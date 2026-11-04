@@ -79,7 +79,7 @@ const Blobs: React.FC = () => {
   const w = (2 * Math.PI) / (4 * BAR); // one slow drift every four bars
   const glow = 1 + (loudness(f) - 1) * 0.35;
   const blob = (color: string, size: number, x: number, y: number, ph: number, op: number) => (
-    <div style={{position: 'absolute', width: size, height: size, borderRadius: '50%', background: color, opacity: Math.min(1, op * glow), filter: 'blur(130px)',
+    <div style={{position: 'absolute', width: size, height: size, borderRadius: '50%', background: `radial-gradient(circle, ${color} 0%, ${color} 28%, transparent 70%)`, opacity: Math.min(1, op * glow),
       left: x + Math.sin(t * w + ph) * 90, top: y + Math.cos(t * w * 0.8 + ph) * 110}} />
   );
   return (
@@ -179,10 +179,11 @@ const Mascot: React.FC<{size: number}> = ({size}) => {
       <defs>
         <linearGradient id="mb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#EBA58C" /><stop offset="1" stopColor="#C86C52" /></linearGradient>
         <radialGradient id="mh" cx="0.3" cy="0.18" r="0.65"><stop offset="0" stopColor="#fff" stopOpacity="0.38" /><stop offset="1" stopColor="#fff" stopOpacity="0" /></radialGradient>
-        <filter id="ms" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="26" stdDeviation="30" floodColor="#8a4a38" floodOpacity="0.28" /></filter>
+        <radialGradient id="msh"><stop offset="0" stopColor="#8a4a38" stopOpacity="0.3" /><stop offset="1" stopColor="#8a4a38" stopOpacity="0" /></radialGradient>
       </defs>
       <g transform={`translate(${g.x * 6} ${g.y * 4})`}>
-        <g filter="url(#ms)">
+        <g>
+          <ellipse cx="512" cy="905" rx="330" ry="80" fill="url(#msh)" />
           <rect x="152" y="150" width="720" height="740" rx="280" fill="url(#mb)" />
           <rect x="152" y="150" width="720" height="740" rx="280" fill="url(#mh)" />
         </g>

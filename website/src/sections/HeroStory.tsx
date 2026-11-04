@@ -34,7 +34,10 @@ export function HeroStory() {
   }, []);
 
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end end'] });
-  const smooth = useSpring(scrollYProgress, { stiffness: 80, damping: 24, restDelta: 0.0004 });
+  const spring = useSpring(scrollYProgress, { stiffness: 80, damping: 24, restDelta: 0.0004 });
+  // touch scrolling already has its own momentum; a spring on top of it lags and overshoots
+  const coarse = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
+  const smooth = coarse ? scrollYProgress : spring;
 
   useMotionValueEvent(scrollYProgress, 'change', (p) => {
     const raw = p * N;
@@ -61,7 +64,7 @@ export function HeroStory() {
     const el = ref.current;
     if (!el) return;
     const top = el.getBoundingClientRect().top + window.scrollY;
-    const length = el.offsetHeight - window.innerHeight;
+    const length = el.offsetHeight - h;
     window.scrollTo({ top: top + ((i + 0.5) / N) * length, behavior: reduce ? 'auto' : 'smooth' });
   };
 

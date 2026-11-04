@@ -12,6 +12,7 @@ export function Showcase() {
   const [near, setNear] = useState(false);
   const [view, setView] = useState<'story' | 'app'>('story');
   const [videoOk, setVideoOk] = useState(true);
+  const [promoFile, setPromoFile] = useState(true);
   const [missing, setMissing] = useState<Set<number>>(new Set());
 
   useEffect(() => {
@@ -43,7 +44,18 @@ export function Showcase() {
         {view === 'story' ? (
           <div className="promo">
             <div className="promo-frame">
-              {near ? (
+              {near && promoFile ? (
+                <video
+                  className="promo-video"
+                  src="/assets/media/anchor-promo.mp4"
+                  controls
+                  playsInline
+                  loop
+                  preload="metadata"
+                  aria-label="Anchor promo video"
+                  onError={() => setPromoFile(false)}
+                />
+              ) : near ? (
                 <Suspense fallback={<div className="promo-wait"><Icon name="play" /></div>}>
                   <PromoPlayer />
                 </Suspense>
@@ -56,9 +68,7 @@ export function Showcase() {
         ) : (
           <div className="rec">
             <div className="vf">
-              <video muted loop playsInline autoPlay preload="metadata" onError={() => setVideoOk(false)} aria-label="Screen recording of the Anchor app">
-                <source src="/assets/media/anchor-demo.mp4" type="video/mp4" />
-              </video>
+              <video src="/assets/media/anchor-demo.mp4" muted loop playsInline autoPlay preload="metadata" onError={() => setVideoOk(false)} aria-label="Screen recording of the Anchor app" />
             </div>
             <p className="hint">Recorded from the real app, with made-up content.</p>
           </div>

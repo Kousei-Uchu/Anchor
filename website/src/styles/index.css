@@ -208,6 +208,13 @@ svg.ic.anchor { stroke-width: 6.5; }
 .pin:not([data-step='0']) .cue { opacity: 0; pointer-events: none; }
 .skip { position: absolute; z-index: 3; right: max(3vw, 18px); bottom: 18px; color: var(--mut); font-size: 0.85rem; }
 
+@media (max-width: 800px), (pointer: coarse) {
+  /* big blurred layers and filter shadows on a moving, scaled phone are what make phones stutter */
+  .glow { display: none; }
+  .hero-phone { filter: none; will-change: auto; }
+  .hero-phone .pf { box-shadow: 0 18px 28px rgba(60, 30, 20, 0.2); border-radius: 15.5% / 7.3%; }
+  .mascot { filter: none; }
+}
 @media (max-width: 800px) {
   .story-grid { grid-template-columns: 1fr; grid-template-rows: 1fr auto; height: 100%; gap: 0; padding: 60px 22px 54px; align-items: center; }
   .phone-col { order: -1; align-self: stretch; }
@@ -267,6 +274,7 @@ svg.ic.anchor { stroke-width: 6.5; }
 }
 .promo { width: min(340px, 100%); }
 .promo-frame { border-radius: 36px; overflow: hidden; box-shadow: var(--sh); background: #fbf6f1; }
+.promo-video { display: block; width: 100%; aspect-ratio: 1080 / 1920; object-fit: cover; background: #fbf6f1; }
 .promo-wait { aspect-ratio: 1080 / 1920; display: grid; place-items: center; color: var(--acc); background: linear-gradient(#fbf6f1, #f6e7de); }
 .promo-wait svg { width: 56px; height: 56px; opacity: 0.7; animation: nudge 2.4s ease-in-out infinite; }
 .hint { margin: 18px 0 0; color: var(--mut); font-size: 0.92rem; }
