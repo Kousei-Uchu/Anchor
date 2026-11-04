@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Anchor Support</title>
+<link rel="icon" href="/assets/icon.png">
+<meta name="description" content="Help and contact for the Anchor app.">
+<style>
+  :root {
+    --bg: #fbf6f1; --card: #ffffff; --ink: #2b2523; --muted: #6b605b;
+    --accent: #ca795f; --sage: #94a88c; --line: #eadfd7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1c1a1a; --card: #2b2827; --ink: #f3ece6; --muted: #b3a79f; --accent: #e29277; --sage: #a9bd9f; --line: #3d3836; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.6 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 48px 20px 80px; }
+  header { margin-bottom: 28px; }
+  .brand { display: inline-flex; align-items: center; gap: 10px; color: var(--accent); font-weight: 700; letter-spacing: .02em; }
+  .brand span { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: var(--sage); }
+  h1 { font-size: 2rem; line-height: 1.2; margin: 14px 0 6px; }
+  h2 { font-size: 1.2rem; margin: 34px 0 8px; color: var(--accent); }
+  p, li { color: var(--ink); }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; margin: 16px 0; }
+  ul { padding-left: 1.2rem; }
+  li { margin: 6px 0; }
+  a { color: var(--accent); }
+  nav { margin-top: 10px; font-size: .95rem; }
+  nav a { margin-right: 14px; }
+  .alert { border-left: 4px solid var(--accent); }
+  footer { margin-top: 48px; color: var(--muted); font-size: .85rem; }
+  details { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; margin: 10px 0; }
+  summary { cursor: pointer; font-weight: 600; }
+  details p { margin: 10px 0 2px; }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div class="brand"><span></span>Anchor</div>
+  <h1>Support</h1>
+  <p class="meta">Help for the Anchor app</p>
+  <nav><a href="/">Home</a><a href="/demo">Demo</a><a href="/privacy">Privacy</a><a href="/support">Support</a><a href="https://github.com/Kousei-Uchu">GitHub</a></nav>
+</header>
+
+<div class="card">
+  <p>Need a hand with Anchor? Email <a href="mailto:YOUR_EMAIL_HERE">YOUR_EMAIL_HERE</a> and include your iOS version and what you were doing when the problem happened. Please do not email private content from your journal or plan.</p>
+</div>
+<div class="card alert">
+  <p><strong>If you are in danger right now,</strong> call your local emergency number (for example 000 in Australia, 911 in the US, 999 in the UK) or a crisis line in your country. I cannot respond to emails in real time.</p>
+</div>
+
+<h2>Common questions</h2>
+
+<details><summary>How do I make the lock screen widget call someone?</summary>
+<p>Add your contacts under Plan, then Contacts. Long-press your lock screen, tap Customize, and add an Anchor widget. Tapping it opens Anchor to a confirmation screen with a call button. If the widget looks empty, open Plan once so it can refresh.</p></details>
+
+<details><summary>Face ID is not working or I am locked out of the app</summary>
+<p>Anchor uses your device's own Face ID, Touch ID or passcode. Make sure Face ID is allowed for Anchor in Settings, then Face ID &amp; Passcode, then Other Apps. You can turn the Anchor lock off in Plan, then Preferences, if you can get in.</p></details>
+
+<details><summary>My notifications are not showing</summary>
+<p>Check Settings, then Notifications, then Anchor, and confirm notifications are allowed. Reminders are scheduled from your trigger windows, appointments and daily check-in. Open Plan once after changing them so they re-sync.</p></details>
+
+<details><summary>Can Anchor message my contacts automatically?</summary>
+<p>No. iOS does not allow apps to send messages silently. Anchor can remind you and open a message ready for you to review and send.</p></details>
+
+<details><summary>Where is my data, and can I move it to a new phone?</summary>
+<p>Your data lives only on your device. To move it, go to Plan, then Your data, export a full backup, send it to the new device, and use "Import from a previous export". Device backups may also restore it if you restore your whole device.</p></details>
+
+<details><summary>How do I delete everything?</summary>
+<p>Plan, then Your data, then clear everything. You can also delete the app, which removes its data from the device.</p></details>
+
+<details><summary>The crisis numbers are for the wrong country</summary>
+<p>On the Now tab, tap the region line at the bottom of the red crisis card and pick your region. Anchor uses your phone's region by default.</p></details>
+
+<details><summary>Does Anchor work on iPad and Mac?</summary>
+<p>Yes on iPhone and iPad. On Macs with Apple silicon it can run as an iPad app. Lock screen widgets and some phone-only features are not available there.</p></details>
+
+<details><summary>Something is broken or looks wrong</summary>
+<p>Please email me with what you were doing, your device model and iOS version. If the app shows a red banner saying it could not open your saved data, close and reopen the app first, and email me before adding anything new.</p></details>
+
+<h2>Privacy</h2>
+<p>Anchor keeps your data on your device and does not collect it. Read the <a href="/privacy">privacy policy</a>.</p>
+
+<div class="card alert"><strong>Early build.</strong> Anchor is not finished and parts may change. The data policy will not: Anchor sends no data, or the bare minimum if a feature ever needs it, and if that ever changes you will be told immediately in the app.</div>
+<footer>Anchor is a personal support tool. It is not a medical device and not an emergency service.</footer>
+</main>
+</body>
+</html>

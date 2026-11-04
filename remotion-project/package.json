@@ -1,0 +1,19 @@
+{
+  "name": "anchor-promo",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "studio": "remotion studio",
+    "audio": "python3 scripts/make-audio.py",
+    "render": "remotion render src/index.ts Promo out/anchor-promo.mp4 --crf=18"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.540",
+    "@remotion/transitions": "^4.0.540",
+    "@types/react": "^18.3.31",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.540",
+    "typescript": "^7.0.2"
+  }
+}

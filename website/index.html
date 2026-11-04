@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Anchor: a calm place for the hard days</title>
+<meta name="description" content="Anchor is a private safety plan, contacts and journal app for iPhone and iPad. No accounts, no tracking. Early build.">
+<link rel="icon" href="/assets/icon.png"><link rel="stylesheet" href="/assets/site.css">
+</head><body>
+<svg width="0" height="0" style="position:absolute"><symbol id="anc" viewBox="0 0 100 112"><circle cx="50" cy="11" r="8.5"/><path d="M50 20V104M36 31H64M16 76C16 98 33 107 50 107S84 98 84 76M8 87L16 75L26 86M92 87L84 75L74 86"/></symbol></svg>
+<header class="hdr"><a class="brand" href="/"><img src="/assets/icon.png" alt="">Anchor</a>
+<nav><a href="/demo">Demo</a><a href="/#about">About</a><a href="/privacy">Privacy</a><a href="/support">Support</a><a href="https://github.com/Kousei-Uchu">GitHub</a><a class="pill" href="/#status">Early build</a></nav></header>
+
+<section class="stage" aria-label="Anchor intro">
+<div class="blob b1"></div><div class="blob b2"></div>
+<div class="copy">
+ <div class="slide"><div class="mascot"><svg><use href="#anc"/></svg></div><h1>A calm place for the hard days.</h1><p>Your safety plan, your people and your journal. Private, on your phone.</p><div class="btns"><a class="btn" href="/demo">Try the demo</a><a class="btn alt" href="#status">Early build, read this</a></div></div>
+ <div class="slide"><span class="t">Plan</span><h2>Your plan, in your words.</h2><p>Safety steps, triggers and scripts you wrote when you were okay, ready for when you aren't.</p></div>
+ <div class="slide"><span class="t">Now</span><h2>Your people, one tap away.</h2><p>Trusted contacts, plus a lock screen widget so help is a tap, not a search.</p></div>
+ <div class="slide"><span class="t">Journal</span><h2>Write at your pace.</h2><p>A private journal with gentle suggestions from your day, only if you want them.</p></div>
+ <div class="slide"><span class="t">Bridge</span><h2>Walk into appointments ready.</h2><p>Keep a running list of what to raise, and take your notes with you.</p></div>
+ <div class="slide"><span class="t">Private</span><h2>Nothing leaves your phone.</h2><p>No account. No ads. No tracking. An optional Face ID lock.</p></div>
+ <div class="slide"><span class="t">Early build</span><h2>Still being built.</h2><p>Anchor isn't finished and parts will change. The privacy promise won't.</p><div class="btns"><a class="btn" href="#status">What that means</a><a class="btn alt" href="#about">Explore Anchor</a></div></div>
+</div>
+<div class="phone"><iframe id="pf" src="/demo?embed" title="" tabindex="-1" aria-hidden="true"></iframe><div class="lockov"><div style="font-size:3rem">🔒</div><b>Anchor is locked</b><span style="color:var(--mut)">Unlock with Face ID</span></div></div>
+<ul class="dots" aria-label="Intro steps"></ul>
+<button class="cue" type="button">Scroll ↓</button>
+</section>
+
+<section class="sec" id="about"><h2>What Anchor is</h2><p class="lead">A private companion for iPhone and iPad that keeps what you need on hard days in one place, written by you, ready when you are.</p>
+<div class="grid">
+<div class="card"><h3>Now</h3><p>Crisis numbers for your region, a gentle check-in, your people, and grounding tools you wrote yourself.</p></div>
+<div class="card"><h3>Plan</h3><p>Safety plan, contacts, trigger windows, appointments, de-escalation scripts and affirmations.</p></div>
+<div class="card"><h3>Journal</h3><p>A private timeline with Markdown, photos and drawings, with optional suggestions from your calendar, photos and music.</p></div>
+<div class="card"><h3>Bridge</h3><p>Prepare for appointments, keep a list of things to raise, and export notes if you choose to share them.</p></div>
+<div class="card"><h3>Thread</h3><p>A message log, notes to your future self, things you haven't said yet, and a support calendar.</p></div>
+<div class="card"><h3>Widgets</h3><p>Lock screen and home screen shortcuts to your top contacts, so you don't have to open the app.</p></div>
+</div></section>
+
+<section class="sec" id="video" hidden><h2>See it in action</h2><p class="lead">Recorded from the real app.</p>
+<div class="frame"><div class="vf"><video id="vid" muted loop playsinline autoplay preload="metadata"><source src="/assets/media/anchor-demo.mp4" type="video/mp4"></video></div></div>
+<div class="shots" id="shots"></div></section>
+<section class="sec" id="status"><div class="note"><h2>Anchor is not finished.</h2>
+<p><strong>This is an early build.</strong> Screens, features and wording may change, things may break, and what you see here may not match the app yet.</p>
+<h3 style="margin-top:1.2em">The one thing that won't change</h3>
+<ul><li>Anchor sends <strong>no data</strong> anywhere. Everything you write stays on your device.</li>
+<li>If a future feature ever truly needs to send something, it will be the <strong>minimum necessary</strong>.</li>
+<li>If that ever changes, you will be <strong>told immediately, in the app</strong>, before anything is sent.</li></ul>
+<p style="margin-bottom:0">Read the full <a href="/privacy">privacy policy</a>.</p></div></section>
+
+<section class="sec" id="demo"><h2>Try it here</h2><p class="lead">A tappable demo with made-up content. Nothing you type is saved or sent.</p>
+<div class="frame"><iframe src="/demo?embed" title="Anchor demo" loading="lazy"></iframe></div><p style="text-align:center"><a href="/demo">Open full screen</a></p></section>
+
+<section class="sec" id="source"><h2>Open source</h2><p class="lead">The code is on GitHub, so you can see exactly what Anchor does and doesn't do.</p><p><a class="btn" href="https://github.com/Kousei-Uchu">View on GitHub</a></p></section>
+<footer class="ft"><a href="/privacy">Privacy</a><a href="/support">Support</a><a href="/demo">Demo</a><a href="https://github.com/Kousei-Uchu">GitHub</a><p>Anchor is a personal support tool. It is not a medical device and not an emergency service. If you are in danger, call your local emergency number.</p></footer>
+<script src="/assets/story.js"></script>
+<script>
+(()=>{const sec=document.getElementById('video'),v=document.getElementById('vid'),sh=document.getElementById('shots');
+const show=()=>sec.hidden=false;v.addEventListener('loadeddata',()=>{show();v.parentElement.style.display='block'});v.parentElement.style.display='none';
+for(let i=1;i<=6;i++){const im=new Image();im.alt='Anchor screenshot '+i;im.onload=()=>{show();sh.append(im)};im.src='/assets/media/shot-'+i+'.png'}})();
+</script>
+</body></html>
