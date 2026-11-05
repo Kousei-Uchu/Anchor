@@ -635,7 +635,7 @@
 				INFOPLIST_FILE = Anchor/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Anchor;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSAppleMusicUsageDescription = "Anchor can suggest recently played music as journal context, if you choose to look.";
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Anchor can suggest calendar events from the day you're journaling about, if you choose to look.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Anchor uses Face ID to keep your safety plan and journal private, independent of your phone's own lock.";
@@ -661,7 +661,7 @@
 				RUNTIME_EXCEPTION_DISABLE_EXECUTABLE_PAGE_PROTECTION = NO;
 				RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION = NO;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = YES;
+				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -810,7 +810,7 @@
 				INFOPLIST_FILE = Anchor/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Anchor;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSAppleMusicUsageDescription = "Anchor can suggest recently played music as journal context, if you choose to look.";
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Anchor can suggest calendar events from the day you're journaling about, if you choose to look.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Anchor uses Face ID to keep your safety plan and journal private, independent of your phone's own lock.";
@@ -836,7 +836,7 @@
 				RUNTIME_EXCEPTION_DISABLE_EXECUTABLE_PAGE_PROTECTION = NO;
 				RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION = NO;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = YES;
+				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;

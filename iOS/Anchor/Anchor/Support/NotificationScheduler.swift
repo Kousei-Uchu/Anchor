@@ -74,6 +74,8 @@ struct NotificationScheduler {
     func scheduleTriggerWindow(_ window: TriggerWindow, reasonsPool: [String],
                                 escalationContacts: [TrustedContact], primaryContact: TrustedContact?) {
         guard window.isActive, let startHour = window.startTime.hour, let startMinute = window.startTime.minute else { return }
+        // Safety net: scheduling means the user has a reminder set up, so make sure we've asked.
+        Self.askForPermissionIfNeeded()
 
         let body = templatedBody(reasonsPool: reasonsPool)
 
@@ -191,6 +193,7 @@ struct NotificationScheduler {
     /// out — appointments getting missed or arrived at unprepared were
     /// both real risks a single 20-hours-out reminder didn't cover well.
     func scheduleAppointmentReminder(for occurrence: AppointmentOccurrence, clinicianLabel: String) {
+        Self.askForPermissionIfNeeded()
         scheduleSingleAppointmentReminder(
             for: occurrence, clinicianLabel: clinicianLabel,
             hoursBefore: 20, identifierSuffix: "day-before",
@@ -229,6 +232,7 @@ struct NotificationScheduler {
     /// "want to check in today?" at a time the user picks in Plan, so
     /// Anchor is proactive even on days nothing's scheduled to fire.
     func scheduleDailyCheckIn(hour: Int, minute: Int) {
+        Self.askForPermissionIfNeeded()   // the user just turned the daily check-in on
         cancelDailyCheckIn()
         let content = UNMutableNotificationContent()
         content.title = "Anchor"
@@ -249,10 +253,16 @@ struct NotificationScheduler {
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["daily-checkin"])
     }
 
-    func requestAuthorizationIfNeeded() {
+    /// Asks for notification permission. Call this at the moment the user first
+    /// turns on something that needs notifications (an active trigger window,
+    /// the daily check-in, or contact escalation), never on launch or when a
+    /// tab merely appears. iOS only shows the prompt once; later calls are no-ops.
+    static func askForPermissionIfNeeded() {
         // Demo mode (screenshots and the website video) never asks, so the
         // system permission alert can't appear in the footage.
         guard !DemoMode.isOn else { return }
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
     }
+
+    func requestAuthorizationIfNeeded() { Self.askForPermissionIfNeeded() }
 }

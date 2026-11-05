@@ -45,15 +45,17 @@ struct JournalContextSuggestionsView: View {
         NavigationStack {
             List {
                 #if canImport(JournalingSuggestions)
+                if #available(iOS 17.2, *) {
                 Section("Apple's journaling suggestions") {
-                    JournalingSuggestionsPicker {
-                        Label("Browse suggestions", systemImage: "sparkles")
-                    } onCompletion: { suggestion in
-                        await MainActor.run {
-                            onInsert("✨ \(suggestion.title)")
-                            dismiss()
+                        JournalingSuggestionsPicker {
+                            Label("Browse suggestions", systemImage: "sparkles")
+                        } onCompletion: { suggestion in
+                            await MainActor.run {
+                                onInsert("✨ \(suggestion.title)")
+                                dismiss()
+                            }
                         }
-                    }
+                }
                 }
                 #endif
                 Section("Calendar events that day") {

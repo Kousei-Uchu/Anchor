@@ -36,11 +36,12 @@ struct BridgeView: View {
                         NavigationLink { FeedbackLoopDiagramListView() } label: {
                             Anchor.TileButtonLabel(icon: "point.3.connected.trianglepath.dotted", title: "Feedback loops", tint: Anchor.Theme.sage)
                         }
-                        if false {
-                            NavigationLink { NSWMentalHealthReferenceView() } label: {
-                                Anchor.TileButtonLabel(icon: "building.columns.fill", title: "NSW mental health law", tint: Anchor.Theme.accent)
-                            }
+                        // Personal copy only: compiled out of every public build. See NSWMentalHealthReferenceView.swift.
+                        #if PERSONAL_BUILD
+                        NavigationLink { NSWMentalHealthReferenceView() } label: {
+                            Anchor.TileButtonLabel(icon: "building.columns.fill", title: "NSW mental health law", tint: Anchor.Theme.accent)
                         }
+                        #endif
                     }
                 }
                 .padding(.vertical, 8)

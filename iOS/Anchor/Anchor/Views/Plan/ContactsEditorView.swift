@@ -163,6 +163,9 @@ private struct ContactEditorSheet: View {
 
                 Section {
                     Toggle("Escalate if I don't respond", isOn: $contact.escalationEnabled)
+                        .onChange(of: contact.escalationEnabled) { _, isOn in
+                            if isOn { NotificationScheduler.askForPermissionIfNeeded() }
+                        }
                     if contact.escalationEnabled {
                         Stepper(
                             "After \(contact.escalationWindowMinutes ?? 30) minutes",

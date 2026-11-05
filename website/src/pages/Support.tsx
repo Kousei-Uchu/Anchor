@@ -27,13 +27,13 @@ export default function Support() {
       <h2>Common questions</h2>
 
       <Q q="How do I make the lock screen widget call someone?">
-        Add your contacts under Plan, then Contacts. Long-press your lock screen, tap Customize, and add an Anchor widget. Tapping it opens Anchor to a confirmation screen with a call button. If the widget looks empty, open Plan once so it can refresh.
+        Add your contacts under Plan, then Contacts. Long-press your lock screen, tap Customize, and add an Anchor widget. Tapping it opens Anchor to a confirmation screen with a call button. If the widget looks empty, open Plan once so it can refresh. Lock screen widgets can be seen without unlocking your phone, so only add one if you are comfortable with that.
       </Q>
       <Q q="Face ID is not working or I am locked out of the app">
         Anchor uses your device&rsquo;s own Face ID, Touch ID or passcode. Make sure Face ID is allowed for Anchor in Settings, then Face ID &amp; Passcode, then Other Apps. You can turn the Anchor lock off in Plan, then Preferences, if you can get in.
       </Q>
       <Q q="My notifications are not showing">
-        Check Settings, then Notifications, then Anchor, and confirm notifications are allowed. Reminders are scheduled from your trigger windows, appointments and daily check-in. Open Plan once after changing them so they re-sync.
+        Check Settings, then Notifications, then Anchor, and confirm notifications are allowed. Reminders are scheduled from your trigger windows and your daily check-in. Open Plan once after changing them so they re-sync.
       </Q>
       <Q q="Can Anchor message my contacts automatically?">
         No. iOS does not allow apps to send messages silently. Anchor can remind you and open a message ready for you to review and send.

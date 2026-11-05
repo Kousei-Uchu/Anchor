@@ -4,7 +4,7 @@ import { SUPPORT_EMAIL } from '../content/meta';
 
 export default function Privacy() {
   return (
-    <Page route="/privacy" title="Privacy Policy" meta="Effective 2 November 2026">
+    <Page route="/privacy" title="Privacy Policy" meta="Effective 5 November 2026">
       <div className="panel">
         <p>
           <strong>The short version.</strong> Anchor keeps what you put into it on your own device. There are no accounts, no servers that receive your data, no analytics, no advertising, and no tracking. I (the developer) cannot see anything you write or save in the app.
@@ -19,7 +19,10 @@ export default function Privacy() {
 
       <h2>Information shared with the home screen and lock screen widgets</h2>
       <p>
-        To let the widgets work, Anchor shares a very small summary with its own widget extension through an Apple app group on your device: the names and phone numbers of your top two contacts, whether a safety plan exists, and the label of your next trigger window. Your journal, plan text and other content are never shared with the widget.
+        To let the widgets work, Anchor shares a small summary with its own widget extension through an Apple app group on your device: the names and phone numbers of your top two contacts, whether a safety plan exists, the label of your next trigger window, and one de-escalation phrase and one affirmation that you wrote yourself. None of this leaves your device. Your journal entries, safety plan text and everything else are never shared with the widget.
+      </p>
+      <p>
+        Widgets on your lock screen can be seen without unlocking your phone, and Anchor&rsquo;s own Face ID lock does not cover them. Only add a widget if you are comfortable with that information being visible.
       </p>
 
       <h2>Optional permissions</h2>
@@ -28,7 +31,7 @@ export default function Privacy() {
       </p>
       <ul>
         <li><strong>Face ID or passcode.</strong> Anchor can lock itself using Face ID, Touch ID or your passcode. This is handled entirely by iOS. Anchor never receives your biometric data.</li>
-        <li><strong>Notifications.</strong> Used for reminders you set up (trigger windows, appointments, daily check-in). They are scheduled on your device. No push notification server is involved.</li>
+        <li><strong>Notifications.</strong> Used for the reminders you set up: trigger windows, the daily check-in, and the optional reminder to reach out to a contact you chose. Anchor asks the first time you turn one of these on. They are scheduled on your device, and no push notification server is involved.</li>
         <li><strong>Calendar and Reminders.</strong> Used to suggest events for a journal day, to import today&rsquo;s reminders into &ldquo;Next hour only&rdquo;, and to add items you create there to Reminders. This information is read on your device and is only saved in Anchor if you tap to add it.</li>
         <li><strong>Photos.</strong> Used to suggest photos from the day you are journaling about, and to attach photos you pick. Only photos you choose are copied into Anchor.</li>
         <li><strong>Apple Music (MusicKit).</strong> Used to suggest recently played songs as journal context. This request is handled by Apple.</li>
@@ -58,9 +61,6 @@ export default function Privacy() {
       <h2>Not medical or emergency advice</h2>
       <p>
         Anchor is a personal organisation and support tool. It does not diagnose, treat or monitor any condition, and it does not contact emergency services or anyone else for you. The crisis numbers shown in the app are a convenience for the region you choose. If you or someone else is in immediate danger, call your local emergency number.
-      </p>
-      <p>
-        Anchor includes plain-language reference material about mental health law. It is general information only and not legal advice, and laws can change.
       </p>
 
       <h2>Changes to this policy</h2>

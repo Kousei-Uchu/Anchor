@@ -137,8 +137,9 @@ struct PlanView: View {
             }
             .onAppear {
                 NotificationScheduler.registerCategories()
+                // No permission prompt here: Anchor asks the first time the user turns on
+                // something that needs notifications (see NotificationScheduler.askForPermissionIfNeeded).
                 let scheduler = NotificationScheduler(context: modelContext)
-                scheduler.requestAuthorizationIfNeeded()
                 refreshWidgetSnapshot()
                 rescheduleTriggerWindowNotifications(using: scheduler)
                 if dailyCheckInEnabled {

@@ -645,9 +645,8 @@ enum AnchorSchema {
 
     static func makeContainer() -> ModelContainer {
         let schema = Schema(models)
-        // Local-first: no CloudKit configuration. Sync to Electron happens
-        // via explicit export/import or local-network sync, never a required
-        // third-party cloud.
+        // Local-first: no CloudKit configuration and no sync service. Data moves
+        // only through explicit export/import, never a required third-party cloud.
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
         do {
             let container = try ModelContainer(for: schema, configurations: [configuration])

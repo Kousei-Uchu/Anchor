@@ -25,13 +25,14 @@ You need: a Mac with **Xcode 26 or later** (Apple requires current-SDK builds fo
    - Journal, then the sparkles "journaling suggestions" button, calendar, photos, music
    - Crisis card on Now, tap the region line at the bottom, change region
    - Rotate the iPad, check nothing looks broken
-10. Replace `YOUR_EMAIL_HERE` in both web pages (Part 2) with the real support email before you submit anything.
+10. Check that `SUPPORT_EMAIL` in `website/src/content/meta.ts` is the address you want to be public. It appears on the privacy and support pages, and Apple may use it to contact you.
 
-## Part 2: Host the privacy and support pages
+## Part 2: Host the website, privacy and support pages
 
-1. Copy the two folders in `web/` (`privacy/` and `support/`, each with an `index.html`) into whichever repo serves `anchor.aspens.page`, so they land at `/privacy/index.html` and `/support/index.html`.
-2. In Vercel, add `anchor.aspens.page` as a domain on that project. In Cloudflare DNS, add the CNAME Vercel tells you to (set it to **DNS only** while Vercel verifies).
-3. Open https://anchor.aspens.page/privacy and /support in a browser to confirm they load. Apple requires both URLs to work before submission.
+1. The site in `website/` is a Vite and React app that builds to static pages, including `/privacy`, `/support` and `/demo`. Check it builds: `cd website && npm install && npm run build`.
+2. Deploy from the `website/` folder with `npx vercel --prod`, or connect the GitHub repo in Vercel and set Root Directory to `website`. Vercel detects Vite: the build command is `npm run build` and the output directory is `dist`.
+3. In Vercel, add `anchor.aspens.page` as a domain on that project. In Cloudflare DNS, add the CNAME Vercel tells you to (set it to **DNS only** while Vercel verifies).
+4. Open https://anchor.aspens.page/privacy and /support in a browser to confirm they load. Apple requires both URLs to work before submission.
 
 ## Part 3: Create the app in App Store Connect
 

@@ -1,5 +1,7 @@
 # Anchor — build status
 
+> **Status note (November 2026).** This file is a running build log and some older entries are out of date. There is no Electron companion app in this repository. The privacy and support pages now live in `website/` (a Vite app). Escalation is a local reminder to the user, never an automatic message. Appointment reminder scheduling exists in `NotificationScheduler` but is not yet called from the Appointments screen. The NSW mental health law screen is compiled only with the `PERSONAL_BUILD` flag and is not part of the public build.
+
 ## Done
 - Repo/project directory structure matching a standard Xcode App-template layout
   (`Anchor.xcodeproj/` sibling to `Anchor/`, source files under `Anchor/`, `Views/`
@@ -57,7 +59,7 @@
   with one stored "reasons to keep going" line slotted in — the file has
   no path that calls a generator. Registers actionable categories
   (message a contact / "I'm okay" / open app) so windows are actionable
-  without opening the app. Appointment reminders scheduled the same way.
+  without opening the app. (Appointment reminder scheduling exists in `NotificationScheduler.scheduleAppointmentReminder` but is not yet called from the Appointments screen.)
 - Escalation timer logic (per-contact opt-in "if I don't respond in X
   minutes") is modeled in `TrustedContact.escalationEnabled` /
   `escalationWindowMinutes` from the data layer, but the actual
@@ -667,5 +669,5 @@ outstanding from the reconstructed feedback document.
 - Journaling Suggestions: `com.apple.developer.journal.allow` entitlement and a `JournalingSuggestionsPicker` section in `JournalContextSuggestionsView` (guarded by `canImport`).
 - `AnchorSchema.makeContainer()` no longer `fatalError`s if the store cannot open. It falls back to an in-memory store, sets `openedPersistentStore = false`, and `AnchorApp` shows a red banner. Real store files are never deleted.
 - Data protection class changed from `.complete` to `.completeUntilFirstUserAuthentication` so background launches while locked can open the store.
-- Privacy and support pages live outside the project in `web/`. `YOUR_EMAIL_HERE` must be replaced.
+- Privacy and support pages live in `website/` (`src/pages/Privacy.tsx`, `Support.tsx`). The support email is set in `website/src/content/meta.ts`.
 - Not compiled in this environment; the pbxproj additions were checked by reference count and brace balance only.

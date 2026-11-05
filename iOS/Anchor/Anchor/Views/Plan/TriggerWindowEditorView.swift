@@ -120,6 +120,9 @@ struct TriggerWindowEditorView: View {
                 Section {
                     TextField("Label", text: $window.label)
                     Toggle("Active", isOn: $window.isActive)
+                        .onChange(of: window.isActive) { _, isOn in
+                            if isOn { NotificationScheduler.askForPermissionIfNeeded() }
+                        }
                 }
                 Section("Days") {
                     WeekdayCirclePicker(selectedDays: Binding(
@@ -136,7 +139,11 @@ struct TriggerWindowEditorView: View {
             .navigationTitle("Trigger window")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button("Done") {
+                        // New windows start active, so this is the first time the user commits to one.
+                        if window.isActive { NotificationScheduler.askForPermissionIfNeeded() }
+                        dismiss()
+                    }
                 }
             }
         }

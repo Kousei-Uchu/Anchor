@@ -10,7 +10,17 @@
 //  Health Act 2007 (NSW), the MHCC Mental Health Rights Manual, and general
 //  NSW health-privacy principles; sources listed on each page.
 //
+//  PERSONAL COPY ONLY.
+//  This screen is compiled only when the PERSONAL_BUILD compilation condition is set.
+//  No shipped configuration sets it (Debug, Release, TestFlight and App Store builds
+//  all leave it off), so it is not part of the public app. It is NSW-specific legal
+//  reference material kept for the developer's own copy, and it may be removed
+//  entirely later. It must never be released in the public build. If you add
+//  PERSONAL_BUILD to a local build in Xcode, do not use that build for screenshots,
+//  TestFlight or Archive.
+//
 
+#if PERSONAL_BUILD
 import SwiftUI
 
 struct NSWMentalHealthReferenceView: View {
@@ -162,3 +172,5 @@ struct TalkingToYourPsychReferenceView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 }
+
+#endif // PERSONAL_BUILD

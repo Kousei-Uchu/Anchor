@@ -18,7 +18,7 @@ export const SLIDES: Slide[] = [
   { tag: 'Now', title: 'Your people, one tap away.', body: 'Trusted contacts, plus a lock screen widget so help is a tap, not a search.', tab: 0, scroll: 440, glow: [14, -4, -12, 6], tilt: 2, lift: -8 },
   { tag: 'Journal', title: 'Write at your pace.', body: 'A private journal with gentle suggestions from your day, only if you want them.', tab: 2, glow: [2, 10, -2, -10], tilt: -2 },
   { tag: 'Bridge', title: 'Walk into appointments ready.', body: 'Keep a running list of what to raise, and take your notes with you.', tab: 3, glow: [-8, 2, 8, 4], tilt: 3, lift: -6 },
-  { tag: 'Private', title: 'Nothing leaves your phone.', body: 'No account. No ads. No tracking. An optional Face ID lock.', tab: 0, locked: true, glow: [6, -8, -8, 8], tilt: 0 },
+  { tag: 'Private', title: 'Nothing leaves your phone on its own.', body: 'No account. No ads. No tracking. An optional Face ID lock.', tab: 0, locked: true, glow: [6, -8, -8, 8], tilt: 0 },
   { tag: 'Early build', title: 'Still being built.', body: "Anchor isn't finished and parts will change. The privacy promise won't.", tab: 0, glow: [0, 0, 0, 0], tilt: 0 },
 ];
 
