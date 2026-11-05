@@ -341,3 +341,100 @@ struct AnchorAffirmationWidget: Widget {
         .supportedFamilies([.accessoryRectangular, .accessoryCircular, .systemSmall, .systemMedium])
     }
 }
+
+// MARK: - Recovery counter widget
+
+struct CounterEntry: TimelineEntry {
+    let date: Date
+    let items: [CounterWidgetItem]
+}
+
+struct CounterTimelineProvider: TimelineProvider {
+    func placeholder(in context: Context) -> CounterEntry {
+        CounterEntry(date: .now, items: [CounterWidgetItem(
+            label: "Your counter",
+            runStart: Calendar.current.date(byAdding: .day, value: -12, to: .now) ?? .now,
+            priorDays: 0, mode: "runAndTotal")])
+    }
+
+    func getSnapshot(in context: Context, completion: @escaping (CounterEntry) -> Void) {
+        completion(CounterEntry(date: .now, items: CounterWidgetStore.read()))
+    }
+
+    func getTimeline(in context: Context, completion: @escaping (Timeline<CounterEntry>) -> Void) {
+        let entry = CounterEntry(date: .now, items: CounterWidgetStore.read())
+        let next = Calendar.current.nextDate(after: .now, matching: DateComponents(hour: 0, minute: 5),
+                                             matchingPolicy: .nextTime) ?? Date.now.addingTimeInterval(6 * 3600)
+        completion(Timeline(entries: [entry], policy: .after(next)))
+    }
+}
+
+struct AnchorCounterEntryView: View {
+    var entry: CounterEntry
+    @Environment(\.widgetFamily) private var family
+
+    var body: some View {
+        Group {
+            if let item = entry.items.first {
+                content(for: item)
+            } else {
+                Text("Add a counter in Plan, under Recovery.")
+                    .font(.caption2)
+            }
+        }
+        .widgetURL(URL(string: "anchor://now"))
+        .containerBackground(for: .widget) {
+            LinearGradient(
+                colors: [Color(red: 0.58, green: 0.66, blue: 0.55).opacity(0.18), Color.clear],
+                startPoint: .topLeading, endPoint: .bottomTrailing
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func content(for item: CounterWidgetItem) -> some View {
+        let days = item.runDays(now: entry.date)
+        let total = item.totalDays(now: entry.date)
+        switch family {
+        case .accessoryCircular:
+            VStack(spacing: 0) {
+                Text("\(days)").font(.system(.title2, design: .rounded).weight(.semibold))
+                Text(days == 1 ? "day" : "days").font(.system(size: 9))
+            }
+        case .accessoryRectangular:
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.label).font(.caption2)
+                Text("\(days) \(days == 1 ? "day" : "days")").font(.headline)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        default:
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.label)
+                    .font(.system(.footnote, design: .rounded))
+                    .foregroundStyle(.secondary)
+                Text("\(days)")
+                    .font(.system(size: 44, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color(red: 0.792, green: 0.475, blue: 0.373))
+                Text(days == 1 ? "day" : "days")
+                    .font(.system(.footnote, design: .rounded))
+                if item.mode == "runAndTotal", total != days {
+                    Text("\(total) in total").font(.caption2).foregroundStyle(.secondary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}
+
+struct AnchorCounterWidget: Widget {
+    let kind: String = "AnchorCounterWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: CounterTimelineProvider()) { entry in
+            AnchorCounterEntryView(entry: entry)
+        }
+        .configurationDisplayName("Anchor: Counter")
+        .description("A day count. It shows the discreet label you chose, never the counter's name, unless you opt in.")
+        .supportedFamilies([.accessoryRectangular, .accessoryCircular, .systemSmall, .systemMedium])
+    }
+}

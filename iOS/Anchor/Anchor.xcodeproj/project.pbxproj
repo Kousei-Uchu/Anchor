@@ -70,6 +70,15 @@
 		F3DC3B9F8E0D4BC0A2503CC7 /* NowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAFB3180183348DF8F5E6251 /* NowView.swift */; };
 		F97B43EDFD29430297FD99F4 /* BridgeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B4F668E26F14D5FA6F0EF32 /* BridgeView.swift */; };
 		F995C771D15D4424B859A200 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 610B3EE80D0C4A63AB5296C8 /* Assets.xcassets */; };
+		36702EAD50B5B6386984383D /* RecoveryModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A37DFE702393E0FA6C8BBC2 /* RecoveryModels.swift */; };
+		531B53A829A58820D8D01370 /* RecoverySupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A299E490BBED2CF3DFC8DF07 /* RecoverySupport.swift */; };
+		933BAE1CA6ED3B8C9B1D09A9 /* RecoveryHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 413DF4F73EF8C9FCD698014E /* RecoveryHomeView.swift */; };
+		39DA0A61353314B90D4BDCC7 /* RecoveryCounterEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB68FEFD19AE3E8E5DF28FB3 /* RecoveryCounterEditorView.swift */; };
+		D7450C847008FD8A42518AA1 /* RecoveryCounterDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D4E020E267318B40AF47F49 /* RecoveryCounterDetailView.swift */; };
+		07F174CB78A6BBEEF965D4F0 /* RecoveryDailyViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D549DC46C03C21BB00FA9EA /* RecoveryDailyViews.swift */; };
+		BD1529B8430691CC5324CA89 /* RecoveryMotivationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FE546DAE72C16511E6F0464 /* RecoveryMotivationsView.swift */; };
+		165999B4C60FDB505A45030B /* CravingToolView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55C8DD2C95B58EFD9E5AFE38 /* CravingToolView.swift */; };
+		8A67639F74080F56C5AA328F /* RecoveryModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A37DFE702393E0FA6C8BBC2 /* RecoveryModels.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -171,6 +180,14 @@
 		F6EB259D670046848BB54BA4 /* BridgeExportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeExportView.swift; sourceTree = "<group>"; };
 		FAFB3180183348DF8F5E6251 /* NowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowView.swift; sourceTree = "<group>"; };
 		FDFFB2420D684494B43F882B /* PlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanView.swift; sourceTree = "<group>"; };
+		3A37DFE702393E0FA6C8BBC2 /* RecoveryModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryModels.swift; sourceTree = "<group>"; };
+		A299E490BBED2CF3DFC8DF07 /* RecoverySupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoverySupport.swift; sourceTree = "<group>"; };
+		413DF4F73EF8C9FCD698014E /* RecoveryHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryHomeView.swift; sourceTree = "<group>"; };
+		FB68FEFD19AE3E8E5DF28FB3 /* RecoveryCounterEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryCounterEditorView.swift; sourceTree = "<group>"; };
+		6D4E020E267318B40AF47F49 /* RecoveryCounterDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryCounterDetailView.swift; sourceTree = "<group>"; };
+		2D549DC46C03C21BB00FA9EA /* RecoveryDailyViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryDailyViews.swift; sourceTree = "<group>"; };
+		3FE546DAE72C16511E6F0464 /* RecoveryMotivationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryMotivationsView.swift; sourceTree = "<group>"; };
+		55C8DD2C95B58EFD9E5AFE38 /* CravingToolView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CravingToolView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -257,7 +274,8 @@
 				5663D5A9C0304CC68C058E80 /* TimeWindowHelper.swift */,
 				B18D5ADC2FF04AF0847FAA83 /* WidgetDataStore.swift */,
 				C21816FFAD0B409A88F1D941 /* NotificationDelegate.swift */,
-			);
+							A299E490BBED2CF3DFC8DF07 /* RecoverySupport.swift */,
+);
 			path = Support;
 			sourceTree = "<group>";
 		};
@@ -271,7 +289,8 @@
 				C68605C6F2CB43D5BE2F42D7 /* Plan */,
 				C46623B21EBF444CACBF31C5 /* Bridge */,
 				C352DD2E481041A5AE4079F3 /* Thread */,
-			);
+							2B964743AF32C893BFF37BEB /* Recovery */,
+);
 			path = Views;
 			sourceTree = "<group>";
 		};
@@ -378,8 +397,22 @@
 			isa = PBXGroup;
 			children = (
 				15ACBC80FF724521BB7AE9FF /* AnchorModels.swift */,
-			);
+							3A37DFE702393E0FA6C8BBC2 /* RecoveryModels.swift */,
+);
 			path = Models;
+			sourceTree = "<group>";
+		};
+		2B964743AF32C893BFF37BEB /* Recovery */ = {
+			isa = PBXGroup;
+			children = (
+				413DF4F73EF8C9FCD698014E /* RecoveryHomeView.swift */,
+				FB68FEFD19AE3E8E5DF28FB3 /* RecoveryCounterEditorView.swift */,
+				6D4E020E267318B40AF47F49 /* RecoveryCounterDetailView.swift */,
+				2D549DC46C03C21BB00FA9EA /* RecoveryDailyViews.swift */,
+				3FE546DAE72C16511E6F0464 /* RecoveryMotivationsView.swift */,
+				55C8DD2C95B58EFD9E5AFE38 /* CravingToolView.swift */,
+			);
+			path = Recovery;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -521,6 +554,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C7633BF1301433480070EEA2 /* AnchorModels.swift in Sources */,
+				8A67639F74080F56C5AA328F /* RecoveryModels.swift in Sources */,
 				57EEA17235EA4D03B12B7C30 /* AnchorWidgetBundle.swift in Sources */,
 				0B0624EF7B42476089C4C66E /* AnchorWidget.swift in Sources */,
 				25CB797548AD4EAF877080F8 /* WidgetDataStore.swift in Sources */,
@@ -554,6 +588,14 @@
 				ECE2756575FD40A49A06E1D1 /* JournalEntryEditorView.swift in Sources */,
 				A8DFC54CA7954E46A4FB5882 /* JournalView.swift in Sources */,
 				2A4C705C9F4E4E1195D652E1 /* NotificationScheduler.swift in Sources */,
+				36702EAD50B5B6386984383D /* RecoveryModels.swift in Sources */,
+				531B53A829A58820D8D01370 /* RecoverySupport.swift in Sources */,
+				933BAE1CA6ED3B8C9B1D09A9 /* RecoveryHomeView.swift in Sources */,
+				39DA0A61353314B90D4BDCC7 /* RecoveryCounterEditorView.swift in Sources */,
+				D7450C847008FD8A42518AA1 /* RecoveryCounterDetailView.swift in Sources */,
+				07F174CB78A6BBEEF965D4F0 /* RecoveryDailyViews.swift in Sources */,
+				BD1529B8430691CC5324CA89 /* RecoveryMotivationsView.swift in Sources */,
+				165999B4C60FDB505A45030B /* CravingToolView.swift in Sources */,
 				3F3F68C497584368BA3DE0C9 /* SafetyPlanEditorView.swift in Sources */,
 				7ACA620BC9514AD393DCD2D4 /* TriggerWindowEditorView.swift in Sources */,
 				C7C09DFF30173A5900F9144F /* JournalContextSuggestionsView.swift in Sources */,

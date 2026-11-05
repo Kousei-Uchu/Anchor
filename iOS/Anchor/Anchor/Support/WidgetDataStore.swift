@@ -82,3 +82,41 @@ enum WidgetDataStore {
         ))
     }
 }
+
+// MARK: - Recovery counter widget
+
+/// What the counter widget may know: a label (the discreet one unless the user
+/// opted in), when the current run began, and the days from earlier runs.
+/// The day count is worked out inside the widget so it moves on at midnight
+/// without the app needing to run.
+struct CounterWidgetItem: Codable, Identifiable {
+    var id: String { label + String(runStart.timeIntervalSince1970) }
+    let label: String
+    let runStart: Date
+    let priorDays: Int
+    let mode: String
+
+    func runDays(now: Date) -> Int {
+        let calendar = Calendar.current
+        let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: runStart), to: calendar.startOfDay(for: now)).day ?? 0
+        return max(0, days)
+    }
+
+    func totalDays(now: Date) -> Int { priorDays + runDays(now: now) }
+}
+
+enum CounterWidgetStore {
+    private static let key = "AnchorCounterWidgetItems"
+
+    static func write(_ items: [CounterWidgetItem]) {
+        guard let defaults = UserDefaults(suiteName: WidgetDataStore.appGroupID),
+              let data = try? JSONEncoder().encode(items) else { return }
+        defaults.set(data, forKey: key)
+    }
+
+    static func read() -> [CounterWidgetItem] {
+        guard let defaults = UserDefaults(suiteName: WidgetDataStore.appGroupID),
+              let data = defaults.data(forKey: key) else { return [] }
+        return (try? JSONDecoder().decode([CounterWidgetItem].self, from: data)) ?? []
+    }
+}

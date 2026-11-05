@@ -13,5 +13,6 @@ struct AnchorWidgetBundle: WidgetBundle {
         AnchorDeEscalationWidget()
         AnchorNextWindowWidget()
         AnchorAffirmationWidget()
+        AnchorCounterWidget()
     }
 }

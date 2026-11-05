@@ -36,6 +36,9 @@ struct DataControlView: View {
     @Query private var decisionCategories: [DecisionPresetCategory]
     @Query private var deEscalationScripts: [DeEscalationScript]
     @Query private var affirmations: [Affirmation]
+    @Query private var recoveryCounters: [RecoveryCounter]
+    @Query private var recoveryMotivations: [RecoveryMotivation]
+    @Query private var recoveryDayEntries: [RecoveryDayEntry]
 
     @State private var exportURL: IdentifiableURL?
     @State private var showDateRangeSheet: DateRangeExportKind?
@@ -182,7 +185,10 @@ struct DataControlView: View {
             unsentDrafts: unsentDrafts.map(UnsentDraftDTO.init),
             decisionCategories: decisionCategories.map(DecisionPresetCategoryDTO.init),
             deEscalationScripts: deEscalationScripts.map(DeEscalationScriptDTO.init),
-            affirmations: affirmations.map(AffirmationDTO.init)
+            affirmations: affirmations.map(AffirmationDTO.init),
+            recoveryCounters: recoveryCounters.map(RecoveryCounterDTO.init),
+            recoveryMotivations: recoveryMotivations.map(RecoveryMotivationDTO.init),
+            recoveryDayEntries: recoveryDayEntries.map(RecoveryDayEntryDTO.init)
         )
         guard let data = try? JSONEncoder.anchorExport.encode(export) else { return }
         writeAndShare(data: data, filename: "anchor-export-\(fileTimestamp()).json")
@@ -267,6 +273,20 @@ struct DataControlView: View {
         for dto in export.affirmations where !existingAffirmationIDs.contains(dto.id) {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
+        // Recovery data is optional in the file, so exports from earlier versions still import.
+        let existingCounterIDs = Set(recoveryCounters.map(\.id))
+        let existingMotivationIDs = Set(recoveryMotivations.map(\.id))
+        let existingDayEntryIDs = Set(recoveryDayEntries.map(\.id))
+        for dto in export.recoveryCounters ?? [] where !existingCounterIDs.contains(dto.id) {
+            modelContext.insert(dto.toModel()); importedCount += 1
+        }
+        for dto in export.recoveryMotivations ?? [] where !existingMotivationIDs.contains(dto.id) {
+            modelContext.insert(dto.toModel()); importedCount += 1
+        }
+        for dto in export.recoveryDayEntries ?? [] where !existingDayEntryIDs.contains(dto.id) {
+            modelContext.insert(dto.toModel()); importedCount += 1
+        }
+        RecoveryNotifications.refresh(using: modelContext)
 
         importResultMessage = importedCount == 0
             ? "Nothing new to import. Everything in that file is already here."
@@ -371,6 +391,11 @@ struct DataControlView: View {
         for item in decisionCategories { modelContext.delete(item) }
         for item in deEscalationScripts { modelContext.delete(item) }
         for item in affirmations { modelContext.delete(item) }
+        for item in recoveryCounters { modelContext.delete(item) }
+        for item in recoveryMotivations { modelContext.delete(item) }
+        for item in recoveryDayEntries { modelContext.delete(item) }
+        RecoveryNotifications.refresh(counters: [])
+        RecoveryWidgetSync.refresh(counters: [])
         clearJournalAttachments()
         showClearedAlert = true
     }
@@ -479,6 +504,10 @@ struct AnchorDataExport: Codable {
     var decisionCategories: [DecisionPresetCategoryDTO] = []
     var deEscalationScripts: [DeEscalationScriptDTO] = []
     var affirmations: [AffirmationDTO] = []
+    /// Optional so exports made before Recovery existed still decode and import.
+    var recoveryCounters: [RecoveryCounterDTO]? = nil
+    var recoveryMotivations: [RecoveryMotivationDTO]? = nil
+    var recoveryDayEntries: [RecoveryDayEntryDTO]? = nil
 }
 
 struct JournalEntryDTO: Codable {

@@ -62,6 +62,18 @@ struct PlanView: View {
                         }
                     }
 
+                    Anchor.TileRow(title: "Recovery") {
+                        NavigationLink { RecoveryHomeView() } label: {
+                            Anchor.TileButtonLabel(icon: "calendar.badge.checkmark", title: "Counters", tint: Anchor.Theme.sage)
+                        }
+                        NavigationLink { CravingToolView() } label: {
+                            Anchor.TileButtonLabel(icon: "wind", title: "Riding out an urge", tint: Anchor.Theme.accent)
+                        }
+                        NavigationLink { RecoveryMotivationsView() } label: {
+                            Anchor.TileButtonLabel(icon: "heart.fill", title: "Who I'm doing this for", tint: Anchor.Theme.accent)
+                        }
+                    }
+
                     Anchor.TileRow(title: "Data") {
                         NavigationLink { DataControlView() } label: {
                             Anchor.TileButtonLabel(icon: "externaldrive.fill", title: "Your data", tint: Anchor.Theme.accent)
@@ -139,6 +151,7 @@ struct PlanView: View {
                 NotificationScheduler.registerCategories()
                 // No permission prompt here: Anchor asks the first time the user turns on
                 // something that needs notifications (see NotificationScheduler.askForPermissionIfNeeded).
+                RecoveryNotifications.refresh(using: modelContext)
                 let scheduler = NotificationScheduler(context: modelContext)
                 refreshWidgetSnapshot()
                 rescheduleTriggerWindowNotifications(using: scheduler)

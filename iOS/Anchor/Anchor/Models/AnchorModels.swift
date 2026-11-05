@@ -8,6 +8,8 @@
 //  to score, streak, gamify, or track body/weight. If you're adding a
 //  property, ask "does this describe something the user wrote or chose,
 //  or does it grade them?" Only the former belongs in this file.
+//  (The optional Recovery area in RecoveryModels.swift is a documented, opt-in
+//  exception: a counter is a date the user chose, and is never scored.)
 //
 //  Journal is not a separate silo — JournalEntry is the one shared content
 //  pool. Bridge, Plan notifications, and Thread all read from it via
@@ -633,7 +635,8 @@ enum AnchorSchema {
             BridgeDraftItem.self, FeedbackLoopDiagram.self,
             ThreadMessage.self, SupportCalendarEntry.self, FutureNote.self, UnsentDraft.self,
             MascotLine.self, DecisionPresetCategory.self, DecisionPresetChoice.self,
-            DeEscalationScript.self, NextHourItem.self, Affirmation.self
+            DeEscalationScript.self, NextHourItem.self, Affirmation.self,
+            RecoveryCounter.self, RecoveryMotivation.self, RecoveryDayEntry.self
         ]
     }
 
