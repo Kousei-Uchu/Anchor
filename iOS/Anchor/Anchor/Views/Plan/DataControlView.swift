@@ -109,7 +109,7 @@ struct DataControlView: View {
                     showImporter = true
                 } label: {
                     Anchor.MenuRow(icon: "square.and.arrow.down", title: "Import from a previous export",
-                                   subtitle: "Anchor JSON export files only", tint: Anchor.Theme.sage)
+                                   subtitle: "Anchor JSON exports, including ones from earlier versions", tint: Anchor.Theme.sage)
                 }
                 if let importResultMessage {
                     Text(importResultMessage)
@@ -144,7 +144,7 @@ struct DataControlView: View {
                 }
             }
         }
-        .fileImporter(isPresented: $showImporter, allowedContentTypes: [.json]) { result in
+        .fileImporter(isPresented: $showImporter, allowedContentTypes: [.json, .plainText]) { result in
             handleImport(result)
         }
         .confirmationDialog("Clear all Anchor data?", isPresented: $showClearConfirm, titleVisibility: .visible) {
@@ -205,6 +205,8 @@ struct DataControlView: View {
         defer { if didAccess { url.stopAccessingSecurityScopedResource() } }
 
         guard let data = try? Data(contentsOf: url),
+              let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              !Set(object.keys).isDisjoint(with: AnchorDataExport.knownKeys),
               let export = try? JSONDecoder.anchorExport.decode(AnchorDataExport.self, from: data) else {
             importResultMessage = "That file doesn't look like an Anchor export."
             return
@@ -488,10 +490,40 @@ private extension JSONEncoder {
     }
 }
 private extension JSONDecoder {
+    /// Accepts ISO 8601 with or without fractional seconds, and plain numeric
+    /// timestamps, so exports written by older or hand-edited files still load.
     static var anchorExport: JSONDecoder {
         let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            if let seconds = try? container.decode(Double.self) {
+                // Foundation's default Date encoding: seconds since 1 Jan 2001.
+                return Date(timeIntervalSinceReferenceDate: seconds)
+            }
+            let text = try container.decode(String.self)
+            let plain = ISO8601DateFormatter()
+            if let date = plain.date(from: text) { return date }
+            let fractional = ISO8601DateFormatter()
+            fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let date = fractional.date(from: text) { return date }
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unrecognised date: \(text)")
+        }
         return decoder
+    }
+}
+
+/// Decodes one array element at a time, so a single unreadable record is
+/// skipped instead of making the whole file fail to import.
+private struct LossyElement<T: Decodable>: Decodable {
+    let value: T?
+    init(from decoder: Decoder) throws { value = try? T(from: decoder) }
+}
+
+private extension KeyedDecodingContainer {
+    /// `nil` when the key is missing (an older export); otherwise every element that could be read.
+    func lossyArray<T: Decodable>(_ type: T.Type, forKey key: Key) -> [T]? {
+        guard let elements = try? decode([LossyElement<T>].self, forKey: key) else { return nil }
+        return elements.compactMap(\.value)
     }
 }
 
@@ -516,6 +548,41 @@ struct AnchorDataExport: Codable {
     var recoveryMotivations: [RecoveryMotivationDTO]? = nil
     var recoveryDayEntries: [RecoveryDayEntryDTO]? = nil
     var recoveryUrges: [RecoveryUrgeDTO]? = nil
+}
+
+/// Every section is optional in the file: an export from any earlier version,
+/// or one missing a section, imports whatever it does contain.
+extension AnchorDataExport {
+    /// Top-level sections an Anchor export can hold. A file with none of them isn't an Anchor export.
+    static let knownKeys: Set<String> = [
+        "journalEntries", "checkIns", "contacts", "groundingTools", "safetyPlans", "triggerWindows",
+        "bridgeDraftItems", "diagrams", "threadMessages", "supportCalendarEntries", "futureNotes",
+        "unsentDrafts", "decisionCategories", "deEscalationScripts", "affirmations",
+        "recoveryCounters", "recoveryMotivations", "recoveryDayEntries", "recoveryUrges"
+    ]
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        journalEntries = c.lossyArray(JournalEntryDTO.self, forKey: .journalEntries) ?? []
+        checkIns = c.lossyArray(CheckInDTO.self, forKey: .checkIns) ?? []
+        contacts = c.lossyArray(TrustedContactDTO.self, forKey: .contacts) ?? []
+        groundingTools = c.lossyArray(GroundingToolDTO.self, forKey: .groundingTools) ?? []
+        safetyPlans = c.lossyArray(SafetyPlanDTO.self, forKey: .safetyPlans) ?? []
+        triggerWindows = c.lossyArray(TriggerWindowDTO.self, forKey: .triggerWindows) ?? []
+        bridgeDraftItems = c.lossyArray(BridgeDraftItemDTO.self, forKey: .bridgeDraftItems) ?? []
+        diagrams = c.lossyArray(FeedbackLoopDiagramDTO.self, forKey: .diagrams) ?? []
+        threadMessages = c.lossyArray(ThreadMessageDTO.self, forKey: .threadMessages) ?? []
+        supportCalendarEntries = c.lossyArray(SupportCalendarEntryDTO.self, forKey: .supportCalendarEntries) ?? []
+        futureNotes = c.lossyArray(FutureNoteDTO.self, forKey: .futureNotes) ?? []
+        unsentDrafts = c.lossyArray(UnsentDraftDTO.self, forKey: .unsentDrafts) ?? []
+        decisionCategories = c.lossyArray(DecisionPresetCategoryDTO.self, forKey: .decisionCategories) ?? []
+        deEscalationScripts = c.lossyArray(DeEscalationScriptDTO.self, forKey: .deEscalationScripts) ?? []
+        affirmations = c.lossyArray(AffirmationDTO.self, forKey: .affirmations) ?? []
+        recoveryCounters = c.lossyArray(RecoveryCounterDTO.self, forKey: .recoveryCounters)
+        recoveryMotivations = c.lossyArray(RecoveryMotivationDTO.self, forKey: .recoveryMotivations)
+        recoveryDayEntries = c.lossyArray(RecoveryDayEntryDTO.self, forKey: .recoveryDayEntries)
+        recoveryUrges = c.lossyArray(RecoveryUrgeDTO.self, forKey: .recoveryUrges)
+    }
 }
 
 struct JournalEntryDTO: Codable {

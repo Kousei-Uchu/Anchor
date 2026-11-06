@@ -2,7 +2,7 @@
 //  RecoverySummaryTab.swift
 //  Anchor
 //
-//  The Summary tab of a counter: a row of swipeable pages (live time, this
+//  The Summary tab of a counter: a row of swipeable pages (live time as nested rings, this
 //  month, total days, streak record, current streak, start date) with Share,
 //  Log urge and Start again underneath.
 //
@@ -29,7 +29,7 @@ struct RecoverySummaryTab: View {
                 RecoveryStartPage(counter: counter).tag(5)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
-            .frame(height: 340)
+            .frame(height: 410)
 
             HStack(spacing: 8) {
                 ForEach(0..<pageCount, id: \.self) { index in
@@ -97,75 +97,142 @@ private struct StatRow: View {
 
 // MARK: - Pages
 
-/// Live time on this run: days, hours, minutes and seconds as slanted bars.
+/// Live time on this run as nested circles: a solid circle in the middle with the
+/// counter's name, and one concentric ring per unit (days innermost, seconds
+/// outermost). Every ring is driven by continuous elapsed time rather than the
+/// whole-number value, so the arcs glide instead of snapping from one day to the next.
 private struct RecoveryTimePage: View {
     let counter: RecoveryCounter
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         SummaryPage(title: "Time on this run") {
-            TimelineView(.periodic(from: .now, by: 1)) { context in
-                VStack(spacing: 10) {
-                    ForEach(rows(at: context.date), id: \.unit) { row in
-                        SlantedMeter(value: row.value, unit: row.unit, fraction: row.fraction)
-                    }
+            if reduceMotion {
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    NestedTimeRings(name: counter.name, start: counter.currentRun?.start, now: context.date)
                 }
-                .padding(.vertical, 8)
+            } else {
+                TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
+                    NestedTimeRings(name: counter.name, start: counter.currentRun?.start, now: context.date)
+                }
             }
         }
     }
+}
 
-    private struct Row { let unit: String; let value: Int; let fraction: Double }
+private struct NestedTimeRings: View {
+    let name: String
+    let start: Date?
+    let now: Date
 
-    private func rows(at now: Date) -> [Row] {
-        guard let start = counter.currentRun?.start else { return [] }
-        let total = Int(max(0, now.timeIntervalSince(start)))
-        let d = total / 86_400, h = total % 86_400 / 3_600, m = total % 3_600 / 60, s = total % 60
-        let all: [Row] = [
-            Row(unit: d == 1 ? "day" : "days", value: d, fraction: min(1, Double(d) / 30)),
-            Row(unit: h == 1 ? "hour" : "hours", value: h, fraction: Double(h) / 24),
-            Row(unit: m == 1 ? "minute" : "minutes", value: m, fraction: Double(m) / 60),
-            Row(unit: s == 1 ? "second" : "seconds", value: s, fraction: Double(s) / 60)
+    private struct Ring: Identifiable {
+        let id: Int
+        let value: Int
+        let unit: String
+        let fraction: Double
+        let tint: Color
+    }
+
+    // Sage (days) blending to terracotta (seconds), using the theme's own two colours.
+    private static let tints: [Color] = [
+        Anchor.Theme.sage,
+        Color(red: 0.651, green: 0.598, blue: 0.491),
+        Color(red: 0.721, green: 0.537, blue: 0.432),
+        Anchor.Theme.accent
+    ]
+
+    private var elapsed: Double { max(0, now.timeIntervalSince(start ?? now)) }
+
+    private var rings: [Ring] {
+        let t = elapsed
+        let whole = Int(t)
+        let d = whole / 86_400, h = whole % 86_400 / 3_600, m = whole % 3_600 / 60, s = whole % 60
+
+        // Days have no bigger cycle to fill, so that ring fills toward the next milestone.
+        let daysElapsed = t / 86_400
+        let previous = RecoveryMilestones.reached(Int(daysElapsed)).last ?? 0
+        let next = RecoveryMilestones.next(after: Int(daysElapsed))
+        let daysFraction = Double(next - previous) > 0 ? (daysElapsed - Double(previous)) / Double(next - previous) : 0
+
+        return [
+            Ring(id: 0, value: d, unit: d == 1 ? "day" : "days", fraction: daysFraction, tint: Self.tints[0]),
+            Ring(id: 1, value: h, unit: h == 1 ? "hour" : "hours", fraction: t.truncatingRemainder(dividingBy: 86_400) / 86_400, tint: Self.tints[1]),
+            Ring(id: 2, value: m, unit: m == 1 ? "minute" : "minutes", fraction: t.truncatingRemainder(dividingBy: 3_600) / 3_600, tint: Self.tints[2]),
+            Ring(id: 3, value: s, unit: s == 1 ? "second" : "seconds", fraction: t.truncatingRemainder(dividingBy: 60) / 60, tint: Self.tints[3])
         ]
-        let startIndex = d > 0 ? 0 : (h > 0 ? 1 : 2)
-        return Array(all[startIndex...].prefix(3))
     }
-}
 
-private struct SlantedBar: Shape {
-    var slant: CGFloat = 16
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.move(to: CGPoint(x: rect.minX, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.maxX - slant, y: rect.maxY))
-        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
-        path.closeSubpath()
-        return path
+    private var nextMilestoneLabel: String {
+        RecoveryMilestones.label(RecoveryMilestones.next(after: Int(elapsed / 86_400)))
     }
-}
-
-private struct SlantedMeter: View {
-    let value: Int
-    let unit: String
-    let fraction: Double
 
     var body: some View {
-        GeometryReader { proxy in
-            ZStack(alignment: .leading) {
-                SlantedBar().fill(Color.secondary.opacity(0.14))
-                SlantedBar()
-                    .fill(LinearGradient(colors: [Anchor.Theme.sage, Anchor.Theme.accent.opacity(0.85)],
-                                         startPoint: .leading, endPoint: .trailing))
-                    .frame(width: max(110, proxy.size.width * CGFloat(fraction)))
-                HStack(spacing: 6) {
-                    Text("\(value)").font(.system(.title3, design: .rounded).weight(.bold)).italic()
-                    Text(unit).font(.system(.title3, design: .rounded)).italic()
+        let rings = self.rings
+        VStack(spacing: 10) {
+            GeometryReader { proxy in
+                let d = min(proxy.size.width, proxy.size.height)
+                let lineWidth = d * 0.035
+                let firstRadius = d * 0.27
+                let step = d * 0.07
+                let centreRadius = d * 0.2
+
+                ZStack {
+                    // Rings
+                    ForEach(rings) { ring in
+                        let radius = firstRadius + CGFloat(ring.id) * step
+                        ZStack {
+                            Circle().stroke(Color.secondary.opacity(0.14), lineWidth: lineWidth)
+                            Circle()
+                                .trim(from: 0, to: CGFloat(min(1, max(0, ring.fraction))))
+                                .stroke(ring.tint, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+                                .rotationEffect(.degrees(-90))
+                                .opacity(ring.fraction < 0.002 ? 0 : 1)
+                        }
+                        .frame(width: radius * 2, height: radius * 2)
+                    }
+
+                    // Solid centre with the counter's name
+                    Circle()
+                        .fill(LinearGradient(colors: [Anchor.Theme.sage, Anchor.Theme.accent.opacity(0.85)],
+                                             startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .frame(width: centreRadius * 2, height: centreRadius * 2)
+                        .overlay(
+                            Text(name)
+                                .font(.system(size: d * 0.065, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.white)
+                                .multilineTextAlignment(.center)
+                                .lineLimit(3)
+                                .minimumScaleFactor(0.5)
+                                .padding(d * 0.04)
+                        )
+
+                    // Labels, sitting on each ring just left of the 12 o'clock start
+                    ForEach(rings) { ring in
+                        let radius = firstRadius + CGFloat(ring.id) * step
+                        let labelWidth = d / 2 - 4
+                        Text("\(ring.value) \(ring.unit)")
+                            .font(.system(size: d * 0.036, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundStyle(.primary)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(.thinMaterial))
+                            .frame(width: labelWidth, alignment: .trailing)
+                            .position(x: labelWidth / 2, y: d / 2 - radius)
+                    }
                 }
-                .foregroundStyle(.white)
-                .padding(.leading, 14)
+                .frame(width: d, height: d)
+                .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
             }
+            .aspectRatio(1, contentMode: .fit)
+            .frame(maxWidth: 300)
+
+            Text("The days ring fills toward \(nextMilestoneLabel)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
-        .frame(height: 44)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(name): " + rings.reversed().map { "\($0.value) \($0.unit)" }.joined(separator: ", "))
     }
 }
 

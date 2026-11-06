@@ -14,7 +14,7 @@ Ship this after v1 is approved. It adds data the v1 privacy policy does not desc
 
 ## The counter screen
 Each counter opens in tabs: **Summary, Savings, Calendar, Urges, Reasons, Today**.
-- **Summary** is six swipeable pages: live time on this run (days, hours, minutes, seconds as slanted bars), progress this month (a dot for every day), total days with whole weekends, fresh starts and first start date, the streak record against your personal best, your current streak, and your start date. Share, Log urge and Start again sit underneath.
+- **Summary** is six swipeable pages: live time on this run (a solid centre circle with the counter's name inside concentric rings for days, hours, minutes and seconds, each labelled and driven by continuous elapsed time so the arcs glide rather than step; the days ring fills toward the next milestone), progress this month (a dot for every day), total days with whole weekends, fresh starts and first start date, the streak record against your personal best, your current streak, and your start date. Share, Log urge and Start again sit underneath.
 - **Calendar** shows a month at a time. Sober days are joined pills, a day you started again is a circled cross, and a "Streaks" row opens the history.
 - **Streaks and Times.** The streak list shows every run with a bar against the longest one and a star on the best. Times lists how many times it happened on each slip day, and has a "before tracking" reference number.
 - **Urges.** Log an urge with when, how strong it felt and a note, then optionally go straight into "riding out an urge". The tab shows this week, this month and the last 14 days.
@@ -35,7 +35,7 @@ Each counter opens in tabs: **Summary, Savings, Calendar, Urges, Reasons, Today*
 
 ## Data safety
 - The three new models are additive, so existing stores migrate automatically. Do not rename or retype their fields after release without a migration.
-- Export files gain three optional arrays. Exports made before v2 still import. A v2 export imported into an older build is accepted, and the Recovery data in it is ignored.
+- Export files gain optional recovery arrays. Import is tolerant: any missing section is treated as empty, a single unreadable record is skipped rather than failing the file, and dates are accepted with or without fractional seconds. Exports made before v2 still import. A v2 export imported into an older build is accepted, and the Recovery data in it is ignored.
 - "Clear everything" deletes counters, motivations, pledges and reviews, cancels Recovery reminders, and empties the counter widget.
 
 ## Before you release it
