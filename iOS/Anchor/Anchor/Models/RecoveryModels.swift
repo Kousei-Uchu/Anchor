@@ -149,6 +149,9 @@ final class RecoveryCounter {
     var createdAt: Date
     var isArchived: Bool
 
+    /// "Before tracking, on a typical day, how many times did it happen?" Just a reference note.
+    var priorTimesPerDay: Int = 0
+
     static var defaultCurrencyCode: String { Locale.current.currency?.identifier ?? "USD" }
 
     init(id: UUID = UUID(),
@@ -175,6 +178,7 @@ final class RecoveryCounter {
         self.sortOrder = sortOrder
         self.createdAt = createdAt
         self.isArchived = false
+        self.priorTimesPerDay = 0
     }
 
     // MARK: Runs
@@ -186,11 +190,9 @@ final class RecoveryCounter {
 
     var currentRun: RecoveryRun? { runs.last(where: { $0.end == nil }) }
 
+    /// Whole elapsed days (like a stopwatch): 23 hours is 0 days, 25 hours is 1.
     static func wholeDays(from start: Date, to end: Date) -> Int {
-        let calendar = Calendar.current
-        let a = calendar.startOfDay(for: start)
-        let b = calendar.startOfDay(for: end)
-        return max(0, calendar.dateComponents([.day], from: a, to: b).day ?? 0)
+        max(0, Calendar.current.dateComponents([.day], from: start, to: end).day ?? 0)
     }
 
     func currentRunDays(now: Date = .now) -> Int {
@@ -236,6 +238,8 @@ final class RecoveryCounter {
         }
         runs = updated
     }
+
+    func timeline(now: Date = .now) -> RecoveryTimeline { RecoveryTimeline(runs: runs, now: now) }
 
     // MARK: Milestones
 
@@ -284,8 +288,11 @@ final class RecoveryDayEntry {
     var hard: String
     var tomorrow: String
 
+    /// How many times a slip happened on this day (0 = none). Powers the "Times" list.
+    var slipTimes: Int = 0
+
     init(id: UUID = UUID(), counterID: UUID, day: Date, pledgedAt: Date? = nil, reviewedAt: Date? = nil,
-         helped: String = "", hard: String = "", tomorrow: String = "") {
+         helped: String = "", hard: String = "", tomorrow: String = "", slipTimes: Int = 0) {
         self.id = id
         self.counterID = counterID
         self.day = day
@@ -294,6 +301,120 @@ final class RecoveryDayEntry {
         self.helped = helped
         self.hard = hard
         self.tomorrow = tomorrow
+        self.slipTimes = slipTimes
+    }
+}
+
+// MARK: - Urges
+
+enum UrgeStrength: String, Codable, CaseIterable, Identifiable {
+    case mild, strong, intense
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .mild: return "Mild"
+        case .strong: return "Strong"
+        case .intense: return "Intense"
+        }
+    }
+}
+
+/// A logged urge. How strong it felt is the user's own description, not a score.
+@Model
+final class RecoveryUrge {
+    @Attribute(.unique) var id: UUID
+    var counterID: UUID
+    var date: Date
+    var strength: UrgeStrength
+    var note: String
+
+    init(id: UUID = UUID(), counterID: UUID, date: Date = .now, strength: UrgeStrength = .strong, note: String = "") {
+        self.id = id
+        self.counterID = counterID
+        self.date = date
+        self.strength = strength
+        self.note = note
+    }
+}
+
+// MARK: - Timeline (calendar, streaks and stats)
+
+enum RecoveryDayStatus { case sober, slip, untracked }
+
+struct RecoveryStreak: Identifiable {
+    let id: Int
+    let start: Date
+    let end: Date?
+    var isCurrent: Bool { end == nil }
+
+    func length(now: Date) -> TimeInterval { max(0, (end ?? now).timeIntervalSince(start)) }
+    func wholeDays(now: Date) -> Int { RecoveryCounter.wholeDays(from: start, to: end ?? now) }
+
+    /// "4 day streak", "23 hour streak", "12 minute streak".
+    func lengthText(now: Date) -> String {
+        let days = wholeDays(now: now)
+        if days >= 1 { return "\(days) day streak" }
+        let hours = Int(length(now: now) / 3600)
+        if hours >= 1 { return "\(hours) hour streak" }
+        return "\(Int(length(now: now) / 60)) minute streak"
+    }
+}
+
+/// Everything the calendar and statistics need, worked out once from the runs.
+struct RecoveryTimeline {
+    let runs: [RecoveryRun]
+    let now: Date
+    private(set) var soberDays: Set<Date> = []
+    private(set) var slipDays: Set<Date> = []
+
+    init(runs: [RecoveryRun], now: Date = .now) {
+        self.runs = runs
+        self.now = now
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: now)
+        for run in runs {
+            let first = calendar.startOfDay(for: run.start)
+            let last = min(calendar.startOfDay(for: run.end ?? now), today)
+            if let end = run.end { slipDays.insert(calendar.startOfDay(for: end)) }
+            var day = first
+            var safety = 0
+            while day <= last && safety < 20000 {
+                soberDays.insert(day)
+                guard let next = calendar.date(byAdding: .day, value: 1, to: day) else { break }
+                day = next
+                safety += 1
+            }
+        }
+        soberDays.subtract(slipDays)
+    }
+
+    func status(_ day: Date) -> RecoveryDayStatus {
+        let d = Calendar.current.startOfDay(for: day)
+        if slipDays.contains(d) { return .slip }
+        return soberDays.contains(d) ? .sober : .untracked
+    }
+
+    var streaks: [RecoveryStreak] {
+        runs.enumerated().map { RecoveryStreak(id: $0.offset, start: $0.element.start, end: $0.element.end) }
+    }
+    var longestStreakDays: Int { streaks.map { $0.wholeDays(now: now) }.max() ?? 0 }
+    var freshStarts: Int { max(0, runs.count - 1) }
+    var originalStart: Date? { runs.first?.start }
+
+    func soberDayCount(inMonthOf date: Date) -> Int {
+        guard let interval = Calendar.current.dateInterval(of: .month, for: date) else { return 0 }
+        return soberDays.filter { interval.contains($0) }.count
+    }
+
+    /// Weekends (Saturday and Sunday) that were fully inside a run and are already over.
+    func wholeWeekends() -> Int {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: now)
+        return soberDays.filter { day in
+            guard calendar.component(.weekday, from: day) == 7 else { return false }
+            guard let sunday = calendar.date(byAdding: .day, value: 1, to: day), sunday < today else { return false }
+            return soberDays.contains(sunday)
+        }.count
     }
 }
 
@@ -313,12 +434,14 @@ struct RecoveryCounterDTO: Codable {
     var sortOrder: Int
     var createdAt: Date
     var isArchived: Bool
+    var priorTimesPerDay: Int?
 
     init(_ c: RecoveryCounter) {
         id = c.id; name = c.name; discreetLabel = c.discreetLabel; showNameOutsideApp = c.showNameOutsideApp
         mode = c.mode; runs = c.runs; savingsAmount = c.savingsAmount; savingsPeriod = c.savingsPeriod
         currencyCode = c.currencyCode; acknowledgedMilestones = c.acknowledgedMilestones
         sortOrder = c.sortOrder; createdAt = c.createdAt; isArchived = c.isArchived
+        priorTimesPerDay = c.priorTimesPerDay
     }
 
     func toModel() -> RecoveryCounter {
@@ -328,6 +451,7 @@ struct RecoveryCounterDTO: Codable {
         c.runs = runs
         c.acknowledgedMilestones = acknowledgedMilestones
         c.isArchived = isArchived
+        c.priorTimesPerDay = priorTimesPerDay ?? 0
         return c
     }
 }
@@ -352,14 +476,27 @@ struct RecoveryDayEntryDTO: Codable {
     var helped: String
     var hard: String
     var tomorrow: String
+    var slipTimes: Int?
 
     init(_ e: RecoveryDayEntry) {
         id = e.id; counterID = e.counterID; day = e.day; pledgedAt = e.pledgedAt; reviewedAt = e.reviewedAt
         helped = e.helped; hard = e.hard; tomorrow = e.tomorrow
+        slipTimes = e.slipTimes
     }
 
     func toModel() -> RecoveryDayEntry {
         RecoveryDayEntry(id: id, counterID: counterID, day: day, pledgedAt: pledgedAt, reviewedAt: reviewedAt,
-                         helped: helped, hard: hard, tomorrow: tomorrow)
+                         helped: helped, hard: hard, tomorrow: tomorrow, slipTimes: slipTimes ?? 0)
     }
+}
+
+struct RecoveryUrgeDTO: Codable {
+    var id: UUID
+    var counterID: UUID
+    var date: Date
+    var strength: UrgeStrength
+    var note: String
+
+    init(_ u: RecoveryUrge) { id = u.id; counterID = u.counterID; date = u.date; strength = u.strength; note = u.note }
+    func toModel() -> RecoveryUrge { RecoveryUrge(id: id, counterID: counterID, date: date, strength: strength, note: note) }
 }

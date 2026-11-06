@@ -12,10 +12,24 @@ Ship this after v1 is approved. It adds data the v1 privacy policy does not desc
 - **Riding out an urge.** A 5 to 20 minute timer with a slow breathing circle, the user's motivations, and their existing grounding tools. Optionally saves a line to the journal.
 - **Discreet by default.** Widgets and reminders use a generic label ("Your counter", "A quiet moment for yourself?") unless the user turns on "Show this name outside the app" for that counter.
 
+## The counter screen
+Each counter opens in tabs: **Summary, Savings, Calendar, Urges, Reasons, Today**.
+- **Summary** is six swipeable pages: live time on this run (days, hours, minutes, seconds as slanted bars), progress this month (a dot for every day), total days with whole weekends, fresh starts and first start date, the streak record against your personal best, your current streak, and your start date. Share, Log urge and Start again sit underneath.
+- **Calendar** shows a month at a time. Sober days are joined pills, a day you started again is a circled cross, and a "Streaks" row opens the history.
+- **Streaks and Times.** The streak list shows every run with a bar against the longest one and a star on the best. Times lists how many times it happened on each slip day, and has a "before tracking" reference number.
+- **Urges.** Log an urge with when, how strong it felt and a note, then optionally go straight into "riding out an urge". The tab shows this week, this month and the last 14 days.
+- **Days are whole elapsed days** (24 hour periods from the start time), like a stopwatch, so "My streak is 0 days" means less than 24 hours.
+
+### Deliberately different from other trackers
+- Anchor's own colours, icons and wording, and no copied artwork or text.
+- It says "Start again" and "Fresh starts", not "Reset" and "Comebacks".
+- No community, no pausing a counter, no reordering of the summary pages. These can be added later.
+- Times and urges are the user's own record and are never scored, ranked or compared.
+
 ## Where the code is
 - `Models/RecoveryModels.swift` (also compiled into the widget target, because the shared schema lists these models)
 - `Support/RecoverySupport.swift` (reminders, widget sync, delete)
-- `Views/Recovery/` (six screens)
+- `Views/Recovery/` (the counter tabs, pledge and review, motivations and the craving tool)
 - `Support/WidgetDataStore.swift` and `AnchorWidget/` (the counter widget)
 - Hooks: the Recovery tile row in `PlanView`, export, import and Clear everything in `DataControlView`, and three entries in `AnchorSchema.models`.
 
@@ -28,6 +42,9 @@ Ship this after v1 is approved. It adds data the v1 privacy policy does not desc
 1. **Test on a device:**
    - Add a counter with a past start date. No celebration should appear for days already behind it.
    - Slip and restart in both modes. In "current run and total days" the total must survive.
+   - Open every tab on a counter that has a slip in its history. Page through all six Summary pages, flip the calendar back a month, and open Streaks and Times.
+   - Log an urge, then "Save, then ride it out". Delete one from its context menu.
+   - Start again with "Times that day" set to 3. It should appear in Times.
    - Edit the start date, then delete a counter. Do the delete from the Edit sheet and check the app does not crash.
    - Turn each reminder on. The permission prompt should appear then, and the text must be generic.
    - Add the counter widget in each size. Check it shows the discreet label, and that the count moves on after midnight.

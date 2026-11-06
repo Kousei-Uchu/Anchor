@@ -39,6 +39,7 @@ struct DataControlView: View {
     @Query private var recoveryCounters: [RecoveryCounter]
     @Query private var recoveryMotivations: [RecoveryMotivation]
     @Query private var recoveryDayEntries: [RecoveryDayEntry]
+    @Query private var recoveryUrges: [RecoveryUrge]
 
     @State private var exportURL: IdentifiableURL?
     @State private var showDateRangeSheet: DateRangeExportKind?
@@ -188,7 +189,8 @@ struct DataControlView: View {
             affirmations: affirmations.map(AffirmationDTO.init),
             recoveryCounters: recoveryCounters.map(RecoveryCounterDTO.init),
             recoveryMotivations: recoveryMotivations.map(RecoveryMotivationDTO.init),
-            recoveryDayEntries: recoveryDayEntries.map(RecoveryDayEntryDTO.init)
+            recoveryDayEntries: recoveryDayEntries.map(RecoveryDayEntryDTO.init),
+            recoveryUrges: recoveryUrges.map(RecoveryUrgeDTO.init)
         )
         guard let data = try? JSONEncoder.anchorExport.encode(export) else { return }
         writeAndShare(data: data, filename: "anchor-export-\(fileTimestamp()).json")
@@ -277,6 +279,7 @@ struct DataControlView: View {
         let existingCounterIDs = Set(recoveryCounters.map(\.id))
         let existingMotivationIDs = Set(recoveryMotivations.map(\.id))
         let existingDayEntryIDs = Set(recoveryDayEntries.map(\.id))
+        let existingUrgeIDs = Set(recoveryUrges.map(\.id))
         for dto in export.recoveryCounters ?? [] where !existingCounterIDs.contains(dto.id) {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
@@ -284,6 +287,9 @@ struct DataControlView: View {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
         for dto in export.recoveryDayEntries ?? [] where !existingDayEntryIDs.contains(dto.id) {
+            modelContext.insert(dto.toModel()); importedCount += 1
+        }
+        for dto in export.recoveryUrges ?? [] where !existingUrgeIDs.contains(dto.id) {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
         RecoveryNotifications.refresh(using: modelContext)
@@ -394,6 +400,7 @@ struct DataControlView: View {
         for item in recoveryCounters { modelContext.delete(item) }
         for item in recoveryMotivations { modelContext.delete(item) }
         for item in recoveryDayEntries { modelContext.delete(item) }
+        for item in recoveryUrges { modelContext.delete(item) }
         RecoveryNotifications.refresh(counters: [])
         RecoveryWidgetSync.refresh(counters: [])
         clearJournalAttachments()
@@ -508,6 +515,7 @@ struct AnchorDataExport: Codable {
     var recoveryCounters: [RecoveryCounterDTO]? = nil
     var recoveryMotivations: [RecoveryMotivationDTO]? = nil
     var recoveryDayEntries: [RecoveryDayEntryDTO]? = nil
+    var recoveryUrges: [RecoveryUrgeDTO]? = nil
 }
 
 struct JournalEntryDTO: Codable {

@@ -171,6 +171,7 @@ struct RecoverySlipView: View {
 
     @State private var slipDate = Date.now
     @State private var restartDate = Date.now
+    @State private var times = 1
 
     var body: some View {
         Form {
@@ -184,6 +185,12 @@ struct RecoverySlipView: View {
 
             Section("When did it happen?") {
                 DatePicker("Date", selection: $slipDate, in: ...Date.now)
+            }
+
+            Section {
+                Stepper("Times that day: \(times)", value: $times, in: 1...50)
+            } footer: {
+                Text("Optional, and just for your own record. It appears in the Times list. Leave it at 1 if you'd rather not say.")
             }
 
             Section {
@@ -202,10 +209,24 @@ struct RecoverySlipView: View {
             ToolbarItem(placement: .confirmationAction) {
                 Button("Start again") {
                     counter.recordSlip(on: slipDate, restartAt: restartDate)
+                    recordTimes()
                     RecoveryNotifications.refresh(using: modelContext)
                     dismiss()
                 }
             }
         }
+    }
+
+    /// Remembers how many times it happened on the day of the slip.
+    private func recordTimes() {
+        let day = Calendar.current.startOfDay(for: slipDate)
+        let id = counter.id
+        let existing = try? modelContext.fetch(FetchDescriptor<RecoveryDayEntry>(predicate: #Predicate { $0.counterID == id && $0.day == day }))
+        let entry = existing?.first ?? {
+            let created = RecoveryDayEntry(counterID: id, day: day)
+            modelContext.insert(created)
+            return created
+        }()
+        entry.slipTimes += times
     }
 }

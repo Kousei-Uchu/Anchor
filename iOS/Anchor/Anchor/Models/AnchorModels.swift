@@ -636,7 +636,7 @@ enum AnchorSchema {
             ThreadMessage.self, SupportCalendarEntry.self, FutureNote.self, UnsentDraft.self,
             MascotLine.self, DecisionPresetCategory.self, DecisionPresetChoice.self,
             DeEscalationScript.self, NextHourItem.self, Affirmation.self,
-            RecoveryCounter.self, RecoveryMotivation.self, RecoveryDayEntry.self
+            RecoveryCounter.self, RecoveryMotivation.self, RecoveryDayEntry.self, RecoveryUrge.self
         ]
     }
 

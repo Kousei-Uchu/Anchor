@@ -79,6 +79,10 @@
 		BD1529B8430691CC5324CA89 /* RecoveryMotivationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FE546DAE72C16511E6F0464 /* RecoveryMotivationsView.swift */; };
 		165999B4C60FDB505A45030B /* CravingToolView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55C8DD2C95B58EFD9E5AFE38 /* CravingToolView.swift */; };
 		8A67639F74080F56C5AA328F /* RecoveryModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A37DFE702393E0FA6C8BBC2 /* RecoveryModels.swift */; };
+		40051E467AB4A36EE0987B35 /* RecoverySummaryTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = D40CCA85F0F54F30445A3577 /* RecoverySummaryTab.swift */; };
+		44242B30E58D656EC4F3378C /* RecoveryCalendarTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = E18A0A5ABCCA95BF8E2F8559 /* RecoveryCalendarTab.swift */; };
+		19CD5840F1AEC544AD77BF39 /* RecoveryStreaksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F823CDEF7F73EDD77B6C2916 /* RecoveryStreaksView.swift */; };
+		768915E2ED4A22437740AF0D /* RecoveryUrgesTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D00D68DF6DB75D0C3F7EB93 /* RecoveryUrgesTab.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -188,6 +192,10 @@
 		2D549DC46C03C21BB00FA9EA /* RecoveryDailyViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryDailyViews.swift; sourceTree = "<group>"; };
 		3FE546DAE72C16511E6F0464 /* RecoveryMotivationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryMotivationsView.swift; sourceTree = "<group>"; };
 		55C8DD2C95B58EFD9E5AFE38 /* CravingToolView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CravingToolView.swift; sourceTree = "<group>"; };
+		D40CCA85F0F54F30445A3577 /* RecoverySummaryTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoverySummaryTab.swift; sourceTree = "<group>"; };
+		E18A0A5ABCCA95BF8E2F8559 /* RecoveryCalendarTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryCalendarTab.swift; sourceTree = "<group>"; };
+		F823CDEF7F73EDD77B6C2916 /* RecoveryStreaksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryStreaksView.swift; sourceTree = "<group>"; };
+		3D00D68DF6DB75D0C3F7EB93 /* RecoveryUrgesTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryUrgesTab.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -411,7 +419,11 @@
 				2D549DC46C03C21BB00FA9EA /* RecoveryDailyViews.swift */,
 				3FE546DAE72C16511E6F0464 /* RecoveryMotivationsView.swift */,
 				55C8DD2C95B58EFD9E5AFE38 /* CravingToolView.swift */,
-			);
+							D40CCA85F0F54F30445A3577 /* RecoverySummaryTab.swift */,
+				E18A0A5ABCCA95BF8E2F8559 /* RecoveryCalendarTab.swift */,
+				F823CDEF7F73EDD77B6C2916 /* RecoveryStreaksView.swift */,
+				3D00D68DF6DB75D0C3F7EB93 /* RecoveryUrgesTab.swift */,
+);
 			path = Recovery;
 			sourceTree = "<group>";
 		};
@@ -591,6 +603,10 @@
 				36702EAD50B5B6386984383D /* RecoveryModels.swift in Sources */,
 				531B53A829A58820D8D01370 /* RecoverySupport.swift in Sources */,
 				933BAE1CA6ED3B8C9B1D09A9 /* RecoveryHomeView.swift in Sources */,
+				40051E467AB4A36EE0987B35 /* RecoverySummaryTab.swift in Sources */,
+				44242B30E58D656EC4F3378C /* RecoveryCalendarTab.swift in Sources */,
+				19CD5840F1AEC544AD77BF39 /* RecoveryStreaksView.swift in Sources */,
+				768915E2ED4A22437740AF0D /* RecoveryUrgesTab.swift in Sources */,
 				39DA0A61353314B90D4BDCC7 /* RecoveryCounterEditorView.swift in Sources */,
 				D7450C847008FD8A42518AA1 /* RecoveryCounterDetailView.swift in Sources */,
 				07F174CB78A6BBEEF965D4F0 /* RecoveryDailyViews.swift in Sources */,

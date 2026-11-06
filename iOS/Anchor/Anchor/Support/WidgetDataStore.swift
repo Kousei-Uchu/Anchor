@@ -97,9 +97,8 @@ struct CounterWidgetItem: Codable, Identifiable {
     let mode: String
 
     func runDays(now: Date) -> Int {
-        let calendar = Calendar.current
-        let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: runStart), to: calendar.startOfDay(for: now)).day ?? 0
-        return max(0, days)
+        // Whole elapsed days, matching the app.
+        max(0, Calendar.current.dateComponents([.day], from: runStart, to: now).day ?? 0)
     }
 
     func totalDays(now: Date) -> Int { priorDays + runDays(now: now) }

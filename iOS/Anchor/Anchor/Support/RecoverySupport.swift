@@ -73,8 +73,9 @@ enum RecoveryNotifications {
                 while added < 3 && attempts < 8 {
                     day = RecoveryMilestones.next(after: day)
                     attempts += 1
-                    guard let dayStart = calendar.date(byAdding: .day, value: day, to: calendar.startOfDay(for: run.start)),
-                          let fire = calendar.date(bySettingHour: 9, minute: 0, second: 0, of: dayStart),
+                    guard let reached = calendar.date(byAdding: .day, value: day, to: run.start),
+                          let fire = calendar.nextDate(after: reached.addingTimeInterval(-1), matching: DateComponents(hour: 9, minute: 0),
+                                                       matchingPolicy: .nextTime),
                           fire > now else { continue }
                     let body = counter.showNameOutsideApp
                         ? "\(counter.name): \(RecoveryMilestones.label(day))"
@@ -141,6 +142,8 @@ enum RecoveryStore {
         let id = counter.id
         let entries = (try? context.fetch(FetchDescriptor<RecoveryDayEntry>(predicate: #Predicate { $0.counterID == id }))) ?? []
         for entry in entries { context.delete(entry) }
+        let urges = (try? context.fetch(FetchDescriptor<RecoveryUrge>(predicate: #Predicate { $0.counterID == id }))) ?? []
+        for urge in urges { context.delete(urge) }
         context.delete(counter)
         RecoveryNotifications.refresh(using: context)
     }
