@@ -154,3 +154,67 @@ struct RecoveryReviewView: View {
         dismiss()
     }
 }
+
+// MARK: - Shared: check-in nudge and journal chips
+
+/// A soft, dismissible offer to check in after a hard moment (starting again, or riding out an
+/// urge). Never shown at any other time, never remembered, and skipping it leaves no mark.
+struct RecoveryCheckInNudge: View {
+    let message: String
+    let onCheckIn: () -> Void
+    let onDismiss: () -> Void
+
+    var body: some View {
+        Anchor.Card(accentColor: Anchor.Theme.sage) {
+            VStack(alignment: .leading, spacing: 10) {
+                Anchor.SectionHeader(icon: "circle.hexagongrid.fill", title: "Check in?", tint: Anchor.Theme.sage)
+                Text(message)
+                    .font(.subheadline)
+                HStack(spacing: 14) {
+                    Button("Check in", action: onCheckIn)
+                        .buttonStyle(Anchor.SecondaryButtonStyle(tint: Anchor.Theme.sage))
+                    Button("Not now", action: onDismiss)
+                        .font(.system(.subheadline, design: .rounded))
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+}
+
+extension View {
+    /// Presents the normal check-in as a sheet from wherever the nudge was tapped, so the user
+    /// isn't pulled out of what they were looking at.
+    func recoveryCheckInSheet(isPresented: Binding<Bool>) -> some View {
+        sheet(isPresented: isPresented) {
+            CheckInSliderView { _ in }
+                .presentationDetents([.large])
+        }
+    }
+}
+
+/// Small tags like "Alcohol · 12 days" for a journal entry written during a counter's run.
+/// Takes the counters from the caller so a long timeline doesn't run a query per row.
+struct RecoveryDayChips: View {
+    let date: Date
+    let counters: [RecoveryCounter]
+    var topPadding: CGFloat = 0
+
+    var body: some View {
+        let chips = RecoveryJournalTag.chips(for: date, counters: counters.filter { !$0.isArchived })
+        if !chips.isEmpty {
+            HStack(spacing: 6) {
+                ForEach(chips.prefix(2), id: \.self) { chip in
+                    Text(chip)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(Anchor.Theme.sage.opacity(0.22)))
+                }
+            }
+            .padding(.top, topPadding)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}

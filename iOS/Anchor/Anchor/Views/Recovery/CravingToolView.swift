@@ -24,6 +24,8 @@ struct CravingToolView: View {
     @State private var breathing = false
     @State private var note = ""
     @State private var noteSaved = false
+    @State private var checkInNudgeDismissed = false
+    @State private var showingCheckIn = false
 
     private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     private let calmLines = [
@@ -60,6 +62,7 @@ struct CravingToolView: View {
             UIApplication.shared.isIdleTimerDisabled = (newPhase == .running)
         }
         .onDisappear { UIApplication.shared.isIdleTimerDisabled = false }
+        .recoveryCheckInSheet(isPresented: $showingCheckIn)
     }
 
     // MARK: Setup
@@ -137,6 +140,13 @@ struct CravingToolView: View {
                     Text("Whatever happens next, you gave yourself that time. That counts.")
                         .font(.subheadline)
                 }
+            }
+            if !checkInNudgeDismissed {
+                RecoveryCheckInNudge(
+                    message: "Want to check in now that it's passed? Totally fine to skip.",
+                    onCheckIn: { checkInNudgeDismissed = true; showingCheckIn = true },
+                    onDismiss: { checkInNudgeDismissed = true }
+                )
             }
             Anchor.Card {
                 VStack(alignment: .leading, spacing: 10) {

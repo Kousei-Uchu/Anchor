@@ -48,6 +48,9 @@ struct NowView: View {
                         }
                     }
 
+                    // Only appears once the user has added a Recovery counter.
+                    RecoveryNowCard()
+
                     NextAppointmentCardView()
 
                     SafetyPlanShortcutView()

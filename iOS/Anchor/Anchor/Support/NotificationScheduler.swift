@@ -266,3 +266,27 @@ struct NotificationScheduler {
 
     func requestAuthorizationIfNeeded() { Self.askForPermissionIfNeeded() }
 }
+
+extension NotificationScheduler {
+    /// Re-syncs every trigger window's notification (clear and re-add), the same way Plan does
+    /// when it appears. Used when a window is created somewhere other than Plan, so it takes
+    /// effect straight away instead of the next time Plan opens.
+    static func resyncTriggerWindows(using context: ModelContext) {
+        let scheduler = NotificationScheduler(context: context)
+        let windows = (try? context.fetch(FetchDescriptor<TriggerWindow>())) ?? []
+        let contacts = (try? context.fetch(FetchDescriptor<TrustedContact>(sortBy: [SortDescriptor(\.sortOrder)]))) ?? []
+        let plan = (try? context.fetch(FetchDescriptor<SafetyPlan>()))?.first
+        let reasons = (plan?.reasonsToKeepGoingText ?? "")
+            .split(separator: "\n")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+        let escalationContacts = contacts.filter { $0.escalationEnabled }
+
+        for window in windows {
+            scheduler.removeTriggerWindowNotifications(for: window)
+            scheduler.scheduleTriggerWindow(window, reasonsPool: reasons,
+                                            escalationContacts: escalationContacts,
+                                            primaryContact: contacts.first)
+        }
+    }
+}

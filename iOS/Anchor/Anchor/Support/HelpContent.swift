@@ -41,13 +41,13 @@ enum HelpTopic: String, CaseIterable, Identifiable {
     var explanation: String {
         switch self {
         case .now:
-            return "Your quick-access dashboard. Crisis numbers, grounding tools, your next-hour list, quick contacts, check-ins, and today's affirmation all live here. Everything on this screen is meant to be used in the moment, not configured. When you need something right now, this is the tab."
+            return "Your quick-access dashboard. Crisis numbers, grounding tools, your next-hour list, quick contacts, check-ins, and today's affirmation all live here. If you've added a Recovery counter, it sits here too, with a shortcut to ride out an urge. Everything on this screen is meant to be used in the moment, not configured. When you need something right now, this is the tab."
         case .plan:
             return "Where everything gets set up ahead of time. Contacts, your safety plan, trigger windows, appointments, and the presets Now pulls from (grounding tools, decision presets, de-escalation scripts, affirmations) are all edited here, plus your data and a couple of on/off preferences. Come here when you're calm and have a moment, not mid-crisis."
         case .journal:
             return "A timeline of what you've written, with your check-in trends running alongside it. Tap the pencil to write. Markdown formatting, photos, drawings, and pulling in that day's calendar events or photos are all supported. Search finds anything you've written."
         case .bridge:
-            return "Everything that makes talking to your psych easier. Drafting what you want to say, prepping for a session, notes afterward, optional cognitive tools (reframing, feedback-loop diagrams), and a plain-language reference for NSW mental health law."
+            return "Everything that makes talking to your psych easier. Drafting what you want to say, prepping for a session, notes afterward, optional cognitive tools (reframing, feedback-loop diagrams), and a plain-language reference for NSW mental health law. If you keep a Recovery counter, session prep can show how it's gone since your last session, and you choose whether to add that to your notes."
         case .thread:
             return "Where you keep track of the people who matter. A message log tied to real contacts you can actually send to, a support calendar you can share with someone outside the app, notes to your future self, and a private space for bigger things you might never send to anyone."
         }

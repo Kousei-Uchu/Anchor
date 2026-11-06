@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import MessageUI
 
 enum RecoveryTab: String, CaseIterable, Identifiable {
     case summary, savings, calendar, urges, reasons, today
@@ -28,6 +29,7 @@ struct RecoveryCounterDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \RecoveryMotivation.sortOrder) private var motivations: [RecoveryMotivation]
+    @Query(sort: \TrustedContact.sortOrder) private var contacts: [TrustedContact]
 
     let counter: RecoveryCounter
 
@@ -36,6 +38,12 @@ struct RecoveryCounterDetailView: View {
     @State private var showingSlip = false
     @State private var showingUrge = false
     @State private var pendingDelete = false
+    @State private var runsBeforeSlip = 0
+    @State private var showCheckInNudge = false
+    @State private var showingCheckIn = false
+    @State private var milestoneToShare: Int?
+    @State private var showingContactPicker = false
+    @State private var milestoneMessage: MilestoneMessage?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -44,6 +52,13 @@ struct RecoveryCounterDetailView: View {
                 VStack(spacing: Anchor.Theme.spacing) {
                     if tab == .summary, let milestone = counter.unacknowledgedMilestone() {
                         milestoneCard(milestone)
+                    }
+                    if showCheckInNudge {
+                        RecoveryCheckInNudge(
+                            message: "That's a hard moment. Want to check in? Totally fine to skip.",
+                            onCheckIn: { showCheckInNudge = false; showingCheckIn = true },
+                            onDismiss: { showCheckInNudge = false }
+                        )
                     }
                     tabContent
                 }
@@ -64,11 +79,30 @@ struct RecoveryCounterDetailView: View {
                 })
             }
         }
-        .sheet(isPresented: $showingSlip) {
+        .sheet(isPresented: $showingSlip, onDismiss: handleSlipDismiss) {
             NavigationStack { RecoverySlipView(counter: counter) }
         }
         .sheet(isPresented: $showingUrge) {
             NavigationStack { RecoveryLogUrgeView(counter: counter) }
+        }
+        .recoveryCheckInSheet(isPresented: $showingCheckIn)
+        .confirmationDialog("Tell who?", isPresented: $showingContactPicker, titleVisibility: .visible) {
+            ForEach(contactsWithNumbers) { contact in
+                Button(contact.name) {
+                    if let milestone = milestoneToShare { composeMilestone(milestone, to: contact) }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("You can change the message before it sends.")
+        }
+        .sheet(item: $milestoneMessage) { message in
+            if MFMessageComposeViewController.canSendText() {
+                MessageComposeView(recipient: message.recipient, body: message.body)
+            } else {
+                Text("This device can't send text messages.")
+                    .padding()
+            }
         }
     }
 
@@ -101,7 +135,7 @@ struct RecoveryCounterDetailView: View {
             RecoverySummaryTab(counter: counter,
                                onShowCalendar: { tab = .calendar },
                                onLogUrge: { showingUrge = true },
-                               onStartAgain: { showingSlip = true })
+                               onStartAgain: { runsBeforeSlip = counter.runs.count; showingSlip = true })
         case .savings:
             RecoverySavingsTab(counter: counter, onEdit: { showingEditor = true })
         case .calendar:
@@ -121,8 +155,14 @@ struct RecoveryCounterDetailView: View {
                 Anchor.SectionHeader(icon: "sparkles", title: RecoveryMilestones.label(milestone), tint: Anchor.Theme.sage)
                 Text("You've reached \(RecoveryMilestones.label(milestone)). That's real, and it's yours.")
                     .font(.subheadline)
-                Button("Noted") { counter.acknowledgeMilestones() }
-                    .buttonStyle(Anchor.SecondaryButtonStyle(tint: Anchor.Theme.sage))
+                HStack(spacing: 10) {
+                    Button("Noted") { counter.acknowledgeMilestones() }
+                        .buttonStyle(Anchor.SecondaryButtonStyle(tint: Anchor.Theme.sage))
+                    if !contactsWithNumbers.isEmpty {
+                        Button("Tell someone") { tellSomeone(about: milestone) }
+                            .buttonStyle(Anchor.SecondaryButtonStyle())
+                    }
+                }
             }
         }
     }
@@ -177,6 +217,33 @@ struct RecoveryCounterDetailView: View {
                 .buttonStyle(.plain)
             }
         }
+    }
+
+    // MARK: Milestone message and check-in nudge
+
+    private var contactsWithNumbers: [TrustedContact] {
+        contacts.filter { !$0.phoneNumber.trimmingCharacters(in: .whitespaces).isEmpty }
+    }
+
+    /// One contact goes straight to Messages; several ask who first. The counter's name is left
+    /// out of the text, and the user can edit it in Messages before sending anything.
+    private func tellSomeone(about milestone: Int) {
+        milestoneToShare = milestone
+        if contactsWithNumbers.count == 1, let only = contactsWithNumbers.first {
+            composeMilestone(milestone, to: only)
+        } else {
+            showingContactPicker = true
+        }
+    }
+
+    private func composeMilestone(_ milestone: Int, to contact: TrustedContact) {
+        let body = "Something I've been working on reached \(RecoveryMilestones.label(milestone)) today. Wanted you to know."
+        milestoneMessage = MilestoneMessage(recipient: contact.phoneNumber, body: body)
+    }
+
+    /// Only offers a check-in if the sheet really recorded a fresh start, not if it was cancelled.
+    private func handleSlipDismiss() {
+        if counter.runs.count > runsBeforeSlip { showCheckInNudge = true }
     }
 
     private func handleEditorDismiss() {
@@ -250,4 +317,10 @@ private struct RecoverySavingsTab: View {
             Text(value.formatted(.currency(code: counter.currencyCode))).font(.subheadline.weight(.semibold))
         }
     }
+}
+
+private struct MilestoneMessage: Identifiable {
+    let id = UUID()
+    let recipient: String
+    let body: String
 }

@@ -148,3 +148,98 @@ enum RecoveryStore {
         RecoveryNotifications.refresh(using: context)
     }
 }
+
+// MARK: - Plain-language summary
+
+/// Counts only: days, urges logged and fresh starts over a window. Used by session prep
+/// and the optional psych export. It never includes urge notes, pledges, reviews or savings.
+enum RecoverySummary {
+    static func lines(for counter: RecoveryCounter, urges allUrges: [RecoveryUrge],
+                      range: ClosedRange<Date>, now: Date = .now) -> [String] {
+        let days = counter.currentRunDays(now: now)
+        let total = counter.totalDays(now: now)
+        var result: [String] = []
+
+        var headline = "\(RecoveryText.days(days)) in the current run"
+        if counter.mode == .runAndTotal, total != days {
+            headline += ", \(RecoveryText.days(total)) in total"
+        }
+        result.append(headline)
+
+        let urges = allUrges.filter { $0.counterID == counter.id && range.contains($0.date) }
+        if urges.isEmpty {
+            result.append("No urges logged")
+        } else {
+            let order = UrgeStrength.allCases
+            let strongest = urges.map(\.strength).max { (order.firstIndex(of: $0) ?? 0) < (order.firstIndex(of: $1) ?? 0) }
+            var text = "\(urges.count) \(urges.count == 1 ? "urge" : "urges") logged"
+            if let strongest { text += ", strongest felt \(strongest.title.lowercased())" }
+            result.append(text)
+        }
+
+        let freshStarts = counter.runs.dropFirst().filter { range.contains($0.start) }.count
+        if freshStarts > 0 {
+            result.append("\(freshStarts) fresh \(freshStarts == 1 ? "start" : "starts")")
+        }
+        return result
+    }
+}
+
+// MARK: - Urge pattern (trigger window suggestion)
+
+/// Looks for a two-hour stretch of the day where most of a counter's logged urges fall,
+/// and only suggests a trigger window if no active one already covers it. It only ever
+/// offers: the user decides, and can switch the suggestion off.
+enum RecoveryUrgePattern {
+    struct Suggestion {
+        let startHour: Int
+        let rangeLabel: String
+    }
+
+    static func suggestion(urgeDates: [Date], windows: [TriggerWindow], calendar: Calendar = .current) -> Suggestion? {
+        guard urgeDates.count >= 4 else { return nil }
+        let hours = urgeDates.map { calendar.component(.hour, from: $0) }
+
+        var bestStart = 0
+        var bestCount = 0
+        for start in 0..<24 {
+            let count = hours.filter { $0 == start || $0 == (start + 1) % 24 }.count
+            if count > bestCount { bestStart = start; bestCount = count }
+        }
+        guard bestCount >= 3, Double(bestCount) / Double(hours.count) >= 0.5 else { return nil }
+
+        let covered = windows.filter(\.isActive).contains {
+            covers($0, hour: bestStart) || covers($0, hour: (bestStart + 1) % 24)
+        }
+        guard !covered else { return nil }
+
+        let formatter = DateFormatter()
+        formatter.setLocalizedDateFormatFromTemplate("j")
+        func text(_ hour: Int) -> String {
+            formatter.string(from: calendar.date(bySettingHour: hour, minute: 0, second: 0, of: .now) ?? .now)
+        }
+        return Suggestion(startHour: bestStart, rangeLabel: "\(text(bestStart)) and \(text((bestStart + 2) % 24))")
+    }
+
+    private static func covers(_ window: TriggerWindow, hour: Int) -> Bool {
+        let start = window.startHour * 60 + window.startMinute
+        let end = window.endHour * 60 + window.endMinute
+        let middle = hour * 60 + 30
+        return start <= end ? (middle >= start && middle < end) : (middle >= start || middle < end)
+    }
+}
+
+// MARK: - Journal tags
+
+/// Which day of a counter's current run a journal entry was written on, worked out from the
+/// entry's date and the counter's runs. Nothing is stored on the entry, so it also works for
+/// older entries and nothing needs migrating.
+enum RecoveryJournalTag {
+    static func chips(for date: Date, counters: [RecoveryCounter]) -> [String] {
+        counters.compactMap { counter in
+            guard let run = counter.runs.first(where: { $0.start <= date && ($0.end ?? .distantFuture) > date }) else { return nil }
+            let days = RecoveryCounter.wholeDays(from: run.start, to: date)
+            return "\(counter.name) \u{00B7} " + (days == 0 ? "first day" : RecoveryText.days(days))
+        }
+    }
+}

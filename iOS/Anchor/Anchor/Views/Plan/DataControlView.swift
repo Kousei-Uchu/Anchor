@@ -79,6 +79,8 @@ struct DataControlView: View {
                 countRow("Decision-preset categories", decisionCategories.count, icon: "checklist")
                 countRow("De-escalation scripts", deEscalationScripts.count, icon: "wind")
                 countRow("Affirmations", affirmations.count, icon: "sparkles")
+                countRow("Recovery counters", recoveryCounters.count, icon: "calendar.badge.checkmark")
+                countRow("Urges logged", recoveryUrges.count, icon: "wind")
             }
 
             Section {
@@ -137,10 +139,10 @@ struct DataControlView: View {
             ShareSheet(activityItems: [wrapped.url])
         }
         .sheet(item: $showDateRangeSheet) { kind in
-            DateRangeExportSheet(kind: kind) { range in
+            DateRangeExportSheet(kind: kind, hasRecovery: recoveryCounters.contains { !$0.isArchived }) { range, includeRecovery in
                 switch kind {
-                case .csv: exportCSV(range: range)
-                case .pdf: exportPDF(range: range)
+                case .csv: exportCSV(range: range, includeRecovery: includeRecovery)
+                case .pdf: exportPDF(range: range, includeRecovery: includeRecovery)
                 }
             }
         }
@@ -303,7 +305,7 @@ struct DataControlView: View {
 
     // MARK: - CSV / PDF (Journal + Check-ins only — the two things worth handing a psych)
 
-    private func exportCSV(range: ClosedRange<Date>?) {
+    private func exportCSV(range: ClosedRange<Date>?, includeRecovery: Bool) {
         var lines = ["type,date,text_or_values"]
         for entry in filteredJournal(range) {
             let escaped = entry.text.replacingOccurrences(of: "\"", with: "\"\"").replacingOccurrences(of: "\n", with: " ")
@@ -313,11 +315,18 @@ struct DataControlView: View {
             let values = "energy=\(fmt(checkIn.physicalEnergy)) clarity=\(fmt(1 - checkIn.cognitiveBurnout)) space=\(fmt(1 - checkIn.mentalLoad)) physicalEnergy=\(fmt(checkIn.physicalEnergy)) social=\(fmt(checkIn.socialEnergy))"
             lines.append("checkin,\(iso(checkIn.timestamp)),\"\(values)\"")
         }
+        if includeRecovery {
+            for counter in activeRecoveryCounters {
+                let summary = RecoverySummary.lines(for: counter, urges: recoveryUrges, range: summaryRange(range))
+                let escaped = "\(counter.name): " + summary.joined(separator: "; ")
+                lines.append("recovery,\(iso(range?.upperBound ?? .now)),\"\(escaped.replacingOccurrences(of: "\"", with: "\"\""))\"")
+            }
+        }
         guard let data = lines.joined(separator: "\n").data(using: .utf8) else { return }
         writeAndShare(data: data, filename: "anchor-export-\(fileTimestamp()).csv")
     }
 
-    private func exportPDF(range: ClosedRange<Date>?) {
+    private func exportPDF(range: ClosedRange<Date>?, includeRecovery: Bool) {
         let pageRect = CGRect(x: 0, y: 0, width: 612, height: 792) // US Letter
         let renderer = UIGraphicsPDFRenderer(bounds: pageRect)
         let data = renderer.pdfData { context in
@@ -351,6 +360,13 @@ struct DataControlView: View {
             for checkIn in filteredCheckIns(range) {
                 draw("\(checkIn.timestamp.formatted(date: .abbreviated, time: .shortened)): energy \(fmt(checkIn.physicalEnergy)), clarity \(fmt(1 - checkIn.cognitiveBurnout)), room in head \(fmt(1 - checkIn.mentalLoad)), physical energy \(fmt(checkIn.physicalEnergy)), social \(fmt(checkIn.socialEnergy))", font: bodyFont)
             }
+            if includeRecovery {
+                draw("Recovery", font: headingFont)
+                for counter in activeRecoveryCounters {
+                    let summary = RecoverySummary.lines(for: counter, urges: recoveryUrges, range: summaryRange(range))
+                    draw("\(counter.name)\n" + summary.joined(separator: "\n"), font: bodyFont)
+                }
+            }
         }
         writeAndShare(data: data, filename: "anchor-export-\(fileTimestamp()).pdf")
     }
@@ -360,6 +376,15 @@ struct DataControlView: View {
     }
     private func filteredCheckIns(_ range: ClosedRange<Date>?) -> [CheckIn] {
         checkIns.filter { range?.contains($0.timestamp) ?? true }.sorted { $0.timestamp < $1.timestamp }
+    }
+
+    private var activeRecoveryCounters: [RecoveryCounter] {
+        recoveryCounters.filter { !$0.isArchived }.sorted { $0.sortOrder < $1.sortOrder }
+    }
+
+    /// All time when no range was chosen.
+    private func summaryRange(_ range: ClosedRange<Date>?) -> ClosedRange<Date> {
+        range ?? (Date.distantPast...Date.now)
     }
 
     private func fmt(_ value: Double) -> String { String(format: "%.2f", value) }
@@ -431,12 +456,15 @@ struct IdentifiableURL: Identifiable {
 /// data between psych sessions" per the request.
 private struct DateRangeExportSheet: View {
     let kind: DataControlView.DateRangeExportKind
-    let onExport: (ClosedRange<Date>?) -> Void
+    let hasRecovery: Bool
+    let onExport: (ClosedRange<Date>?, Bool) -> Void
     @Environment(\.dismiss) private var dismiss
 
     @State private var useRange = false
     @State private var start: Date = Calendar.current.date(byAdding: .day, value: -14, to: .now) ?? .now
     @State private var end: Date = .now
+    /// Deliberately not remembered: Recovery is left out of every export unless it is switched on for that export.
+    @State private var includeRecovery = false
 
     var body: some View {
         NavigationStack {
@@ -447,6 +475,14 @@ private struct DateRangeExportSheet: View {
                     DatePicker("From", selection: $start, displayedComponents: .date)
                     DatePicker("To", selection: $end, displayedComponents: .date)
                 }
+                if hasRecovery {
+                    Section {
+                        Toggle("Include Recovery summary", isOn: $includeRecovery)
+                            .tint(Anchor.Theme.accent)
+                    } footer: {
+                        Text("Off unless you switch it on, every time. Adds each counter's name, days, urges logged and fresh starts. Never your urge notes, pledges, reviews or savings.")
+                    }
+                }
             }
             .navigationTitle(kind == .csv ? "Export CSV" : "Export PDF")
             .navigationBarTitleDisplayMode(.inline)
@@ -456,7 +492,7 @@ private struct DateRangeExportSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Export") {
-                        onExport(useRange ? start...end : nil)
+                        onExport(useRange ? min(start, end)...max(start, end) : nil, hasRecovery && includeRecovery)
                         dismiss()
                     }
                 }

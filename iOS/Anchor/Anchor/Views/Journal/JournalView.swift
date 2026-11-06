@@ -21,6 +21,7 @@ struct JournalView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \JournalEntry.createdAt) private var entries: [JournalEntry]
     @Query(sort: \CheckIn.timestamp) private var checkIns: [CheckIn]
+    @Query(sort: \RecoveryCounter.sortOrder) private var recoveryCounters: [RecoveryCounter]
     @State private var searchText = ""
     @State private var entryToEdit: JournalEntry?
     @State private var checkInToView: CheckIn?
@@ -159,6 +160,8 @@ struct JournalView: View {
                         .font(.system(.subheadline, design: .rounded))
                         .lineLimit(2)
                         .foregroundStyle(entry.text.isEmpty ? .secondary : .primary)
+
+                    RecoveryDayChips(date: entry.createdAt, counters: recoveryCounters, topPadding: 4)
                 }
                 .padding(10)
                 .frame(maxWidth: .infinity, alignment: .leading)

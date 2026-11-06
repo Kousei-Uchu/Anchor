@@ -16,8 +16,17 @@ struct RecoveryUrgesTab: View {
 
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \RecoveryUrge.date, order: .reverse) private var allUrges: [RecoveryUrge]
+    @Query private var triggerWindows: [TriggerWindow]
+    @State private var newWindow: TriggerWindow?
+    /// "Not now" switches the suggestion off for good. Trigger windows can still be added from Plan.
+    @AppStorage("recovery.triggerSuggestion.dismissed") private var suggestionDismissed = false
 
     private var urges: [RecoveryUrge] { allUrges.filter { $0.counterID == counter.id } }
+
+    private var windowSuggestion: RecoveryUrgePattern.Suggestion? {
+        guard !suggestionDismissed else { return nil }
+        return RecoveryUrgePattern.suggestion(urgeDates: urges.map(\.date), windows: triggerWindows)
+    }
     private let calendar = Calendar.current
 
     var body: some View {
@@ -46,6 +55,23 @@ struct RecoveryUrgesTab: View {
             }
             .buttonStyle(.plain)
 
+            if let suggestion = windowSuggestion {
+                Anchor.Card {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Anchor.SectionHeader(icon: "clock.fill", title: "A pattern", tint: Anchor.Theme.sage)
+                        Text("A lot of the urges you've logged have come between \(suggestion.rangeLabel). Want a trigger window for that time, so Anchor can send a gentle reminder then?")
+                            .font(.subheadline)
+                        HStack(spacing: 14) {
+                            Button("Add a trigger window") { addWindow(suggestion) }
+                                .buttonStyle(Anchor.SecondaryButtonStyle(tint: Anchor.Theme.sage))
+                            Button("Not now") { suggestionDismissed = true }
+                                .font(.system(.subheadline, design: .rounded))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+
             if urges.isEmpty {
                 Text("Urges you log will show up here. Noticing them is not failing at anything.")
                     .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
@@ -63,6 +89,24 @@ struct RecoveryUrgesTab: View {
                 }
             }
         }
+        .sheet(item: $newWindow, onDismiss: {
+            NotificationScheduler.resyncTriggerWindows(using: modelContext)
+        }) { window in
+            TriggerWindowEditorView(window: window)
+        }
+    }
+
+    /// Opens the normal trigger window editor with the time filled in. The user can change
+    /// the label, days and times before tapping Done.
+    private func addWindow(_ suggestion: RecoveryUrgePattern.Suggestion) {
+        let window = TriggerWindow(
+            label: "Urge window",
+            daysOfWeek: [1, 2, 3, 4, 5, 6, 7],
+            startTime: DateComponents(hour: suggestion.startHour, minute: 0),
+            endTime: DateComponents(hour: (suggestion.startHour + 2) % 24, minute: 0)
+        )
+        modelContext.insert(window)
+        newWindow = window
     }
 
     private var groupedDays: [Date] {

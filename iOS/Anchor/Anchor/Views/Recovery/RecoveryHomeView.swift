@@ -169,3 +169,89 @@ private struct RecoveryCounterCard: View {
         }
     }
 }
+
+// MARK: - Now tab presence
+
+/// A quiet Recovery card for the Now tab. It only appears once the user has
+/// added a counter, so people who never use Recovery never see it. Nothing here
+/// scores or nags: it shows where each counter is, offers today's pledge only if
+/// the user turned that reminder on, and keeps "Ride out an urge" one tap away.
+struct RecoveryNowCard: View {
+    @Query(sort: \RecoveryCounter.sortOrder) private var allCounters: [RecoveryCounter]
+    @Query private var entries: [RecoveryDayEntry]
+    @AppStorage(RecoverySettings.pledgeEnabled) private var pledgeEnabled = false
+
+    private var counters: [RecoveryCounter] { allCounters.filter { !$0.isArchived } }
+    private var today: Date { Calendar.current.startOfDay(for: .now) }
+
+    /// The first counter without a pledge today, and only if daily pledge is switched on.
+    private var counterNeedingPledge: RecoveryCounter? {
+        guard pledgeEnabled else { return nil }
+        return counters.first { counter in
+            !entries.contains { $0.counterID == counter.id && $0.day == today && $0.pledgedAt != nil }
+        }
+    }
+
+    var body: some View {
+        if !counters.isEmpty {
+            Anchor.Card(accentColor: Anchor.Theme.sage) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Anchor.SectionHeader(icon: "calendar.badge.checkmark", title: "Recovery", tint: Anchor.Theme.sage)
+
+                    ForEach(Array(counters.prefix(3).enumerated()), id: \.element.id) { index, counter in
+                        if index > 0 { Divider() }
+                        NavigationLink { RecoveryCounterDetailView(counter: counter) } label: {
+                            counterRow(counter)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    if let counter = counterNeedingPledge {
+                        NavigationLink { RecoveryPledgeView(counter: counter) } label: {
+                            Label("Today's pledge", systemImage: "hand.raised.fill")
+                        }
+                        .buttonStyle(Anchor.SecondaryButtonStyle(tint: Anchor.Theme.sage))
+                    }
+
+                    NavigationLink { CravingToolView() } label: {
+                        Label("Ride out an urge", systemImage: "wind")
+                    }
+                    .buttonStyle(Anchor.SecondaryButtonStyle())
+                }
+            }
+        }
+    }
+
+    private func counterRow(_ counter: RecoveryCounter) -> some View {
+        let days = counter.currentRunDays()
+        return HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(counter.name)
+                    .font(.system(.headline, design: .rounded))
+                    .foregroundStyle(.primary)
+                if let milestone = counter.unacknowledgedMilestone() {
+                    Text("You've reached \(RecoveryMilestones.label(milestone)).")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("Next: \(RecoveryMilestones.label(RecoveryMilestones.next(after: days)))")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer()
+            VStack(spacing: 0) {
+                Text("\(days)")
+                    .font(.system(size: 30, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Anchor.Theme.accent)
+                Text(days == 1 ? "day" : "days")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
+        }
+        .contentShape(Rectangle())
+    }
+}

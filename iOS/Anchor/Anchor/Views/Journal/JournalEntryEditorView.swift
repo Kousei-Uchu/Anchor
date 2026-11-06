@@ -36,10 +36,14 @@ struct JournalEntryEditorView: View {
     @State private var photoPickerItem: PhotosPickerItem?
     @State private var showDrawingCanvas = false
     @State private var showContextSuggestions = false
+    @Query(sort: \RecoveryCounter.sortOrder) private var recoveryCounters: [RecoveryCounter]
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
+                RecoveryDayChips(date: entry.createdAt, counters: recoveryCounters, topPadding: 6)
+                    .padding(.horizontal)
+
                 if entry.text.isEmpty && !isPreviewing {
                     MascotPresenceView(line: promptLine, mood: .gentle)
                         .padding(.horizontal)
