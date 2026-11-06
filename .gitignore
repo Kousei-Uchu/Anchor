@@ -9,3 +9,4 @@ build/
 node_modules/
 remotion-project/out/
 Archive*.zip
+anchor*.zip
