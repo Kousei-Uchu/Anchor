@@ -345,6 +345,60 @@ final class BoundarySection {
     }
 }
 
+/// A short dated note the person adds to one of their goals along the way.
+struct GoalNote: Codable, Identifiable, Hashable {
+    var id: UUID = UUID()
+    var date: Date = .now
+    var text: String
+}
+
+enum GoalStatus: String, CaseIterable, Identifiable {
+    case active, reached, setAside
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .active: return "Working on it"
+        case .reached: return "Reached"
+        case .setAside: return "Set aside for now"
+        }
+    }
+}
+
+/// One of the person's own goals, written in their words, with short dated
+/// notes along the way. Nothing is scored, counted as a percentage or framed
+/// as treatment: a note is just something they wanted to remember. Where a
+/// goal is (working on it, reached, set aside for now) is the person's call.
+@Model
+final class PersonalGoal {
+    @Attribute(.unique) var id: UUID
+    var title: String
+    var why: String = ""
+    var statusRaw: String = "active"
+    var notes: [GoalNote] = []
+    var sortOrder: Int = 0
+    var createdAt: Date = Date.now
+    var lastEditedAt: Date = Date.now
+
+    init(id: UUID = UUID(), title: String = "", why: String = "", status: GoalStatus = .active,
+         notes: [GoalNote] = [], sortOrder: Int = 0, createdAt: Date = .now, lastEditedAt: Date = .now) {
+        self.id = id
+        self.title = title
+        self.why = why
+        self.statusRaw = status.rawValue
+        self.notes = notes
+        self.sortOrder = sortOrder
+        self.createdAt = createdAt
+        self.lastEditedAt = lastEditedAt
+    }
+
+    var status: GoalStatus {
+        get { GoalStatus(rawValue: statusRaw) ?? .active }
+        set { statusRaw = newValue.rawValue }
+    }
+}
+
 /// One of the person's own short lines for starting a message on a hard day,
 /// such as "I'm not up to talking, but I'm safe". Nothing is written for them:
 /// the list starts empty. Tapping one puts it in the message box, where it can
@@ -1696,7 +1750,7 @@ enum AnchorSchema {
     static var models: [any PersistentModel.Type] {
         [
             JournalEntry.self, CheckIn.self, TrustedContact.self, GroundingTool.self,
-            SafetyPlan.self, SafetyPlanSection.self, BoundarySection.self, MessageStarter.self, TriggerWindow.self, AppointmentSeries.self, AppointmentOccurrence.self,
+            SafetyPlan.self, SafetyPlanSection.self, BoundarySection.self, MessageStarter.self, PersonalGoal.self, TriggerWindow.self, AppointmentSeries.self, AppointmentOccurrence.self,
             BridgeDraftItem.self, FeedbackLoopDiagram.self,
             ThreadMessage.self, SupportCalendarEntry.self, FutureNote.self, UnsentDraft.self,
             MascotLine.self, DecisionPresetCategory.self, DecisionPresetChoice.self,

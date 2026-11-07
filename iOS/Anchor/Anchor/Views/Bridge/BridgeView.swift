@@ -55,6 +55,7 @@ struct BridgeView: View {
         case .nextSession: NextSessionWidget(fallbackSeries: currentAppointmentSeries)
         case .reframing: ReframingWidget { showReframing = true }
         case .feedbackLoops: FeedbackLoopsWidget()
+        case .personalGoals: PersonalGoalsWidget()
         // Personal copy only: compiled out of every public build. See NSWMentalHealthReferenceView.swift.
         #if PERSONAL_BUILD
         case .nswLaw:
@@ -78,6 +79,7 @@ struct BridgeView: View {
             }
             .buttonStyle(.plain)
         case .feedbackLoops: Anchor.MoreTile(id: id) { FeedbackLoopDiagramListView() }
+        case .personalGoals: Anchor.MoreTile(id: id) { PersonalGoalsView() }
         #if PERSONAL_BUILD
         case .nswLaw: Anchor.MoreTile(id: id) { NSWMentalHealthReferenceView() }
         #endif
@@ -108,6 +110,9 @@ struct BridgeView: View {
                         }
                         NavigationLink { FeedbackLoopDiagramListView() } label: {
                             Anchor.TileButtonLabel(icon: "point.3.connected.trianglepath.dotted", title: "Feedback loops", tint: Anchor.Theme.sage)
+                        }
+                        NavigationLink { PersonalGoalsView() } label: {
+                            Anchor.TileButtonLabel(icon: "flag.fill", title: "Personal goals", tint: Anchor.Theme.sage)
                         }
                         // Personal copy only: compiled out of every public build. See NSWMentalHealthReferenceView.swift.
                         #if PERSONAL_BUILD

@@ -44,7 +44,7 @@ enum WidgetTab: String, CaseIterable, Identifiable {
             return [.safetyPlan, .triggerWindows, .appointments, .tasks, .contacts, .deEscalation,
                     .grounding, .decisionPresets, .affirmations, .recovery, .motivations]
         case .bridge:
-            var ids: [WidgetID] = [.thingsToRaise, .nextSession, .reframing, .feedbackLoops]
+            var ids: [WidgetID] = [.thingsToRaise, .nextSession, .reframing, .feedbackLoops, .personalGoals]
             #if PERSONAL_BUILD
             ids.append(.nswLaw)
             #endif

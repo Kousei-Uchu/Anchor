@@ -30,7 +30,7 @@ enum WidgetID: String, CaseIterable, Identifiable {
     case safetyPlan, triggerWindows, appointments, contacts, deEscalation
     case grounding, decisionPresets, affirmations, recovery, motivations, tasks
     // Bridge
-    case thingsToRaise, nextSession, reframing, feedbackLoops, nswLaw
+    case thingsToRaise, nextSession, reframing, feedbackLoops, nswLaw, personalGoals
     // Thread
     case messageLog, supportCalendar, futureNotes, unsentDrafts, boundaries
 }
@@ -75,6 +75,7 @@ extension WidgetID {
         case .futureNotes: return "To future me"
         case .unsentDrafts: return "Things I haven't said"
         case .boundaries: return "Boundaries"
+        case .personalGoals: return "Personal goals"
         }
     }
 
@@ -101,13 +102,14 @@ extension WidgetID {
         case .futureNotes: return "envelope.open.badge.clock"
         case .unsentDrafts: return "square.and.pencil"
         case .boundaries: return "hand.raised.fill"
+        case .personalGoals: return "flag.fill"
         }
     }
 
     var tint: Color {
         switch self {
         case .triggerWindows, .appointments, .deEscalation, .grounding, .recovery,
-             .reframing, .feedbackLoops, .futureNotes, .unsentDrafts, .boundaries:
+             .reframing, .feedbackLoops, .futureNotes, .unsentDrafts, .boundaries, .personalGoals:
             return Anchor.Theme.sage
         default:
             return Anchor.Theme.accent
@@ -684,6 +686,35 @@ struct FutureNotesWidget: View {
                 Anchor.WidgetCaption(text: letters == 1 ? "1 letter to open when you choose." : "\(letters) letters to open when you choose.")
             } else {
                 Anchor.WidgetCaption(text: "Write something for a later day.")
+            }
+        }
+    }
+}
+
+struct PersonalGoalsWidget: View {
+    @Query(sort: \PersonalGoal.sortOrder) private var goals: [PersonalGoal]
+
+    private var working: [PersonalGoal] {
+        goals.filter { $0.status == .active && !$0.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    }
+
+    var body: some View {
+        Anchor.Widget(icon: "flag.fill", title: "Personal goals", tint: Anchor.Theme.sage) {
+            PersonalGoalsView()
+        } content: {
+            if let first = working.first {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(first.title)
+                        .font(.system(.subheadline, design: .rounded))
+                        .lineLimit(2)
+                    if working.count > 1 {
+                        Text("and \(working.count - 1) more")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } else {
+                Anchor.WidgetCaption(text: "Your own goals, in your own words. Tap to add one.")
             }
         }
     }

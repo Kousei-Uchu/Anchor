@@ -172,6 +172,13 @@ enum DemoMode {
         context.insert(BridgeDraftItem(createdAt: ago(9), text: "Is it worth trying a different time of day?", isResolved: true,
                                        isQuestion: true, answer: "Worth a try for two weeks, then we look again."))
 
+        context.insert(PersonalGoal(title: "Get outside for a short walk most days",
+                                    why: "It helps my head more than I expect.",
+                                    notes: [GoalNote(date: ago(3), text: "Walked to the end of the street and back. That counted."),
+                                            GoalNote(date: ago(1), text: "Skipped it today and that was fine.")],
+                                    sortOrder: 0))
+        context.insert(PersonalGoal(title: "Go back to the pottery class", status: .reached, sortOrder: 1))
+
         context.insert(FeedbackLoopDiagram(
             title: "Waking in the night",
             graphJSON: DiagramGraph.loop([
