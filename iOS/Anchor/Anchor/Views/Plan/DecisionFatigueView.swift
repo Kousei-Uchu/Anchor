@@ -338,12 +338,13 @@ private struct DecisionChoiceEditor: View {
 
 // MARK: - Presets: decisions and routines in one screen
 
-/// Decision presets and routines share one screen, with a switch at the top.
+/// Decision presets, routines and item lists share one screen, with a switch at the top.
 /// Each part keeps its own title and plus button.
 struct PresetsView: View {
     enum Part: String, CaseIterable, Identifiable {
         case decisions = "Decisions"
         case routines = "Routines"
+        case lists = "Lists"
         var id: Self { self }
     }
 
@@ -358,6 +359,7 @@ struct PresetsView: View {
             switch part {
             case .decisions: DecisionFatigueView()
             case .routines: RoutinesView()
+            case .lists: ItemListsView()
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
@@ -736,6 +738,394 @@ struct RoutineRunnerView: View {
                 }
             }
             .anchorBackground()
+        }
+    }
+}
+
+// MARK: - Item lists
+
+private struct ItemRef: Identifiable { let id: UUID }
+
+/// Item lists as cards. Tap one to open it; the plus makes a new one.
+struct ItemListsView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \ItemList.createdAt) private var lists: [ItemList]
+    @State private var opened: ItemList?
+    @State private var pendingDelete: ItemList?
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: Anchor.Theme.spacing) {
+                if lists.isEmpty {
+                    Anchor.EmptyState(
+                        icon: "suitcase",
+                        title: "No lists yet",
+                        message: "A list sorts items under headings and ticks them off. An item can follow a number you set, like one T-shirt for each day, so changing the days changes every amount.",
+                        actionTitle: "Make a list",
+                        tint: Anchor.Theme.accent
+                    ) { startNew() }
+                } else {
+                    ForEach(lists) { list in
+                        Button { opened = list } label: {
+                            Anchor.Card {
+                                HStack(spacing: 12) {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(list.displayName)
+                                            .font(.system(.headline, design: .rounded))
+                                            .foregroundStyle(.primary)
+                                            .multilineTextAlignment(.leading)
+                                        Text(list.summaryText)
+                                            .font(.subheadline)
+                                            .foregroundStyle(.secondary)
+                                        if !list.variables.isEmpty {
+                                            Text(list.variables.map { "\($0.name.isEmpty ? "Number" : $0.name) \($0.value)" }
+                                                .joined(separator: ", "))
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                                .multilineTextAlignment(.leading)
+                                        }
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    Image(systemName: "chevron.right")
+                                        .font(.footnote)
+                                        .foregroundStyle(.tertiary)
+                                }
+                                .contentShape(Rectangle())
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .contextMenu {
+                            Button(role: .destructive) { modelContext.delete(list) } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                    }
+                }
+            }
+            .padding()
+        }
+        .anchorBackground()
+        .navigationTitle("Lists")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Anchor.AddToolbarButton(label: "Make a list") { startNew() }
+            }
+        }
+        .navigationDestination(item: $opened) { list in
+            ItemListDetailView(list: list) { pendingDelete = $0 }
+        }
+        .onAppear { tidy() }
+    }
+
+    private func startNew() {
+        let new = ItemList(name: "")
+        modelContext.insert(new)
+        opened = new
+    }
+
+    /// Runs when this screen comes back into view, so a list is never removed
+    /// while its own screen is still showing it.
+    private func tidy() {
+        let deleting = pendingDelete
+        pendingDelete = nil
+        if let deleting { modelContext.delete(deleting) }
+        for list in lists where list !== deleting && list.isBlank {
+            modelContext.delete(list)
+        }
+    }
+}
+
+/// One list: its name, its numbers, and its items under their headings.
+private struct ItemListDetailView: View {
+    @Bindable var list: ItemList
+    let onDelete: (ItemList) -> Void
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+    @State private var editing: ItemRef?
+    @State private var itemToDelete: UUID?
+    @State private var showNumbers = false
+    @State private var confirmingDelete = false
+    @State private var newText = ""
+
+    var body: some View {
+        List {
+            Section("Name") {
+                TextField("e.g. Weekend away", text: $list.name)
+            }
+
+            Section {
+                ForEach($list.variables) { $variable in
+                    Stepper(value: $variable.value, in: 0...99) {
+                        Text("\(variable.name.isEmpty ? "Number" : variable.name): \(variable.value)")
+                    }
+                }
+                Button(list.variables.isEmpty ? "Add a number to count by" : "Edit numbers") {
+                    showNumbers = true
+                }
+            }
+
+            if list.items.isEmpty {
+                Section { Text("No items yet.").foregroundStyle(.secondary) }
+            }
+
+            ForEach(list.categoryNames, id: \.self) { category in
+                Section(category) {
+                    ForEach(list.items(in: category)) { item in
+                        row(item)
+                            .anchorDeletable { removeItem(item.id) }
+                    }
+                }
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .anchorBackground()
+        .navigationTitle(list.displayName)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    Button { list.resetTicks() } label: {
+                        Label("Reset ticks", systemImage: "arrow.counterclockwise")
+                    }
+                    .disabled(list.tickedCount == 0)
+                    Button { makeCopy() } label: {
+                        Label("Make a copy", systemImage: "doc.on.doc")
+                    }
+                    Button(role: .destructive) { confirmingDelete = true } label: {
+                        Label("Delete list", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+                .accessibilityLabel("List options")
+            }
+        }
+        .safeAreaInset(edge: .bottom) {
+            HStack(spacing: 8) {
+                TextField("Add an item", text: $newText, axis: .vertical)
+                    .textFieldStyle(.roundedBorder)
+                Button("Add") { addItems() }
+                    .disabled(newText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+            .padding()
+            .background(.bar)
+        }
+        .sheet(item: $editing, onDismiss: finishEditingItem) { ref in
+            ListItemEditor(list: list, itemID: ref.id) { itemToDelete = ref.id }
+        }
+        .sheet(isPresented: $showNumbers) {
+            ListNumbersSheet(list: list)
+        }
+        .confirmationDialog("Delete this list?", isPresented: $confirmingDelete, titleVisibility: .visible) {
+            Button("Delete list", role: .destructive) {
+                onDelete(list)
+                dismiss()
+            }
+        }
+    }
+
+    private func row(_ item: ListItem) -> some View {
+        HStack(spacing: 12) {
+            Button { toggle(item.id) } label: {
+                Image(systemName: item.isDone ? "checkmark.circle.fill" : "circle")
+                    .font(.title3)
+                    .foregroundStyle(item.isDone ? Anchor.Theme.accent : Color.secondary)
+                    .frame(width: 32, height: 32)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(item.isDone ? "Ticked, \(item.name)" : "Not ticked, \(item.name)")
+
+            Button { editing = ItemRef(id: item.id) } label: {
+                HStack(alignment: .firstTextBaseline) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(item.name.isEmpty ? "Untitled" : item.name)
+                            .strikethrough(item.isDone)
+                            .foregroundStyle(item.isDone ? .secondary : .primary)
+                            .multilineTextAlignment(.leading)
+                        let rule = list.ruleDescription(for: item)
+                        if !rule.isEmpty {
+                            Text(rule).font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    Spacer()
+                    Text(list.quantityBadge(of: item))
+                        .font(.system(.body, design: .rounded).weight(.semibold))
+                        .foregroundStyle(item.isDone ? .secondary : .primary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Opens the item")
+        }
+    }
+
+    private func toggle(_ id: UUID) {
+        guard let index = list.items.firstIndex(where: { $0.id == id }) else { return }
+        list.items[index].isDone.toggle()
+    }
+
+    private func removeItem(_ id: UUID) {
+        list.items.removeAll { $0.id == id }
+    }
+
+    /// Runs once the item sheet has closed, so it never reads an item that is
+    /// already gone. An item left with no name is dropped.
+    private func finishEditingItem() {
+        if let id = itemToDelete { removeItem(id) }
+        itemToDelete = nil
+        list.items.removeAll { $0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    }
+
+    /// Typed or pasted text becomes one item per line.
+    private func addItems() {
+        let parsed = QuickList.parsedItems(from: newText)
+        guard !parsed.isEmpty else { return }
+        let room = max(0, ItemList.maxItems - list.items.count)
+        list.items.append(contentsOf: parsed.prefix(room).map { ListItem(name: $0.text) })
+        newText = ""
+    }
+
+    private func makeCopy() {
+        let name = list.displayName + " copy"
+        modelContext.insert(list.copied(named: name))
+        dismiss()
+    }
+}
+
+/// One item in one sheet: name, heading, how many, and Delete.
+private struct ListItemEditor: View {
+    @Bindable var list: ItemList
+    let itemID: UUID
+    let onDelete: () -> Void
+
+    private var index: Int? { list.items.firstIndex { $0.id == itemID } }
+
+    var body: some View {
+        Anchor.ItemEditorSheet(
+            title: "Item",
+            onDelete: onDelete,
+            deleteTitle: "Delete item",
+            deleteQuestion: "Delete this item?"
+        ) {
+            if let index {
+                form(for: $list.items[index])
+            } else {
+                Text("This item is gone.").foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func form(for item: Binding<ListItem>) -> some View {
+        let usesNumber = item.wrappedValue.rule.variableID != nil
+        Form {
+            Section("Item") {
+                TextField("e.g. T-shirts", text: item.name)
+                TextField("Heading (e.g. Clothes)", text: item.category)
+                let headings = list.categoryNames.filter { $0 != ItemList.otherCategory }
+                if !headings.isEmpty {
+                    Menu("Use a heading already here") {
+                        ForEach(headings, id: \.self) { heading in
+                            Button(heading) { item.wrappedValue.category = heading }
+                        }
+                    }
+                }
+            }
+
+            Section {
+                if !list.variables.isEmpty {
+                    Picker("Amount", selection: Binding(
+                        get: { usesNumber },
+                        set: { follows in
+                            item.wrappedValue.rule.variableID = follows ? list.variables.first?.id : nil
+                        }
+                    )) {
+                        Text("A set number").tag(false)
+                        Text("Follows a number").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                }
+
+                if usesNumber {
+                    Picker("Counts by", selection: item.rule.variableID) {
+                        ForEach(list.variables) { variable in
+                            Text(variable.name.isEmpty ? "Number" : variable.name).tag(Optional(variable.id))
+                        }
+                    }
+                    Stepper("\(item.wrappedValue.rule.per) per \(list.variableName(for: item.wrappedValue.rule.variableID)?.lowercased() ?? "unit")",
+                            value: item.rule.per, in: 0...20)
+                    Toggle("Add some extra", isOn: Binding(
+                        get: { item.wrappedValue.rule.extra > 0 && item.wrappedValue.rule.extraEvery > 0 },
+                        set: { on in
+                            item.wrappedValue.rule.extra = on ? 1 : 0
+                            item.wrappedValue.rule.extraEvery = on ? 3 : 0
+                        }
+                    ))
+                    .tint(Anchor.Theme.accent)
+                    if item.wrappedValue.rule.extra > 0 && item.wrappedValue.rule.extraEvery > 0 {
+                        Stepper("\(item.wrappedValue.rule.extra) extra", value: item.rule.extra, in: 1...20)
+                        Stepper("for every \(item.wrappedValue.rule.extraEvery)", value: item.rule.extraEvery, in: 1...99)
+                    }
+                } else {
+                    Stepper("\(item.wrappedValue.rule.fixed)", value: item.rule.fixed, in: 0...99)
+                }
+
+                HStack {
+                    Text("Right now")
+                    Spacer()
+                    Text("\(list.quantity(of: item.wrappedValue))")
+                        .font(.system(.body, design: .rounded).weight(.semibold))
+                }
+            } header: {
+                Text("How many")
+            } footer: {
+                if list.variables.isEmpty {
+                    Text("Add a number on the list, like Day, to make an amount follow it.")
+                }
+            }
+        }
+    }
+}
+
+/// The list's numbers: a name and a value each, like Day 5 or Person 2.
+private struct ListNumbersSheet: View {
+    @Bindable var list: ItemList
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    ForEach($list.variables) { $variable in
+                        HStack {
+                            TextField("Name (e.g. Day)", text: $variable.name)
+                            Stepper(value: $variable.value, in: 0...99) {
+                                Text("\(variable.value)")
+                                    .frame(maxWidth: .infinity, alignment: .trailing)
+                            }
+                        }
+                    }
+                    .onDelete { list.variables.remove(atOffsets: $0) }
+
+                    if list.variables.count < ItemList.maxVariables {
+                        Button("Add a number") {
+                            list.variables.append(ListVariable(name: "", value: 1))
+                        }
+                    }
+                } footer: {
+                    Text("An item that followed a number you remove goes back to its set amount.")
+                }
+            }
+            .anchorSettingsStyle()
+            .navigationTitle("Numbers")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
         }
     }
 }
