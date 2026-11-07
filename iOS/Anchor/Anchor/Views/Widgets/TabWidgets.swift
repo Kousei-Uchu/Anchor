@@ -40,6 +40,9 @@ extension WidgetID {
 
     /// Half-width widgets sit two across when adjacent; a lone one goes full width.
     var isHalf: Bool {
+        // Long titles ("Who I'm doing this for") would be squeezed in a half-width
+        // card, so they always get the full width.
+        guard title.count <= 16 else { return false }
         switch self {
         case .triggerWindows, .appointments, .recovery, .motivations,
              .reframing, .feedbackLoops, .futureNotes, .unsentDrafts:
@@ -140,7 +143,8 @@ extension Anchor {
                                 Text(title)
                                     .font(.system(.subheadline, design: .rounded).weight(.semibold))
                                     .foregroundStyle(.primary)
-                                    .lineLimit(2)
+                                    .lineLimit(3)
+                                    .minimumScaleFactor(0.7)
                                     .fixedSize(horizontal: false, vertical: true)
                                 Spacer(minLength: 0)
                                 Image(systemName: "chevron.right")
@@ -181,20 +185,23 @@ extension Anchor {
             Text(text)
                 .font(.system(.title3, design: .rounded).weight(.semibold))
                 .foregroundStyle(.primary)
-                .lineLimit(2)
-                .minimumScaleFactor(0.8)
+                .lineLimit(3)
+                .minimumScaleFactor(0.6)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
     struct WidgetCaption: View {
         let text: String
-        var lines = 2
+        var lines = 3
         var body: some View {
             Text(text)
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(lines)
+                .minimumScaleFactor(0.9)
                 .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

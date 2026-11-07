@@ -351,10 +351,10 @@ enum Anchor {
                     .font(.system(.caption, design: .rounded).weight(.medium))
                     .foregroundStyle(.primary)
                     .multilineTextAlignment(.center)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.85)
+                    .lineLimit(3)
+                    .minimumScaleFactor(0.75)
                     .fixedSize(horizontal: false, vertical: true)
-                    .frame(height: 32)
+                    .frame(minHeight: 32, alignment: .top)
             }
             // Widened from 64 (icon width, no slack) to 88 so two- and
             // three-word titles like "Decision presets" or "NSW mental

@@ -124,6 +124,8 @@ extension Anchor {
             }
         }
 
+        @Environment(\.dynamicTypeSize) private var typeSize
+
         private var ordered: [WidgetID] { WidgetLayoutStore.ordering(for: tab, orderRaw: orderRaw) }
         private var hidden: Set<WidgetID> { Set(WidgetLayoutStore.decode(hiddenRaw)) }
         private var visible: [WidgetID] { ordered.filter { !hidden.contains($0) } }
@@ -135,7 +137,7 @@ extension Anchor {
             var i = 0
             while i < ids.count {
                 let a = ids[i]
-                if a.isHalf, i + 1 < ids.count, ids[i + 1].isHalf {
+                if !typeSize.isAccessibilitySize, a.isHalf, i + 1 < ids.count, ids[i + 1].isHalf {
                     result.append(.pair(a, ids[i + 1]))
                     i += 2
                 } else {
