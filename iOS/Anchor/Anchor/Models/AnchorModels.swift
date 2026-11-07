@@ -623,6 +623,16 @@ final class TaskItem {
     /// task sits under "Waiting on something else". A blocker that has been
     /// deleted is simply ignored.
     var blockedByIDs: [UUID] = []
+    /// Where the task is in your own words: not started, started, or set aside
+    /// for now. Done stays `isDone`. A task with a step ticked off also counts
+    /// as started without you having to say so (see `isStarted`).
+    var status: TaskStatus = TaskStatus.notStarted
+    /// How much energy the task needs, if you have said. Only used to narrow
+    /// the list on a low day; nothing is scored or compared.
+    var energy: TaskEnergy = TaskEnergy.unset
+    /// The smallest way to begin, in a few words. Separate from steps so it
+    /// can be a single line.
+    var firstStep: String = ""
 
     init(
         id: UUID = UUID(),
@@ -637,7 +647,10 @@ final class TaskItem {
         dueDate: Date? = nil,
         parentID: UUID? = nil,
         subtasksCollapsed: Bool = false,
-        blockedByIDs: [UUID] = []
+        blockedByIDs: [UUID] = [],
+        status: TaskStatus = .notStarted,
+        energy: TaskEnergy = .unset,
+        firstStep: String = ""
     ) {
         self.id = id
         self.title = title
@@ -652,6 +665,9 @@ final class TaskItem {
         self.parentID = parentID
         self.subtasksCollapsed = subtasksCollapsed
         self.blockedByIDs = blockedByIDs
+        self.status = status
+        self.energy = energy
+        self.firstStep = firstStep
     }
 
     /// Ticks the task off or back on, keeping `completedAt` in step.
@@ -682,8 +698,81 @@ enum TaskDueKind: String, Codable, CaseIterable, Identifiable {
 }
 
 /// The groups the task list is shown in, in this order.
+enum TaskStatus: String, Codable, CaseIterable, Identifiable {
+    case notStarted, inProgress, setAside
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .notStarted: return "Not started"
+        case .inProgress: return "Started"
+        case .setAside: return "Set aside for now"
+        }
+    }
+}
+
+enum TaskEnergy: String, Codable, CaseIterable, Identifiable {
+    case unset, little, some, lots
+
+    var id: String { rawValue }
+
+    /// The choice as it reads in the editor.
+    var label: String {
+        switch self {
+        case .unset: return "Not set"
+        case .little: return "A little"
+        case .some: return "Some"
+        case .lots: return "A lot"
+        }
+    }
+
+    /// The tag as it reads on a task card, or nil when it is not set.
+    var cardText: String? {
+        switch self {
+        case .unset: return nil
+        case .little: return "Needs a little energy"
+        case .some: return "Needs some energy"
+        case .lots: return "Needs a lot of energy"
+        }
+    }
+}
+
+/// Narrows the Tasks list on a low day. Tasks with no energy set are always
+/// shown, because nothing is known about them.
+enum TaskEnergyFilter: String, CaseIterable, Identifiable {
+    case everything, someOrLess, littleOnly
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .everything: return "Everything"
+        case .someOrLess: return "Some energy or less"
+        case .littleOnly: return "Only a little energy"
+        }
+    }
+
+    /// The line shown above the list while a filter is on.
+    var summary: String {
+        switch self {
+        case .everything: return ""
+        case .someOrLess: return "Showing tasks that need some energy or less, and any with no energy set."
+        case .littleOnly: return "Showing tasks that need only a little energy, and any with no energy set."
+        }
+    }
+
+    func allows(_ energy: TaskEnergy) -> Bool {
+        switch self {
+        case .everything: return true
+        case .someOrLess: return energy != .lots
+        case .littleOnly: return energy != .some && energy != .lots
+        }
+    }
+}
+
 enum TaskBucket: Int, CaseIterable, Identifiable {
-    case today, thisWeek, later, noDate, waiting
+    case today, thisWeek, later, noDate, waiting, setAside
 
     var id: Int { rawValue }
 
@@ -694,6 +783,7 @@ enum TaskBucket: Int, CaseIterable, Identifiable {
         case .later: return "Later"
         case .noDate: return "No date"
         case .waiting: return "Waiting on something else"
+        case .setAside: return "Set aside for now"
         }
     }
 }
@@ -753,6 +843,7 @@ extension TaskItem {
         case .someday: return "Someday"
         case .exact:
             guard let due = dueDate else { return nil }
+            if calendar.isDate(due, inSameDayAs: calendar.date(byAdding: .day, value: 1, to: now) ?? now) { return "Tomorrow" }
             let text = due.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))
             return calendar.startOfDay(for: due) < calendar.startOfDay(for: now) ? "Planned for \(text)" : text
         case .today, .thisWeek, .thisMonth:
@@ -762,10 +853,10 @@ extension TaskItem {
     }
 
     /// Open tasks in the order the list shows them: group first, then your own order.
-    /// `includeWaiting: false` leaves out tasks that are waiting on another, for
-    /// places that show what can be done now.
+    /// `includeWaiting: false` leaves out tasks that are waiting on another and
+    /// tasks you have set aside, for places that show what can be done now.
     static func listOrder(_ tasks: [TaskItem], now: Date = .now, includeWaiting: Bool = true) -> [TaskItem] {
-        topLevel(tasks).filter { !$0.isDone && (includeWaiting || !$0.isBlocked(among: tasks)) }.sorted {
+        topLevel(tasks).filter { !$0.isDone && (includeWaiting || ($0.status != .setAside && !$0.isBlocked(among: tasks))) }.sorted {
             let a = $0.listBucket(among: tasks, now: now), b = $1.listBucket(among: tasks, now: now)
             return a.rawValue != b.rawValue ? a.rawValue < b.rawValue : $0.sortOrder < $1.sortOrder
         }
@@ -783,9 +874,26 @@ extension TaskItem {
         !openBlockers(among: tasks).isEmpty
     }
 
-    /// Where the list puts the task: Waiting while blocked, otherwise by its timing.
+    /// Where the list puts the task: set aside if you chose that, Waiting while
+    /// blocked, otherwise by its timing.
     func listBucket(among tasks: [TaskItem], now: Date = .now, calendar: Calendar = .current) -> TaskBucket {
-        isBlocked(among: tasks) ? .waiting : bucket(now: now, calendar: calendar)
+        if !isDone && status == .setAside { return .setAside }
+        return isBlocked(among: tasks) ? .waiting : bucket(now: now, calendar: calendar)
+    }
+
+    /// True once you have said so, or as soon as one of its steps is ticked.
+    /// A task set aside or done is never shown as started.
+    func isStarted(steps: [TaskItem]) -> Bool {
+        guard !isDone, status != .setAside else { return false }
+        return status == .inProgress || steps.contains(where: \.isDone)
+    }
+
+    /// Moves the task to tomorrow. It comes back to Today on its own when the
+    /// day arrives, and nothing marks it as late.
+    func snoozeToTomorrow(now: Date = .now, calendar: Calendar = .current) {
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now)) ?? now.addingTimeInterval(86_400)
+        setDue(.exact, day: tomorrow, now: now, calendar: calendar)
+        if status == .setAside { status = .notStarted }
     }
 
     /// True when `candidate` already waits on this task, directly or through
