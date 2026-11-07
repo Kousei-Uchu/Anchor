@@ -5,61 +5,105 @@
 //  Now's empty state says "add your own tools in Plan" — this is that
 //  screen. Still user-authored only: no seeded suggestions here either.
 //
+//  Editing follows the app-wide pattern: tap a tool to edit it, the plus adds
+//  one, and Delete is in the editor and in the long-press menu. Order matters
+//  (it is the order on Now), so there is a labelled Reorder button. A tool
+//  with written steps has a play button on its card to run it right here;
+//  that is using it, not editing it.
+//
 
 import SwiftUI
 import SwiftData
 
-/// Grounding tools as something to browse: a card per tool, with its kind and
-/// when it's relevant shown as labels. A tool with written steps can be run
-/// right here (that's using it, not editing it); adding, deleting and
-/// rewriting live behind Edit (`GroundingToolsEditorView`).
+/// Grounding tools as cards, with each tool's kind and when it is relevant
+/// shown as labels.
 struct GroundingToolsListView: View {
+    @Environment(\.modelContext) private var modelContext
     @Query(sort: \GroundingTool.sortOrder) private var tools: [GroundingTool]
-    @State private var showingEditor = false
+    @State private var editingTool: GroundingTool?
+    @State private var toolToDelete: GroundingTool?
     @State private var runningTool: GroundingTool?
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: Anchor.Theme.spacing) {
-                if tools.isEmpty {
+        Group {
+            if tools.isEmpty {
+                ScrollView {
                     Anchor.EmptyState(
                         icon: "leaf.fill",
                         title: "No grounding tools yet",
                         message: "Add the things that actually help you settle: a few steps, or a link to a playlist or app. They'll show up on Now.",
                         actionTitle: "Add a tool",
                         tint: Anchor.Theme.sage
-                    ) { showingEditor = true }
-                } else {
-                    ForEach(tools) { tool in
-                        if tool.kind == .physicalAction, groundingHasSteps(tool) {
-                            Button { runningTool = tool } label: {
-                                GroundingToolCard(tool: tool, runnable: true)
-                            }
-                            .buttonStyle(.plain)
-                        } else {
-                            GroundingToolCard(tool: tool, runnable: false)
-                        }
-                    }
+                    ) { startNewTool() }
+                    .padding()
                 }
+            } else {
+                List {
+                    ForEach(tools) { tool in
+                        GroundingToolCard(
+                            tool: tool,
+                            onEdit: { editingTool = tool },
+                            onRun: canRun(tool) ? { runningTool = tool } : nil
+                        )
+                        .anchorDeletable { modelContext.delete(tool) }
+                        .anchorCardRow()
+                    }
+                    .onMove(perform: move)
+                }
+                .listStyle(.plain)
             }
-            .padding()
         }
         .anchorBackground()
         .navigationTitle("Grounding tools")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Anchor.EditToolbarButton { showingEditor = true }
+            ToolbarItemGroup(placement: .primaryAction) {
+                if tools.count > 1 {
+                    Anchor.ReorderToolbarButton()
+                }
+                Anchor.AddToolbarButton(label: "Add a tool") { startNewTool() }
             }
         }
-        .sheet(isPresented: $showingEditor) {
-            Anchor.EditorSheet(title: "Edit grounding tools") {
-                GroundingToolsEditorView()
-            }
+        .sheet(item: $editingTool, onDismiss: finishEditing) { tool in
+            GroundingToolEditorSheet(tool: tool) { toolToDelete = tool }
         }
         .fullScreenCover(item: $runningTool) { tool in
             StepByStepRunnerView(title: tool.title, stepsText: tool.steps ?? "", tint: Anchor.Theme.sage)
         }
+    }
+
+    private func canRun(_ tool: GroundingTool) -> Bool {
+        tool.kind == .physicalAction && groundingHasSteps(tool)
+    }
+
+    private func startNewTool() {
+        let new = GroundingTool(title: "", kind: .physicalAction, steps: "", sortOrder: tools.count)
+        modelContext.insert(new)
+        editingTool = new
+    }
+
+    private func move(from offsets: IndexSet, to destination: Int) {
+        var reordered = tools
+        reordered.move(fromOffsets: offsets, toOffset: destination)
+        for (index, tool) in reordered.enumerated() { tool.sortOrder = index }
+    }
+
+    /// Runs once the editor has closed. Deleting here, not while the editor
+    /// is still on screen, keeps the editor from reading a tool that is
+    /// already gone. A tool added and then left blank is dropped.
+    private func finishEditing() {
+        let deleting = toolToDelete
+        toolToDelete = nil
+        if let deleting { modelContext.delete(deleting) }
+        for tool in tools where tool !== deleting && isBlank(tool) {
+            modelContext.delete(tool)
+        }
+    }
+
+    private func isBlank(_ tool: GroundingTool) -> Bool {
+        tool.kind == .physicalAction
+            && tool.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !groundingHasSteps(tool)
     }
 }
 
@@ -76,9 +120,12 @@ private func groundingTimeLabel(_ tag: TimeWindowTag) -> String {
     }
 }
 
+/// A tool as a card. The card opens the editor. The play button, when there
+/// is one, runs the steps instead.
 private struct GroundingToolCard: View {
     let tool: GroundingTool
-    let runnable: Bool
+    let onEdit: () -> Void
+    let onRun: (() -> Void)?
 
     private var whenText: String {
         tool.relevantTimeWindows.isEmpty
@@ -88,74 +135,53 @@ private struct GroundingToolCard: View {
 
     var body: some View {
         Anchor.Card(accentColor: Anchor.Theme.sage) {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text(tool.title.isEmpty ? "Untitled tool" : tool.title)
-                        .font(.system(.headline, design: .rounded))
-                    Spacer()
-                    Label(tool.kind == .deepLink ? "Opens a link" : "Steps",
-                          systemImage: tool.kind == .deepLink ? "arrow.up.forward.app.fill" : "list.number")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Text(whenText)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                if runnable {
-                    Label("Try it step by step", systemImage: "play.fill")
-                        .font(.caption)
-                        .foregroundStyle(Anchor.Theme.sage)
-                }
-            }
-        }
-    }
-}
-
-/// The grounding-tools editor: add, delete, open a tool's details. Presented
-/// from `GroundingToolsListView` via Edit, never browsed to directly.
-struct GroundingToolsEditorView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query(sort: \GroundingTool.sortOrder) private var tools: [GroundingTool]
-    @State private var editingTool: GroundingTool?
-
-    var body: some View {
-        List {
-            ForEach(tools) { tool in
-                Button {
-                    editingTool = tool
-                } label: {
-                    VStack(alignment: .leading) {
-                        Text(tool.title).font(.headline)
-                        Text(tool.kind == .deepLink ? "Opens a link" : "Described steps")
-                            .font(.caption)
+            HStack(spacing: 12) {
+                Button(action: onEdit) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(tool.title.isEmpty ? "Untitled tool" : tool.title)
+                                .font(.system(.headline, design: .rounded))
+                            Spacer()
+                            Label(tool.kind == .deepLink ? "Opens a link" : "Steps",
+                                  systemImage: tool.kind == .deepLink ? "arrow.up.forward.app.fill" : "list.number")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Text(whenText)
+                            .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-            }
-            .onDelete { offsets in
-                for index in offsets { modelContext.delete(tools[index]) }
-            }
+                .accessibilityHint("Opens the editor")
 
-            Button("Add grounding tool") {
-                let new = GroundingTool(title: "", kind: .physicalAction, steps: "", sortOrder: tools.count)
-                modelContext.insert(new)
-                editingTool = new
+                if let onRun {
+                    Button(action: onRun) {
+                        Image(systemName: "play.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(Anchor.Theme.sage)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Try \(tool.title.isEmpty ? "this tool" : tool.title) step by step")
+                }
             }
-        }
-        .sheet(item: $editingTool) { tool in
-            GroundingToolEditorSheet(tool: tool)
         }
     }
 }
 
 private struct GroundingToolEditorSheet: View {
     @Bindable var tool: GroundingTool
-    @Environment(\.dismiss) private var dismiss
+    let onDelete: () -> Void
     @State private var deepLinkURLString: String = ""
 
     var body: some View {
-        NavigationStack {
+        Anchor.ItemEditorSheet(
+            title: tool.title.isEmpty ? "New tool" : tool.title,
+            onDelete: onDelete,
+            deleteQuestion: "Delete this tool?"
+        ) {
             Form {
                 TextField("Title", text: $tool.title)
 
@@ -212,14 +238,6 @@ private struct GroundingToolEditorSheet: View {
                     Text("When it's relevant")
                 } footer: {
                     Text("Leave all off to show this tool at any time of day.")
-                }
-            }
-            .anchorSettingsStyle()
-            .navigationTitle(tool.title.isEmpty ? "New tool" : tool.title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
                 }
             }
         }
