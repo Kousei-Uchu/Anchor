@@ -46,6 +46,16 @@ struct AppointmentPrepView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Anchor.Theme.spacing) {
+                if !series.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Anchor.Card {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Anchor.SectionHeader(icon: "person.text.rectangle", title: "About \(series.displayName)")
+                            Text(series.notes)
+                                .font(.subheadline)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                }
                 if let next = nextOccurrence {
                     Anchor.Card {
                         VStack(alignment: .leading, spacing: 6) {

@@ -143,7 +143,7 @@ struct AppointmentView: View {
             .padding()
         }
         .anchorBackground()
-        .navigationTitle(series.clinicianLabel)
+        .navigationTitle(series.displayName)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -398,6 +398,189 @@ private struct OccurrenceEditorSheet: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
+                }
+            }
+        }
+    }
+}
+
+
+// MARK: - Providers
+
+/// Which of a provider's pages the host is showing.
+enum ProviderPage {
+    case sessions, prep, afterSession
+
+    var title: String {
+        switch self {
+        case .sessions: return "Appointments"
+        case .prep: return "Session prep"
+        case .afterSession: return "Post-session notes"
+        }
+    }
+}
+
+/// The screen behind every appointments, session prep and after-session
+/// link. It shows one provider's page at a time. With two or more providers a
+/// row of names at the top switches between them, and the menu in the bar has
+/// Details for the one shown and a way to add another. With none, it says so
+/// and offers to add one, rather than making one up.
+struct ProviderPageHost: View {
+    let page: ProviderPage
+    /// The provider to open first, usually the one with the next session.
+    var startingWith: UUID? = nil
+
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \AppointmentSeries.sortOrder) private var providers: [AppointmentSeries]
+    @State private var selectedID: UUID?
+    @State private var editing: AppointmentSeries?
+    @State private var toDelete: AppointmentSeries?
+
+    private var current: AppointmentSeries? {
+        providers.first { $0.id == selectedID }
+            ?? providers.first { $0.id == startingWith }
+            ?? providers.first
+    }
+
+    var body: some View {
+        Group {
+            if let provider = current {
+                pageView(for: provider)
+                    .id(provider.id)
+                    .safeAreaInset(edge: .top, spacing: 0) {
+                        if providers.count > 1 { nameRow(selected: provider) }
+                    }
+            } else {
+                ScrollView {
+                    Anchor.EmptyState(
+                        icon: "person.2.fill",
+                        title: "No one added yet",
+                        message: "Add the people you see. Each one gets their own sessions and notes.",
+                        actionTitle: "Add someone",
+                        tint: Anchor.Theme.sage
+                    ) { addProvider() }
+                    .padding()
+                }
+                .anchorBackground()
+                .navigationTitle(page.title)
+                .navigationBarTitleDisplayMode(.inline)
+            }
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                if let provider = current {
+                    Menu {
+                        Button { editing = provider } label: {
+                            Label("Details for \(provider.displayName)", systemImage: "person.text.rectangle")
+                        }
+                        Button { addProvider() } label: {
+                            Label("Add someone", systemImage: "plus")
+                        }
+                    } label: {
+                        Image(systemName: "person.crop.circle")
+                    }
+                    .accessibilityLabel("Providers")
+                }
+            }
+        }
+        .sheet(item: $editing, onDismiss: finishEditing) { provider in
+            ProviderEditorSheet(provider: provider) { toDelete = provider }
+        }
+    }
+
+    @ViewBuilder private func pageView(for provider: AppointmentSeries) -> some View {
+        switch page {
+        case .sessions: AppointmentView(series: provider)
+        case .prep: AppointmentPrepView(series: provider)
+        case .afterSession: PostSessionNotesView(series: provider)
+        }
+    }
+
+    /// One button per provider, so a person with two or more can move between them.
+    private func nameRow(selected: AppointmentSeries) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(providers) { provider in
+                    let isSelected = provider.id == selected.id
+                    Button {
+                        selectedID = provider.id
+                    } label: {
+                        Text(provider.displayName)
+                            .font(.subheadline.weight(.medium))
+                            .lineLimit(1)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .foregroundStyle(isSelected ? Anchor.Theme.accent : Color.primary)
+                            .background(isSelected ? Anchor.Theme.accentSoft : Color.clear, in: Capsule())
+                            .overlay(
+                                Capsule().strokeBorder(isSelected ? Anchor.Theme.accent : Color.secondary.opacity(0.3))
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(isSelected ? .isSelected : [])
+                }
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+        }
+        .background(.thinMaterial)
+    }
+
+    private func addProvider() {
+        let new = AppointmentSeries(
+            clinicianLabel: "",
+            sortOrder: (providers.map(\.sortOrder).max() ?? -1) + 1
+        )
+        modelContext.insert(new)
+        selectedID = new.id
+        editing = new
+    }
+
+    /// Runs once the sheet has closed, so it never reads a provider that is
+    /// already gone. A provider added and left with no name, role, notes or
+    /// sessions is dropped.
+    private func finishEditing() {
+        let deleting = toDelete
+        toDelete = nil
+        if let deleting { modelContext.delete(deleting) }
+        for provider in providers where provider !== deleting && provider.isBlankProvider {
+            modelContext.delete(provider)
+        }
+    }
+}
+
+private extension AppointmentSeries {
+    var isBlankProvider: Bool {
+        clinicianLabel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && role.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && occurrences.isEmpty
+    }
+}
+
+private struct ProviderEditorSheet: View {
+    @Bindable var provider: AppointmentSeries
+    let onDelete: () -> Void
+
+    var body: some View {
+        Anchor.ItemEditorSheet(
+            title: provider.clinicianLabel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "New provider" : "Provider",
+            onDelete: onDelete,
+            deleteTitle: "Remove this provider",
+            deleteQuestion: "Remove this provider and their sessions? Notes you wrote stay in your Journal."
+        ) {
+            Form {
+                Section {
+                    TextField("Name", text: $provider.clinicianLabel)
+                        .textInputAutocapitalization(.words)
+                    TextField("What they do, if you like", text: $provider.role)
+                }
+                Section("Name on exports") {
+                    TextField("Same as the name above", text: $provider.exportLabel)
+                }
+                Section("Notes") {
+                    TextField("Anything you want to remember about them", text: $provider.notes, axis: .vertical)
+                        .lineLimit(3...10)
                 }
             }
         }

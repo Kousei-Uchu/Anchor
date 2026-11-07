@@ -293,8 +293,6 @@ struct TriggerWindowsWidget: View {
 
 struct AppointmentsWidget: View {
     @Query private var allSeries: [AppointmentSeries]
-    /// Fallback destination when nothing is scheduled (Plan/Bridge create the series).
-    let fallbackSeries: AppointmentSeries
     var fillsHeight = true
 
     private var next: (series: AppointmentSeries, occurrence: AppointmentOccurrence)? {
@@ -314,12 +312,12 @@ struct AppointmentsWidget: View {
 
     var body: some View {
         Anchor.Widget(icon: "calendar", title: "Appointments", tint: Anchor.Theme.sage, fillsHeight: fillsHeight) {
-            AppointmentView(series: next?.series ?? fallbackSeries)
+            ProviderPageHost(page: .sessions, startingWith: next?.series.id)
         } content: {
             if let next {
                 VStack(alignment: .leading, spacing: 2) {
                     Anchor.WidgetBig(text: next.occurrence.scheduledDate.formatted(.dateTime.weekday(.abbreviated).hour().minute()))
-                    Anchor.WidgetCaption(text: "\(next.series.clinicianLabel) · \(daysUntil(next.occurrence.scheduledDate))")
+                    Anchor.WidgetCaption(text: "\(next.series.displayName) · \(daysUntil(next.occurrence.scheduledDate))")
                 }
             } else {
                 Anchor.WidgetCaption(text: "Nothing scheduled. Tap to set one up.")
@@ -507,7 +505,6 @@ struct ThingsToRaiseWidget: View {
 
 struct NextSessionWidget: View {
     @Query private var allSeries: [AppointmentSeries]
-    let fallbackSeries: AppointmentSeries
 
     private var next: (series: AppointmentSeries, occurrence: AppointmentOccurrence)? {
         allSeries
@@ -516,14 +513,21 @@ struct NextSessionWidget: View {
             .min { $0.1.scheduledDate < $1.1.scheduledDate }
     }
 
+    /// The provider of the most recent session so far, which is who After session opens on.
+    private var lastPastSeries: AppointmentSeries? {
+        let past = allSeries
+            .flatMap { s in s.occurrences.map { (s, $0) } }
+            .filter { $0.1.scheduledDate <= .now }
+        return past.max { $0.1.scheduledDate < $1.1.scheduledDate }?.0
+    }
+
     var body: some View {
-        let series = next?.series ?? fallbackSeries
         Anchor.Widget(icon: "calendar.badge.clock", title: "Next session") {
-            AppointmentView(series: series)
+            ProviderPageHost(page: .sessions, startingWith: next?.series.id)
         } content: {
             if let next {
                 Anchor.WidgetCaption(
-                    text: "\(next.series.clinicianLabel) · \(next.occurrence.scheduledDate.formatted(date: .abbreviated, time: .shortened))",
+                    text: "\(next.series.displayName) · \(next.occurrence.scheduledDate.formatted(date: .abbreviated, time: .shortened))",
                     lines: 1
                 )
             } else {
@@ -531,10 +535,10 @@ struct NextSessionWidget: View {
             }
         } footer: {
             HStack(spacing: 8) {
-                NavigationLink { AppointmentPrepView(series: series) } label: {
+                NavigationLink { ProviderPageHost(page: .prep, startingWith: next?.series.id) } label: {
                     Text("Session prep").lineLimit(1)
                 }
-                NavigationLink { PostSessionNotesView(series: series) } label: {
+                NavigationLink { ProviderPageHost(page: .afterSession, startingWith: (lastPastSeries ?? next?.series)?.id) } label: {
                     Text("After session").lineLimit(1)
                 }
             }

@@ -9,7 +9,6 @@ import SwiftData
 struct PlanView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \SafetyPlanSection.sortOrder) private var planSections: [SafetyPlanSection]
-    @Query private var appointmentSeries: [AppointmentSeries]
     @Query(sort: \TrustedContact.sortOrder) private var contacts: [TrustedContact]
     @Query private var triggerWindows: [TriggerWindow]
     @Query(sort: \DeEscalationScript.sortOrder) private var deEscalationScripts: [DeEscalationScript]
@@ -77,7 +76,7 @@ struct PlanView: View {
         switch id {
         case .safetyPlan: SafetyPlanWidget()
         case .triggerWindows: TriggerWindowsWidget()
-        case .appointments: AppointmentsWidget(fallbackSeries: currentAppointmentSeries)
+        case .appointments: AppointmentsWidget()
         case .contacts: ContactsWidget(contacts: contacts)
         case .deEscalation: DeEscalationWidget()
         case .grounding: GroundingWidget(tools: groundingTools)
@@ -95,7 +94,7 @@ struct PlanView: View {
         switch id {
         case .safetyPlan: Anchor.MoreTile(id: id) { SafetyPlanView() }
         case .triggerWindows: Anchor.MoreTile(id: id) { TriggerWindowListView() }
-        case .appointments: Anchor.MoreTile(id: id) { AppointmentView(series: currentAppointmentSeries) }
+        case .appointments: Anchor.MoreTile(id: id) { ProviderPageHost(page: .sessions) }
         case .contacts: Anchor.MoreTile(id: id) { ContactsView() }
         case .deEscalation: Anchor.MoreTile(id: id) { DeEscalationScriptsView() }
         case .grounding: Anchor.MoreTile(id: id) { GroundingToolsListView() }
@@ -121,7 +120,7 @@ struct PlanView: View {
                         NavigationLink { TriggerWindowListView() } label: {
                             Anchor.TileButtonLabel(icon: "clock.fill", title: "Trigger windows", tint: Anchor.Theme.sage)
                         }
-                        NavigationLink { AppointmentView(series: currentAppointmentSeries) } label: {
+                        NavigationLink { ProviderPageHost(page: .sessions) } label: {
                             Anchor.TileButtonLabel(icon: "calendar", title: "Appointments", tint: Anchor.Theme.sage)
                         }
                     }
@@ -197,12 +196,5 @@ struct PlanView: View {
         let timeLabel = formatter.string(from: soonest.date)
         let name = soonest.window.label.isEmpty ? "Trigger window" : soonest.window.label
         return "\(name) · \(timeLabel)"
-    }
-
-    private var currentAppointmentSeries: AppointmentSeries {
-        if let existing = appointmentSeries.first { return existing }
-        let new = AppointmentSeries(clinicianLabel: "Psych")
-        modelContext.insert(new)
-        return new
     }
 }

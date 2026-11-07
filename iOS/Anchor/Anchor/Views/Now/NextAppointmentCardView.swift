@@ -29,13 +29,13 @@ struct NextAppointmentCardView: View {
     var body: some View {
         if let next = nextUpcoming {
             NavigationLink {
-                AppointmentView(series: next.series)
+                ProviderPageHost(page: .sessions, startingWith: next.series.id)
             } label: {
                 Anchor.Card {
                     HStack(spacing: 12) {
                         VStack(alignment: .leading, spacing: 2) {
                             Anchor.SectionHeader(icon: "calendar.badge.clock", title: "Next appointment")
-                            Text("\(next.series.clinicianLabel) · \(next.occurrence.scheduledDate.formatted(date: .abbreviated, time: .shortened))")
+                            Text("\(next.series.displayName) · \(next.occurrence.scheduledDate.formatted(date: .abbreviated, time: .shortened))")
                                 .font(.system(.subheadline, design: .rounded))
                                 .foregroundStyle(.primary)
                             Text(daysUntilLabel(next.occurrence.scheduledDate))

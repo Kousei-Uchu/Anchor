@@ -95,7 +95,11 @@ enum DemoMode {
                                                 matchingPolicy: .nextTime) ?? now.addingTimeInterval(3 * 86_400)
         context.insert(AppointmentSeries(clinicianLabel: "Dr Lee", typicalDayOfWeek: 3,
             typicalTime: DateComponents(hour: 10, minute: 30), typicalCadenceDays: 14,
-            occurrences: [AppointmentOccurrence(scheduledDate: tuesday)]))
+            occurrences: [AppointmentOccurrence(scheduledDate: tuesday)],
+            role: "Psychologist", sortOrder: 0))
+        context.insert(AppointmentSeries(clinicianLabel: "Dr Patel", typicalCadenceDays: 60,
+            occurrences: [AppointmentOccurrence(scheduledDate: now.addingTimeInterval(12 * 86_400))],
+            role: "GP", exportLabel: "My GP", notes: "Ask for the longer appointment.", sortOrder: 1))
 
         let water = TaskItem(title: "Drink some water", sortOrder: 0, energy: .little, estimateMinutes: 5)
         water.setDue(.today)
