@@ -173,7 +173,9 @@ struct JournalContextSuggestionsView: View {
 
         let manager = PHImageManager.default()
         let requestOptions = PHImageRequestOptions()
-        requestOptions.deliveryMode = .opportunistic
+        // One callback with the final image. .opportunistic calls back twice
+        // (a rough image, then the real one), which resumed the continuation twice.
+        requestOptions.deliveryMode = .highQualityFormat
         requestOptions.isNetworkAccessAllowed = true
 
         var thumbnails: [UIImage] = []
@@ -182,7 +184,12 @@ struct JournalContextSuggestionsView: View {
                 manager.requestImage(
                     for: asset, targetSize: CGSize(width: 140, height: 140),
                     contentMode: .aspectFill, options: requestOptions
-                ) { image, _ in continuation.resume(returning: image) }
+                ) { image, info in
+                    // Belt and braces: ignore a rough in-between image, so the
+                    // continuation is only ever resumed once.
+                    if (info?[PHImageResultIsDegradedKey] as? Bool) == true { return }
+                    continuation.resume(returning: image)
+                }
             }
             if let image { thumbnails.append(image) }
         }
