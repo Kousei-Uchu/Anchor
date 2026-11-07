@@ -41,7 +41,7 @@ struct RecoverySummaryTab: View {
             }
 
             HStack(spacing: 0) {
-                ShareLink(item: "I'm \(RecoveryText.days(counter.currentRunDays())) in.") {
+                ShareLink(item: "I'm \(counter.currentRunPhraseIn()).") {
                     actionLabel(icon: "square.and.arrow.up", title: "Share")
                 }
                 Button(action: onLogUrge) { actionLabel(icon: "waveform.path", title: "Log urge") }
@@ -485,7 +485,7 @@ private struct RecoveryRecordPage: View {
                 Text(isBest ? "Your longest yet" : "A new streak")
                     .font(.system(.title, design: .rounded).weight(.bold))
                 Text(isBest ? "That's your longest streak so far."
-                            : "Your best streak is still \(RecoveryText.days(timeline.longestStreakDays)).")
+                            : "Your best streak is still \(timeline.longestStreakPhrase).")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -493,7 +493,7 @@ private struct RecoveryRecordPage: View {
                     HStack {
                         Text("Personal best").font(.subheadline)
                         Spacer()
-                        Text(RecoveryText.days(timeline.longestStreakDays)).font(.subheadline.weight(.semibold))
+                        Text(timeline.longestStreakPhrase).font(.subheadline.weight(.semibold))
                     }
                     GeometryReader { proxy in
                         ZStack(alignment: .leading) {
@@ -525,12 +525,12 @@ private struct RecoveryStreakPage: View {
     let counter: RecoveryCounter
 
     var body: some View {
-        let days = counter.currentRunDays()
+        let reading = counter.currentRunReading()
         SummaryPage(title: "My streak is") {
             VStack(spacing: 2) {
-                Text("\(days)")
+                Text(reading.number)
                     .font(.system(size: 110, weight: .thin, design: .rounded))
-                Text(days == 1 ? "day" : "days")
+                Text(reading.label)
                     .font(.system(.title3, design: .rounded))
                     .foregroundStyle(.secondary)
             }

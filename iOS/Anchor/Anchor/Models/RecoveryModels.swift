@@ -200,6 +200,24 @@ final class RecoveryCounter {
         return RecoveryCounter.wholeDays(from: run.start, to: now)
     }
 
+    /// The current run as a big number plus unit, never "0 days".
+    func currentRunReading(now: Date = .now) -> ElapsedFormat.Reading {
+        guard let run = currentRun else { return ElapsedFormat.reading(from: now, to: now) }
+        return ElapsedFormat.reading(from: run.start, to: now)
+    }
+
+    /// "12 days", "3 hours", "just started".
+    func currentRunPhrase(now: Date = .now) -> String {
+        guard let run = currentRun else { return "just started" }
+        return ElapsedFormat.phrase(from: run.start, to: now)
+    }
+
+    /// "12 days in", "3 hours in", "just getting started".
+    func currentRunPhraseIn(now: Date = .now) -> String {
+        guard let run = currentRun else { return "just getting started" }
+        return ElapsedFormat.phraseIn(from: run.start, to: now)
+    }
+
     /// Days in runs that have ended (not counting the current run).
     var completedRunsDays: Int {
         runs.filter { $0.end != nil }
@@ -398,6 +416,12 @@ struct RecoveryTimeline {
         runs.enumerated().map { RecoveryStreak(id: $0.offset, start: $0.element.start, end: $0.element.end) }
     }
     var longestStreakDays: Int { streaks.map { $0.wholeDays(now: now) }.max() ?? 0 }
+
+    /// The longest streak in its largest sensible unit ("5 hours", not "0 days").
+    var longestStreakPhrase: String {
+        guard let best = streaks.max(by: { $0.length(now: now) < $1.length(now: now) }) else { return "just started" }
+        return ElapsedFormat.phrase(from: best.start, to: best.end ?? now)
+    }
     var freshStarts: Int { max(0, runs.count - 1) }
     var originalStart: Date? { runs.first?.start }
 

@@ -12,6 +12,56 @@
 
 import Foundation
 
+/// How long the current run has lasted, in the largest sensible unit, never
+/// as "0 days". Lives here because this file is compiled into both the app
+/// and the widget extension.
+enum ElapsedFormat {
+    struct Reading: Equatable {
+        /// What goes in the big number slot, e.g. "12", "3" or "<1".
+        let number: String
+        /// The unit under it, e.g. "days", "hour", "minute".
+        let label: String
+    }
+
+    private static func parts(from start: Date, to end: Date) -> (days: Int, hours: Int, minutes: Int) {
+        let c = Calendar.current.dateComponents([.day, .hour, .minute], from: start, to: max(end, start))
+        return (c.day ?? 0, c.hour ?? 0, c.minute ?? 0)
+    }
+
+    static func reading(from start: Date, to end: Date) -> Reading {
+        let p = parts(from: start, to: end)
+        if p.days >= 1 { return Reading(number: "\(p.days)", label: p.days == 1 ? "day" : "days") }
+        if p.hours >= 1 { return Reading(number: "\(p.hours)", label: p.hours == 1 ? "hour" : "hours") }
+        if p.minutes >= 1 { return Reading(number: "\(p.minutes)", label: p.minutes == 1 ? "minute" : "minutes") }
+        return Reading(number: "<1", label: "minute")
+    }
+
+    /// "12 days", "3 hours", "just started".
+    static func phrase(from start: Date, to end: Date) -> String {
+        let p = parts(from: start, to: end)
+        if p.days < 1, p.hours < 1, p.minutes < 1 { return "just started" }
+        let r = reading(from: start, to: end)
+        return "\(r.number) \(r.label)"
+    }
+
+    /// "12 days in", "3 hours in", "just getting started".
+    static func phraseIn(from start: Date, to end: Date) -> String {
+        let p = parts(from: start, to: end)
+        if p.days < 1, p.hours < 1, p.minutes < 1 { return "just getting started" }
+        return phrase(from: start, to: end) + " in"
+    }
+
+    /// Early on the number changes every few minutes, so refresh often. After
+    /// the first day it only changes at midnight.
+    static func nextRefresh(runStarts: [Date], now: Date = .now) -> Date {
+        let youngest = runStarts.map { now.timeIntervalSince($0) }.min() ?? .infinity
+        if youngest < 3600 { return now.addingTimeInterval(15 * 60) }
+        if youngest < 86_400 { return now.addingTimeInterval(3600) }
+        return Calendar.current.nextDate(after: now, matching: DateComponents(hour: 0, minute: 5),
+                                         matchingPolicy: .nextTime) ?? now.addingTimeInterval(6 * 3600)
+    }
+}
+
 struct ContactWidgetSummary: Codable, Identifiable {
     var id: String { name + phoneNumber }
     let name: String
@@ -102,6 +152,8 @@ struct CounterWidgetItem: Codable, Identifiable {
     }
 
     func totalDays(now: Date) -> Int { priorDays + runDays(now: now) }
+
+    func reading(now: Date) -> ElapsedFormat.Reading { ElapsedFormat.reading(from: runStart, to: now) }
 }
 
 enum CounterWidgetStore {

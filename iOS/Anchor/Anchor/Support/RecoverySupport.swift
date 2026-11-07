@@ -160,7 +160,7 @@ enum RecoverySummary {
         let total = counter.totalDays(now: now)
         var result: [String] = []
 
-        var headline = "\(RecoveryText.days(days)) in the current run"
+        var headline = "\(counter.currentRunPhrase(now: now)) in the current run"
         if counter.mode == .runAndTotal, total != days {
             headline += ", \(RecoveryText.days(total)) in total"
         }

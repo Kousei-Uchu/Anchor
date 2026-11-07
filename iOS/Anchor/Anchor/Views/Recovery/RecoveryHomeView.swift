@@ -112,10 +112,10 @@ private struct RecoveryCounterCard: View {
                 }
                 Spacer()
                 VStack(spacing: 0) {
-                    Text("\(days)")
+                    Text(counter.currentRunReading().number)
                         .font(.system(size: 40, weight: .semibold, design: .rounded))
                         .foregroundStyle(Anchor.Theme.accent)
-                    Text(days == 1 ? "day" : "days")
+                    Text(counter.currentRunReading().label)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -195,10 +195,10 @@ struct RecoveryNowCard: View {
             }
             Spacer()
             VStack(spacing: 0) {
-                Text("\(days)")
+                Text(counter.currentRunReading().number)
                     .font(.system(size: 30, weight: .semibold, design: .rounded))
                     .foregroundStyle(Anchor.Theme.accent)
-                Text(days == 1 ? "day" : "days")
+                Text(counter.currentRunReading().label)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

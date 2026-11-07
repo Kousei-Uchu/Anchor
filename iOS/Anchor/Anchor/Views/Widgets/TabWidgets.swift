@@ -402,7 +402,7 @@ struct RecoveryWidget: View {
         } content: {
             if let counter {
                 VStack(alignment: .leading, spacing: 2) {
-                    Anchor.WidgetBig(text: "Day \(counter.currentRunDays())")
+                    Anchor.WidgetBig(text: counter.currentRunDays() >= 1 ? "Day \(counter.currentRunDays())" : counter.currentRunPhrase().prefix(1).uppercased() + counter.currentRunPhrase().dropFirst())
                     Anchor.WidgetCaption(text: counter.name, lines: 1)
                 }
             } else {
