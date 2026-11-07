@@ -638,6 +638,9 @@ final class TaskItem {
     /// or shown against a goal.
     var focusSessions: Int = 0
     var focusMinutes: Int = 0
+    /// A rough guess at how long the task takes, in minutes. 0 means no
+    /// estimate. Only used to add up a day's plan; nothing is checked against it.
+    var estimateMinutes: Int = 0
 
     init(
         id: UUID = UUID(),
@@ -657,7 +660,8 @@ final class TaskItem {
         energy: TaskEnergy = .unset,
         firstStep: String = "",
         focusSessions: Int = 0,
-        focusMinutes: Int = 0
+        focusMinutes: Int = 0,
+        estimateMinutes: Int = 0
     ) {
         self.id = id
         self.title = title
@@ -677,6 +681,7 @@ final class TaskItem {
         self.firstStep = firstStep
         self.focusSessions = focusSessions
         self.focusMinutes = focusMinutes
+        self.estimateMinutes = estimateMinutes
     }
 
     /// Ticks the task off or back on, keeping `completedAt` in step.
@@ -794,6 +799,25 @@ enum TaskBucket: Int, CaseIterable, Identifiable {
         case .waiting: return "Waiting on something else"
         case .setAside: return "Set aside for now"
         }
+    }
+}
+
+extension TaskItem {
+    /// The quick choices offered for an estimate, besides none.
+    static let estimateChoices = [5, 15, 30, 60]
+
+    /// "About 15 min", or nil when there is no estimate.
+    var estimateText: String? {
+        estimateMinutes > 0 ? "About \(TaskItem.durationText(estimateMinutes))" : nil
+    }
+
+    /// "45 min", "1 hr", "1 hr 30 min". Lives here, not with the screens,
+    /// because this file is also built into the widget.
+    static func durationText(_ minutes: Int) -> String {
+        let hours = minutes / 60, rest = minutes % 60
+        if hours == 0 { return "\(rest) min" }
+        if rest == 0 { return "\(hours) hr" }
+        return "\(hours) hr \(rest) min"
     }
 }
 

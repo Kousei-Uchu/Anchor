@@ -212,6 +212,7 @@ struct TasksView: View {
     @State private var confirmingClearDone = false
     @State private var energyFilter: TaskEnergyFilter = .everything
     @State private var showFocus = false
+    @State private var showDayPlan = false
 
     private var open: [TaskItem] { TaskItem.listOrder(tasks).filter { energyFilter.allows($0.energy) } }
     private var done: [TaskItem] {
@@ -311,6 +312,9 @@ struct TasksView: View {
                         }
                         .pickerStyle(.inline)
                     }
+                    Button { showDayPlan = true } label: {
+                        Label("Plan my day", systemImage: "sun.max")
+                    }
                     Button { openFocus(nil) } label: {
                         Label("Focus timer", systemImage: "timer")
                     }
@@ -329,6 +333,9 @@ struct TasksView: View {
         }
         .sheet(isPresented: $showFocus) {
             PomodoroView()
+        }
+        .sheet(isPresented: $showDayPlan) {
+            PlanMyDayView()
         }
         .confirmationDialog("Import which reminders?", isPresented: $showImporter, titleVisibility: .visible) {
             ForEach(importable) { reminder in
@@ -491,6 +498,11 @@ private struct TaskCard: View {
                             }
                             if !task.isDone, let due = task.dueText() {
                                 Label(due, systemImage: "calendar")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            if !task.isDone, let estimate = task.estimateText {
+                                Label(estimate, systemImage: "clock")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
@@ -699,6 +711,15 @@ private struct TaskEditorSheet: View {
                     if !task.isDone && !dueIsTomorrow {
                         Button("Move to tomorrow") { task.snoozeToTomorrow() }
                     }
+                }
+                Section("How long") {
+                    Picker("How long", selection: $task.estimateMinutes) {
+                        Text("None").tag(0)
+                        ForEach(TaskItem.estimateChoices, id: \.self) { minutes in
+                            Text(minutes == 60 ? "1 hr" : "\(minutes) min").tag(minutes)
+                        }
+                    }
+                    .pickerStyle(.segmented)
                 }
                 Section("How it is going") {
                     Picker("Status", selection: $task.status) {
@@ -1288,5 +1309,284 @@ struct PomodoroSettingsView: View {
         .navigationTitle("Timer settings")
         .navigationBarTitleDisplayMode(.inline)
         .onChange(of: alertsOn) { _, isOn in PomodoroSettings.alertsChanged(isOn) }
+    }
+}
+
+
+// MARK: - Plan my day
+
+/// Today's plan: the tasks and steps you picked, in order, and the time you
+/// said you have. Kept on this device for the day only. A plan from an earlier
+/// day is dropped without comment; only the time you said you have carries over.
+struct DayPlan: Codable, Equatable {
+    var day: Date
+    var ids: [UUID] = []
+    var availableMinutes: Int = 0
+
+    static let key = "anchor.dayPlan"
+
+    static func today(now: Date = .now, calendar: Calendar = .current) -> DayPlan {
+        let start = calendar.startOfDay(for: now)
+        guard let data = UserDefaults.standard.data(forKey: key),
+              let saved = try? JSONDecoder().decode(DayPlan.self, from: data) else {
+            return DayPlan(day: start)
+        }
+        if calendar.isDate(saved.day, inSameDayAs: now) { return saved }
+        return DayPlan(day: start, ids: [], availableMinutes: saved.availableMinutes)
+    }
+
+    func save() {
+        guard let data = try? JSONEncoder().encode(self) else { return }
+        UserDefaults.standard.set(data, forKey: Self.key)
+    }
+}
+
+/// Pick a few tasks or steps, put them in the order you like, say how much
+/// time you have, and walk through them one at a time. Nothing is scored, and
+/// a plan that does not fit the time is only described, never flagged.
+struct PlanMyDayView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Query(sort: \TaskItem.sortOrder) private var tasks: [TaskItem]
+    @State private var plan = DayPlan.today()
+    @State private var editMode: EditMode = .inactive
+    @State private var walking = false
+
+    private struct Candidate: Identifiable {
+        let task: TaskItem
+        let parent: TaskItem?
+        var id: UUID { task.id }
+    }
+
+    /// What can be done now: open tasks that are not waiting or set aside,
+    /// and the open steps of those tasks.
+    private var candidates: [Candidate] {
+        var found: [Candidate] = []
+        for task in TaskItem.listOrder(tasks, includeWaiting: false) {
+            found.append(Candidate(task: task, parent: nil))
+            for step in TaskItem.steps(of: task, in: tasks) where !step.isDone {
+                found.append(Candidate(task: step, parent: task))
+            }
+        }
+        return found
+    }
+
+    private var planned: [Candidate] {
+        let pool = candidates
+        return plan.ids.compactMap { id in pool.first { $0.id == id } }
+    }
+
+    private var others: [Candidate] {
+        let chosen = Set(plan.ids)
+        return candidates.filter { !chosen.contains($0.id) }
+    }
+
+    private var summary: String {
+        let items = planned
+        guard !items.isEmpty else { return "Nothing picked yet." }
+        let total = items.reduce(0) { $0 + $1.task.estimateMinutes }
+        let unknown = items.filter { $0.task.estimateMinutes == 0 }.count
+        var text = total > 0 ? "About \(TaskItem.durationText(total)) planned" : "No estimates yet"
+        if plan.availableMinutes > 0 { text += ", with \(TaskItem.durationText(plan.availableMinutes)) to spend" }
+        if total > 0 && unknown > 0 { text += ", plus \(unknown) with no estimate" }
+        return text + "."
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Stepper(value: $plan.availableMinutes, in: 0...720, step: 30) {
+                        Text(plan.availableMinutes == 0
+                             ? "Time I have: not sure"
+                             : "Time I have: \(TaskItem.durationText(plan.availableMinutes))")
+                            .font(.system(.subheadline, design: .rounded))
+                    }
+                    Text(summary)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
+                if !planned.isEmpty {
+                    Section("Your plan") {
+                        ForEach(planned) { item in
+                            row(item, inPlan: true)
+                        }
+                        .onMove(perform: movePlanned)
+                    }
+                }
+
+                Section(others.isEmpty && planned.isEmpty ? "Nothing to pick from" : "Add to your plan") {
+                    if others.isEmpty && planned.isEmpty {
+                        Text("Add a task first, then come back.")
+                            .foregroundStyle(.secondary)
+                    }
+                    ForEach(others) { item in
+                        row(item, inPlan: false)
+                    }
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                if !planned.isEmpty {
+                    Button("Start") { walking = true }
+                        .buttonStyle(Anchor.PrimaryButtonStyle())
+                        .padding()
+                        .background(.thinMaterial)
+                }
+            }
+            .navigationTitle("Plan my day")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Close") { dismiss() }
+                }
+                if planned.count > 1 {
+                    ToolbarItem(placement: .primaryAction) {
+                        Anchor.ReorderToolbarButton()
+                    }
+                }
+            }
+            .navigationDestination(isPresented: $walking) {
+                DayWalkthroughView(ids: planned.map(\.id))
+            }
+            .onAppear { plan.ids = planned.map(\.id) }
+            .onChange(of: plan) { _, new in new.save() }
+            .environment(\.editMode, $editMode)
+        }
+    }
+
+    private func row(_ item: Candidate, inPlan: Bool) -> some View {
+        HStack(spacing: 12) {
+            Button {
+                withAnimation(.snappy) { toggle(item.id) }
+            } label: {
+                Image(systemName: inPlan ? "minus.circle" : "plus.circle")
+                    .font(.title3)
+                    .foregroundStyle(inPlan ? Color.secondary : Anchor.Theme.accent)
+            }
+            .buttonStyle(.borderless)
+            .accessibilityLabel(inPlan ? "Take out of the plan" : "Add to the plan")
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.task.title.isEmpty ? "Untitled" : item.task.title)
+                    .font(.system(.body, design: .rounded))
+                    .fixedSize(horizontal: false, vertical: true)
+                if let parent = item.parent {
+                    Text("Step of \(parent.title.isEmpty ? "an untitled task" : parent.title)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                if let estimate = item.task.estimateText {
+                    Text(estimate)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private func toggle(_ id: UUID) {
+        if plan.ids.contains(id) {
+            plan.ids.removeAll { $0 == id }
+        } else {
+            plan.ids.append(id)
+        }
+    }
+
+    private func movePlanned(from offsets: IndexSet, to destination: Int) {
+        var ids = planned.map(\.id)
+        ids.move(fromOffsets: offsets, toOffset: destination)
+        plan.ids = ids
+    }
+}
+
+/// Goes through the plan one item at a time. Done ticks it off, Not now moves
+/// on without changing anything, and Focus on this opens the timer.
+private struct DayWalkthroughView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \TaskItem.sortOrder) private var tasks: [TaskItem]
+    let ids: [UUID]
+    @State private var skipped: Set<UUID> = []
+    @State private var showFocus = false
+
+    private var queue: [TaskItem] {
+        ids.compactMap { id in tasks.first { $0.id == id && !$0.isDone } }
+    }
+    private var current: TaskItem? { queue.first { !skipped.contains($0.id) } }
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                if let task = current {
+                    VStack(spacing: 10) {
+                        Text("Now")
+                            .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        Text(task.title.isEmpty ? "Untitled" : task.title)
+                            .font(.system(.title, design: .rounded).weight(.semibold))
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                        if !task.firstStep.isEmpty {
+                            Text("Start with: \(task.firstStep)")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        if let estimate = task.estimateText {
+                            Text(estimate)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        if !task.notes.isEmpty {
+                            Text(task.notes)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+                    }
+                    .padding(.top, 24)
+
+                    VStack(spacing: 12) {
+                        Button("Focus on this") {
+                            PomodoroTimer.shared.use(modelContext)
+                            PomodoroTimer.shared.setTask(task)
+                            showFocus = true
+                        }
+                        .buttonStyle(Anchor.PrimaryButtonStyle())
+                        Button("Done") {
+                            withAnimation(.snappy) { setTask(task, done: true, among: tasks) }
+                        }
+                        .buttonStyle(Anchor.SecondaryButtonStyle(tint: Anchor.Theme.sage))
+                        if queue.count > 1 {
+                            Button("Not now") {
+                                withAnimation(.snappy) { _ = skipped.insert(task.id) }
+                            }
+                            .buttonStyle(Anchor.SecondaryButtonStyle(tint: .gray))
+                        }
+                    }
+                    .frame(maxWidth: 360)
+                } else {
+                    VStack(spacing: 12) {
+                        Text("That is the plan for today.")
+                            .font(.system(.title3, design: .rounded).weight(.semibold))
+                            .multilineTextAlignment(.center)
+                        if !queue.isEmpty {
+                            Button("Go back to the ones I set down") {
+                                withAnimation(.snappy) { skipped.removeAll() }
+                            }
+                            .buttonStyle(Anchor.SecondaryButtonStyle())
+                        }
+                    }
+                    .padding(.top, 48)
+                }
+            }
+            .padding()
+            .frame(maxWidth: .infinity)
+        }
+        .anchorBackground()
+        .navigationTitle("Today")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showFocus) {
+            PomodoroView()
+        }
     }
 }

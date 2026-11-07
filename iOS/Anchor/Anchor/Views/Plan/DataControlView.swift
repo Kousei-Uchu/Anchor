@@ -432,6 +432,7 @@ struct DataControlView: View {
         for item in deEscalationScripts { modelContext.delete(item) }
         for item in affirmations { modelContext.delete(item) }
         for item in tasks { modelContext.delete(item) }
+        UserDefaults.standard.removeObject(forKey: DayPlan.key)
         for item in recoveryCounters { modelContext.delete(item) }
         for item in recoveryMotivations { modelContext.delete(item) }
         for item in recoveryDayEntries { modelContext.delete(item) }
@@ -817,6 +818,8 @@ struct TaskItemDTO: Codable {
     var status: String?; var energy: String?; var firstStep: String?
     /// Optional so exports made before the focus timer still import.
     var focusSessions: Int?; var focusMinutes: Int?
+    /// Optional so exports made before tasks had an estimate still import.
+    var estimateMinutes: Int?
     init(_ m: TaskItem) {
         id = m.id; title = m.title; notes = m.notes; isDone = m.isDone
         completedAt = m.completedAt; createdAt = m.createdAt; sortOrder = m.sortOrder
@@ -825,6 +828,7 @@ struct TaskItemDTO: Codable {
         blockedByIDs = m.blockedByIDs
         status = m.status.rawValue; energy = m.energy.rawValue; firstStep = m.firstStep
         focusSessions = m.focusSessions; focusMinutes = m.focusMinutes
+        estimateMinutes = m.estimateMinutes
     }
     func toModel() -> TaskItem {
         TaskItem(id: id, title: title, notes: notes, isDone: isDone,
@@ -835,7 +839,8 @@ struct TaskItemDTO: Codable {
                  status: TaskStatus(rawValue: status ?? "") ?? .notStarted,
                  energy: TaskEnergy(rawValue: energy ?? "") ?? .unset,
                  firstStep: firstStep ?? "",
-                 focusSessions: focusSessions ?? 0, focusMinutes: focusMinutes ?? 0)
+                 focusSessions: focusSessions ?? 0, focusMinutes: focusMinutes ?? 0,
+                 estimateMinutes: estimateMinutes ?? 0)
     }
 }
 
