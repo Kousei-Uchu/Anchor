@@ -20,8 +20,8 @@ struct SupportCalendarView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \SupportCalendarEntry.date) private var entries: [SupportCalendarEntry]
     @Query(sort: \TrustedContact.sortOrder) private var contacts: [TrustedContact]
-    @State private var newEntry: SupportCalendarEntry?
-    @State private var showingEditor = false
+    @State private var editingEntry: SupportCalendarEntry?
+    @State private var entryToDelete: SupportCalendarEntry?
     @State private var icsShareURL: IdentifiableURL?
     @State private var noVisibleEntriesMessage: String?
 
@@ -56,30 +56,38 @@ struct SupportCalendarView: View {
                     ) { startNewEntry() }
                 } else {
                     ForEach(entries) { entry in
-                        Anchor.Card {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(entry.date.formatted(date: .abbreviated, time: .omitted))
-                                    .font(.system(.headline, design: .rounded))
-                                if !entry.note.isEmpty {
-                                    Text(entry.note)
-                                        .font(.subheadline)
-                                        .foregroundStyle(.secondary)
-                                }
-                                if !entry.visibleToContactIDs.isEmpty {
-                                    Label("Visible to " + visibleNames(entry), systemImage: "eye")
-                                        .font(.caption)
+                        Button {
+                            editingEntry = entry
+                        } label: {
+                            Anchor.Card {
+                                HStack(alignment: .top) {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(entry.date.formatted(date: .abbreviated, time: .omitted))
+                                            .font(.system(.headline, design: .rounded))
+                                            .foregroundStyle(.primary)
+                                        if !entry.note.isEmpty {
+                                            Text(entry.note)
+                                                .font(.subheadline)
+                                                .foregroundStyle(.secondary)
+                                                .multilineTextAlignment(.leading)
+                                        }
+                                        if !entry.visibleToContactIDs.isEmpty {
+                                            Label("Visible to " + visibleNames(entry), systemImage: "eye")
+                                                .font(.caption)
+                                                .foregroundStyle(.tertiary)
+                                        }
+                                    }
+                                    Spacer(minLength: 0)
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption.weight(.semibold))
                                         .foregroundStyle(.tertiary)
                                 }
+                                .frame(maxWidth: .infinity, alignment: .leading)
                             }
-                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
+                        .buttonStyle(.plain)
+                        .anchorDeletable { modelContext.delete(entry) }
                     }
-                    Button {
-                        startNewEntry()
-                    } label: {
-                        Label("Add extra-support day", systemImage: "plus")
-                    }
-                    .buttonStyle(Anchor.SecondaryButtonStyle())
                 }
             }
             .padding()
@@ -89,18 +97,11 @@ struct SupportCalendarView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                if !entries.isEmpty {
-                    Anchor.EditToolbarButton { showingEditor = true }
-                }
+                Anchor.AddToolbarButton(label: "Add extra-support day") { startNewEntry() }
             }
         }
-        .sheet(item: $newEntry) { entry in
-            SupportCalendarEntryEditor(entry: entry, contacts: contacts)
-        }
-        .sheet(isPresented: $showingEditor) {
-            Anchor.EditorSheet(title: "Edit support days") {
-                SupportCalendarManageView(contacts: contacts)
-            }
+        .sheet(item: $editingEntry, onDismiss: finishEditing) { entry in
+            SupportCalendarEntryEditor(entry: entry, contacts: contacts) { entryToDelete = entry }
         }
         .sheet(item: $icsShareURL) { wrapped in
             ShareSheet(activityItems: [wrapped.url])
@@ -119,7 +120,16 @@ struct SupportCalendarView: View {
     private func startNewEntry() {
         let new = SupportCalendarEntry(date: .now, note: "")
         modelContext.insert(new)
-        newEntry = new
+        editingEntry = new
+    }
+
+    /// Deleting waits until the sheet has closed, so the sheet never reads
+    /// a day that is already gone.
+    private func finishEditing() {
+        if let entry = entryToDelete {
+            modelContext.delete(entry)
+            entryToDelete = nil
+        }
     }
 
     private func visibleNames(_ entry: SupportCalendarEntry) -> String {
@@ -176,50 +186,13 @@ struct SupportCalendarView: View {
     }
 }
 
-/// Tap a day to change it, swipe to delete. Presented from Edit.
-private struct SupportCalendarManageView: View {
-    let contacts: [TrustedContact]
-    @Environment(\.modelContext) private var modelContext
-    @Query(sort: \SupportCalendarEntry.date) private var entries: [SupportCalendarEntry]
-    @State private var editingEntry: SupportCalendarEntry?
-
-    var body: some View {
-        List {
-            ForEach(entries) { entry in
-                Button {
-                    editingEntry = entry
-                } label: {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(entry.date.formatted(date: .abbreviated, time: .omitted))
-                            .font(.system(.subheadline, design: .rounded))
-                            .foregroundStyle(.primary)
-                        if !entry.note.isEmpty {
-                            Text(entry.note)
-                                .lineLimit(1)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-            }
-            .onDelete { offsets in
-                for index in offsets { modelContext.delete(entries[index]) }
-            }
-        }
-        .toolbar { EditButton() }
-        .sheet(item: $editingEntry) { entry in
-            SupportCalendarEntryEditor(entry: entry, contacts: contacts)
-        }
-    }
-}
-
 private struct SupportCalendarEntryEditor: View {
     @Bindable var entry: SupportCalendarEntry
     let contacts: [TrustedContact]
-    @Environment(\.dismiss) private var dismiss
+    let onDelete: () -> Void
 
     var body: some View {
-        NavigationStack {
+        Anchor.ItemEditorSheet(title: "Support day", onDelete: onDelete, deleteQuestion: "Delete this day?") {
             Form {
                 DatePicker("Date", selection: $entry.date, displayedComponents: .date)
                 TextField("Note", text: $entry.note, axis: .vertical)
@@ -242,14 +215,6 @@ private struct SupportCalendarEntryEditor: View {
                             }
                         ))
                     }
-                }
-            }
-            .anchorSettingsStyle()
-            .navigationTitle("Support day")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
                 }
             }
         }

@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 11: on the Thread screens, tap a card to open it, use the plus to add, and delete from inside the card or its long-press menu; the Edit buttons and list sheets are gone.
 - Patch 10: the shared pieces for tap a row to edit it, swipe to delete, a plus to add and a labelled Reorder are in place; no screen uses them yet.
 - Patch 9: the Journal has a Year view with twelve small months; tap a month to open it.
 - Patch 8: the Journal has a Days and Month switch; the month calendar shows a dot for each entry and a square for a check-in, and tapping a day opens it in the timeline.

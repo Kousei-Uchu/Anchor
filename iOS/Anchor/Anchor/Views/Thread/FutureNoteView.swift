@@ -10,10 +10,11 @@ import SwiftUI
 import SwiftData
 
 struct FutureNoteListView: View {
+    @Environment(\.modelContext) private var modelContext
     @Query(sort: \FutureNote.unlockDate) private var notes: [FutureNote]
     @State private var showingComposer = false
-    @State private var showingEditor = false
     @State private var openedNote: FutureNote?
+    @State private var noteToDelete: FutureNote?
 
     var body: some View {
         ScrollView {
@@ -30,7 +31,7 @@ struct FutureNoteListView: View {
                     ForEach(notes) { note in
                         let unlocked = note.unlockDate <= .now
                         Button {
-                            if unlocked { openedNote = note }
+                            openedNote = note
                         } label: {
                             Anchor.Card(accentColor: unlocked ? Anchor.Theme.accent : Anchor.Theme.sage) {
                                 HStack {
@@ -49,14 +50,8 @@ struct FutureNoteListView: View {
                             }
                         }
                         .buttonStyle(.plain)
-                        .disabled(!unlocked)
+                        .anchorDeletable { modelContext.delete(note) }
                     }
-                    Button {
-                        showingComposer = true
-                    } label: {
-                        Label("Write a note to future you", systemImage: "plus")
-                    }
-                    .buttonStyle(Anchor.SecondaryButtonStyle())
                 }
             }
             .padding()
@@ -66,54 +61,51 @@ struct FutureNoteListView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                if !notes.isEmpty {
-                    Anchor.EditToolbarButton { showingEditor = true }
-                }
+                Anchor.AddToolbarButton(label: "New note") { showingComposer = true }
             }
         }
         .sheet(isPresented: $showingComposer) {
             FutureNoteComposer()
         }
-        .sheet(isPresented: $showingEditor) {
-            Anchor.EditorSheet(title: "Edit notes") {
-                FutureNotesManageView()
-            }
+        .sheet(item: $openedNote, onDismiss: finishViewing) { note in
+            FutureNoteSheet(note: note) { noteToDelete = note }
         }
-        .sheet(item: $openedNote) { note in
-            NavigationStack {
-                ScrollView {
-                    Text(note.text).padding()
-                }
-                .anchorBackground()
-                .navigationTitle("From \(note.writtenAt.formatted(date: .abbreviated, time: .omitted))")
-                .navigationBarTitleDisplayMode(.inline)
-            }
+    }
+
+    /// Deleting waits until the sheet has closed, so the sheet never reads
+    /// a note that is already gone.
+    private func finishViewing() {
+        if let note = noteToDelete {
+            modelContext.delete(note)
+            noteToDelete = nil
         }
     }
 }
 
-/// Delete notes. Presented from Edit. Locked notes show only their dates,
-/// never their text, here as everywhere else.
-private struct FutureNotesManageView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query(sort: \FutureNote.unlockDate) private var notes: [FutureNote]
+/// One note. A locked note shows only its date, never its text, here as
+/// everywhere else. Delete works on locked and unlocked notes alike.
+private struct FutureNoteSheet: View {
+    let note: FutureNote
+    let onDelete: () -> Void
 
     var body: some View {
-        List {
-            ForEach(notes) { note in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(note.unlockDate <= .now ? "Unlocked" : "Locked until \(note.unlockDate.formatted(date: .abbreviated, time: .omitted))")
-                        .font(.system(.subheadline, design: .rounded))
-                    Text("Written \(note.writtenAt.formatted(date: .abbreviated, time: .omitted))")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+        let unlocked = note.unlockDate <= .now
+        Anchor.ItemEditorSheet(
+            title: "From \(note.writtenAt.formatted(date: .abbreviated, time: .omitted))",
+            onDelete: onDelete,
+            deleteQuestion: "Delete this note?"
+        ) {
+            Form {
+                Section {
+                    if unlocked {
+                        Text(note.text)
+                    } else {
+                        Text("This note stays sealed until \(note.unlockDate.formatted(date: .abbreviated, time: .omitted)).")
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
-            .onDelete { offsets in
-                for index in offsets { modelContext.delete(notes[index]) }
-            }
         }
-        .toolbar { EditButton() }
     }
 }
 

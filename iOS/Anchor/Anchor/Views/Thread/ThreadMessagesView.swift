@@ -10,8 +10,11 @@
 //  sends anything itself, and is for bigger things that might never go
 //  anywhere. The header text below spells out that contrast directly.
 //
-//  Browse/edit split: the log is a read screen. Writing a message is its own
-//  compose sheet (`ThreadMessageComposer`); deleting entries lives behind Edit.
+//  The log is a read screen. Writing a message is its own compose sheet
+//  (`ThreadMessageComposer`), opened by the plus. Tapping a message opens it
+//  with a Delete button; swipe-style delete is also in the long-press menu.
+//  The text of a logged message is not editable, since it is a record of
+//  what was said.
 //
 
 import SwiftUI
@@ -19,11 +22,13 @@ import SwiftData
 import MessageUI
 
 struct ThreadMessagesView: View {
+    @Environment(\.modelContext) private var modelContext
     @Query(sort: \ThreadMessage.timestamp, order: .reverse) private var messages: [ThreadMessage]
     @Query(sort: \TrustedContact.sortOrder) private var contacts: [TrustedContact]
 
     @State private var showingComposer = false
-    @State private var showingEditor = false
+    @State private var openedMessage: ThreadMessage?
+    @State private var messageToDelete: ThreadMessage?
 
     var body: some View {
         ScrollView {
@@ -43,30 +48,37 @@ struct ThreadMessagesView: View {
                     ) { showingComposer = true }
                 } else {
                     ForEach(messages) { message in
-                        Anchor.Card {
-                            VStack(alignment: .leading, spacing: 4) {
-                                if let contactID = message.withContactID,
-                                   let contact = contacts.first(where: { $0.id == contactID }) {
-                                    Text(contact.name)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
+                        Button {
+                            openedMessage = message
+                        } label: {
+                            Anchor.Card {
+                                HStack(alignment: .top) {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        if let name = contactName(for: message) {
+                                            Text(name)
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        Text(message.text)
+                                            .font(.system(.body, design: .rounded))
+                                            .foregroundStyle(.primary)
+                                            .multilineTextAlignment(.leading)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                        Text(message.timestamp.formatted(date: .abbreviated, time: .shortened))
+                                            .font(.caption)
+                                            .foregroundStyle(.tertiary)
+                                    }
+                                    Spacer(minLength: 0)
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.tertiary)
                                 }
-                                Text(message.text)
-                                    .font(.system(.body, design: .rounded))
-                                    .fixedSize(horizontal: false, vertical: true)
-                                Text(message.timestamp.formatted(date: .abbreviated, time: .shortened))
-                                    .font(.caption)
-                                    .foregroundStyle(.tertiary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                             }
-                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
+                        .buttonStyle(.plain)
+                        .anchorDeletable { modelContext.delete(message) }
                     }
-                    Button {
-                        showingComposer = true
-                    } label: {
-                        Label("Write something", systemImage: "plus")
-                    }
-                    .buttonStyle(Anchor.SecondaryButtonStyle())
                 }
             }
             .padding()
@@ -76,44 +88,52 @@ struct ThreadMessagesView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                if !messages.isEmpty {
-                    Anchor.EditToolbarButton { showingEditor = true }
-                }
+                Anchor.AddToolbarButton(label: "Write something") { showingComposer = true }
             }
         }
         .sheet(isPresented: $showingComposer) {
             ThreadMessageComposer()
         }
-        .sheet(isPresented: $showingEditor) {
-            Anchor.EditorSheet(title: "Edit message log") {
-                ThreadMessagesManageView()
+        .sheet(item: $openedMessage, onDismiss: finishViewing) { message in
+            ThreadMessageSheet(message: message, contactName: contactName(for: message)) {
+                messageToDelete = message
             }
+        }
+    }
+
+    private func contactName(for message: ThreadMessage) -> String? {
+        guard let contactID = message.withContactID else { return nil }
+        return contacts.first(where: { $0.id == contactID })?.name
+    }
+
+    /// Deleting waits until the sheet has closed, so the sheet never reads
+    /// a message that is already gone.
+    private func finishViewing() {
+        if let message = messageToDelete {
+            modelContext.delete(message)
+            messageToDelete = nil
         }
     }
 }
 
-/// Delete entries from the log. Presented from Edit.
-private struct ThreadMessagesManageView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query(sort: \ThreadMessage.timestamp, order: .reverse) private var messages: [ThreadMessage]
+/// One logged message, with a Delete button.
+private struct ThreadMessageSheet: View {
+    let message: ThreadMessage
+    let contactName: String?
+    let onDelete: () -> Void
 
     var body: some View {
-        List {
-            ForEach(messages) { message in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(message.text)
-                        .font(.system(.subheadline, design: .rounded))
-                        .lineLimit(2)
-                    Text(message.timestamp.formatted(date: .abbreviated, time: .shortened))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+        Anchor.ItemEditorSheet(title: "Message", onDelete: onDelete, deleteQuestion: "Delete this message?") {
+            Form {
+                if let contactName {
+                    Section("About") { Text(contactName) }
+                }
+                Section("Message") { Text(message.text) }
+                Section("Written") {
+                    Text(message.timestamp.formatted(date: .complete, time: .shortened))
                 }
             }
-            .onDelete { offsets in
-                for index in offsets { modelContext.delete(messages[index]) }
-            }
         }
-        .toolbar { EditButton() }
     }
 }
 

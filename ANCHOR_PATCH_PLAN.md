@@ -1,6 +1,6 @@
 # Anchor — Patch Plan (v2-recovery)
 
-*Living document. Last updated: 7 Nov 2026, after Patch 10 was written (Patches 1 to 7 are pushed; Patches 8 to 10 await your paste; none confirmed building).*
+*Living document. Last updated: 7 Nov 2026, after Patch 11 was written (Patches 1 to 9 are pushed; Patches 10 and 11 await your paste; none confirmed building).*
 
 > ## READ THIS FIRST: THIS FILE IS THE PROMPT
 >
@@ -35,13 +35,15 @@ The source code repository is at <https://github.com/Kousei-Uchu/Anchor/tree/v2-
 | 5: Check-in visual refresh | 🟡 Pushed by you (`1a95f15`); build not yet confirmed |
 | 6: Journal newest first, jump to today | 🟡 Pushed by you (`7859612`); build not yet confirmed |
 | 7: Journal editor declutter, labelled Add sheet, discoverable Suggestions | 🟡 Pushed by you (`08b0dcc`); build not yet confirmed |
-| 8: Journal month calendar | 🟡 Written (`patch-08.sh`); awaiting your paste and build (paste after Patch 7) |
-| 9: Journal year overview | 🟡 Written (`patch-09.sh`); awaiting your paste and build (paste after Patch 8) |
+| 8: Journal month calendar | 🟡 Pushed by you (`19b9105`); build not yet confirmed |
+| 9: Journal year overview | 🟡 Pushed by you (`041c874`); build not yet confirmed |
 | 10: Tap-to-edit building blocks | 🟡 Written (`patch-10.sh`); awaiting your paste and build (paste after Patch 9) |
-| 11 onward | Not started |
+| 11: Edit pattern on the Thread screens | 🟡 Written (`patch-11.sh`); awaiting your paste and build (paste after Patch 10) |
+| 12 onward | Not started |
 
 ## Change log of this plan
 
+- **7 Nov 2026 (16):** Patch 11 written: the four Thread screens use the new edit pattern. No Edit buttons, no manage-list sheets, no second Edit button. A plus adds on each screen. Tapping a card opens that item in one sheet: a draft, a support day (both editable), a future note (its text only if it has unlocked; a locked note shows just its date) or a logged message (read only, because it is a record of what was said). Each sheet has a Delete that asks first, and the card's long-press menu has Delete too. Deleting happens after the sheet has closed, so a sheet never reads something that is already gone. Locked notes can now be deleted by tapping them, which the old Edit list did but the card itself did not allow. The empty drafts left behind by closing a new draft without writing anything are removed. The extra full-width buttons at the bottom of each list are gone because the plus does that job. `UnsentDraftView` (the read page for one draft) is removed; the editor shows the same fields. Patch 14 can add resend and copy to the message sheet. Patches 8 and 9 confirmed pushed. Not compiled here.
 - **7 Nov 2026 (15):** Patch 10 written. Nothing changes on screen yet. `ContentView.swift` gains the pieces of the new edit pattern: `AddToolbarButton` (a plus), `ReorderToolbarButton` (a text button that says Reorder, then Done), `TapToEditRow` (the whole row opens its editor), `ItemEditorSheet` (one item in one sheet, with an optional Delete that asks first) and a `.anchorDeletable` modifier (swipe, and the same action on long-press). The older `EditToolbarButton` and `EditorSheet` stay until Patches 11 to 13 have moved every screen. Deletion inside a reorder session uses swipe only, so reorder mode shows handles and no red minus buttons. Not compiled here.
 - **7 Nov 2026 (14):** Patch 9 written: the Journal switch gains Year. Twelve small months, a filled square for each day with something on it (darker if more than one thing), tap a month to open it in Month view. Deliberately plain: no colour for better or worse and no totals, so it cannot turn into a streak chart. Year arrows stop at the earliest entry and this year; future months are dimmed. Patches 6 and 7 confirmed pushed (`7859612`, `08b0dcc`). **Not done:** the optional lenses (entries only, check-ins only, by origin); the plan said "later". Not compiled here.
 - **7 Nov 2026 (13):** Patch 8 written: a Days / Month switch at the top of the Journal (remembered between launches). Month is a calendar grid, one dot per entry (up to three) and a small square for a check-in, with no colour or score. Tapping a day that has something on it switches to Days and scrolls to that day. Month arrows stop at the earliest entry and at this month; "Jump to today" returns to the current month. Search still applies. The month view is a struct inside `JournalView.swift`, so there is no project file change. **Not done:** swiping between months. Not compiled here.
@@ -327,7 +329,7 @@ Order: unblock → visible quick wins → one shared pattern later screens inher
 | Patch | Contents | Points | Size | Status |
 | --- | --- | --- | --- | --- |
 | **10** | New edit pattern implemented in shared `Anchor` components only | 13 | S | 🟡 |
-| **11** | Apply to Thread screens | 13 | M | ⬜ |
+| **11** | Apply to Thread screens | 13 | M | 🟡 |
 | **12** | Apply to Plan screens | 13 | M | ⬜ |
 | **13** | Apply to Bridge, Now, Recovery screens | 13 | M | ⬜ |
 | **14** | Message log review and rework (needs D8); includes the widget caption and a write action | 10 | M | ⬜ |
@@ -488,4 +490,4 @@ A reminder you set yourself, per person, **off by default**. Lock-screen text is
 
 ## Appendix B: Suggested next session
 
-Patch **11** (apply the edit pattern to the Thread screens), once Patches 1 to 10 build. D9 is closed, so Journal polish carries on in Swift.
+Patch **12** (apply the edit pattern to the Plan screens), once Patches 1 to 11 build. D9 is closed, so Journal polish carries on in Swift.

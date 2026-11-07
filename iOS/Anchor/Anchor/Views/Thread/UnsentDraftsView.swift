@@ -7,6 +7,9 @@
 //  sends anything itself, so "never forced to send" is a real property of
 //  the code, not just a UI framing choice.
 //
+//  Editing follows the app-wide pattern: tap a draft to edit it, a plus
+//  starts a new one, and Delete is in the long-press menu and in the editor.
+//
 
 import SwiftUI
 import SwiftData
@@ -15,7 +18,7 @@ struct UnsentDraftsView: View {
     @Query(sort: \UnsentDraft.createdAt, order: .reverse) private var drafts: [UnsentDraft]
     @Environment(\.modelContext) private var modelContext
     @State private var editingDraft: UnsentDraft?
-    @State private var showingEditor = false
+    @State private var draftToDelete: UnsentDraft?
 
     var body: some View {
         ScrollView {
@@ -30,8 +33,8 @@ struct UnsentDraftsView: View {
                     ) { startNewDraft() }
                 } else {
                     ForEach(drafts) { draft in
-                        NavigationLink {
-                            UnsentDraftView(draft: draft)
+                        Button {
+                            editingDraft = draft
                         } label: {
                             Anchor.Card(accentColor: Anchor.Theme.sage) {
                                 HStack(alignment: .top) {
@@ -60,13 +63,8 @@ struct UnsentDraftsView: View {
                             }
                         }
                         .buttonStyle(.plain)
+                        .anchorDeletable { modelContext.delete(draft) }
                     }
-                    Button {
-                        startNewDraft()
-                    } label: {
-                        Label("New draft", systemImage: "plus")
-                    }
-                    .buttonStyle(Anchor.SecondaryButtonStyle())
                 }
             }
             .padding()
@@ -76,124 +74,49 @@ struct UnsentDraftsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                if !drafts.isEmpty {
-                    Anchor.EditToolbarButton { showingEditor = true }
-                }
+                Anchor.AddToolbarButton(label: "New draft") { startNewDraft() }
             }
         }
-        .sheet(item: $editingDraft) { draft in
-            UnsentDraftEditor(draft: draft)
-        }
-        .sheet(isPresented: $showingEditor) {
-            Anchor.EditorSheet(title: "Edit drafts") {
-                UnsentDraftsManageView()
-            }
+        .sheet(item: $editingDraft, onDismiss: finishEditing) { draft in
+            UnsentDraftEditor(draft: draft) { draftToDelete = draft }
         }
     }
 
-    /// Starting a draft is writing something new, so it opens the writing
-    /// sheet straight away.
+    /// Starting a draft is writing something new, so it opens the editor
+    /// straight away.
     private func startNewDraft() {
         let new = UnsentDraft(recipientLabel: "", text: "")
         modelContext.insert(new)
         editingDraft = new
     }
-}
 
-/// One draft as something to read. Edit opens the writing sheet; "I've
-/// actually sent this" is a quick self-report, so it stays here.
-private struct UnsentDraftView: View {
-    @Bindable var draft: UnsentDraft
-    @State private var showingEditor = false
-
-    var body: some View {
-        ScrollView {
-            VStack(spacing: Anchor.Theme.spacing) {
-                Anchor.TextCard(
-                    icon: "square.and.pencil",
-                    title: draft.recipientLabel.isEmpty ? "Untitled" : "For \(draft.recipientLabel)",
-                    text: draft.text,
-                    placeholder: "Nothing written yet. Tap Edit to start.",
-                    tint: Anchor.Theme.sage
-                )
-                Button {
-                    draft.wasSent.toggle()
-                } label: {
-                    Label(draft.wasSent ? "Marked as sent" : "I've actually sent this",
-                          systemImage: draft.wasSent ? "checkmark.circle.fill" : "paperplane")
-                }
-                .buttonStyle(Anchor.SecondaryButtonStyle(tint: Anchor.Theme.sage))
-            }
-            .padding()
+    /// Runs once the editor has closed. Deleting here, not while the editor
+    /// is still on screen, keeps the editor from reading a draft that is
+    /// already gone. A draft with nothing in it is dropped too.
+    private func finishEditing() {
+        if let draft = draftToDelete {
+            modelContext.delete(draft)
+            draftToDelete = nil
         }
-        .anchorBackground()
-        .navigationTitle(draft.recipientLabel.isEmpty ? "Draft" : draft.recipientLabel)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Anchor.EditToolbarButton { showingEditor = true }
-            }
-        }
-        .sheet(isPresented: $showingEditor) {
-            UnsentDraftEditor(draft: draft)
-        }
-    }
-}
-
-/// Delete drafts, or tap one to rewrite it. Presented from Edit.
-private struct UnsentDraftsManageView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query(sort: \UnsentDraft.createdAt, order: .reverse) private var drafts: [UnsentDraft]
-    @State private var editingDraft: UnsentDraft?
-
-    var body: some View {
-        List {
-            ForEach(drafts) { draft in
-                Button {
-                    editingDraft = draft
-                } label: {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(draft.recipientLabel.isEmpty ? "Untitled" : draft.recipientLabel)
-                            .font(.system(.subheadline, design: .rounded))
-                            .foregroundStyle(.primary)
-                        Text(draft.text)
-                            .lineLimit(1)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-            .onDelete { offsets in
-                for index in offsets { modelContext.delete(drafts[index]) }
-            }
-        }
-        .toolbar { EditButton() }
-        .sheet(item: $editingDraft) { draft in
-            UnsentDraftEditor(draft: draft)
+        for draft in drafts where draft.recipientLabel.isEmpty
+            && draft.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            modelContext.delete(draft)
         }
     }
 }
 
 private struct UnsentDraftEditor: View {
     @Bindable var draft: UnsentDraft
-    @Environment(\.dismiss) private var dismiss
+    let onDelete: () -> Void
 
     var body: some View {
-        NavigationStack {
+        Anchor.ItemEditorSheet(title: "Draft", onDelete: onDelete, deleteQuestion: "Delete this draft?") {
             Form {
                 TextField("Who this is for (e.g. \"partner\")", text: $draft.recipientLabel)
                 Section {
                     TextEditor(text: $draft.text).frame(minHeight: 200)
                 }
                 Toggle("I've actually sent this", isOn: $draft.wasSent)
-            }
-            .anchorSettingsStyle()
-            .navigationTitle("Draft")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                }
             }
         }
     }
