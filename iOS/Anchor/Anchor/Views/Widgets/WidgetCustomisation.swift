@@ -42,7 +42,7 @@ enum WidgetTab: String, CaseIterable, Identifiable {
         switch self {
         case .plan:
             return [.safetyPlan, .triggerWindows, .appointments, .tasks, .contacts, .deEscalation,
-                    .grounding, .decisionPresets, .affirmations, .recovery, .motivations]
+                    .grounding, .decisionPresets, .affirmations, .recovery, .motivations, .sleep]
         case .bridge:
             var ids: [WidgetID] = [.thingsToRaise, .nextSession, .reframing, .feedbackLoops, .personalGoals]
             #if PERSONAL_BUILD
@@ -53,9 +53,40 @@ enum WidgetTab: String, CaseIterable, Identifiable {
             return [.messageLog, .supportCalendar, .people, .futureNotes, .unsentDrafts, .boundaries]
         }
     }
+
+    /// Widgets that start tucked away in the More row until the person turns
+    /// them on, so a feature they never asked for does not appear on its own.
+    var defaultHidden: [WidgetID] {
+        switch self {
+        case .plan: return [.sleep]
+        case .bridge, .thread: return []
+        }
+    }
+
+    /// What "hidden" holds when nothing has been saved yet.
+    var defaultHiddenRaw: String { WidgetLayoutStore.encode(defaultHidden) }
 }
 
 enum WidgetLayoutStore {
+    /// Makes a widget that is hidden by default hidden once for a layout that
+    /// was saved before it existed. After that the person's choice is left
+    /// alone, including turning it back on. Nothing saved means the default
+    /// already applies, so there is nothing to write.
+    static func seedDefaultHidden(for tab: WidgetTab) {
+        let defaults = UserDefaults.standard
+        for id in tab.defaultHidden {
+            let flag = "widgetSeeded.\(tab.rawValue).\(id.rawValue)"
+            guard !defaults.bool(forKey: flag) else { continue }
+            defaults.set(true, forKey: flag)
+            guard let saved = defaults.string(forKey: tab.hiddenKey) else { continue }
+            var ids = decode(saved)
+            if !ids.contains(id) {
+                ids.append(id)
+                defaults.set(encode(ids), forKey: tab.hiddenKey)
+            }
+        }
+    }
+
     static func decode(_ raw: String) -> [WidgetID] {
         raw.split(separator: ",").compactMap { WidgetID(rawValue: String($0)) }
     }
@@ -121,8 +152,9 @@ extension Anchor {
             self.tab = tab
             self.content = content
             self.more = more
+            WidgetLayoutStore.seedDefaultHidden(for: tab)
             _orderRaw = AppStorage(wrappedValue: "", tab.orderKey)
-            _hiddenRaw = AppStorage(wrappedValue: "", tab.hiddenKey)
+            _hiddenRaw = AppStorage(wrappedValue: tab.defaultHiddenRaw, tab.hiddenKey)
             _fullRaw = AppStorage(wrappedValue: "", tab.fullKey)
         }
 
@@ -413,7 +445,7 @@ extension Anchor {
 
         private func reset() {
             orderRaw = ""
-            hiddenRaw = ""
+            hiddenRaw = tab.defaultHiddenRaw
             fullRaw = ""
         }
     }
@@ -473,8 +505,9 @@ private struct CustomiseWidgetsList: View {
 
     init(tab: WidgetTab) {
         self.tab = tab
+        WidgetLayoutStore.seedDefaultHidden(for: tab)
         _orderRaw = AppStorage(wrappedValue: "", tab.orderKey)
-        _hiddenRaw = AppStorage(wrappedValue: "", tab.hiddenKey)
+        _hiddenRaw = AppStorage(wrappedValue: tab.defaultHiddenRaw, tab.hiddenKey)
         _fullRaw = AppStorage(wrappedValue: "", tab.fullKey)
     }
 
@@ -526,7 +559,7 @@ private struct CustomiseWidgetsList: View {
             Anchor.SettingsSection(title: nil) {
                 Button("Reset \(tab.title) to default", role: .destructive) {
                     orderRaw = ""
-                    hiddenRaw = ""
+                    hiddenRaw = tab.defaultHiddenRaw
                     fullRaw = ""
                 }
                 .font(.system(.subheadline, design: .rounded))

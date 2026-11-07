@@ -354,6 +354,111 @@ final class BoundarySection {
     }
 }
 
+/// One night in the sleep journal. A quiet record and nothing more: there is
+/// no score, no target, no streak and no word for a "bad" night. Every field
+/// is optional or defaulted, so a night can hold just a note, or just a time.
+@Model
+final class SleepEntry {
+    @Attribute(.unique) var id: UUID
+    /// The night this belongs to, as the start of the day you woke up on.
+    var nightDate: Date
+    var bedTime: Date? = nil
+    var wakeTime: Date? = nil
+    /// Time asleep, in minutes, when it was typed. Nil means it is worked out
+    /// from the two times, if both are there.
+    var minutesAsleep: Int? = nil
+    /// Which of the three feel words, 0 to 2. Nil means nothing was chosen.
+    var feel: Int? = nil
+    var note: String = ""
+    /// "typed" for now. Later versions may add other sources.
+    var sourceRaw: String = "typed"
+    /// For a night that came from somewhere else, that source's own id, so
+    /// the same night is never added twice. Nil for typed nights.
+    var externalID: String? = nil
+    var createdAt: Date = Date.now
+    var lastEditedAt: Date = Date.now
+
+    init(id: UUID = UUID(), nightDate: Date = Calendar.current.startOfDay(for: .now),
+         bedTime: Date? = nil, wakeTime: Date? = nil, minutesAsleep: Int? = nil,
+         feel: Int? = nil, note: String = "", sourceRaw: String = "typed",
+         externalID: String? = nil, createdAt: Date = .now, lastEditedAt: Date = .now) {
+        self.id = id
+        self.nightDate = nightDate
+        self.bedTime = bedTime
+        self.wakeTime = wakeTime
+        self.minutesAsleep = minutesAsleep
+        self.feel = feel
+        self.note = note
+        self.sourceRaw = sourceRaw
+        self.externalID = externalID
+        self.createdAt = createdAt
+        self.lastEditedAt = lastEditedAt
+    }
+
+    /// Minutes between going to bed and waking, when both are known and make sense.
+    var minutesInBed: Int? {
+        guard let bedTime, let wakeTime, wakeTime > bedTime else { return nil }
+        let minutes = Int(wakeTime.timeIntervalSince(bedTime) / 60)
+        return minutes <= 24 * 60 ? minutes : nil
+    }
+
+    /// What is shown as time asleep: what was typed, else worked out from the times.
+    var shownMinutes: Int? { minutesAsleep ?? minutesInBed }
+
+    /// True when there is nothing in it at all, so it can be dropped again.
+    var isBlank: Bool {
+        bedTime == nil && wakeTime == nil && minutesAsleep == nil && feel == nil
+            && note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// "7 h 30 min", "8 h" or "45 min".
+    static func describe(minutes: Int) -> String {
+        let hours = minutes / 60, mins = minutes % 60
+        if hours == 0 { return "\(mins) min" }
+        return mins == 0 ? "\(hours) h" : "\(hours) h \(mins) min"
+    }
+
+    /// The moment with this clock time that comes last before `wake`, so a
+    /// 11:30 pm bedtime for a morning wake is the evening before.
+    static func bedMoment(clock: Date, night: Date, wake: Date?) -> Date {
+        let cal = Calendar.current
+        let parts = cal.dateComponents([.hour, .minute], from: clock)
+        let reference = wake ?? cal.date(byAdding: .hour, value: 8, to: night) ?? night
+        var candidate = cal.date(bySettingHour: parts.hour ?? 0, minute: parts.minute ?? 0, second: 0, of: reference) ?? reference
+        if candidate >= reference { candidate = cal.date(byAdding: .day, value: -1, to: candidate) ?? candidate }
+        return candidate
+    }
+
+    /// The wake time on the morning of `night`.
+    static func wakeMoment(clock: Date, night: Date) -> Date {
+        let cal = Calendar.current
+        let parts = cal.dateComponents([.hour, .minute], from: clock)
+        return cal.date(bySettingHour: parts.hour ?? 0, minute: parts.minute ?? 0, second: 0, of: night) ?? night
+    }
+}
+
+/// The three words for how a night felt. They start as plain, neutral words
+/// and the person can rename them. Nothing is coloured or ranked.
+enum SleepFeelWords {
+    static let storageKey = "sleepFeelWords"
+    static let defaults = ["Rested", "So-so", "Tired"]
+
+    /// Three words from the saved text (separated by a bar), falling back to
+    /// the default for any left empty.
+    static func words(from raw: String) -> [String] {
+        let saved = raw.split(separator: "|", omittingEmptySubsequences: false).map {
+            $0.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return (0..<3).map { index in
+            index < saved.count && !saved[index].isEmpty ? saved[index] : defaults[index]
+        }
+    }
+
+    static func encode(_ words: [String]) -> String {
+        words.map { $0.replacingOccurrences(of: "|", with: " ") }.joined(separator: "|")
+    }
+}
+
 /// One section of a person's page: a note about them, what helps, things the
 /// person has told them, or anything else the person decides to keep. The
 /// same shape as a safety plan section, tied to one trusted contact by id.
@@ -1868,7 +1973,7 @@ enum AnchorSchema {
     static var models: [any PersistentModel.Type] {
         [
             JournalEntry.self, CheckIn.self, TrustedContact.self, GroundingTool.self,
-            SafetyPlan.self, SafetyPlanSection.self, BoundarySection.self, PersonSection.self, MessageStarter.self, PersonalGoal.self, TriggerWindow.self, AppointmentSeries.self, AppointmentOccurrence.self,
+            SafetyPlan.self, SafetyPlanSection.self, BoundarySection.self, PersonSection.self, SleepEntry.self, MessageStarter.self, PersonalGoal.self, TriggerWindow.self, AppointmentSeries.self, AppointmentOccurrence.self,
             BridgeDraftItem.self, FeedbackLoopDiagram.self,
             ThreadMessage.self, SupportCalendarEntry.self, FutureNote.self, UnsentDraft.self,
             MascotLine.self, DecisionPresetCategory.self, DecisionPresetChoice.self,

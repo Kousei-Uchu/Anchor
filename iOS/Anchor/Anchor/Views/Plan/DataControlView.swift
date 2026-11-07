@@ -42,6 +42,7 @@ struct DataControlView: View {
     @Query private var itemLists: [ItemList]
     @Query private var boundarySections: [BoundarySection]
     @Query private var personSections: [PersonSection]
+    @Query private var sleepEntries: [SleepEntry]
     @Query private var messageStarters: [MessageStarter]
     @Query private var personalGoals: [PersonalGoal]
     @Query private var recoveryCounters: [RecoveryCounter]
@@ -93,6 +94,7 @@ struct DataControlView: View {
                 countRow("Item lists", itemLists.count, icon: "suitcase")
                 countRow("Boundaries sections", boundarySections.count, icon: "hand.raised.fill")
                 countRow("Person page sections", personSections.count, icon: "person.crop.circle.fill")
+                countRow("Sleep nights", sleepEntries.count, icon: "moon.zzz.fill")
                 countRow("Message starters", messageStarters.count, icon: "text.bubble")
                 countRow("Personal goals", personalGoals.count, icon: "flag.fill")
                 countRow("Recovery counters", recoveryCounters.count, icon: "calendar.badge.checkmark")
@@ -219,7 +221,8 @@ struct DataControlView: View {
             messageStarters: messageStarters.map(MessageStarterDTO.init),
             personalGoals: personalGoals.map(PersonalGoalDTO.init),
             appointmentSeries: appointmentSeries.map(AppointmentSeriesDTO.init),
-            personSections: personSections.map(PersonSectionDTO.init)
+            personSections: personSections.map(PersonSectionDTO.init),
+            sleepEntries: sleepEntries.map(SleepEntryDTO.init)
         )
         guard let data = try? JSONEncoder.anchorExport.encode(export) else { return }
         writeAndShare(data: data, filename: "anchor-export-\(fileTimestamp()).json")
@@ -263,6 +266,7 @@ struct DataControlView: View {
         let existingItemListIDs = Set(itemLists.map(\.id))
         let existingBoundaryIDs = Set(boundarySections.map(\.id))
         let existingPersonSectionIDs = Set(personSections.map(\.id))
+        let existingSleepIDs = Set(sleepEntries.map(\.id))
         let existingStarterIDs = Set(messageStarters.map(\.id))
         let existingGoalIDs = Set(personalGoals.map(\.id))
         let existingProviderIDs = Set(appointmentSeries.map(\.id))
@@ -354,6 +358,9 @@ struct DataControlView: View {
         let knownContactIDs = Set(contacts.map(\.id)).union(export.contacts.map(\.id))
         for dto in export.personSections ?? []
         where !existingPersonSectionIDs.contains(dto.id) && knownContactIDs.contains(dto.contactID) {
+            modelContext.insert(dto.toModel()); importedCount += 1
+        }
+        for dto in export.sleepEntries ?? [] where !existingSleepIDs.contains(dto.id) {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
         for dto in export.messageStarters ?? [] where !existingStarterIDs.contains(dto.id) {
@@ -518,6 +525,7 @@ struct DataControlView: View {
         for item in itemLists { modelContext.delete(item) }
         for item in boundarySections { modelContext.delete(item) }
         for item in personSections { modelContext.delete(item) }
+        for item in sleepEntries { modelContext.delete(item) }
         for item in messageStarters { modelContext.delete(item) }
         for item in personalGoals { modelContext.delete(item) }
         UserDefaults.standard.removeObject(forKey: DayPlan.key)
@@ -701,6 +709,8 @@ struct AnchorDataExport: Codable {
     var appointmentSeries: [AppointmentSeriesDTO]? = nil
     /// The sections on each person's page. Optional so exports made before person pages still import.
     var personSections: [PersonSectionDTO]? = nil
+    /// The sleep journal, one per night. Optional so exports made before it existed still import.
+    var sleepEntries: [SleepEntryDTO]? = nil
 }
 
 /// Every section is optional in the file: an export from any earlier version,
@@ -712,7 +722,7 @@ extension AnchorDataExport {
         "bridgeDraftItems", "diagrams", "threadMessages", "supportCalendarEntries", "futureNotes",
         "unsentDrafts", "decisionCategories", "deEscalationScripts", "affirmations",
         "recoveryCounters", "recoveryMotivations", "recoveryDayEntries", "recoveryUrges", "tasks",
-        "quickLists", "routines", "itemLists", "safetySections", "boundarySections", "messageStarters", "personalGoals", "appointmentSeries", "personSections"
+        "quickLists", "routines", "itemLists", "safetySections", "boundarySections", "messageStarters", "personalGoals", "appointmentSeries", "personSections", "sleepEntries"
     ]
 
     init(from decoder: Decoder) throws {
@@ -746,6 +756,7 @@ extension AnchorDataExport {
         personalGoals = c.lossyArray(PersonalGoalDTO.self, forKey: .personalGoals)
         appointmentSeries = c.lossyArray(AppointmentSeriesDTO.self, forKey: .appointmentSeries)
         personSections = c.lossyArray(PersonSectionDTO.self, forKey: .personSections)
+        sleepEntries = c.lossyArray(SleepEntryDTO.self, forKey: .sleepEntries)
     }
 }
 
@@ -1052,6 +1063,24 @@ struct PersonSectionDTO: Codable {
     func toModel() -> PersonSection {
         PersonSection(id: id, contactID: contactID, title: title, text: text, iconName: iconName,
                       tintName: tintName, sortOrder: sortOrder, isHidden: isHidden, lastEditedAt: lastEditedAt)
+    }
+}
+
+struct SleepEntryDTO: Codable {
+    var id: UUID; var nightDate: Date
+    var bedTime: Date?; var wakeTime: Date?; var minutesAsleep: Int?; var feel: Int?
+    var note: String; var sourceRaw: String; var externalID: String?
+    var createdAt: Date; var lastEditedAt: Date
+    init(_ m: SleepEntry) {
+        id = m.id; nightDate = m.nightDate
+        bedTime = m.bedTime; wakeTime = m.wakeTime; minutesAsleep = m.minutesAsleep; feel = m.feel
+        note = m.note; sourceRaw = m.sourceRaw; externalID = m.externalID
+        createdAt = m.createdAt; lastEditedAt = m.lastEditedAt
+    }
+    func toModel() -> SleepEntry {
+        SleepEntry(id: id, nightDate: nightDate, bedTime: bedTime, wakeTime: wakeTime,
+                   minutesAsleep: minutesAsleep, feel: feel, note: note, sourceRaw: sourceRaw,
+                   externalID: externalID, createdAt: createdAt, lastEditedAt: lastEditedAt)
     }
 }
 

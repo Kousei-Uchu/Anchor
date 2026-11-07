@@ -184,6 +184,18 @@ enum DemoMode {
         context.insert(BridgeDraftItem(createdAt: ago(9), text: "Is it worth trying a different time of day?", isResolved: true,
                                        isQuestion: true, answer: "Worth a try for two weeks, then we look again."))
 
+        let demoAsleep = [450, 410, 480, 390, 465, 435, 420]
+        let demoFeel: [Int?] = [0, 1, 0, 2, 0, nil, 1]
+        for index in 0..<7 {
+            let cal = Calendar.current
+            let night = cal.startOfDay(for: ago(Double(index)))
+            let wake = night.addingTimeInterval(7 * 3_600 + Double(index % 3) * 900)
+            let bed = wake.addingTimeInterval(-Double(demoAsleep[index] + 20) * 60)
+            context.insert(SleepEntry(nightDate: night, bedTime: bed, wakeTime: wake,
+                                      minutesAsleep: index == 3 ? demoAsleep[index] : nil,
+                                      feel: demoFeel[index],
+                                      note: index == 3 ? "Woke a few times. Mind was busy." : ""))
+        }
         context.insert(PersonalGoal(title: "Get outside for a short walk most days",
                                     why: "It helps my head more than I expect.",
                                     notes: [GoalNote(date: ago(3), text: "Walked to the end of the street and back. That counted."),

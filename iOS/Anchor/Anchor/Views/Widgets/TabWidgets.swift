@@ -28,7 +28,7 @@ enum TabLayoutStyle: String {
 enum WidgetID: String, CaseIterable, Identifiable {
     // Plan
     case safetyPlan, triggerWindows, appointments, contacts, deEscalation
-    case grounding, decisionPresets, affirmations, recovery, motivations, tasks
+    case grounding, decisionPresets, affirmations, recovery, motivations, tasks, sleep
     // Bridge
     case thingsToRaise, nextSession, reframing, feedbackLoops, nswLaw, personalGoals
     // Thread
@@ -44,7 +44,7 @@ extension WidgetID {
         // card, so they always get the full width.
         guard title.count <= 16 else { return false }
         switch self {
-        case .triggerWindows, .appointments, .recovery, .motivations,
+        case .triggerWindows, .appointments, .recovery, .motivations, .sleep,
              .reframing, .feedbackLoops, .futureNotes, .unsentDrafts:
             return true
         default:
@@ -65,6 +65,7 @@ extension WidgetID {
         case .recovery: return "Recovery"
         case .motivations: return "Who I'm doing this for"
         case .tasks: return "Tasks"
+        case .sleep: return "Sleep"
         case .thingsToRaise: return "Things to raise"
         case .nextSession: return "Next session"
         case .reframing: return "Reframing"
@@ -93,6 +94,7 @@ extension WidgetID {
         case .recovery: return "calendar.badge.checkmark"
         case .motivations: return "heart.fill"
         case .tasks: return "checkmark.circle.fill"
+        case .sleep: return "moon.zzz.fill"
         case .thingsToRaise: return "doc.text.fill"
         case .nextSession: return "calendar.badge.clock"
         case .reframing: return "arrow.triangle.2.circlepath"
