@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 10: the shared pieces for tap a row to edit it, swipe to delete, a plus to add and a labelled Reorder are in place; no screen uses them yet.
 - Patch 9: the Journal has a Year view with twelve small months; tap a month to open it.
 - Patch 8: the Journal has a Days and Month switch; the month calendar shows a dot for each entry and a square for a check-in, and tapping a day opens it in the timeline.
 - Patch 7: the Journal editor is one calm writing surface with a single Add button for Journaling Suggestions, photos, drawings, prompts and formatting; Preview moved into a menu; a prompt now adds to your entry instead of replacing it.

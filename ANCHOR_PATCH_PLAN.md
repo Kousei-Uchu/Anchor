@@ -1,6 +1,6 @@
 # Anchor — Patch Plan (v2-recovery)
 
-*Living document. Last updated: 7 Nov 2026, after Patch 9 was written (Patches 1 to 7 are pushed; Patches 8 and 9 await your paste; none confirmed building).*
+*Living document. Last updated: 7 Nov 2026, after Patch 10 was written (Patches 1 to 7 are pushed; Patches 8 to 10 await your paste; none confirmed building).*
 
 > ## READ THIS FIRST: THIS FILE IS THE PROMPT
 >
@@ -37,10 +37,12 @@ The source code repository is at <https://github.com/Kousei-Uchu/Anchor/tree/v2-
 | 7: Journal editor declutter, labelled Add sheet, discoverable Suggestions | 🟡 Pushed by you (`08b0dcc`); build not yet confirmed |
 | 8: Journal month calendar | 🟡 Written (`patch-08.sh`); awaiting your paste and build (paste after Patch 7) |
 | 9: Journal year overview | 🟡 Written (`patch-09.sh`); awaiting your paste and build (paste after Patch 8) |
-| 10 onward | Not started |
+| 10: Tap-to-edit building blocks | 🟡 Written (`patch-10.sh`); awaiting your paste and build (paste after Patch 9) |
+| 11 onward | Not started |
 
 ## Change log of this plan
 
+- **7 Nov 2026 (15):** Patch 10 written. Nothing changes on screen yet. `ContentView.swift` gains the pieces of the new edit pattern: `AddToolbarButton` (a plus), `ReorderToolbarButton` (a text button that says Reorder, then Done), `TapToEditRow` (the whole row opens its editor), `ItemEditorSheet` (one item in one sheet, with an optional Delete that asks first) and a `.anchorDeletable` modifier (swipe, and the same action on long-press). The older `EditToolbarButton` and `EditorSheet` stay until Patches 11 to 13 have moved every screen. Deletion inside a reorder session uses swipe only, so reorder mode shows handles and no red minus buttons. Not compiled here.
 - **7 Nov 2026 (14):** Patch 9 written: the Journal switch gains Year. Twelve small months, a filled square for each day with something on it (darker if more than one thing), tap a month to open it in Month view. Deliberately plain: no colour for better or worse and no totals, so it cannot turn into a streak chart. Year arrows stop at the earliest entry and this year; future months are dimmed. Patches 6 and 7 confirmed pushed (`7859612`, `08b0dcc`). **Not done:** the optional lenses (entries only, check-ins only, by origin); the plan said "later". Not compiled here.
 - **7 Nov 2026 (13):** Patch 8 written: a Days / Month switch at the top of the Journal (remembered between launches). Month is a calendar grid, one dot per entry (up to three) and a small square for a check-in, with no colour or score. Tapping a day that has something on it switches to Days and scrolls to that day. Month arrows stop at the earliest entry and at this month; "Jump to today" returns to the current month. Search still applies. The month view is a struct inside `JournalView.swift`, so there is no project file change. **Not done:** swiping between months. Not compiled here.
 - **7 Nov 2026 (12):** D9 answered: option 1, keep polishing in Swift for now, so Patches 7 to 9 go ahead. Patch 7 written: the editor has one calm writing surface. The inline prompt card and the six-icon toolbar are gone. A single Add button under the text opens a labelled sheet (Journaling Suggestions, Photo, Drawing, Prompt for me, Formatting); Preview moved into a menu in the top bar; the Suggestions screen is now titled Journaling Suggestions; a one-time "Got it" hint points at Add. **Deviation from the plan:** no Cancel button, because entries save as you type and a Cancel would not undo that. Done stays on the right. Also fixed: "Use this" on a prompt used to replace the whole entry text; it now appends. Not compiled here.
@@ -324,7 +326,7 @@ Order: unblock → visible quick wins → one shared pattern later screens inher
 
 | Patch | Contents | Points | Size | Status |
 | --- | --- | --- | --- | --- |
-| **10** | New edit pattern implemented in shared `Anchor` components only | 13 | S | ⬜ |
+| **10** | New edit pattern implemented in shared `Anchor` components only | 13 | S | 🟡 |
 | **11** | Apply to Thread screens | 13 | M | ⬜ |
 | **12** | Apply to Plan screens | 13 | M | ⬜ |
 | **13** | Apply to Bridge, Now, Recovery screens | 13 | M | ⬜ |
@@ -486,4 +488,4 @@ A reminder you set yourself, per person, **off by default**. Lock-screen text is
 
 ## Appendix B: Suggested next session
 
-Patch **10** (the new edit pattern, in the shared `Anchor` components only), once Patches 1 to 9 build. D9 is closed, so Journal polish carries on in Swift.
+Patch **11** (apply the edit pattern to the Thread screens), once Patches 1 to 10 build. D9 is closed, so Journal polish carries on in Swift.

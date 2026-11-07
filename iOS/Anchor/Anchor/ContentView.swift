@@ -129,6 +129,123 @@ enum Anchor {
         }
     }
 
+    // MARK: Tap-to-edit pattern
+    //
+    // The replacement for the Edit button and the manage-list sheet above.
+    // Patches 11 to 13 move the screens over one area at a time, and the
+    // two older types are removed when the last screen has moved.
+    //
+    //   - Tap a row to edit that item (`TapToEditRow`).
+    //   - Swipe a row to delete it (`anchorDeletable`). Screens made of cards
+    //     rather than a List can't swipe, so the editor offers Delete instead.
+    //   - A plus in the toolbar adds (`AddToolbarButton`).
+    //   - A labelled Reorder appears only where order matters
+    //     (`ReorderToolbarButton`).
+    //   - One item is edited in one sheet (`ItemEditorSheet`). There is no
+    //     sheet of lists and no second Edit button inside it.
+
+    /// The toolbar button that adds a new item. It opens the same editor
+    /// a tap on a row opens, with a new item in it.
+    struct AddToolbarButton: View {
+        var label: String = "Add"
+        let action: () -> Void
+
+        var body: some View {
+            Button(action: action) {
+                Image(systemName: "plus")
+            }
+            .accessibilityLabel(label)
+        }
+    }
+
+    /// Switches a List in and out of reorder mode. Use it only on screens
+    /// where the order means something. The text says what it does, and it
+    /// changes to Done while you are reordering.
+    struct ReorderToolbarButton: View {
+        @Environment(\.editMode) private var editMode
+
+        var body: some View {
+            let isReordering = editMode?.wrappedValue.isEditing == true
+            Button(isReordering ? "Done" : "Reorder") {
+                withAnimation {
+                    editMode?.wrappedValue = isReordering ? .inactive : .active
+                }
+            }
+        }
+    }
+
+    /// A row that opens its own editor when tapped. The whole row is the
+    /// tap target, and a small chevron says so.
+    struct TapToEditRow<Content: View>: View {
+        let action: () -> Void
+        @ViewBuilder var content: () -> Content
+
+        var body: some View {
+            Button(action: action) {
+                HStack(spacing: 8) {
+                    content()
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Opens the editor")
+        }
+    }
+
+    /// The editor for one item, presented as a sheet. Done closes it.
+    /// Pass `onDelete` and a Delete button appears under the form, with a
+    /// confirmation before anything is removed.
+    struct ItemEditorSheet<Content: View>: View {
+        @Environment(\.dismiss) private var dismiss
+        let title: String
+        var onDelete: (() -> Void)? = nil
+        var deleteTitle: String = "Delete"
+        var deleteQuestion: String = "Delete this?"
+        var onDone: (() -> Void)? = nil
+        @ViewBuilder var content: () -> Content
+        @State private var confirmingDelete = false
+
+        var body: some View {
+            NavigationStack {
+                content()
+                    .anchorSettingsStyle()
+                    .safeAreaInset(edge: .bottom) {
+                        if onDelete != nil {
+                            Button(role: .destructive) {
+                                confirmingDelete = true
+                            } label: {
+                                Text(deleteTitle)
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .padding()
+                            .background(.thinMaterial)
+                        }
+                    }
+                    .navigationTitle(title)
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") {
+                                onDone?()
+                                dismiss()
+                            }
+                        }
+                    }
+                    .confirmationDialog(deleteQuestion, isPresented: $confirmingDelete, titleVisibility: .visible) {
+                        Button(deleteTitle, role: .destructive) {
+                            onDelete?()
+                            dismiss()
+                        }
+                        Button("Keep it", role: .cancel) {}
+                    }
+            }
+        }
+    }
+
     /// Friendly empty state for a read screen, with an optional prompt that
     /// opens the editor ("Add someone").
     struct EmptyState: View {
@@ -421,6 +538,24 @@ extension View {
     /// Applies the app's warm scroll background consistently.
     func anchorBackground() -> some View {
         modifier(AnchorBackgroundModifier())
+    }
+}
+
+extension View {
+    /// Swipe a List row to delete it. The same action is in the long-press
+    /// menu, for people who don't use swipes.
+    func anchorDeletable(_ title: String = "Delete", action: @escaping () -> Void) -> some View {
+        self
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                Button(role: .destructive, action: action) {
+                    Label(title, systemImage: "trash")
+                }
+            }
+            .contextMenu {
+                Button(role: .destructive, action: action) {
+                    Label(title, systemImage: "trash")
+                }
+            }
     }
 }
 
