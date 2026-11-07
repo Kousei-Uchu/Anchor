@@ -1,6 +1,6 @@
 # Recovery (v2)
 
-An optional area for day counters, motivations, a daily pledge and evening review, and a craving tool. It is free, local, and has no account or community. Its home is under Plan, in the Recovery row, and once a counter exists it also shows up on Now and in Bridge's session prep (see "Where it shows up").
+An optional area for day counters, motivations, a daily pledge and evening review, and a craving tool. It is free, local, and has no account or community. Its home is under Plan, in the Recovery row, and its reminders (daily pledge, evening review, milestones) are switched on in Settings (the gear on Plan or on Recovery home), under Recovery, which only appears once a counter exists. Counter-level options (name, savings, lock-screen label) are in the counter's own settings gear. Once a counter exists, Recovery also shows up on Now and in Bridge's session prep (see "Where it shows up").
 
 Ship this after v1 is approved. It adds data the v1 privacy policy does not describe, so keep it on its own branch (for example `v2-recovery`) and do not merge it into the release you submit first.
 

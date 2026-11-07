@@ -10,14 +10,118 @@
 //  sends anything itself, and is for bigger things that might never go
 //  anywhere. The header text below spells out that contrast directly.
 //
+//  Browse/edit split: the log is a read screen. Writing a message is its own
+//  compose sheet (`ThreadMessageComposer`); deleting entries lives behind Edit.
+//
 
 import SwiftUI
 import SwiftData
 import MessageUI
 
 struct ThreadMessagesView: View {
+    @Query(sort: \ThreadMessage.timestamp, order: .reverse) private var messages: [ThreadMessage]
+    @Query(sort: \TrustedContact.sortOrder) private var contacts: [TrustedContact]
+
+    @State private var showingComposer = false
+    @State private var showingEditor = false
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: Anchor.Theme.spacing) {
+                Text("Quick notes tied to a real contact. Sent right away if you want, or just saved as a log of what you've told them over time. For bigger things you might never send, that's \"Things I haven't said\" instead.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                if messages.isEmpty {
+                    Anchor.EmptyState(
+                        icon: "bubble.left.and.bubble.right.fill",
+                        title: "No messages yet",
+                        message: "Write a quick note to someone, or just save it privately as a record of what you've told them.",
+                        actionTitle: "Write something",
+                        tint: Anchor.Theme.accent
+                    ) { showingComposer = true }
+                } else {
+                    ForEach(messages) { message in
+                        Anchor.Card {
+                            VStack(alignment: .leading, spacing: 4) {
+                                if let contactID = message.withContactID,
+                                   let contact = contacts.first(where: { $0.id == contactID }) {
+                                    Text(contact.name)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Text(message.text)
+                                    .font(.system(.body, design: .rounded))
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Text(message.timestamp.formatted(date: .abbreviated, time: .shortened))
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                    Button {
+                        showingComposer = true
+                    } label: {
+                        Label("Write something", systemImage: "plus")
+                    }
+                    .buttonStyle(Anchor.SecondaryButtonStyle())
+                }
+            }
+            .padding()
+        }
+        .anchorBackground()
+        .navigationTitle("Message log")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                if !messages.isEmpty {
+                    Anchor.EditToolbarButton { showingEditor = true }
+                }
+            }
+        }
+        .sheet(isPresented: $showingComposer) {
+            ThreadMessageComposer()
+        }
+        .sheet(isPresented: $showingEditor) {
+            Anchor.EditorSheet(title: "Edit message log") {
+                ThreadMessagesManageView()
+            }
+        }
+    }
+}
+
+/// Delete entries from the log. Presented from Edit.
+private struct ThreadMessagesManageView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \ThreadMessage.timestamp, order: .reverse) private var messages: [ThreadMessage]
+
+    var body: some View {
+        List {
+            ForEach(messages) { message in
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(message.text)
+                        .font(.system(.subheadline, design: .rounded))
+                        .lineLimit(2)
+                    Text(message.timestamp.formatted(date: .abbreviated, time: .shortened))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .onDelete { offsets in
+                for index in offsets { modelContext.delete(messages[index]) }
+            }
+        }
+        .toolbar { EditButton() }
+    }
+}
+
+/// Compose a new log entry: pick who it's about, write it, then either save
+/// it privately or save and send. Creating something new, so it's its own flow.
+private struct ThreadMessageComposer: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
     @Query(sort: \TrustedContact.sortOrder) private var contacts: [TrustedContact]
 
     @State private var newMessageText = ""
@@ -32,63 +136,41 @@ struct ThreadMessagesView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            List {
-                Section {
-                    Text("Quick notes tied to a real contact. Sent right away if you want, or just saved as a log of what you've told them over time. For bigger things you might never send, that's \"Things I haven't said\" instead.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .listRowBackground(Color.clear)
-
-                ForEach(messages) { message in
-                    VStack(alignment: .leading, spacing: 4) {
-                        if let contactID = message.withContactID,
-                           let contact = contacts.first(where: { $0.id == contactID }) {
-                            Text(contact.name).font(.caption).foregroundStyle(.secondary)
-                        }
-                        Text(message.text)
-                        Text(message.timestamp.formatted(date: .abbreviated, time: .shortened))
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.vertical, 4)
-                }
-                .onDelete { offsets in
-                    for index in offsets { modelContext.delete(messages[index]) }
-                }
-            }
-
-            Divider()
-
-            VStack(alignment: .leading, spacing: 8) {
+        NavigationStack {
+            Form {
                 if !contacts.isEmpty {
-                    Picker("About", selection: $selectedContactID) {
-                        Text("No one in particular").tag(UUID?.none)
-                        ForEach(contacts) { contact in
-                            Text(contact.name).tag(Optional(contact.id))
+                    Section("About") {
+                        Picker("About", selection: $selectedContactID) {
+                            Text("No one in particular").tag(UUID?.none)
+                            ForEach(contacts) { contact in
+                                Text(contact.name).tag(Optional(contact.id))
+                            }
                         }
+                        .pickerStyle(.menu)
                     }
-                    .pickerStyle(.menu)
                 }
-                HStack {
+
+                Section("Message") {
                     TextField("Write something…", text: $newMessageText, axis: .vertical)
-                        .textFieldStyle(.roundedBorder)
+                        .lineLimit(4...10)
                 }
-                HStack {
+
+                Section {
                     Button("Save privately") {
                         saveOnly()
+                        dismiss()
                     }
-                    .buttonStyle(Anchor.SecondaryButtonStyle())
+                    .disabled(newMessageTrimmed.isEmpty)
 
                     if let contactID = selectedContactID, let contact = contacts.first(where: { $0.id == contactID }) {
                         switch contact.contactMethod {
                         case .phone:
                             Button("Save & send via Messages") {
+                                let body = newMessageTrimmed
                                 saveOnly()
-                                pendingMessage = PendingMessage(recipient: contact.phoneNumber, body: newMessageTrimmed)
+                                pendingMessage = PendingMessage(recipient: contact.phoneNumber, body: body)
                             }
-                            .buttonStyle(Anchor.PrimaryButtonStyle())
+                            .disabled(newMessageTrimmed.isEmpty)
                         case .discord:
                             Button("Save & open Discord") {
                                 saveOnly()
@@ -96,29 +178,35 @@ struct ThreadMessagesView: View {
                                     discordFailureMessage = message
                                 }
                             }
-                            .buttonStyle(Anchor.PrimaryButtonStyle())
+                            .disabled(newMessageTrimmed.isEmpty)
                         }
                     }
                 }
             }
-            .padding()
-        }
-        .navigationTitle("Message log")
-        .sheet(item: $pendingMessage) { message in
-            if MFMessageComposeViewController.canSendText() {
-                MessageComposeView(recipient: message.recipient, body: message.body)
-            } else {
-                Text("This device can't send text messages.")
-                    .padding()
+            .anchorSettingsStyle()
+            .navigationTitle("Write something")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") { dismiss() }
+                }
             }
-        }
-        .alert("Couldn't open Discord", isPresented: Binding(
-            get: { discordFailureMessage != nil },
-            set: { if !$0 { discordFailureMessage = nil } }
-        )) {
-            Button("OK", role: .cancel) { discordFailureMessage = nil }
-        } message: {
-            Text(discordFailureMessage ?? "")
+            .sheet(item: $pendingMessage, onDismiss: { dismiss() }) { message in
+                if MFMessageComposeViewController.canSendText() {
+                    MessageComposeView(recipient: message.recipient, body: message.body)
+                } else {
+                    Text("This device can't send text messages.")
+                        .padding()
+                }
+            }
+            .alert("Couldn't open Discord", isPresented: Binding(
+                get: { discordFailureMessage != nil },
+                set: { if !$0 { discordFailureMessage = nil } }
+            )) {
+                Button("OK", role: .cancel) { discordFailureMessage = nil }
+            } message: {
+                Text(discordFailureMessage ?? "")
+            }
         }
     }
 

@@ -14,7 +14,144 @@
 import SwiftUI
 import SwiftData
 
+/// Sessions as something to look at: the next one, a read-only month, and
+/// the list of sessions. Scheduling, moving, cancelling and the typical
+/// cadence all live behind Edit (`AppointmentEditorView`).
 struct AppointmentView: View {
+    let series: AppointmentSeries
+
+    @State private var displayedMonth: Date = .now
+    @State private var showingEditor = false
+
+    private var calendar: Calendar { Calendar.current }
+
+    private var occurrencesByDay: [Date: [AppointmentOccurrence]] {
+        Dictionary(grouping: series.occurrences) { calendar.startOfDay(for: $0.scheduledDate) }
+    }
+
+    private var sortedOccurrences: [AppointmentOccurrence] {
+        series.occurrences.sorted { $0.scheduledDate < $1.scheduledDate }
+    }
+
+    private var nextOccurrence: AppointmentOccurrence? {
+        sortedOccurrences.first { $0.scheduledDate > .now }
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                Anchor.Card {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Anchor.SectionHeader(icon: "calendar.badge.clock", title: "Next session")
+                        if let next = nextOccurrence {
+                            Text(next.scheduledDate.formatted(date: .abbreviated, time: .shortened))
+                                .font(.system(.title3, design: .rounded))
+                            Text(daysUntil(next.scheduledDate))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Text("Nothing scheduled yet.")
+                                .foregroundStyle(.secondary)
+                            Button("Schedule a session") { showingEditor = true }
+                                .buttonStyle(Anchor.SecondaryButtonStyle())
+                                .padding(.top, 4)
+                        }
+                    }
+                }
+
+                Anchor.Card {
+                    VStack(alignment: .leading, spacing: 12) {
+                        monthHeader
+
+                        MonthCalendarGrid(
+                            displayedMonth: displayedMonth,
+                            occurrencesByDay: occurrencesByDay,
+                            onSelectDay: nil
+                        )
+
+                        HStack(spacing: 16) {
+                            Label("Scheduled", systemImage: "circle.fill")
+                                .foregroundStyle(Anchor.Theme.accent)
+                            Label("Moved", systemImage: "circle.fill")
+                                .foregroundStyle(Anchor.Theme.sage)
+                        }
+                        .font(.caption2)
+                        .labelStyle(.titleAndIcon)
+                    }
+                }
+
+                if !sortedOccurrences.isEmpty {
+                    Anchor.Card {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Anchor.SectionHeader(icon: "list.bullet", title: "All sessions")
+                            ForEach(sortedOccurrences) { occurrence in
+                                HStack {
+                                    Text(occurrence.scheduledDate.formatted(date: .abbreviated, time: .shortened))
+                                    if occurrence.wasMoved {
+                                        Text("moved").font(.caption2).foregroundStyle(Anchor.Theme.sage)
+                                    }
+                                    Spacer()
+                                }
+                                .foregroundStyle(occurrence.scheduledDate < .now ? .secondary : .primary)
+                            }
+                        }
+                    }
+                }
+
+                Text("Usually about every \(series.typicalCadenceDays) days.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+            }
+            .padding()
+        }
+        .anchorBackground()
+        .navigationTitle(series.clinicianLabel)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Anchor.EditToolbarButton { showingEditor = true }
+            }
+        }
+        .sheet(isPresented: $showingEditor) {
+            Anchor.EditorSheet(title: "Edit sessions") {
+                AppointmentEditorView(series: series)
+            }
+        }
+    }
+
+    private var monthHeader: some View {
+        HStack {
+            Button {
+                withAnimation { displayedMonth = calendar.date(byAdding: .month, value: -1, to: displayedMonth) ?? displayedMonth }
+            } label: {
+                Image(systemName: "chevron.left")
+            }
+            Spacer()
+            Text(displayedMonth.formatted(.dateTime.month(.wide).year()))
+                .font(.system(.headline, design: .rounded))
+            Spacer()
+            Button {
+                withAnimation { displayedMonth = calendar.date(byAdding: .month, value: 1, to: displayedMonth) ?? displayedMonth }
+            } label: {
+                Image(systemName: "chevron.right")
+            }
+        }
+        .tint(Anchor.Theme.accent)
+    }
+
+    private func daysUntil(_ date: Date) -> String {
+        let days = calendar.dateComponents([.day], from: .now, to: date).day ?? 0
+        if days <= 0 { return "Today" }
+        if days == 1 { return "Tomorrow" }
+        return "In \(days) days"
+    }
+}
+
+/// The scheduling editor: tap a date to schedule or move a session, set the
+/// typical cadence, delete sessions. Presented from `AppointmentView` via
+/// Edit, never browsed to directly.
+struct AppointmentEditorView: View {
     @Bindable var series: AppointmentSeries
     @Environment(\.modelContext) private var modelContext
 
@@ -146,8 +283,6 @@ struct AppointmentView: View {
             }
             .padding()
         }
-        .anchorBackground()
-        .navigationTitle(series.clinicianLabel)
         .sheet(isPresented: $showScheduleSheet) {
             if let selectedDate {
                 ScheduleSessionSheet(series: series, date: selectedDate)
@@ -194,7 +329,7 @@ struct AppointmentView: View {
 private struct MonthCalendarGrid: View {
     let displayedMonth: Date
     let occurrencesByDay: [Date: [AppointmentOccurrence]]
-    let onSelectDay: (Date) -> Void
+    let onSelectDay: ((Date) -> Void)?
 
     private var calendar: Calendar { Calendar.current }
 
@@ -248,23 +383,31 @@ private struct MonthCalendarGrid: View {
         let occurrence = occurrencesByDay[dayStart]?.first
         let isToday = calendar.isDateInToday(date)
 
-        return Button {
-            onSelectDay(date)
-        } label: {
-            VStack(spacing: 2) {
-                Text("\(calendar.component(.day, from: date))")
-                    .font(.system(.subheadline, design: .rounded))
-                    .fontWeight(isToday ? .bold : .regular)
-                    .foregroundStyle(isToday ? Anchor.Theme.accent : .primary)
+        let content = VStack(spacing: 2) {
+            Text("\(calendar.component(.day, from: date))")
+                .font(.system(.subheadline, design: .rounded))
+                .fontWeight(isToday ? .bold : .regular)
+                .foregroundStyle(isToday ? Anchor.Theme.accent : .primary)
 
-                Circle()
-                    .fill(occurrence == nil ? Color.clear : (occurrence!.wasMoved ? Anchor.Theme.sage : Anchor.Theme.accent))
-                    .frame(width: 5, height: 5)
-            }
-            .frame(maxWidth: .infinity, minHeight: 38)
-            .background(isToday ? Anchor.Theme.accentSoft : Color.clear, in: RoundedRectangle(cornerRadius: 8))
+            Circle()
+                .fill(occurrence == nil ? Color.clear : (occurrence!.wasMoved ? Anchor.Theme.sage : Anchor.Theme.accent))
+                .frame(width: 5, height: 5)
         }
-        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity, minHeight: 38)
+        .background(isToday ? Anchor.Theme.accentSoft : Color.clear, in: RoundedRectangle(cornerRadius: 8))
+
+        return Group {
+            if let onSelectDay {
+                Button {
+                    onSelectDay(date)
+                } label: {
+                    content
+                }
+                .buttonStyle(.plain)
+            } else {
+                content
+            }
+        }
     }
 }
 
@@ -302,6 +445,7 @@ private struct ScheduleSessionSheet: View {
                          : "Just this one session.")
                 }
             }
+            .anchorSettingsStyle()
             .navigationTitle("Schedule")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -363,6 +507,7 @@ private struct OccurrenceEditorSheet: View {
                     }
                 }
             }
+            .anchorSettingsStyle()
             .navigationTitle("Session")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -20,54 +20,87 @@ struct SupportCalendarView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \SupportCalendarEntry.date) private var entries: [SupportCalendarEntry]
     @Query(sort: \TrustedContact.sortOrder) private var contacts: [TrustedContact]
-    @State private var editingEntry: SupportCalendarEntry?
+    @State private var newEntry: SupportCalendarEntry?
+    @State private var showingEditor = false
     @State private var icsShareURL: IdentifiableURL?
     @State private var noVisibleEntriesMessage: String?
 
     var body: some View {
-        List {
-            if !contacts.isEmpty {
-                Section {
+        ScrollView {
+            VStack(spacing: Anchor.Theme.spacing) {
+                if !contacts.isEmpty {
+                    // Sharing is a quick action, not editing, so it stays on the read screen.
                     Menu {
                         ForEach(contacts) { contact in
                             Button(contact.name) { shareCalendar(with: contact) }
                         }
                     } label: {
-                        Anchor.MenuRow(icon: "square.and.arrow.up", title: "Share with…",
-                                       subtitle: "Sends a real calendar file, they don't need Anchor", tint: Anchor.Theme.accent)
-                    }
-                }
-            }
-
-            ForEach(entries) { entry in
-                Button {
-                    editingEntry = entry
-                } label: {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(entry.date.formatted(date: .abbreviated, time: .omitted)).font(.headline)
-                        Text(entry.note).foregroundStyle(.secondary)
-                        if !entry.visibleToContactIDs.isEmpty {
-                            Text("Visible to: " + visibleNames(entry))
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
+                        Anchor.Card(accentColor: Anchor.Theme.sage) {
+                            HStack {
+                                Anchor.MenuRow(icon: "square.and.arrow.up", title: "Share with…",
+                                               subtitle: "Sends a real calendar file, they don't need Anchor", tint: Anchor.Theme.accent)
+                                Spacer()
+                            }
                         }
                     }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
-            }
-            .onDelete { offsets in
-                for index in offsets { modelContext.delete(entries[index]) }
-            }
 
-            Button("Add extra-support day") {
-                let new = SupportCalendarEntry(date: .now, note: "")
-                modelContext.insert(new)
-                editingEntry = new
+                if entries.isEmpty {
+                    Anchor.EmptyState(
+                        icon: "calendar.badge.clock",
+                        title: "No extra-support days yet",
+                        message: "Mark days you'd like some extra support, and choose who can see each one.",
+                        actionTitle: "Add a day",
+                        tint: Anchor.Theme.accent
+                    ) { startNewEntry() }
+                } else {
+                    ForEach(entries) { entry in
+                        Anchor.Card {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(entry.date.formatted(date: .abbreviated, time: .omitted))
+                                    .font(.system(.headline, design: .rounded))
+                                if !entry.note.isEmpty {
+                                    Text(entry.note)
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                }
+                                if !entry.visibleToContactIDs.isEmpty {
+                                    Label("Visible to " + visibleNames(entry), systemImage: "eye")
+                                        .font(.caption)
+                                        .foregroundStyle(.tertiary)
+                                }
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                    Button {
+                        startNewEntry()
+                    } label: {
+                        Label("Add extra-support day", systemImage: "plus")
+                    }
+                    .buttonStyle(Anchor.SecondaryButtonStyle())
+                }
+            }
+            .padding()
+        }
+        .anchorBackground()
+        .navigationTitle("Support calendar")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                if !entries.isEmpty {
+                    Anchor.EditToolbarButton { showingEditor = true }
+                }
             }
         }
-        .navigationTitle("Support calendar")
-        .sheet(item: $editingEntry) { entry in
+        .sheet(item: $newEntry) { entry in
             SupportCalendarEntryEditor(entry: entry, contacts: contacts)
+        }
+        .sheet(isPresented: $showingEditor) {
+            Anchor.EditorSheet(title: "Edit support days") {
+                SupportCalendarManageView(contacts: contacts)
+            }
         }
         .sheet(item: $icsShareURL) { wrapped in
             ShareSheet(activityItems: [wrapped.url])
@@ -80,6 +113,13 @@ struct SupportCalendarView: View {
         } message: {
             Text(noVisibleEntriesMessage ?? "")
         }
+    }
+
+    /// Adding a day is writing something new, so it opens the entry sheet straight away.
+    private func startNewEntry() {
+        let new = SupportCalendarEntry(date: .now, note: "")
+        modelContext.insert(new)
+        newEntry = new
     }
 
     private func visibleNames(_ entry: SupportCalendarEntry) -> String {
@@ -136,6 +176,43 @@ struct SupportCalendarView: View {
     }
 }
 
+/// Tap a day to change it, swipe to delete. Presented from Edit.
+private struct SupportCalendarManageView: View {
+    let contacts: [TrustedContact]
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \SupportCalendarEntry.date) private var entries: [SupportCalendarEntry]
+    @State private var editingEntry: SupportCalendarEntry?
+
+    var body: some View {
+        List {
+            ForEach(entries) { entry in
+                Button {
+                    editingEntry = entry
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(entry.date.formatted(date: .abbreviated, time: .omitted))
+                            .font(.system(.subheadline, design: .rounded))
+                            .foregroundStyle(.primary)
+                        if !entry.note.isEmpty {
+                            Text(entry.note)
+                                .lineLimit(1)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+            .onDelete { offsets in
+                for index in offsets { modelContext.delete(entries[index]) }
+            }
+        }
+        .toolbar { EditButton() }
+        .sheet(item: $editingEntry) { entry in
+            SupportCalendarEntryEditor(entry: entry, contacts: contacts)
+        }
+    }
+}
+
 private struct SupportCalendarEntryEditor: View {
     @Bindable var entry: SupportCalendarEntry
     let contacts: [TrustedContact]
@@ -167,7 +244,9 @@ private struct SupportCalendarEntryEditor: View {
                     }
                 }
             }
+            .anchorSettingsStyle()
             .navigationTitle("Support day")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }

@@ -46,6 +46,55 @@ struct AffirmationsCardView: View {
     }
 }
 
+/// The affirmation rotation as something to read: one calm card per line.
+/// Writing, reordering, deleting and browsing suggestions live behind Edit
+/// (`AffirmationsEditorView`).
+struct AffirmationsView: View {
+    @Query(sort: \Affirmation.sortOrder) private var affirmations: [Affirmation]
+    @State private var showingEditor = false
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: Anchor.Theme.spacing) {
+                if affirmations.isEmpty {
+                    Anchor.EmptyState(
+                        icon: "sparkles",
+                        title: "Nothing here yet",
+                        message: "Write your own, or browse a pool of suggestions and keep whichever ones land. Nothing here is fixed.",
+                        actionTitle: "Add some",
+                        tint: Anchor.Theme.accent
+                    ) { showingEditor = true }
+                } else {
+                    ForEach(affirmations) { affirmation in
+                        Anchor.Card {
+                            Text(affirmation.text)
+                                .font(.system(.title3, design: .rounded))
+                                .italic()
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+            }
+            .padding()
+        }
+        .anchorBackground()
+        .navigationTitle("Affirmations")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Anchor.EditToolbarButton { showingEditor = true }
+            }
+        }
+        .sheet(isPresented: $showingEditor) {
+            Anchor.EditorSheet(title: "Edit affirmations") {
+                AffirmationsEditorView()
+            }
+        }
+    }
+}
+
+/// The affirmations editor. Presented from `AffirmationsView` via Edit,
+/// never browsed to directly.
 struct AffirmationsEditorView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Affirmation.sortOrder) private var affirmations: [Affirmation]
@@ -96,7 +145,6 @@ struct AffirmationsEditorView: View {
                 }
             }
         }
-        .navigationTitle("Affirmations")
         .toolbar { EditButton() }
         .sheet(isPresented: $showSuggestions) {
             AffirmationSuggestionsView(alreadyAdded: Set(affirmations.map(\.text))) { text in
@@ -160,6 +208,7 @@ private struct AffirmationSuggestionsView: View {
                     }
                 }
             }
+            .anchorSettingsStyle()
             .navigationTitle("Suggestions")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

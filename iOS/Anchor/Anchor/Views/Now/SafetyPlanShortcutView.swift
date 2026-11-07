@@ -22,7 +22,7 @@ struct SafetyPlanShortcutView: View {
 
     var body: some View {
         NavigationLink {
-            SafetyPlanEditorView(plan: currentPlan)
+            SafetyPlanView(plan: currentPlan)
         } label: {
             Anchor.Card {
                 HStack(spacing: 12) {

@@ -35,6 +35,7 @@ struct RecoveryCounterDetailView: View {
 
     @State private var tab: RecoveryTab = .summary
     @State private var showingEditor = false
+    @State private var editorFocus: RecoveryCounterEditorView.Focus?
     @State private var showingSlip = false
     @State private var showingUrge = false
     @State private var pendingDelete = false
@@ -69,14 +70,19 @@ struct RecoveryCounterDetailView: View {
         .navigationTitle(counter.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .primaryAction) { Button("Edit") { showingEditor = true } }
+            ToolbarItem(placement: .primaryAction) {
+                Anchor.GearButton(label: "Counter settings") {
+                    editorFocus = nil
+                    showingEditor = true
+                }
+            }
         }
         .sheet(isPresented: $showingEditor, onDismiss: handleEditorDismiss) {
             NavigationStack {
                 RecoveryCounterEditorView(counter: counter, onDelete: {
                     pendingDelete = true
                     showingEditor = false
-                })
+                }, focus: editorFocus)
             }
         }
         .sheet(isPresented: $showingSlip, onDismiss: handleSlipDismiss) {
@@ -137,7 +143,10 @@ struct RecoveryCounterDetailView: View {
                                onLogUrge: { showingUrge = true },
                                onStartAgain: { runsBeforeSlip = counter.runs.count; showingSlip = true })
         case .savings:
-            RecoverySavingsTab(counter: counter, onEdit: { showingEditor = true })
+            RecoverySavingsTab(counter: counter, onEdit: {
+                editorFocus = .savings
+                showingEditor = true
+            })
         case .calendar:
             RecoveryCalendarTab(counter: counter)
         case .urges:
@@ -294,8 +303,11 @@ private struct RecoverySavingsTab: View {
                         row("Each year", perDay * 365)
                     }
                 }
-                Button("Change the amount", action: onEdit)
-                    .buttonStyle(Anchor.SecondaryButtonStyle())
+                Button(action: onEdit) {
+                    Label("Savings settings", systemImage: "gearshape")
+                        .font(.footnote)
+                }
+                .foregroundStyle(.secondary)
             }
         } else {
             Anchor.Card {
@@ -303,8 +315,11 @@ private struct RecoverySavingsTab: View {
                     Anchor.SectionHeader(icon: "banknote.fill", title: "Money not spent", tint: Anchor.Theme.sage)
                     Text("If this costs money, add a rough amount and Anchor will keep a running estimate of what you haven't spent. It never leaves your phone.")
                         .font(.subheadline).foregroundStyle(.secondary)
-                    Button("Add an amount", action: onEdit)
-                        .buttonStyle(Anchor.SecondaryButtonStyle(tint: Anchor.Theme.sage))
+                    Button(action: onEdit) {
+                        Label("Set up savings", systemImage: "gearshape")
+                            .font(.footnote)
+                    }
+                    .foregroundStyle(.secondary)
                 }
             }
         }

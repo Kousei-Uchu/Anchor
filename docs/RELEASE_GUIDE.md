@@ -78,7 +78,7 @@ You need: a Mac with **Xcode 26 or later** (Apple requires current-SDK builds fo
 ## Likely review questions
 
 - "Is this a medical app?" Answer in notes: no, it is a personal planning and journaling tool, it makes no diagnosis or treatment claims, and links to crisis lines.
-- Permission strings are all present and only requested on use. If they ask about the Face ID prompt, it is the app's own lock, optional in Plan, Preferences.
+- Permission strings are all present and only requested on use. If they ask about the Face ID prompt, it is the app's own lock, optional in Plan, Settings.
 - If they mention the red "could not open saved data" banner: that is a safety fallback if the on-device database cannot open.
 
 ## After release: one rule that matters

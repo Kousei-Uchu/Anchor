@@ -2,9 +2,10 @@
 //  RecoveryHomeView.swift
 //  Anchor
 //
-//  Entry point for the optional Recovery area: counters, the craving tool,
-//  motivations and reminders. Nothing here is shown anywhere else in the app
-//  unless the user adds a counter.
+//  Entry point for the optional Recovery area: counters, the craving tool and
+//  motivations. A read screen: reminders and other toggles live in Settings
+//  (gear), not here. Nothing here is shown anywhere else in the app unless the
+//  user adds a counter.
 //
 
 import SwiftUI
@@ -14,14 +15,7 @@ struct RecoveryHomeView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \RecoveryCounter.sortOrder) private var allCounters: [RecoveryCounter]
     @State private var showingNewCounter = false
-
-    @AppStorage(RecoverySettings.pledgeEnabled) private var pledgeEnabled = false
-    @AppStorage(RecoverySettings.pledgeHour) private var pledgeHour = 8
-    @AppStorage(RecoverySettings.pledgeMinute) private var pledgeMinute = 0
-    @AppStorage(RecoverySettings.reviewEnabled) private var reviewEnabled = false
-    @AppStorage(RecoverySettings.reviewHour) private var reviewHour = 20
-    @AppStorage(RecoverySettings.reviewMinute) private var reviewMinute = 30
-    @AppStorage(RecoverySettings.milestonesEnabled) private var milestonesEnabled = false
+    @State private var showingSettings = false
 
     private var counters: [RecoveryCounter] { allCounters.filter { !$0.isArchived } }
 
@@ -74,65 +68,25 @@ struct RecoveryHomeView: View {
                     }
                 }
                 .buttonStyle(.plain)
-
-                remindersCard
             }
             .padding()
         }
         .anchorBackground()
         .navigationTitle("Recovery")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Anchor.GearButton(label: "Recovery settings") { showingSettings = true }
+            }
+        }
+        .sheet(isPresented: $showingSettings) {
+            SettingsView()
+        }
         .sheet(isPresented: $showingNewCounter) {
             NavigationStack { RecoveryCounterEditorView(counter: nil) }
         }
         .onAppear { RecoveryNotifications.refresh(using: modelContext) }
         .onChange(of: allCounters.count) { _, _ in RecoveryNotifications.refresh(using: modelContext) }
-    }
-
-    private var remindersCard: some View {
-        Anchor.Card {
-            VStack(alignment: .leading, spacing: 12) {
-                Anchor.SectionHeader(icon: "bell.fill", title: "Reminders", tint: Anchor.Theme.sage)
-
-                Toggle("Daily pledge", isOn: $pledgeEnabled)
-                if pledgeEnabled {
-                    DatePicker("Time", selection: timeBinding($pledgeHour, $pledgeMinute), displayedComponents: .hourAndMinute)
-                }
-                Toggle("Evening review", isOn: $reviewEnabled)
-                if reviewEnabled {
-                    DatePicker("Time", selection: timeBinding($reviewHour, $reviewMinute), displayedComponents: .hourAndMinute)
-                }
-                Toggle("Milestones", isOn: $milestonesEnabled)
-
-                Text("Reminders and widgets use generic wording, like \"A quiet moment for yourself?\", so nobody reading your lock screen learns what you're tracking. You can show a counter's name outside the app by turning that on for the counter.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .tint(Anchor.Theme.accent)
-        }
-        .onChange(of: pledgeEnabled) { _, isOn in remindersChanged(isOn) }
-        .onChange(of: reviewEnabled) { _, isOn in remindersChanged(isOn) }
-        .onChange(of: milestonesEnabled) { _, isOn in remindersChanged(isOn) }
-        .onChange(of: pledgeHour) { _, _ in RecoveryNotifications.refresh(using: modelContext) }
-        .onChange(of: pledgeMinute) { _, _ in RecoveryNotifications.refresh(using: modelContext) }
-        .onChange(of: reviewHour) { _, _ in RecoveryNotifications.refresh(using: modelContext) }
-        .onChange(of: reviewMinute) { _, _ in RecoveryNotifications.refresh(using: modelContext) }
-    }
-
-    private func remindersChanged(_ isOn: Bool) {
-        if isOn { NotificationScheduler.askForPermissionIfNeeded() }
-        RecoveryNotifications.refresh(using: modelContext)
-    }
-
-    private func timeBinding(_ hour: Binding<Int>, _ minute: Binding<Int>) -> Binding<Date> {
-        Binding(
-            get: { Calendar.current.date(bySettingHour: hour.wrappedValue, minute: minute.wrappedValue, second: 0, of: .now) ?? .now },
-            set: { newValue in
-                let parts = Calendar.current.dateComponents([.hour, .minute], from: newValue)
-                hour.wrappedValue = parts.hour ?? 8
-                minute.wrappedValue = parts.minute ?? 0
-            }
-        )
     }
 }
 

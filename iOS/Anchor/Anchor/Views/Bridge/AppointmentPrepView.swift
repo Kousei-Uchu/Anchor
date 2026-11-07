@@ -14,6 +14,7 @@ struct AppointmentPrepView: View {
     @Bindable var series: AppointmentSeries
     @Environment(\.modelContext) private var modelContext
     @State private var entry: JournalEntry?
+    @State private var showingEditor = false
 
     private var nextOccurrence: AppointmentOccurrence? {
         series.occurrences.filter { $0.scheduledDate > .now }.sorted { $0.scheduledDate < $1.scheduledDate }.first
@@ -37,39 +38,70 @@ struct AppointmentPrepView: View {
     }
 
     var body: some View {
-        Group {
-            if let next = nextOccurrence {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text(next.scheduledDate.formatted(date: .abbreviated, time: .shortened))
-                            .font(.title3)
-
-                        // Only appears once the user has a Recovery counter. Read-only until
-                        // they choose to add it to their prep notes.
-                        RecoverySessionSummaryCard(
-                            since: summaryStart,
-                            sinceIsLastSession: lastSessionDate != nil,
-                            onAddToNotes: appendToNotes
-                        )
-
-                        if let entry {
-                            Text("Prep notes").font(.caption).foregroundStyle(.secondary)
-                            TextEditor(text: Binding(get: { entry.text }, set: { entry.text = $0 }))
-                                .frame(minHeight: 200)
-                        } else {
-                            ProgressView()
+        ScrollView {
+            VStack(alignment: .leading, spacing: Anchor.Theme.spacing) {
+                if let next = nextOccurrence {
+                    Anchor.Card {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Anchor.SectionHeader(icon: "calendar.badge.clock", title: "Next session")
+                            Text(next.scheduledDate.formatted(date: .abbreviated, time: .shortened))
+                                .font(.system(.title3, design: .rounded))
                         }
                     }
-                    .padding()
+
+                    // Only appears once the user has a Recovery counter. Read-only until
+                    // they choose to add it to their prep notes.
+                    RecoverySessionSummaryCard(
+                        since: summaryStart,
+                        sinceIsLastSession: lastSessionDate != nil,
+                        onAddToNotes: appendToNotes
+                    )
+
+                    Anchor.TextCard(
+                        icon: "list.bullet.clipboard.fill",
+                        title: "Prep notes",
+                        text: entry?.text ?? "",
+                        placeholder: "Nothing written yet. Tap Edit to jot down what you want to bring up.",
+                        tint: Anchor.Theme.accent
+                    )
+                } else {
+                    Anchor.EmptyState(
+                        icon: "calendar",
+                        title: "No upcoming session",
+                        message: "Add one in Plan → Appointments and your prep notes will live here.",
+                        tint: Anchor.Theme.accent
+                    )
                 }
-                .onAppear { loadOrCreateEntry(for: next) }
-            } else {
-                Text("No upcoming session scheduled. Add one in Plan → Appointments.")
-                    .foregroundStyle(.secondary)
-                    .padding()
+            }
+            .padding()
+        }
+        .anchorBackground()
+        .navigationTitle("Session prep")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                if nextOccurrence != nil {
+                    Anchor.EditToolbarButton { showingEditor = true }
+                }
             }
         }
-        .navigationTitle("Session prep")
+        .sheet(isPresented: $showingEditor) {
+            Anchor.EditorSheet(title: "Prep notes") {
+                if let entry {
+                    Form {
+                        Section {
+                            TextEditor(text: Binding(get: { entry.text }, set: { entry.text = $0 }))
+                                .frame(minHeight: 260)
+                        }
+                    }
+                } else {
+                    ProgressView()
+                }
+            }
+        }
+        .onAppear {
+            if let next = nextOccurrence { loadOrCreateEntry(for: next) }
+        }
     }
 
     private func loadOrCreateEntry(for occurrence: AppointmentOccurrence) {

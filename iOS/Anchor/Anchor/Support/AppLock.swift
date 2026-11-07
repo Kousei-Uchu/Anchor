@@ -41,7 +41,7 @@ final class AppLock: ObservableObject {
     private static let enabledDefaultsKey = "anchor.appLockEnabled"
 
     /// Whether the app should even ask for Face ID/passcode. Defaults to
-    /// on, but user-toggleable in Plan for cases like: shared device
+    /// on, but user-toggleable in Settings for cases like: shared device
     /// during onboarding, or Face ID being awkward for someone's setup.
     var isEnabled: Bool {
         get {

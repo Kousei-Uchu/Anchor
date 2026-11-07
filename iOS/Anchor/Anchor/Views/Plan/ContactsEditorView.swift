@@ -18,6 +18,100 @@ import SwiftUI
 import SwiftData
 import ContactsUI
 
+/// Contacts as something to browse: a card per person, no handles or
+/// fields. Adding, reordering, deleting and changing details all live behind
+/// Edit (`ContactsEditorView`).
+struct ContactsView: View {
+    @Query(sort: \TrustedContact.sortOrder) private var contacts: [TrustedContact]
+    @State private var showingEditor = false
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: Anchor.Theme.spacing) {
+                if contacts.isEmpty {
+                    Anchor.EmptyState(
+                        icon: "person.2.fill",
+                        title: "No one here yet",
+                        message: "Add the people you'd want to reach in a hard moment. The first two show up as quick buttons on Now.",
+                        actionTitle: "Add someone",
+                        tint: Anchor.Theme.accent
+                    ) { showingEditor = true }
+                } else {
+                    NavigationLink { ContactAvailabilityView(contacts: contacts) } label: {
+                        Anchor.Card(accentColor: Anchor.Theme.sage) {
+                            HStack {
+                                Anchor.MenuRow(icon: "sun.horizon.fill", title: "Who's awake right now",
+                                               subtitle: "Local times for people in other timezones",
+                                               tint: Anchor.Theme.sage)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+
+                    ForEach(Array(contacts.enumerated()), id: \.element.id) { index, contact in
+                        ContactCard(contact: contact, isQuickContact: index < 2)
+                    }
+                }
+            }
+            .padding()
+        }
+        .anchorBackground()
+        .navigationTitle("Contacts")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Anchor.EditToolbarButton { showingEditor = true }
+            }
+        }
+        .sheet(isPresented: $showingEditor) {
+            Anchor.EditorSheet(title: "Edit contacts") {
+                ContactsEditorView()
+            }
+        }
+    }
+}
+
+private struct ContactCard: View {
+    let contact: TrustedContact
+    let isQuickContact: Bool
+
+    var body: some View {
+        Anchor.Card {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(contact.name.isEmpty ? "Unnamed" : contact.name)
+                        .font(.system(.headline, design: .rounded))
+                    Spacer()
+                    if isQuickContact {
+                        Label("On Now", systemImage: "bolt.fill")
+                            .font(.caption)
+                            .foregroundStyle(Anchor.Theme.sage)
+                    }
+                }
+                Text(contact.contactMethod == .discord ? "Discord" : contact.phoneNumber)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                if contact.escalationEnabled, let minutes = contact.escalationWindowMinutes {
+                    Label("Reminder to reach out after \(minutes) min", systemImage: "bell.fill")
+                        .font(.caption)
+                        .foregroundStyle(Anchor.Theme.accent)
+                }
+                if !contact.messageTemplates.isEmpty {
+                    Text("\(contact.messageTemplates.count) message template\(contact.messageTemplates.count == 1 ? "" : "s")")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
+    }
+}
+
+/// The contacts editor: reorder, delete, add and open a contact's details.
+/// Presented from `ContactsView` via Edit, never browsed to directly.
 struct ContactsEditorView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \TrustedContact.sortOrder) private var contacts: [TrustedContact]
@@ -32,12 +126,6 @@ struct ContactsEditorView: View {
                     .foregroundStyle(.secondary)
             }
             .listRowBackground(Color.clear)
-
-            if !contacts.isEmpty {
-                NavigationLink { ContactAvailabilityView(contacts: contacts) } label: {
-                    Anchor.MenuRow(icon: "sun.horizon.fill", title: "Who's awake right now", tint: Anchor.Theme.sage)
-                }
-            }
 
             ForEach(contacts) { contact in
                 Button {
@@ -77,7 +165,6 @@ struct ContactsEditorView: View {
             }
         }
         .toolbar { EditButton() }
-        .navigationTitle("Contacts")
         .sheet(item: $editingContact) { contact in
             ContactEditorSheet(contact: contact)
         }
@@ -236,7 +323,9 @@ private struct ContactEditorSheet: View {
                     Text("Optional. Powers \"Who's awake right now\" so you're not guessing across timezones.")
                 }
             }
+            .anchorSettingsStyle()
             .navigationTitle(contact.name.isEmpty ? "New contact" : contact.name)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }

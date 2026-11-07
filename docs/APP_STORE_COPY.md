@@ -46,7 +46,7 @@ Thanks for testing Anchor. Please try: setting up contacts and a safety plan, ad
 ## App Review notes
 Anchor is a fully on-device personal planning and journaling app. There are no accounts, no login, and the app does not talk to any developer server, so no demo account is needed.
 
-On first launch a short tour is shown. The app has its own optional Face ID lock (Plan, Preferences) which is on by default and uses the standard system prompt. Permissions (Calendar, Reminders, Photos, Apple Music, notifications, Journaling Suggestions) are requested only when the related feature is used (notifications: the first time the user saves an active trigger window, turns on the daily check-in, or turns on contact escalation), and all are optional.
+On first launch a short tour is shown. The app has its own optional Face ID lock (Plan, Settings) which is on by default and uses the standard system prompt. Permissions (Calendar, Reminders, Photos, Apple Music, notifications, Journaling Suggestions) are requested only when the related feature is used (notifications: the first time the user saves an active trigger window, turns on the daily check-in, or turns on contact escalation), and all are optional.
 
 Crisis numbers on the Now tab are shown for the user's region (changeable from the card). The app makes no diagnosis or treatment claims and states that it is not a medical device or emergency service.
 

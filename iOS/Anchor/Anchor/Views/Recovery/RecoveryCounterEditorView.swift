@@ -2,14 +2,18 @@
 //  RecoveryCounterEditorView.swift
 //  Anchor
 //
-//  Create or edit a counter. The user picks the name, the start date, how the
-//  days are counted, and what (if anything) lock-screen surfaces may say.
+//  Create or edit a counter. A configure surface (settings look, opened from the
+//  gear): name, start and day count first, then Savings, then what (if anything)
+//  lock-screen surfaces may say, then Delete.
 //
 
 import SwiftUI
 import SwiftData
 
 struct RecoveryCounterEditorView: View {
+    /// A section the editor can open scrolled to, e.g. from the Savings tab.
+    enum Focus: Hashable { case savings }
+
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Query private var existing: [RecoveryCounter]
@@ -19,6 +23,7 @@ struct RecoveryCounterEditorView: View {
     /// closes this sheet and performs the deletion after it has gone, so nothing
     /// reads a deleted counter.
     var onDelete: (() -> Void)? = nil
+    var focus: Focus? = nil
 
     @State private var name: String
     @State private var discreetLabel: String
@@ -31,9 +36,10 @@ struct RecoveryCounterEditorView: View {
     @State private var currencyCode: String
     @State private var confirmDelete = false
 
-    init(counter: RecoveryCounter?, onDelete: (() -> Void)? = nil) {
+    init(counter: RecoveryCounter?, onDelete: (() -> Void)? = nil, focus: Focus? = nil) {
         self.counter = counter
         self.onDelete = onDelete
+        self.focus = focus
         _name = State(initialValue: counter?.name ?? "")
         _discreetLabel = State(initialValue: counter?.discreetLabel ?? "Your counter")
         _showNameOutsideApp = State(initialValue: counter?.showNameOutsideApp ?? false)
@@ -47,6 +53,7 @@ struct RecoveryCounterEditorView: View {
     }
 
     var body: some View {
+        ScrollViewReader { proxy in
         Form {
             Section {
                 TextField("What are you counting?", text: $name)
@@ -75,19 +82,6 @@ struct RecoveryCounterEditorView: View {
             }
 
             Section {
-                Toggle("Show this name outside the app", isOn: $showNameOutsideApp)
-                if !showNameOutsideApp {
-                    TextField("Label for widgets and reminders", text: $discreetLabel)
-                }
-            } header: {
-                Text("Lock screen and widgets")
-            } footer: {
-                Text(showNameOutsideApp
-                     ? "Widgets and reminders will show this counter's name. Anyone who can see your lock screen could see it."
-                     : "Widgets and reminders will only say this label, never the name above.")
-            }
-
-            Section {
                 Toggle("Track money saved", isOn: $tracksSavings)
                 if tracksSavings {
                     HStack {
@@ -107,6 +101,20 @@ struct RecoveryCounterEditorView: View {
             } footer: {
                 Text("A simple estimate of what you haven't spent. It never leaves your phone.")
             }
+            .id(Focus.savings)
+
+            Section {
+                Toggle("Show this name outside the app", isOn: $showNameOutsideApp)
+                if !showNameOutsideApp {
+                    TextField("Label for widgets and reminders", text: $discreetLabel)
+                }
+            } header: {
+                Text("Lock screen and widgets")
+            } footer: {
+                Text(showNameOutsideApp
+                     ? "Widgets and reminders will show this counter's name. Anyone who can see your lock screen could see it."
+                     : "Widgets and reminders will only say this label, never the name above.")
+            }
 
             if onDelete != nil {
                 Section {
@@ -114,7 +122,11 @@ struct RecoveryCounterEditorView: View {
                 }
             }
         }
-        .navigationTitle(counter == nil ? "New counter" : "Edit counter")
+        .anchorSettingsStyle()
+        .onAppear {
+            if let focus { proxy.scrollTo(focus, anchor: .top) }
+        }
+        .navigationTitle(counter == nil ? "New counter" : "Counter settings")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
@@ -128,6 +140,7 @@ struct RecoveryCounterEditorView: View {
             Button("Keep it", role: .cancel) {}
         } message: {
             Text("This can't be undone.")
+        }
         }
     }
 

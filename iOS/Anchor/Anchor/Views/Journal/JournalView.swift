@@ -24,6 +24,7 @@ struct JournalView: View {
     @Query(sort: \RecoveryCounter.sortOrder) private var recoveryCounters: [RecoveryCounter]
     @State private var searchText = ""
     @State private var entryToEdit: JournalEntry?
+    @State private var entryToRead: JournalEntry?
     @State private var checkInToView: CheckIn?
 
     // MARK: - Unified timeline item
@@ -121,6 +122,9 @@ struct JournalView: View {
             .sheet(item: $entryToEdit) { entry in
                 JournalEntryEditorView(entry: entry)
             }
+            .sheet(item: $entryToRead) { entry in
+                JournalEntryReadSheet(entry: entry)
+            }
             .sheet(item: $checkInToView) { checkIn in
                 CheckInDetailSheet(checkIn: checkIn)
             }
@@ -149,7 +153,7 @@ struct JournalView: View {
             timelineConnector(color: Anchor.Theme.accent)
 
             Button {
-                entryToEdit = entry
+                entryToRead = entry
             } label: {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(entry.createdAt.formatted(date: .omitted, time: .shortened))
@@ -353,5 +357,41 @@ private struct CheckInDetailSheet: View {
             }
         }
         .presentationDetents([.medium])
+    }
+}
+
+
+/// Opening an existing entry shows it as rendered text (formatting, photos,
+/// drawings), not a text box. Edit switches to the editor; Done in the
+/// editor returns here.
+private struct JournalEntryReadSheet: View {
+    let entry: JournalEntry
+    @Environment(\.dismiss) private var dismiss
+    @Query(sort: \RecoveryCounter.sortOrder) private var recoveryCounters: [RecoveryCounter]
+    @State private var isEditing = false
+
+    var body: some View {
+        if isEditing {
+            JournalEntryEditorView(entry: entry, onFinish: { isEditing = false })
+        } else {
+            NavigationStack {
+                VStack(spacing: 0) {
+                    RecoveryDayChips(date: entry.createdAt, counters: recoveryCounters, topPadding: 6)
+                        .padding(.horizontal)
+                    MarkdownPreviewView(markdown: entry.text)
+                }
+                .anchorBackground()
+                .navigationTitle(entry.createdAt.formatted(date: .abbreviated, time: .shortened))
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Anchor.EditToolbarButton { isEditing = true }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { dismiss() }
+                    }
+                }
+            }
+        }
     }
 }

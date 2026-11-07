@@ -10,7 +10,90 @@
 import SwiftUI
 import SwiftData
 
+/// Trigger windows as something to browse: a card per window, with whether
+/// it's active shown as a label. Adding, deleting and changing windows
+/// happens behind Edit.
 struct TriggerWindowListView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Query private var windows: [TriggerWindow]
+    @State private var showingEditor = false
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: Anchor.Theme.spacing) {
+                if windows.isEmpty {
+                    Anchor.EmptyState(
+                        icon: "clock.fill",
+                        title: "No trigger windows yet",
+                        message: "Add the times of day that tend to be hard, and Anchor can check in with you then.",
+                        actionTitle: "Add a window",
+                        tint: Anchor.Theme.sage
+                    ) { showingEditor = true }
+                } else {
+                    ForEach(windows) { window in
+                        TriggerWindowCard(window: window)
+                    }
+                }
+            }
+            .padding()
+        }
+        .anchorBackground()
+        .navigationTitle("Trigger windows")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Anchor.EditToolbarButton { showingEditor = true }
+            }
+        }
+        .sheet(isPresented: $showingEditor, onDismiss: {
+            NotificationScheduler.resyncTriggerWindows(using: modelContext)
+        }) {
+            Anchor.EditorSheet(title: "Edit trigger windows") {
+                TriggerWindowsEditorList()
+            }
+        }
+    }
+}
+
+private struct TriggerWindowCard: View {
+    let window: TriggerWindow
+
+    var body: some View {
+        Anchor.Card(accentColor: window.isActive ? Anchor.Theme.accent : Anchor.Theme.sage) {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(window.label.isEmpty ? "Untitled window" : window.label)
+                        .font(.system(.headline, design: .rounded))
+                    Spacer()
+                    Label(window.isActive ? "Active" : "Paused",
+                          systemImage: window.isActive ? "bell.fill" : "bell.slash")
+                        .font(.caption)
+                        .foregroundStyle(window.isActive ? Anchor.Theme.accent : .secondary)
+                }
+                Text(triggerWindowSummary(window))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .opacity(window.isActive ? 1 : 0.7)
+        }
+    }
+}
+
+/// "Mon Tue Wed · 07:00–09:00" — shared by the read cards and the editor list.
+private func triggerWindowSummary(_ window: TriggerWindow) -> String {
+    let dayNames = window.daysOfWeek.sorted().compactMap { weekday -> String? in
+        let symbols = Calendar.current.shortWeekdaySymbols
+        guard weekday >= 1 && weekday <= symbols.count else { return nil }
+        return symbols[weekday - 1]
+    }.joined(separator: " ")
+    let start = String(format: "%02d:%02d", window.startTime.hour ?? 0, window.startTime.minute ?? 0)
+    let end = String(format: "%02d:%02d", window.endTime.hour ?? 0, window.endTime.minute ?? 0)
+    return "\(dayNames) · \(start)–\(end)"
+}
+
+/// The editable list: add, delete, and open a window's details. Presented
+/// from `TriggerWindowListView` via Edit, never browsed to directly.
+private struct TriggerWindowsEditorList: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var windows: [TriggerWindow]
     @State private var editingWindow: TriggerWindow?
@@ -23,7 +106,7 @@ struct TriggerWindowListView: View {
                 } label: {
                     VStack(alignment: .leading) {
                         Text(window.label).font(.headline)
-                        Text(summary(for: window))
+                        Text(triggerWindowSummary(window))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -45,21 +128,9 @@ struct TriggerWindowListView: View {
                 editingWindow = new
             }
         }
-        .navigationTitle("Trigger windows")
         .sheet(item: $editingWindow) { window in
             TriggerWindowEditorView(window: window)
         }
-    }
-
-    private func summary(for window: TriggerWindow) -> String {
-        let dayNames = window.daysOfWeek.sorted().compactMap { weekday -> String? in
-            let symbols = Calendar.current.shortWeekdaySymbols
-            guard weekday >= 1 && weekday <= symbols.count else { return nil }
-            return symbols[weekday - 1]
-        }.joined(separator: " ")
-        let start = String(format: "%02d:%02d", window.startTime.hour ?? 0, window.startTime.minute ?? 0)
-        let end = String(format: "%02d:%02d", window.endTime.hour ?? 0, window.endTime.minute ?? 0)
-        return "\(dayNames) · \(start)–\(end)"
     }
 }
 
@@ -136,7 +207,9 @@ struct TriggerWindowEditorView: View {
                     DatePicker("End", selection: endBinding, displayedComponents: .hourAndMinute)
                 }
             }
+            .anchorSettingsStyle()
             .navigationTitle("Trigger window")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {

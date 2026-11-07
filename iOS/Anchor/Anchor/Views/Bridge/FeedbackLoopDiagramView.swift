@@ -34,25 +34,152 @@ struct DiagramGraph: Codable, Equatable {
 struct FeedbackLoopDiagramListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var diagrams: [FeedbackLoopDiagram]
+    @State private var showingEditor = false
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: Anchor.Theme.spacing) {
+                if diagrams.isEmpty {
+                    Anchor.EmptyState(
+                        icon: "point.3.connected.trianglepath.dotted",
+                        title: "No diagrams yet",
+                        message: "Draw how things feed into each other, in your own words, to show someone else.",
+                        actionTitle: "New diagram",
+                        tint: Anchor.Theme.sage
+                    ) { addDiagram() }
+                } else {
+                    ForEach(diagrams) { diagram in
+                        NavigationLink {
+                            FeedbackLoopDiagramView(diagram: diagram)
+                        } label: {
+                            Anchor.Card(accentColor: Anchor.Theme.sage) {
+                                HStack {
+                                    Text(diagram.title.isEmpty ? "Untitled" : diagram.title)
+                                        .font(.system(.headline, design: .rounded))
+                                        .foregroundStyle(.primary)
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.tertiary)
+                                }
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    Button {
+                        addDiagram()
+                    } label: {
+                        Label("New diagram", systemImage: "plus")
+                    }
+                    .buttonStyle(Anchor.SecondaryButtonStyle())
+                }
+            }
+            .padding()
+        }
+        .anchorBackground()
+        .navigationTitle("Feedback-loop diagrams")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                if !diagrams.isEmpty {
+                    Anchor.EditToolbarButton { showingEditor = true }
+                }
+            }
+        }
+        .sheet(isPresented: $showingEditor) {
+            Anchor.EditorSheet(title: "Edit diagrams") {
+                FeedbackLoopDiagramsManageView()
+            }
+        }
+    }
+
+    private func addDiagram() {
+        let emptyGraph = DiagramGraph()
+        let data = (try? JSONEncoder().encode(emptyGraph)) ?? Data()
+        modelContext.insert(FeedbackLoopDiagram(title: "New diagram", graphJSON: data))
+    }
+}
+
+/// Delete diagrams. Presented from Edit; a diagram's own contents are
+/// edited from inside the diagram.
+private struct FeedbackLoopDiagramsManageView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Query private var diagrams: [FeedbackLoopDiagram]
 
     var body: some View {
         List {
             ForEach(diagrams) { diagram in
-                NavigationLink(diagram.title) {
-                    FeedbackLoopDiagramEditorView(diagram: diagram)
-                }
+                Text(diagram.title.isEmpty ? "Untitled" : diagram.title)
+                    .font(.system(.subheadline, design: .rounded))
             }
             .onDelete { offsets in
                 for index in offsets { modelContext.delete(diagrams[index]) }
             }
+        }
+        .toolbar { EditButton() }
+    }
+}
 
-            Button("New diagram") {
-                let emptyGraph = DiagramGraph()
-                let data = (try? JSONEncoder().encode(emptyGraph)) ?? Data()
-                modelContext.insert(FeedbackLoopDiagram(title: "New diagram", graphJSON: data))
+/// A diagram as something to look at (and show a clinician): nodes and
+/// connections, nothing draggable. Edit opens the canvas editor.
+struct FeedbackLoopDiagramView: View {
+    @Bindable var diagram: FeedbackLoopDiagram
+    @State private var graph = DiagramGraph()
+    @State private var showingEditor = false
+
+    var body: some View {
+        ZStack {
+            Canvas { context, size in
+                for edge in graph.edges {
+                    guard let from = graph.nodes.first(where: { $0.id == edge.fromID }),
+                          let to = graph.nodes.first(where: { $0.id == edge.toID }) else { continue }
+                    var path = Path()
+                    path.move(to: CGPoint(x: from.x, y: from.y))
+                    path.addLine(to: CGPoint(x: to.x, y: to.y))
+                    context.stroke(path, with: .color(Anchor.Theme.accent.opacity(0.5)), lineWidth: 2)
+                }
+            }
+            .allowsHitTesting(false)
+
+            ForEach(graph.nodes) { node in
+                Text(node.label)
+                    .font(.system(.caption, design: .rounded).weight(.medium))
+                    .padding(10)
+                    .background(Anchor.Theme.sageSoft, in: RoundedRectangle(cornerRadius: 10))
+                    .position(x: node.x, y: node.y)
+            }
+
+            if graph.nodes.isEmpty {
+                VStack(spacing: 8) {
+                    Image(systemName: "point.3.connected.trianglepath.dotted")
+                        .font(.largeTitle)
+                        .foregroundStyle(.tertiary)
+                    Text("Nothing drawn yet. Tap Edit to add your first node.")
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding()
             }
         }
-        .navigationTitle("Feedback-loop diagrams")
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .anchorBackground()
+        .navigationTitle(diagram.title)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Anchor.EditToolbarButton { showingEditor = true }
+            }
+        }
+        .onAppear(perform: loadGraph)
+        .sheet(isPresented: $showingEditor, onDismiss: loadGraph) {
+            Anchor.EditorSheet(title: "Edit diagram") {
+                FeedbackLoopDiagramEditorView(diagram: diagram)
+            }
+        }
+    }
+
+    private func loadGraph() {
+        graph = (try? JSONDecoder().decode(DiagramGraph.self, from: diagram.graphJSON)) ?? DiagramGraph()
     }
 }
 

@@ -134,6 +134,7 @@ struct DataControlView: View {
                 Text("Deletes everything listed above from this device. This can't be undone, so export first if you want a copy.")
             }
         }
+        .anchorSettingsStyle()
         .navigationTitle("Your data")
         .sheet(item: $exportURL) { wrapped in
             ShareSheet(activityItems: [wrapped.url])

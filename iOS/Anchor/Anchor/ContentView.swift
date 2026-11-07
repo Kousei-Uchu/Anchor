@@ -40,8 +40,207 @@ enum Anchor {
                 : Color.white
         }
 
+        // Settings surfaces get their own, quieter palette: a cooler,
+        // slightly darker greige page with flat rows, so crossing from
+        // "things to read and reach" into "things to configure" is felt.
+        static func settingsBackground(_ scheme: ColorScheme) -> Color {
+            scheme == .dark
+                ? Color(red: 0.085, green: 0.08, blue: 0.08)
+                : Color(red: 0.94, green: 0.925, blue: 0.91)
+        }
+
+        static func settingsRowBackground(_ scheme: ColorScheme) -> Color {
+            scheme == .dark
+                ? Color(red: 0.15, green: 0.14, blue: 0.135)
+                : Color.white
+        }
+
         static let cornerRadius: CGFloat = 20
         static let spacing: CGFloat = 16
+    }
+
+    // MARK: Settings surfaces
+    //
+    // The rule: every screen is either READ (cards, big rounded numerals,
+    // tiles; only actions like Log urge or Share) or CONFIGURE (grouped
+    // flat rows, toggles, pickers, footers). Configure screens are only
+    // reached through `GearButton`, and no toggle or time picker appears on
+    // a read screen. These pieces are the configure side of that split.
+
+    /// The one toolbar button that opens a settings surface, wherever it
+    /// appears in the app. Outline gear, so it never competes with content.
+    struct GearButton: View {
+        var label: String = "Settings"
+        let action: () -> Void
+
+        var body: some View {
+            Button(action: action) {
+                Image(systemName: "gearshape")
+            }
+            .accessibilityLabel(label)
+        }
+    }
+
+    // MARK: Browse vs. edit
+    //
+    // Every content screen is a READ screen first: cards, big rounded type,
+    // calm empty states, no text fields or reorder handles. Changing the
+    // content is a separate, deliberate step: one `EditToolbarButton` in the
+    // toolbar opens the editor as a sheet (`EditorSheet`, settings look).
+    // Quick, in-the-moment actions (log, check in, mark done, call, run a
+    // tool) stay on the read screen; they aren't "editing".
+
+    /// The one "Edit" button used on read screens. Text, not an icon, so
+    /// it's clearly a mode switch and never confused with the settings gear.
+    struct EditToolbarButton: View {
+        var label: String = "Edit"
+        let action: () -> Void
+
+        var body: some View {
+            Button(label, action: action)
+        }
+    }
+
+    /// Wraps an editor (a `Form`/`List`) for presentation as a sheet:
+    /// its own navigation bar with a Done button, on the settings
+    /// background, so editing looks and feels like a different place from
+    /// browsing.
+    struct EditorSheet<Content: View>: View {
+        @Environment(\.dismiss) private var dismiss
+        let title: String
+        var onDone: (() -> Void)? = nil
+        @ViewBuilder var content: () -> Content
+
+        var body: some View {
+            NavigationStack {
+                content()
+                    .anchorSettingsStyle()
+                    .navigationTitle(title)
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") {
+                                onDone?()
+                                dismiss()
+                            }
+                        }
+                    }
+            }
+        }
+    }
+
+    /// Friendly empty state for a read screen, with an optional prompt that
+    /// opens the editor ("Add someone").
+    struct EmptyState: View {
+        let icon: String
+        let title: String
+        let message: String
+        var actionTitle: String? = nil
+        var tint: Color = Theme.sage
+        var action: (() -> Void)? = nil
+
+        var body: some View {
+            Card(accentColor: tint) {
+                VStack(spacing: 10) {
+                    ZStack {
+                        Circle().fill(tint.opacity(0.16)).frame(width: 52, height: 52)
+                        Image(systemName: icon)
+                            .font(.system(size: 22, weight: .medium))
+                            .foregroundStyle(tint)
+                    }
+                    Text(title)
+                        .font(.system(.headline, design: .rounded))
+                    Text(message)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                    if let actionTitle, let action {
+                        Button(actionTitle, action: action)
+                            .buttonStyle(SecondaryButtonStyle(tint: tint))
+                            .padding(.top, 4)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+            }
+        }
+    }
+
+    /// Read-only card for a block of the user's own words (a safety-plan
+    /// section, a note). Shows a muted placeholder when empty.
+    struct TextCard: View {
+        let icon: String
+        let title: String
+        let text: String
+        var placeholder: String = "Nothing added yet."
+        var tint: Color = Theme.accent
+
+        var body: some View {
+            Card(accentColor: tint) {
+                VStack(alignment: .leading, spacing: 10) {
+                    SectionHeader(icon: icon, title: title, tint: tint)
+                    let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if trimmed.isEmpty {
+                        Text(placeholder)
+                            .font(.subheadline)
+                            .foregroundStyle(.tertiary)
+                    } else {
+                        Text(trimmed)
+                            .font(.system(.body, design: .rounded))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+        }
+    }
+
+    /// A titled group of settings rows with an optional caption footer.
+    /// Use inside a `Form`/`List` that has `.anchorSettingsStyle()`.
+    struct SettingsSection<Content: View>: View {
+        @Environment(\.colorScheme) private var scheme
+        let title: String?
+        var footer: String? = nil
+        @ViewBuilder var content: () -> Content
+
+        var body: some View {
+            Section {
+                Group { content() }
+                    .listRowBackground(Theme.settingsRowBackground(scheme))
+            } header: {
+                if let title {
+                    Text(title)
+                        .font(.system(.footnote, design: .rounded).weight(.medium))
+                }
+            } footer: {
+                if let footer {
+                    Text(footer).font(.caption)
+                }
+            }
+        }
+    }
+
+    /// Standard on/off row for settings screens.
+    struct SettingsToggle: View {
+        let title: String
+        @Binding var isOn: Bool
+
+        var body: some View {
+            Toggle(isOn: $isOn) {
+                Text(title).font(.system(.subheadline, design: .rounded))
+            }
+            .tint(Theme.accent)
+        }
+    }
+
+    /// Standard time-of-day row for settings screens.
+    struct SettingsTimeRow: View {
+        var title: String = "Time"
+        @Binding var time: Date
+
+        var body: some View {
+            DatePicker(selection: $time, displayedComponents: .hourAndMinute) {
+                Text(title).font(.system(.subheadline, design: .rounded))
+            }
+        }
     }
 
     /// Warm rounded card used everywhere in place of stock `List`/plain
@@ -223,6 +422,24 @@ extension View {
     }
 }
 
+extension View {
+    /// Styles a `Form`/`List` as a configure surface: the quieter settings
+    /// background and sage-leaning accent, instead of the warm card canvas.
+    func anchorSettingsStyle() -> some View {
+        modifier(AnchorSettingsStyleModifier())
+    }
+}
+
+private struct AnchorSettingsStyleModifier: ViewModifier {
+    @Environment(\.colorScheme) private var scheme
+    func body(content: Content) -> some View {
+        content
+            .scrollContentBackground(.hidden)
+            .background(Anchor.Theme.settingsBackground(scheme).ignoresSafeArea())
+            .tint(Anchor.Theme.accent)
+    }
+}
+
 private struct AnchorBackgroundModifier: ViewModifier {
     @Environment(\.colorScheme) private var scheme
     func body(content: Content) -> some View {
@@ -235,6 +452,7 @@ private struct AnchorBackgroundModifier: ViewModifier {
 struct ContentView: View {
     @State private var selectedTab = 0
     @State private var pendingWidgetAction: WidgetAction?
+    @State private var showSettingsFromLink = false
     @State private var showOnboardingTour = !OnboardingState.hasSeenTour
     @StateObject private var notificationDelegate = NotificationDelegate.shared
 
@@ -280,6 +498,8 @@ struct ContentView: View {
                 selectedTab = 1
             } else if url.host == "now" {
                 selectedTab = 0
+            } else if url.host == "settings" {
+                showSettingsFromLink = true
             } else if url.host == "action" {
                 if url.path == "/call" {
                     pendingWidgetAction = .call
@@ -288,6 +508,9 @@ struct ContentView: View {
         }
         .sheet(item: $pendingWidgetAction) { action in
             WidgetActionConfirmationView(action: action)
+        }
+        .sheet(isPresented: $showSettingsFromLink) {
+            SettingsView()
         }
         .sheet(isPresented: $showOnboardingTour, onDismiss: {
             OnboardingState.hasSeenTour = true

@@ -49,8 +49,69 @@ struct DeEscalationCardView: View {
     }
 }
 
-/// Edited in Plan. Seeded with a few varied starting points only the very
-/// first time — after that, whatever the user has is authoritative,
+/// The de-escalation scripts as something to read: a quoted card per script.
+/// Rewriting, reordering and deleting live behind Edit
+/// (`DeEscalationScriptsEditorView`). Seeded with a few varied starting
+/// points only when there are none, as before.
+struct DeEscalationScriptsView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \DeEscalationScript.sortOrder) private var scripts: [DeEscalationScript]
+    @State private var showingEditor = false
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: Anchor.Theme.spacing) {
+                if scripts.isEmpty {
+                    Anchor.EmptyState(
+                        icon: "wind",
+                        title: "No scripts yet",
+                        message: "What actually gets you 10 minutes of space, in words that sound like you?",
+                        actionTitle: "Write one",
+                        tint: Anchor.Theme.sage
+                    ) { showingEditor = true }
+                } else {
+                    ForEach(scripts) { script in
+                        Anchor.Card(accentColor: Anchor.Theme.sage) {
+                            Text("\u{201C}\(script.text)\u{201D}")
+                                .font(.system(.title3, design: .rounded))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+            }
+            .padding()
+        }
+        .anchorBackground()
+        .navigationTitle("De-escalation scripts")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Anchor.EditToolbarButton { showingEditor = true }
+            }
+        }
+        .sheet(isPresented: $showingEditor) {
+            Anchor.EditorSheet(title: "Edit scripts") {
+                DeEscalationScriptsEditorView()
+            }
+        }
+        .onAppear { seedDeEscalationDefaultsIfNeeded(scripts: scripts, context: modelContext) }
+    }
+}
+
+private func seedDeEscalationDefaultsIfNeeded(scripts: [DeEscalationScript], context: ModelContext) {
+    guard scripts.isEmpty else { return }
+    let starters = [
+        "I need 10 minutes, then we can talk.",
+        "I'm not okay right now. I need space, not a conversation.",
+        "Can we pause this? I'll come find you when I've calmed down."
+    ]
+    for (index, text) in starters.enumerated() {
+        context.insert(DeEscalationScript(text: text, sortOrder: index))
+    }
+}
+
+/// The scripts editor. Presented from `DeEscalationScriptsView` via Edit,
+/// never browsed to directly. Whatever the user has is authoritative,
 /// including if they delete everything.
 struct DeEscalationScriptsEditorView: View {
     @Environment(\.modelContext) private var modelContext
@@ -93,20 +154,6 @@ struct DeEscalationScriptsEditorView: View {
                 }
             }
         }
-        .navigationTitle("De-escalation scripts")
         .toolbar { EditButton() }
-        .onAppear { seedDefaultsIfNeeded() }
-    }
-
-    private func seedDefaultsIfNeeded() {
-        guard scripts.isEmpty else { return }
-        let starters = [
-            "I need 10 minutes, then we can talk.",
-            "I'm not okay right now. I need space, not a conversation.",
-            "Can we pause this? I'll come find you when I've calmed down."
-        ]
-        for (index, text) in starters.enumerated() {
-            modelContext.insert(DeEscalationScript(text: text, sortOrder: index))
-        }
     }
 }

@@ -6,7 +6,7 @@
 //  not SwiftData — this is a device preference, not user data). Reuses
 //  the exact same HelpTopic content as the per-tab "?" buttons, so there's
 //  one source of truth for these explanations, not two to keep in sync.
-//  Replayable anytime from Plan → Preferences.
+//  Replayable anytime from Plan → Settings (gear).
 //
 
 import SwiftUI

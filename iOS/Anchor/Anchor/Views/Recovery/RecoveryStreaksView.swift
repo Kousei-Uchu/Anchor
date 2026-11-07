@@ -13,6 +13,7 @@ struct RecoveryStreaksView: View {
     let counter: RecoveryCounter
     @Query private var allEntries: [RecoveryDayEntry]
     @State private var segment = 0
+    @State private var showingPriorEditor = false
 
     private var slipDays: [RecoveryDayEntry] {
         allEntries
@@ -35,6 +36,20 @@ struct RecoveryStreaksView: View {
         .anchorBackground()
         .navigationTitle(counter.name)
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showingPriorEditor) {
+            Anchor.EditorSheet(title: "Before tracking") {
+                Form {
+                    Section {
+                        Stepper("\(counter.priorTimesPerDay) \(counter.priorTimesPerDay == 1 ? "time" : "times")",
+                                value: Binding(get: { counter.priorTimesPerDay }, set: { counter.priorTimesPerDay = $0 }),
+                                in: 0...50)
+                    } footer: {
+                        Text("On a typical day before you started tracking, how many times did it happen? Just for your own reference.")
+                    }
+                }
+            }
+            .presentationDetents([.medium])
+        }
     }
 
     private func pill(_ title: String, index: Int) -> some View {
@@ -128,9 +143,12 @@ struct RecoveryStreaksView: View {
                 Text("Before tracking").font(.system(.headline, design: .rounded))
                 Text("On a typical day before you started tracking, how many times did it happen? Just for your own reference.")
                     .font(.subheadline).foregroundStyle(.secondary)
-                Stepper("\(counter.priorTimesPerDay) \(counter.priorTimesPerDay == 1 ? "time" : "times")",
-                        value: Binding(get: { counter.priorTimesPerDay }, set: { counter.priorTimesPerDay = $0 }),
-                        in: 0...50)
+                Text("\(counter.priorTimesPerDay) \(counter.priorTimesPerDay == 1 ? "time" : "times") on a typical day")
+                    .font(.system(.title3, design: .rounded).weight(.semibold))
+                Button { showingPriorEditor = true } label: {
+                    Label("Change", systemImage: "gearshape").font(.footnote)
+                }
+                .foregroundStyle(.secondary)
             }
             .padding(.top, 8)
         }

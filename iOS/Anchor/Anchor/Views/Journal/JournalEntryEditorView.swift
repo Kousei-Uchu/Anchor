@@ -26,6 +26,10 @@ import PencilKit
 
 struct JournalEntryEditorView: View {
     @Bindable var entry: JournalEntry
+    /// When set (editing from the read view), Done hands control back to the
+    /// caller instead of dismissing, so the user lands back on the rendered
+    /// entry. An empty entry is still deleted and the sheet dismissed.
+    var onFinish: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
 
@@ -91,8 +95,12 @@ struct JournalEntryEditorView: View {
                     Button("Done") {
                         if entry.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                             modelContext.delete(entry)
+                            dismiss()
+                        } else if let onFinish {
+                            onFinish()
+                        } else {
+                            dismiss()
                         }
-                        dismiss()
                     }
                 }
             }
