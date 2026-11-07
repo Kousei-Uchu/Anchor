@@ -29,6 +29,27 @@ enum DiagramKind: String, Codable {
 enum EdgePolarity: String, Codable {
     case same
     case opposite
+    /// A link on a free map that carries no sign. Loops never use this.
+    case none
+}
+
+/// The soft fill behind an item on a free map.
+enum NodeColour: String, Codable, CaseIterable, Identifiable {
+    case sage, rose, amber, sky, lilac, stone
+
+    var id: String { rawValue }
+    var name: String { rawValue.capitalized }
+
+    var fill: Color {
+        switch self {
+        case .sage: return Anchor.Theme.sageSoft
+        case .rose: return Color(red: 0.86, green: 0.40, blue: 0.48).opacity(0.28)
+        case .amber: return Color(red: 0.93, green: 0.66, blue: 0.20).opacity(0.30)
+        case .sky: return Color(red: 0.30, green: 0.60, blue: 0.88).opacity(0.28)
+        case .lilac: return Color(red: 0.62, green: 0.48, blue: 0.85).opacity(0.28)
+        case .stone: return Color.gray.opacity(0.25)
+        }
+    }
 }
 
 struct DiagramNode: Codable, Identifiable, Equatable {
@@ -36,6 +57,8 @@ struct DiagramNode: Codable, Identifiable, Equatable {
     var label: String
     var x: Double
     var y: Double
+    /// Free maps only. Nothing set means the default sage.
+    var colour: NodeColour? = nil
 }
 
 struct DiagramEdge: Codable, Identifiable, Equatable {
@@ -58,14 +81,15 @@ struct DiagramEdge: Codable, Identifiable, Equatable {
     }
 
     // Diagrams saved before loops existed have no polarity, so every field
-    // added since is optional when reading.
+    // added since is optional when reading. A map link with no sign saved
+    // reads back as no sign, so old maps do not suddenly show plus marks.
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = (try? c.decodeIfPresent(UUID.self, forKey: .id)) ?? UUID()
         fromID = try c.decode(UUID.self, forKey: .fromID)
         toID = try c.decode(UUID.self, forKey: .toID)
         label = (try? c.decodeIfPresent(String.self, forKey: .label)) ?? ""
-        polarity = (try? c.decodeIfPresent(EdgePolarity.self, forKey: .polarity)) ?? .same
+        polarity = (try? c.decodeIfPresent(EdgePolarity.self, forKey: .polarity)) ?? .none
     }
 }
 
@@ -164,13 +188,41 @@ extension DiagramGraph {
 
     /// Positions on a nominal ring, so a loop still draws sensibly if it is
     /// ever opened as a free map.
-    mutating func placeOnRing() {
+    mutating func placeOnRing(radius: Double = 120) {
         let count = nodes.count
+        let middle = radius + 60
         for index in nodes.indices {
             let angle = -Double.pi / 2 + 2 * Double.pi * Double(index) / Double(max(count, 1))
-            nodes[index].x = 180 + 120 * cos(angle)
-            nodes[index].y = 180 + 120 * sin(angle)
+            nodes[index].x = middle + radius * cos(angle)
+            nodes[index].y = middle + radius * sin(angle)
         }
+    }
+
+    /// Turns a loop into a free map. The steps keep their order, links and
+    /// signs, and are spread on a ring wide enough for the boxes not to touch.
+    func asMap() -> DiagramGraph {
+        var map = self
+        map.kind = .map
+        map.version = 2
+        map.placeOnRing(radius: max(120, 30 * Double(nodes.count)))
+        return map
+    }
+
+    /// A ready-made map, used by the demo data.
+    static func demoMap() -> DiagramGraph {
+        var graph = DiagramGraph(kind: .map)
+        let names = ["A hard day", "I shut down", "I skip the things that help", "Everything piles up"]
+        let spots: [(Double, Double)] = [(120, 80), (320, 80), (320, 240), (120, 240)]
+        for (index, name) in names.enumerated() {
+            graph.nodes.append(DiagramNode(label: name, x: spots[index].0, y: spots[index].1))
+        }
+        graph.nodes[1].colour = .sky
+        graph.nodes[3].colour = .rose
+        for index in 0..<3 {
+            graph.edges.append(DiagramEdge(fromID: graph.nodes[index].id, toID: graph.nodes[index + 1].id, polarity: .same))
+        }
+        graph.edges.append(DiagramEdge(fromID: graph.nodes[3].id, toID: graph.nodes[0].id, label: "the next day is harder", polarity: .same))
+        return graph
     }
 
     /// A ready-made loop, used by the demo data.
@@ -296,6 +348,7 @@ struct FeedbackLoopDiagramView: View {
     var startsInEditor: Bool = false
     @State private var showingEditor = false
     @State private var didAutoOpen = false
+    @State private var confirmingMap = false
 
     private var graph: DiagramGraph {
         DiagramGraph.decoded(from: diagram.graphJSON)
@@ -313,9 +366,28 @@ struct FeedbackLoopDiagramView: View {
         .navigationTitle(diagram.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            if graph.kind == .loop && !graph.nodes.isEmpty {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button("Open as a free map") { confirmingMap = true }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                    .accessibilityLabel("More")
+                }
+            }
             ToolbarItem(placement: .primaryAction) {
                 Button("Edit") { showingEditor = true }
             }
+        }
+        .confirmationDialog("Open this loop as a free map?", isPresented: $confirmingMap, titleVisibility: .visible) {
+            Button("Open as a map") {
+                diagram.graphJSON = graph.asMap().encoded()
+                diagram.lastEditedAt = .now
+            }
+            Button("Keep the loop", role: .cancel) {}
+        } message: {
+            Text("You can then move things around and add more, but it will not be a loop any more.")
         }
         .onAppear {
             if startsInEditor && !didAutoOpen {
@@ -337,41 +409,7 @@ struct FeedbackLoopDiagramView: View {
     }
 
     private var mapBody: some View {
-        let graph = self.graph
-        return ZStack {
-            Canvas { context, size in
-                for edge in graph.edges {
-                    guard let from = graph.nodes.first(where: { $0.id == edge.fromID }),
-                          let to = graph.nodes.first(where: { $0.id == edge.toID }) else { continue }
-                    var path = Path()
-                    path.move(to: CGPoint(x: from.x, y: from.y))
-                    path.addLine(to: CGPoint(x: to.x, y: to.y))
-                    context.stroke(path, with: .color(Anchor.Theme.accent.opacity(0.5)), lineWidth: 2)
-                }
-            }
-            .allowsHitTesting(false)
-
-            ForEach(graph.nodes) { node in
-                Text(node.label)
-                    .font(.system(.caption, design: .rounded).weight(.medium))
-                    .padding(10)
-                    .background(Anchor.Theme.sageSoft, in: RoundedRectangle(cornerRadius: 10))
-                    .position(x: node.x, y: node.y)
-            }
-
-            if graph.nodes.isEmpty {
-                VStack(spacing: 8) {
-                    Image(systemName: "point.3.connected.trianglepath.dotted")
-                        .font(.largeTitle)
-                        .foregroundStyle(.tertiary)
-                    Text("Nothing drawn yet. Tap Edit to add your first node.")
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                .padding()
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        MapReadView(graph: graph)
     }
 }
 
@@ -475,7 +513,7 @@ struct LoopRingView: View {
                     ForEach(Array(graph.nodes.enumerated()), id: \.element.id) { index, node in
                         let middle = angle(index, count) + Double.pi / Double(count)
                         let edge = graph.edge(from: node.id)
-                        badge(edge?.polarity ?? .same)
+                        badge(edge?.polarity == .opposite ? .opposite : .same)
                             .position(point(middle, center: center, radius: radius))
                         if let how = edge?.label, !how.isEmpty {
                             Text(how)
@@ -555,7 +593,7 @@ struct LoopRingView: View {
     }
 
     private func badge(_ polarity: EdgePolarity) -> some View {
-        Text(polarity == .same ? "+" : "\u{2212}")
+        Text(polarity == .opposite ? "\u{2212}" : "+")
             .font(.system(.footnote, design: .rounded).weight(.bold))
             .foregroundStyle(Anchor.Theme.accent)
             .frame(width: 24, height: 24)
@@ -689,7 +727,7 @@ struct FeedbackLoopBuilderView: View {
 
     private func polarityBinding(for id: UUID) -> Binding<EdgePolarity> {
         Binding(
-            get: { graph.edge(from: id)?.polarity ?? .same },
+            get: { graph.edge(from: id)?.polarity == .opposite ? .opposite : .same },
             set: { value in
                 if let index = graph.edges.firstIndex(where: { $0.fromID == id }) {
                     graph.edges[index].polarity = value
@@ -741,54 +779,278 @@ struct FeedbackLoopBuilderView: View {
     }
 }
 
-// MARK: - Editing a free map
+// MARK: - Free map: drawing
 
-// Redesign note: the previous version stacked a plain `DragGesture()`, an
-// `.onTapGesture`, and an `.onLongPressGesture` all on the very same node
-// view with no priority between them, plus a *separate* background
-// tap-to-add-node gesture underneath a non-interactive `Canvas`. SwiftUI
-// doesn't reliably arbitrate three overlapping recognizers like that — in
-// practice the zero-distance drag gesture wins almost every touch, so taps
-// (to connect nodes) and long-presses (to rename) barely fired, and adding
-// nodes was inconsistent. Rather than fight SwiftUI's gesture-priority
-// rules to get that exactly right without a device to test on, the
-// interaction model is restructured so drag and tap are never candidates
-// for the same touch at the same time:
-//   - Adding a node is an explicit toolbar button (a fixed action, not a
-//     background tap that has to be distinguished from everything else).
-//   - "Connect mode" is an explicit toggle. While it's off, dragging moves
-//     nodes and a plain tap opens rename/delete. While it's on, dragging is
-//     disabled and tapping two nodes in sequence connects them. The two
-//     behaviors are never live at the same time, so there's nothing left
-//     to disambiguate.
+/// The sums shared by looking at a map and editing one. A map lives in its
+/// own coordinates; `pan` and `zoom` turn them into screen points.
+enum MapGeometry {
+    static let halfWidth: CGFloat = 56
+    static let halfHeight: CGFloat = 30
+    static let minZoom: CGFloat = 0.25
+    static let maxZoom: CGFloat = 2.5
+
+    static func screen(_ node: DiagramNode, pan: CGSize, zoom: CGFloat) -> CGPoint {
+        CGPoint(x: CGFloat(node.x) * zoom + pan.width, y: CGFloat(node.y) * zoom + pan.height)
+    }
+
+    /// The visible part of a link: from the edge of one box to the edge of
+    /// the other, nudged sideways so a pair of links in opposite directions
+    /// do not sit on top of each other.
+    static func segment(from a: CGPoint, to b: CGPoint, scale: CGFloat) -> (start: CGPoint, end: CGPoint)? {
+        let dx = b.x - a.x
+        let dy = b.y - a.y
+        let length = (dx * dx + dy * dy).squareRoot()
+        guard length > 1 else { return nil }
+        let ux = dx / length
+        let uy = dy / length
+        let hw = halfWidth * scale + 4
+        let hh = halfHeight * scale + 4
+        let tx: CGFloat = abs(ux) > 0.001 ? hw / abs(ux) : CGFloat.infinity
+        let ty: CGFloat = abs(uy) > 0.001 ? hh / abs(uy) : CGFloat.infinity
+        let t = min(tx, ty)
+        guard t * 2 < length else { return nil }
+        let ox = -uy * 6 * scale
+        let oy = ux * 6 * scale
+        return (CGPoint(x: a.x + ux * t + ox, y: a.y + uy * t + oy),
+                CGPoint(x: b.x - ux * t + ox, y: b.y - uy * t + oy))
+    }
+
+    /// A pan and zoom that fit everything on a map into `size`.
+    static func fit(_ graph: DiagramGraph, in size: CGSize, maxFitZoom: CGFloat) -> (pan: CGSize, zoom: CGFloat) {
+        guard !graph.nodes.isEmpty, size.width > 0, size.height > 0 else { return (CGSize.zero, 1) }
+        let xs = graph.nodes.map { $0.x }
+        let ys = graph.nodes.map { $0.y }
+        let minX = xs.min() ?? 0
+        let maxX = xs.max() ?? 0
+        let minY = ys.min() ?? 0
+        let maxY = ys.max() ?? 0
+        let width = CGFloat(maxX - minX) + halfWidth * 2 + 48
+        let height = CGFloat(maxY - minY) + halfHeight * 2 + 48
+        let z = min(max(min(size.width / width, size.height / height), minZoom), maxFitZoom)
+        let cx = CGFloat((minX + maxX) / 2)
+        let cy = CGFloat((minY + maxY) / 2)
+        return (CGSize(width: size.width / 2 - cx * z, height: size.height / 2 - cy * z), z)
+    }
+
+    static func drawEdges(into context: inout GraphicsContext, graph: DiagramGraph, pan: CGSize, zoom: CGFloat) {
+        var lookup: [UUID: DiagramNode] = [:]
+        for node in graph.nodes { lookup[node.id] = node }
+        let colour = Anchor.Theme.accent.opacity(0.65)
+        for edge in graph.edges {
+            guard let from = lookup[edge.fromID], let to = lookup[edge.toID],
+                  let seg = segment(from: screen(from, pan: pan, zoom: zoom),
+                                    to: screen(to, pan: pan, zoom: zoom),
+                                    scale: zoom) else { continue }
+            var path = Path()
+            path.move(to: seg.start)
+            path.addLine(to: seg.end)
+            context.stroke(path, with: .color(colour), lineWidth: 2)
+
+            let dx = seg.end.x - seg.start.x
+            let dy = seg.end.y - seg.start.y
+            let length = max((dx * dx + dy * dy).squareRoot(), 1)
+            let direction = CGPoint(x: dx / length, y: dy / length)
+            context.fill(arrowHead(tip: seg.end, direction: direction, size: 10 * max(zoom, 0.8)),
+                         with: .color(colour))
+        }
+    }
+
+    static func arrowHead(tip: CGPoint, direction: CGPoint, size: CGFloat) -> Path {
+        func rotated(_ v: CGPoint, by angle: Double) -> CGPoint {
+            CGPoint(x: v.x * CGFloat(cos(angle)) - v.y * CGFloat(sin(angle)),
+                    y: v.x * CGFloat(sin(angle)) + v.y * CGFloat(cos(angle)))
+        }
+        let left = rotated(direction, by: Double.pi * 5 / 6)
+        let right = rotated(direction, by: -Double.pi * 5 / 6)
+        var path = Path()
+        path.move(to: tip)
+        path.addLine(to: CGPoint(x: tip.x + left.x * size, y: tip.y + left.y * size))
+        path.addLine(to: CGPoint(x: tip.x + right.x * size, y: tip.y + right.y * size))
+        path.closeSubpath()
+        return path
+    }
+}
+
+/// The links of a map: lines and arrowheads, plus a plus or minus and the
+/// user's words on the links that have them. Never takes a touch.
+struct MapLayer: View {
+    let graph: DiagramGraph
+    let pan: CGSize
+    let zoom: CGFloat
+
+    var body: some View {
+        let lookup = Dictionary(graph.nodes.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        ZStack {
+            Canvas { context, _ in
+                MapGeometry.drawEdges(into: &context, graph: graph, pan: pan, zoom: zoom)
+            }
+            ForEach(graph.edges) { edge in
+                if let from = lookup[edge.fromID], let to = lookup[edge.toID],
+                   let seg = MapGeometry.segment(from: MapGeometry.screen(from, pan: pan, zoom: zoom),
+                                                 to: MapGeometry.screen(to, pan: pan, zoom: zoom),
+                                                 scale: zoom) {
+                    let mid = CGPoint(x: (seg.start.x + seg.end.x) / 2, y: (seg.start.y + seg.end.y) / 2)
+                    let markScale = max(zoom, 0.6)
+                    if edge.polarity != .none {
+                        SignBadge(polarity: edge.polarity)
+                            .scaleEffect(markScale)
+                            .position(mid)
+                    }
+                    if !edge.label.isEmpty {
+                        Text(edge.label)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: 100)
+                            .scaleEffect(markScale)
+                            .position(x: mid.x, y: mid.y + 20 * markScale)
+                    }
+                }
+            }
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+struct SignBadge: View {
+    let polarity: EdgePolarity
+
+    var body: some View {
+        Text(polarity == .opposite ? "\u{2212}" : "+")
+            .font(.system(.footnote, design: .rounded).weight(.bold))
+            .foregroundStyle(Anchor.Theme.accent)
+            .frame(width: 24, height: 24)
+            .background(Circle().fill(Anchor.Theme.accentSoft))
+    }
+}
+
+struct MapNodeLabel: View {
+    let node: DiagramNode
+    var highlighted: Bool = false
+
+    var body: some View {
+        Text(node.label.isEmpty ? "Item" : node.label)
+            .font(.system(.footnote, design: .rounded).weight(.medium))
+            .multilineTextAlignment(.center)
+            .lineLimit(3)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 8)
+            .frame(width: MapGeometry.halfWidth * 2)
+            .background((node.colour ?? .sage).fill, in: RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Anchor.Theme.accent, lineWidth: highlighted ? 2 : 0)
+            )
+    }
+}
+
+// MARK: - Free map: looking at one
+
+/// A map to look at, scaled to fit the screen. Editing is where you pan and
+/// zoom.
+struct MapReadView: View {
+    let graph: DiagramGraph
+
+    var body: some View {
+        GeometryReader { geo in
+            let fit = MapGeometry.fit(graph, in: geo.size, maxFitZoom: 1.3)
+            ZStack {
+                MapLayer(graph: graph, pan: fit.pan, zoom: fit.zoom)
+                ForEach(graph.nodes) { node in
+                    MapNodeLabel(node: node)
+                        .scaleEffect(fit.zoom)
+                        .position(MapGeometry.screen(node, pan: fit.pan, zoom: fit.zoom))
+                }
+                if graph.nodes.isEmpty {
+                    VStack(spacing: 8) {
+                        Image(systemName: "point.3.connected.trianglepath.dotted")
+                            .font(.largeTitle)
+                            .foregroundStyle(.tertiary)
+                        Text("Nothing drawn yet. Tap Edit to add your first item.")
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding()
+                }
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilitySummary)
+    }
+
+    private var accessibilitySummary: String {
+        if graph.nodes.isEmpty { return "Map with nothing drawn yet." }
+        var lookup: [UUID: String] = [:]
+        for node in graph.nodes { lookup[node.id] = node.label.isEmpty ? "an item" : node.label }
+        let links = graph.edges.compactMap { edge -> String? in
+            guard let from = lookup[edge.fromID], let to = lookup[edge.toID] else { return nil }
+            switch edge.polarity {
+            case .same: return "\(from) leads to \(to), more leads to more"
+            case .opposite: return "\(from) leads to \(to), more leads to less"
+            case .none: return "\(from) leads to \(to)"
+            }
+        }
+        return "Map of \(graph.nodes.count) items. " + links.joined(separator: ". ")
+    }
+}
+
+// MARK: - Free map: editing
+
+/// The free canvas. Drag the background to pan, pinch to zoom (the buttons
+/// do the same), and use the switch at the bottom to choose what dragging an
+/// item does: Move shifts it, Link draws a line from it to another. The two
+/// are never live together, so a drag never has to guess which one you meant.
+/// Every change can be undone and redone.
 struct FeedbackLoopDiagramEditorView: View {
+    enum Mode { case move, link }
+
+    struct PendingLink {
+        var from: UUID
+        var point: CGPoint
+    }
+
     @Bindable var diagram: FeedbackLoopDiagram
     @State private var graph = DiagramGraph()
-    @State private var pendingEdgeStart: UUID?
-    @State private var isConnectMode = false
-    @State private var renamingNode: DiagramNode?
-    @State private var renameText = ""
+    @State private var history: [DiagramGraph] = []
+    @State private var future: [DiagramGraph] = []
+    @State private var pan: CGSize = .zero
+    @State private var zoom: CGFloat = 1
+    @State private var canvasSize: CGSize = .zero
+    @State private var mode: Mode = .move
+    @State private var pending: PendingLink?
+    @State private var dragBase: DiagramGraph?
+    @State private var dragOrigin: CGPoint?
+    @State private var panStart: CGSize?
+    @State private var zoomBase: CGFloat?
+    @State private var zoomBasePan: CGSize?
+    @State private var editingNodeID: UUID?
+    @State private var sheetBase: DiagramGraph?
 
     var body: some View {
         GeometryReader { geo in
             ZStack {
-                Anchor.Theme.background(.light).ignoresSafeArea()
+                Color.clear
+                    .contentShape(Rectangle())
+                    .gesture(panGesture)
 
-                Canvas { context, size in
-                    for edge in graph.edges {
-                        guard let from = graph.nodes.first(where: { $0.id == edge.fromID }),
-                              let to = graph.nodes.first(where: { $0.id == edge.toID }) else { continue }
-                        var path = Path()
-                        path.move(to: CGPoint(x: from.x, y: from.y))
-                        path.addLine(to: CGPoint(x: to.x, y: to.y))
-                        context.stroke(path, with: .color(Anchor.Theme.accent.opacity(0.5)), lineWidth: 2)
-                    }
-                }
-                .allowsHitTesting(false)
+                MapLayer(graph: graph, pan: pan, zoom: zoom)
 
                 ForEach(graph.nodes) { node in
-                    nodeView(node, canvasSize: geo.size)
-                        .position(x: node.x, y: node.y)
+                    nodeView(node)
+                        .position(MapGeometry.screen(node, pan: pan, zoom: zoom))
+                }
+
+                if let link = pending,
+                   let from = graph.nodes.first(where: { $0.id == link.from }) {
+                    Canvas { context, _ in
+                        var path = Path()
+                        path.move(to: MapGeometry.screen(from, pan: pan, zoom: zoom))
+                        path.addLine(to: link.point)
+                        context.stroke(path, with: .color(Anchor.Theme.accent),
+                                       style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
+                    }
+                    .allowsHitTesting(false)
                 }
 
                 if graph.nodes.isEmpty {
@@ -796,132 +1058,415 @@ struct FeedbackLoopDiagramEditorView: View {
                         Image(systemName: "point.3.connected.trianglepath.dotted")
                             .font(.largeTitle)
                             .foregroundStyle(.tertiary)
-                        Text("Tap + to add your first node")
+                        Text("Tap the plus to add your first item")
                             .foregroundStyle(.secondary)
                     }
+                    .allowsHitTesting(false)
                 }
             }
+            .frame(width: geo.size.width, height: geo.size.height)
+            .coordinateSpace(name: "map")
+            .gesture(zoomGesture)
+            .clipped()
+            .onAppear {
+                canvasSize = geo.size
+                load(size: geo.size)
+            }
+            .onChange(of: geo.size) { _, newSize in
+                canvasSize = newSize
+            }
         }
-        .navigationTitle(diagram.title)
+        .anchorBackground()
         .toolbar {
             ToolbarItem(placement: .principal) {
                 TextField("Title", text: $diagram.title)
                     .multilineTextAlignment(.center)
             }
-            ToolbarItemGroup(placement: .navigationBarTrailing) {
-                Button {
-                    withAnimation { isConnectMode.toggle() }
-                    pendingEdgeStart = nil
-                } label: {
-                    Label("Connect", systemImage: isConnectMode ? "link.circle.fill" : "link.circle")
-                }
-                .tint(isConnectMode ? Anchor.Theme.accent : nil)
-
-                Button {
-                    addNode()
-                } label: {
-                    Label("Add node", systemImage: "plus.circle.fill")
-                }
-            }
         }
-        .safeAreaInset(edge: .bottom) {
-            if isConnectMode {
-                Text(pendingEdgeStart == nil ? "Tap a node to start a connection" : "Now tap the node to connect it to")
-                    .font(.caption)
-                    .padding(8)
-                    .frame(maxWidth: .infinity)
-                    .background(.thinMaterial)
-            }
-        }
-        .onAppear {
-            graph = (try? JSONDecoder().decode(DiagramGraph.self, from: diagram.graphJSON)) ?? DiagramGraph()
-        }
+        .safeAreaInset(edge: .bottom) { controls }
         .onChange(of: graph) { _, newValue in
-            diagram.graphJSON = (try? JSONEncoder().encode(newValue)) ?? diagram.graphJSON
-            diagram.lastEditedAt = .now
+            save(newValue)
         }
-        .alert("Rename or delete node", isPresented: Binding(get: { renamingNode != nil }, set: { if !$0 { renamingNode = nil } })) {
-            TextField("Label", text: $renameText)
-            Button("Save") {
-                if let node = renamingNode, let index = graph.nodes.firstIndex(where: { $0.id == node.id }) {
-                    graph.nodes[index].label = renameText
-                }
-                renamingNode = nil
+        .sheet(isPresented: Binding(get: { editingNodeID != nil }, set: { if !$0 { editingNodeID = nil } }),
+               onDismiss: {
+                   if let base = sheetBase, base != graph { commit(base) }
+                   sheetBase = nil
+               }) {
+            if let id = editingNodeID {
+                MapItemSheet(graph: $graph, nodeID: id)
             }
-            Button("Delete node", role: .destructive) {
-                if let node = renamingNode {
-                    graph.nodes.removeAll { $0.id == node.id }
-                    graph.edges.removeAll { $0.fromID == node.id || $0.toID == node.id }
-                }
-                renamingNode = nil
-            }
-            Button("Cancel", role: .cancel) { renamingNode = nil }
         }
     }
 
-    @ViewBuilder
-    private func nodeView(_ node: DiagramNode, canvasSize: CGSize) -> some View {
-        let label = Text(node.label)
-            .font(.system(.caption, design: .rounded).weight(.medium))
-            .padding(10)
-            .background(
-                pendingEdgeStart == node.id ? Anchor.Theme.accentSoft : Anchor.Theme.sageSoft,
-                in: RoundedRectangle(cornerRadius: 10)
-            )
+    // MARK: Controls
 
-        // Branching the whole view (rather than passing an optional
-        // Gesture into a single `.gesture()` call) is what actually
-        // guarantees only one recognizer exists at a time — an optional
-        // Gesture doesn't type-check cleanly across DragGesture/TapGesture,
-        // and more importantly, keeping both attached-but-conditionally-
-        // no-op would still leave two live recognizers fighting over the
-        // same touch, which was the original bug.
-        if isConnectMode {
+    private var controls: some View {
+        VStack(spacing: 10) {
+            if mode == .link {
+                Text("Drag from one item onto another to link them.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Picker("What dragging an item does", selection: $mode) {
+                Text("Move").tag(Mode.move)
+                Text("Link").tag(Mode.link)
+            }
+            .pickerStyle(.segmented)
+
+            HStack {
+                toolButton("plus.circle", "Add an item") { addNode() }
+                toolButton("arrow.uturn.backward", "Undo", disabled: history.isEmpty) { undo() }
+                toolButton("arrow.uturn.forward", "Redo", disabled: future.isEmpty) { redo() }
+                toolButton("minus.magnifyingglass", "Zoom out") { stepZoom(1 / 1.25) }
+                toolButton("plus.magnifyingglass", "Zoom in") { stepZoom(1.25) }
+                toolButton("arrow.up.left.and.arrow.down.right", "Fit everything") { fitAll() }
+            }
+        }
+        .padding()
+        .background(.thinMaterial)
+    }
+
+    private func toolButton(_ icon: String, _ label: String, disabled: Bool = false, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.title3)
+                .frame(maxWidth: .infinity, minHeight: 36)
+        }
+        .disabled(disabled)
+        .accessibilityLabel(label)
+    }
+
+    // MARK: Items
+
+    @ViewBuilder
+    private func nodeView(_ node: DiagramNode) -> some View {
+        let label = MapNodeLabel(node: node, highlighted: pending?.from == node.id)
+        if mode == .link {
             label
-                .onTapGesture {
-                    if let start = pendingEdgeStart, start != node.id {
-                        graph.edges.append(DiagramEdge(fromID: start, toID: node.id))
-                        pendingEdgeStart = nil
-                    } else {
-                        pendingEdgeStart = node.id
-                    }
-                }
+                .scaleEffect(zoom)
+                .gesture(linkGesture(for: node))
         } else {
-            // Rename lives on a small dedicated button rather than a plain
-            // tap on the node itself — a real Button reliably takes tap
-            // priority over a parent's DragGesture in SwiftUI for its own
-            // bounds, whereas two raw gesture recognizers on the exact same
-            // view (the original bug) do not reliably arbitrate.
+            // Editing lives on a small dedicated button rather than a tap on
+            // the item itself, so a tap and a drag never compete.
             label
                 .overlay(alignment: .topTrailing) {
                     Button {
-                        renameText = node.label
-                        renamingNode = node
+                        openSheet(for: node.id)
                     } label: {
                         Image(systemName: "pencil.circle.fill")
-                            .font(.caption)
+                            .font(.title3)
                             .foregroundStyle(Anchor.Theme.accent)
                             .background(Circle().fill(.white))
                     }
                     .buttonStyle(.plain)
-                    .offset(x: 8, y: -8)
+                    .offset(x: 10, y: -10)
+                    .accessibilityLabel("Edit \(node.label.isEmpty ? "item" : node.label)")
                 }
-                .gesture(
-                    DragGesture(minimumDistance: 2)
-                        .onChanged { value in
-                            if let index = graph.nodes.firstIndex(where: { $0.id == node.id }) {
-                                graph.nodes[index].x = min(max(value.location.x, 24), canvasSize.width - 24)
-                                graph.nodes[index].y = min(max(value.location.y, 24), canvasSize.height - 24)
-                            }
-                        }
-                )
+                .scaleEffect(zoom)
+                .gesture(moveGesture(for: node))
         }
     }
 
+    private func moveGesture(for node: DiagramNode) -> some Gesture {
+        DragGesture(minimumDistance: 3, coordinateSpace: .named("map"))
+            .onChanged { value in
+                if dragBase == nil {
+                    dragBase = graph
+                    dragOrigin = CGPoint(x: node.x, y: node.y)
+                }
+                guard let origin = dragOrigin,
+                      let index = graph.nodes.firstIndex(where: { $0.id == node.id }) else { return }
+                graph.nodes[index].x = Double(origin.x + value.translation.width / zoom)
+                graph.nodes[index].y = Double(origin.y + value.translation.height / zoom)
+            }
+            .onEnded { _ in
+                if let base = dragBase, base != graph { commit(base) }
+                dragBase = nil
+                dragOrigin = nil
+            }
+    }
+
+    private func linkGesture(for node: DiagramNode) -> some Gesture {
+        DragGesture(minimumDistance: 4, coordinateSpace: .named("map"))
+            .onChanged { value in
+                pending = PendingLink(from: node.id, point: value.location)
+            }
+            .onEnded { value in
+                pending = nil
+                if let target = item(at: value.location, excluding: node.id) {
+                    addLink(from: node.id, to: target.id)
+                }
+            }
+    }
+
+    private func item(at point: CGPoint, excluding id: UUID) -> DiagramNode? {
+        graph.nodes.first { other in
+            guard other.id != id else { return false }
+            let centre = MapGeometry.screen(other, pan: pan, zoom: zoom)
+            return abs(centre.x - point.x) <= MapGeometry.halfWidth * zoom
+                && abs(centre.y - point.y) <= MapGeometry.halfHeight * zoom
+        }
+    }
+
+    private func addLink(from: UUID, to: UUID) {
+        guard !graph.edges.contains(where: { $0.fromID == from && $0.toID == to }) else { return }
+        let before = graph
+        graph.edges.append(DiagramEdge(fromID: from, toID: to, polarity: .none))
+        commit(before)
+    }
+
     private func addNode() {
-        // Staggered default placement so new nodes don't all land on top of
-        // each other; the user can immediately drag to reposition.
-        let offset = Double(graph.nodes.count % 5) * 20
-        graph.nodes.append(DiagramNode(label: "New", x: 120 + offset, y: 160 + offset))
+        let before = graph
+        let z = max(zoom, 0.01)
+        let centreX = (canvasSize.width / 2 - pan.width) / z
+        let centreY = (canvasSize.height / 2 - pan.height) / z
+        let stagger = Double(graph.nodes.count % 5) * 24
+        let node = DiagramNode(label: "", x: Double(centreX) + stagger - 48, y: Double(centreY) + stagger - 48)
+        graph.nodes.append(node)
+        commit(before)
+        openSheet(for: node.id)
+    }
+
+    private func openSheet(for id: UUID) {
+        sheetBase = graph
+        editingNodeID = id
+    }
+
+    // MARK: Pan and zoom
+
+    private var panGesture: some Gesture {
+        DragGesture(minimumDistance: 4)
+            .onChanged { value in
+                if panStart == nil { panStart = pan }
+                let start = panStart ?? pan
+                pan = CGSize(width: start.width + value.translation.width,
+                             height: start.height + value.translation.height)
+            }
+            .onEnded { _ in panStart = nil }
+    }
+
+    private var zoomGesture: some Gesture {
+        MagnifyGesture()
+            .onChanged { value in
+                if zoomBase == nil {
+                    zoomBase = zoom
+                    zoomBasePan = pan
+                }
+                applyZoom((zoomBase ?? zoom) * value.magnification,
+                          baseZoom: zoomBase ?? zoom,
+                          basePan: zoomBasePan ?? pan)
+            }
+            .onEnded { _ in
+                zoomBase = nil
+                zoomBasePan = nil
+            }
+    }
+
+    /// Zooms about the middle of the canvas, so what you are looking at stays
+    /// where it is.
+    private func applyZoom(_ target: CGFloat, baseZoom: CGFloat, basePan: CGSize) {
+        let z = min(max(target, MapGeometry.minZoom), MapGeometry.maxZoom)
+        let ratio = z / max(baseZoom, 0.01)
+        let cx = canvasSize.width / 2
+        let cy = canvasSize.height / 2
+        zoom = z
+        pan = CGSize(width: cx - (cx - basePan.width) * ratio,
+                     height: cy - (cy - basePan.height) * ratio)
+    }
+
+    private func stepZoom(_ factor: CGFloat) {
+        applyZoom(zoom * factor, baseZoom: zoom, basePan: pan)
+    }
+
+    private func fitAll() {
+        let fit = MapGeometry.fit(graph, in: canvasSize, maxFitZoom: 1.3)
+        withAnimation {
+            pan = fit.pan
+            zoom = fit.zoom
+        }
+    }
+
+    // MARK: History and saving
+
+    private func commit(_ before: DiagramGraph) {
+        history.append(before)
+        if history.count > 60 { history.removeFirst() }
+        future = []
+    }
+
+    private func undo() {
+        guard let previous = history.popLast() else { return }
+        future.append(graph)
+        graph = previous
+    }
+
+    private func redo() {
+        guard let next = future.popLast() else { return }
+        history.append(graph)
+        graph = next
+    }
+
+    private func load(size: CGSize) {
+        let loaded = DiagramGraph.decoded(from: diagram.graphJSON)
+        graph = loaded
+        let fit = MapGeometry.fit(loaded, in: size, maxFitZoom: 1.2)
+        pan = fit.pan
+        zoom = fit.zoom
+    }
+
+    /// Writes the map back only when something changed, so opening the
+    /// editor does not move the diagram up the list or rewrite an old one.
+    private func save(_ new: DiagramGraph) {
+        if new != DiagramGraph.decoded(from: diagram.graphJSON) {
+            var toSave = new
+            toSave.version = 2
+            diagram.graphJSON = toSave.encoded()
+            diagram.lastEditedAt = .now
+        }
+    }
+}
+
+/// One item on a map, in one sheet: its words, its colour, and the links
+/// that leave it, each with an optional sign and a few words of its own.
+struct MapItemSheet: View {
+    @Binding var graph: DiagramGraph
+    let nodeID: UUID
+
+    private var outgoing: [DiagramEdge] {
+        graph.edges.filter { $0.fromID == nodeID }
+    }
+
+    private var linkTargets: [DiagramNode] {
+        graph.nodes.filter { other in
+            other.id != nodeID && !graph.edges.contains(where: { $0.fromID == nodeID && $0.toID == other.id })
+        }
+    }
+
+    var body: some View {
+        Anchor.ItemEditorSheet(
+            title: "Edit item",
+            onDelete: deleteItem,
+            deleteTitle: "Delete item",
+            deleteQuestion: "Delete this item and its links?"
+        ) {
+            Form {
+                if graph.nodes.contains(where: { $0.id == nodeID }) {
+                    Section("What is it") {
+                        TextField("Write it in your own words", text: labelBinding, axis: .vertical)
+                    }
+
+                    Section("Colour") {
+                        colourRow
+                    }
+
+                    Section {
+                        ForEach(outgoing) { edge in
+                            linkRow(edge)
+                        }
+                        Menu {
+                            ForEach(linkTargets) { other in
+                                Button(other.label.isEmpty ? "Item" : other.label) {
+                                    graph.edges.append(DiagramEdge(fromID: nodeID, toID: other.id, polarity: .none))
+                                }
+                            }
+                        } label: {
+                            Label("Add a link to another item", systemImage: "arrow.right")
+                        }
+                        .disabled(linkTargets.isEmpty)
+                    } header: {
+                        Text("Links from this item")
+                    } footer: {
+                        Text("A sign is optional. More leads to more shows a plus on the arrow, more leads to less shows a minus.")
+                    }
+                }
+            }
+        }
+    }
+
+    private var colourRow: some View {
+        let current = graph.nodes.first(where: { $0.id == nodeID })?.colour ?? .sage
+        return HStack(spacing: 14) {
+            ForEach(NodeColour.allCases) { option in
+                Button {
+                    if let index = graph.nodes.firstIndex(where: { $0.id == nodeID }) {
+                        graph.nodes[index].colour = option == .sage ? nil : option
+                    }
+                } label: {
+                    Circle()
+                        .fill(option.fill)
+                        .frame(width: 32, height: 32)
+                        .overlay(Circle().stroke(Color.secondary.opacity(0.5), lineWidth: 1))
+                        .overlay {
+                            if option == current {
+                                Image(systemName: "checkmark")
+                                    .font(.footnote.weight(.bold))
+                                    .foregroundStyle(.primary)
+                            }
+                        }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(option.name)
+                .accessibilityAddTraits(option == current ? .isSelected : [])
+            }
+        }
+    }
+
+    private func linkRow(_ edge: DiagramEdge) -> some View {
+        let target = graph.nodes.first(where: { $0.id == edge.toID })
+        let name = (target?.label ?? "").isEmpty ? "another item" : (target?.label ?? "")
+        return VStack(alignment: .leading, spacing: 8) {
+            Text("To \(name)")
+                .font(.subheadline.weight(.medium))
+            Picker("Sign", selection: polarityBinding(edge.id)) {
+                Text("No sign").tag(EdgePolarity.none)
+                Text("More leads to more").tag(EdgePolarity.same)
+                Text("More leads to less").tag(EdgePolarity.opposite)
+            }
+            .pickerStyle(.menu)
+            TextField("How, in your words (optional)", text: wordsBinding(edge.id))
+                .font(.footnote)
+        }
+        .padding(.vertical, 2)
+        .anchorDeletable("Remove link") {
+            graph.edges.removeAll { $0.id == edge.id }
+        }
+    }
+
+    private var labelBinding: Binding<String> {
+        Binding(
+            get: { graph.nodes.first(where: { $0.id == nodeID })?.label ?? "" },
+            set: { value in
+                if let index = graph.nodes.firstIndex(where: { $0.id == nodeID }) {
+                    graph.nodes[index].label = value
+                }
+            }
+        )
+    }
+
+    private func polarityBinding(_ edgeID: UUID) -> Binding<EdgePolarity> {
+        Binding(
+            get: { graph.edges.first(where: { $0.id == edgeID })?.polarity ?? .none },
+            set: { value in
+                if let index = graph.edges.firstIndex(where: { $0.id == edgeID }) {
+                    graph.edges[index].polarity = value
+                }
+            }
+        )
+    }
+
+    private func wordsBinding(_ edgeID: UUID) -> Binding<String> {
+        Binding(
+            get: { graph.edges.first(where: { $0.id == edgeID })?.label ?? "" },
+            set: { value in
+                if let index = graph.edges.firstIndex(where: { $0.id == edgeID }) {
+                    graph.edges[index].label = value
+                }
+            }
+        )
+    }
+
+    private func deleteItem() {
+        graph.nodes.removeAll { $0.id == nodeID }
+        graph.edges.removeAll { $0.fromID == nodeID || $0.toID == nodeID }
     }
 }
