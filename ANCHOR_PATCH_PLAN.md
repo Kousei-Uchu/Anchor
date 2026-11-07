@@ -1,6 +1,6 @@
 # Anchor — Patch Plan (v2-recovery)
 
-*Living document. Last updated: 7 Nov 2026, after Patch 18 was written (Patches 1 to 17 are pushed, `484caca` at the time; none confirmed building; Patch 18 awaits your paste).*
+*Living document. Last updated: 7 Nov 2026, after Patch 19 was written (Patches 1 to 18 are pushed, `03b920d` at the time; none confirmed building; Patch 19 awaits your paste).*
 
 > ## READ THIS FIRST: THIS FILE IS THE PROMPT
 >
@@ -49,11 +49,14 @@ The source code repository is at <https://github.com/Kousei-Uchu/Anchor/tree/v2-
 | 14b: Message log, part 2: voice notes (record, play, attach when sending through Messages) | 🟡 Pushed by you (`464a9a0`); build not yet confirmed |
 | 15: Tasks: `TaskItem`, carry-over from Next hour only, basic list, Plan widget, export and import, demo data | 🟡 Pushed by you (`698b6c0`); build not yet confirmed |
 | 16: Task due dates, fuzzy values, grouping by time | 🟡 Pushed by you (`15e1daf`); build not yet confirmed |
-| 17: Subtasks with collapse and derived progress | 🟡 Written (`patch-17.sh`); awaiting your paste and build |
-| 18: Task dependencies: greyed blocked tasks, "Waiting on…", auto-unlock | 🟡 Written (`patch-18.sh`); awaiting your paste and build |
+| 17: Subtasks with collapse and derived progress | 🟡 Pushed by you (`484caca`); build not yet confirmed |
+| 18: Task dependencies: greyed blocked tasks, "Waiting on…", auto-unlock | 🟡 Pushed by you (`03b920d`); build not yet confirmed |
+| 19: Task status, energy tag, tiny first step, snooze to tomorrow | 🟡 Written (`patch-19.sh`); awaiting your paste and build |
 | 19 onward | Not started |
 
 ## Change log of this plan
+
+- **7 Nov 2026 (29):** Patches 17 and 18 confirmed pushed (HEAD was `03b920d`). Patch 19 written: the last of the task fields. **Model:** three fields on `TaskItem`, all with defaults, so no store migration: `status` (Not started, Started, Set aside for now), `energy` (Not set, A little, Some, A lot) and `firstStep` (one line of text). **Deviation from the plan:** the plan said "Parked"; the app says **Set aside for now**, which reads as relief rather than failure. **Status:** a task counts as Started when you say so or as soon as one of its steps is ticked, with no manual step. A set-aside task moves to a last group, "Set aside for now", dimmed, with its steps folded away; Now and the Tasks widget leave it out, like a waiting task. Ticking a set-aside task off still works. **Energy:** a small "Needs a little / some / a lot of energy" line on the card, and a filter in the Tasks screen's menu (Everything, Some energy or less, Only a little energy). Tasks with no energy set are always shown, and a line above the list says what the filter is doing and has a Show everything button. The filter is not remembered: it resets when the screen is reopened, so nothing stays hidden by accident. **First tiny step:** its own one-line field, shown on the card as "Start with: ..." until the task is started; separate from steps so it can be one line. **Snooze:** swipe right on a task (or long-press) for Move to tomorrow or Set aside; the editor has a Move to tomorrow button. It sets the day to tomorrow, shows as "Tomorrow", and the task returns to Today on its own when the day arrives. Nothing is marked as late. Swipe left still deletes. Export carries `status`, `energy` and `firstStep` (optional, so older files import). Demo: energy tags on three tasks, a first step on the call, and "Sort out the old paperwork" set aside. Help (Plan) mentions it. **Size:** about 250 changed lines in 6 files, larger than S, because the energy filter and the row actions came with it. **Not done:** recurring tasks and a priority or category field from the original task idea; they are not in the patch list, so say if you want them. Checked here only with a Swift syntax parser, not compiled.
 
 - **7 Nov 2026 (28):** Patch 18 written: tasks that wait on other tasks. **Model:** `blockedByIDs` on `TaskItem` (a list, default empty, so no store migration). A task is blocked while any task it waits on is still open; a deleted blocker is ignored. **List:** a fifth group, "Waiting on something else", after No date. A blocked task is shown dimmed with an hourglass instead of a tick, a line "Waiting on Call to book the appointment" (or "and 2 more"), and its steps folded away. It still opens in the editor. **Unlocking is quiet:** when the last blocker is ticked off the task simply moves into its usual group, with the list's normal animation, and nothing announces it. **Editor:** a "Waiting on" section lists what it is waiting on (swipe to remove; a done blocker stays listed, greyed, until removed) and a menu offers other open tasks. Steps are never offered, and a task that already waits on this one, directly or through others, is left out so two tasks cannot wait on each other. **Now and the Plan widget** show only what can be done now: blocked tasks are left out of the first four and of the "to do" count, and an all-waiting list says "Nothing to do right now." instead of "All ticked off." Export carries `blockedByIDs` (optional, so older files import). Demo: "Bring the form along" waits on "Call to book the appointment". Help (Plan) mentions it. **Not done:** sub-steps of a blocked task cannot wait on anything; only whole tasks can. Not compiled here.
 - **7 Nov 2026 (27):** Patch 17 written: steps on tasks. **Model:** a step is a `TaskItem` with a `parentID` (the id of its task), plus a `subtasksCollapsed` flag on the task. Both have defaults, so there is still no store migration, and ticking, ordering, export and import all reuse what tasks already do. `TaskItem.topLevel` is what the list, Now and the Plan widget show, so steps never appear as tasks of their own; a step whose task has gone is treated as a task so it cannot vanish. **Card:** a task with steps shows "2 of 5 steps" and a thin bar (no percentage, nothing red, nothing when all are done beyond the full bar), a chevron to fold the steps away, and the steps themselves underneath; tap a step to tick it. Ticking every step does **not** tick the task, because finishing is your call. A done task hides its steps. **Editor:** a Steps section with a field to add one, tap to reword, swipe to delete, a labelled Reorder, and the tick. A blank task that has steps is kept when the editor closes. Deleting a task, clearing done tasks or swiping removes its steps too. Export carries `parentID` and `subtasksCollapsed` (optional, so older files import). **Known quirk:** the data screen's Tasks count includes steps. Demo: "Reply to one message" has three steps, one done. Help (Plan) mentions steps. Not compiled here.
@@ -377,7 +380,7 @@ First add an explicit SwiftData migration plan: a store that fails to open shows
 | **16** | Due dates incl. fuzzy values, time-bucket grouping | 7 | S | 🟡 |
 | **17** | Subtasks with collapse/expand and derived progress | 7 | M | 🟡 |
 | **18** | Dependencies: greyed blocked tasks, "Waiting on…", auto-unlock | 7 | M | 🟡 |
-| **19** | Status, progress display, extras (energy tag, tiny first step, snooze) | 7 | S | ⬜ |
+| **19** | Status, progress display, extras (energy tag, tiny first step, snooze) | 7 | S | 🟡 |
 | **20** | Widget drag-and-drop editing on the tab (see point 14) | 14 | M | ⬜ |
 | **21** | Pomodoro: settings, notifications, optional Live Activity | 7 | M | ⬜ |
 | **22** | "Plan my day" screen | 7 | M | ⬜ |
@@ -521,4 +524,4 @@ A reminder you set yourself, per person, **off by default**. Lock-screen text is
 
 ## Appendix B: Suggested next session
 
-Patch **19** (task status, progress display and extras: energy tag, tiny first step, snooze), once Patches 1 to 18 build. Patch 20 (widget drag and drop) is independent of both. D4 to D9 are all answered, so nothing is waiting on a decision.
+Patch **20** (widget drag and drop on the tab), then 21 (Pomodoro), once Patches 1 to 19 build. D4 to D9 are all answered, so nothing is waiting on a decision.

@@ -87,19 +87,21 @@ enum DemoMode {
             typicalTime: DateComponents(hour: 10, minute: 30), typicalCadenceDays: 14,
             occurrences: [AppointmentOccurrence(scheduledDate: tuesday)]))
 
-        let water = TaskItem(title: "Drink some water", sortOrder: 0)
+        let water = TaskItem(title: "Drink some water", sortOrder: 0, energy: .little)
         water.setDue(.today)
         context.insert(water)
-        let reply = TaskItem(title: "Reply to one message", notes: "Just the easy one.", sortOrder: 1)
+        let reply = TaskItem(title: "Reply to one message", notes: "Just the easy one.", sortOrder: 1, energy: .some)
         reply.setDue(.thisWeek)
         context.insert(reply)
         context.insert(TaskItem(title: "Pick the easy one", isDone: true, completedAt: ago(0, hour: 1), sortOrder: 0, parentID: reply.id))
         context.insert(TaskItem(title: "Write two lines", sortOrder: 1, parentID: reply.id))
         context.insert(TaskItem(title: "Send it", sortOrder: 2, parentID: reply.id))
-        let call = TaskItem(title: "Call to book the appointment", sortOrder: 3)
+        let call = TaskItem(title: "Call to book the appointment", sortOrder: 3, energy: .some,
+                            firstStep: "Find the number and put it on the screen.")
         context.insert(call)
         context.insert(TaskItem(title: "Bring the form along", sortOrder: 4, blockedByIDs: [call.id]))
         context.insert(TaskItem(title: "Step outside for five minutes", isDone: true, completedAt: ago(0, hour: 2), sortOrder: 2))
+        context.insert(TaskItem(title: "Sort out the old paperwork", sortOrder: 5, status: .setAside, energy: .lots))
 
         context.insert(Affirmation(text: "I got through today. That counts.", sortOrder: 0))
         context.insert(Affirmation(text: "Small steps still move me forward.", sortOrder: 1))

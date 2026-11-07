@@ -62,6 +62,56 @@ private func setTask(_ task: TaskItem, done: Bool, among tasks: [TaskItem]) {
     }
 }
 
+/// Sets a task aside for now, or brings it back to the list.
+private func toggleSetAside(_ task: TaskItem) {
+    task.status = task.status == .setAside ? .notStarted : .setAside
+}
+
+private extension View {
+    /// Swipe right to move a task to tomorrow or set it aside, swipe left to
+    /// delete. The long-press menu carries the same three, for people who do
+    /// not use swipes.
+    func taskRowActions(_ task: TaskItem, onDelete: @escaping () -> Void) -> some View {
+        self
+            .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                Button {
+                    withAnimation(.snappy) { task.snoozeToTomorrow() }
+                } label: {
+                    Label("Tomorrow", systemImage: "sunrise")
+                }
+                .tint(Anchor.Theme.accent)
+                Button {
+                    withAnimation(.snappy) { toggleSetAside(task) }
+                } label: {
+                    Label(task.status == .setAside ? "Bring back" : "Set aside",
+                          systemImage: task.status == .setAside ? "tray.and.arrow.up" : "tray")
+                }
+                .tint(.gray)
+            }
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                Button(role: .destructive, action: onDelete) {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
+            .contextMenu {
+                Button {
+                    withAnimation(.snappy) { task.snoozeToTomorrow() }
+                } label: {
+                    Label("Move to tomorrow", systemImage: "sunrise")
+                }
+                Button {
+                    withAnimation(.snappy) { toggleSetAside(task) }
+                } label: {
+                    Label(task.status == .setAside ? "Bring back" : "Set aside for now",
+                          systemImage: task.status == .setAside ? "tray.and.arrow.up" : "tray")
+                }
+                Button(role: .destructive, action: onDelete) {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
+    }
+}
+
 // MARK: - Tasks card on Now
 
 /// The first few open tasks, with a quick add. The header opens the full list.
@@ -153,8 +203,9 @@ struct TasksView: View {
     @State private var showImporter = false
     @State private var remindersDenied = false
     @State private var confirmingClearDone = false
+    @State private var energyFilter: TaskEnergyFilter = .everything
 
-    private var open: [TaskItem] { TaskItem.listOrder(tasks) }
+    private var open: [TaskItem] { TaskItem.listOrder(tasks).filter { energyFilter.allows($0.energy) } }
     private var done: [TaskItem] {
         TaskItem.topLevel(tasks).filter(\.isDone).sorted { ($0.completedAt ?? .distantPast) > ($1.completedAt ?? .distantPast) }
     }
@@ -174,6 +225,18 @@ struct TasksView: View {
                 }
             } else {
                 List {
+                    if energyFilter != .everything {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(energyFilter.summary)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                            Button("Show everything") { energyFilter = .everything }
+                                .font(.footnote)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .anchorCardRow()
+                    }
+
                     ForEach(TaskBucket.allCases) { bucket in
                         let group = open.filter { $0.listBucket(among: tasks) == bucket }
                         if !group.isEmpty {
@@ -186,7 +249,7 @@ struct TasksView: View {
                                 TaskCard(task: task, steps: TaskItem.steps(of: task, in: tasks),
                                          blockedBy: task.openBlockers(among: tasks),
                                          onToggle: { toggle(task) }, onEdit: { editing = task })
-                                    .anchorDeletable { modelContext.deleteTask(task, among: tasks) }
+                                    .taskRowActions(task) { modelContext.deleteTask(task, among: tasks) }
                                     .anchorCardRow()
                             }
                             .onMove { offsets, destination in
@@ -228,6 +291,14 @@ struct TasksView: View {
                     Anchor.ReorderToolbarButton()
                 }
                 Menu {
+                    Section("Show tasks that need") {
+                        Picker("Energy", selection: $energyFilter) {
+                            ForEach(TaskEnergyFilter.allCases) { filter in
+                                Text(filter.label).tag(filter)
+                            }
+                        }
+                        .pickerStyle(.inline)
+                    }
                     Button { importFromReminders() } label: {
                         Label("Import from Reminders", systemImage: "arrow.down.doc")
                     }
@@ -351,7 +422,9 @@ private struct TaskCard: View {
 
     private var doneSteps: Int { steps.filter(\.isDone).count }
     private var isBlocked: Bool { !task.isDone && !blockedBy.isEmpty }
-    private var showsSteps: Bool { !task.isDone && !isBlocked && !steps.isEmpty }
+    private var isSetAside: Bool { !task.isDone && task.status == .setAside }
+    private var showsSteps: Bool { !task.isDone && !isBlocked && !isSetAside && !steps.isEmpty }
+    private var isStarted: Bool { task.isStarted(steps: steps) }
 
     private var waitingText: String {
         let first = blockedBy[0].title.isEmpty ? "an untitled task" : blockedBy[0].title
@@ -393,6 +466,22 @@ private struct TaskCard: View {
                                 Label(due, systemImage: "calendar")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
+                            }
+                            if isStarted {
+                                Label("Started", systemImage: "play.circle")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            if !task.isDone, let energy = task.energy.cardText {
+                                Label(energy, systemImage: "bolt")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            if !task.isDone, !isBlocked, !isSetAside, !isStarted, !task.firstStep.isEmpty {
+                                Text("Start with: \(task.firstStep)")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(2)
                             }
                             if showsSteps {
                                 Text("\(doneSteps) of \(steps.count) steps")
@@ -454,7 +543,7 @@ private struct TaskCard: View {
                 }
             }
         }
-        .opacity(isBlocked ? 0.6 : 1)
+        .opacity(isBlocked || isSetAside ? 0.6 : 1)
     }
 }
 
@@ -473,6 +562,9 @@ private struct TaskEditorSheet: View {
         task.blockedByIDs.compactMap { id in liveTasks.first(where: { $0.id == id }) }
     }
     private var possibleBlockers: [TaskItem] { task.possibleBlockers(among: liveTasks) }
+    private var dueIsTomorrow: Bool {
+        task.dueKind == .exact && (task.dueDate.map { Calendar.current.isDateInTomorrow($0) } ?? false)
+    }
 
     var body: some View {
         Anchor.ItemEditorSheet(
@@ -484,6 +576,10 @@ private struct TaskEditorSheet: View {
                 Section {
                     TextField("What needs doing?", text: $task.title, axis: .vertical)
                         .lineLimit(1...4)
+                }
+                Section("First tiny step") {
+                    TextField("The smallest way to begin", text: $task.firstStep, axis: .vertical)
+                        .lineLimit(1...3)
                 }
                 Section {
                     ForEach(steps) { step in
@@ -559,6 +655,21 @@ private struct TaskEditorSheet: View {
                             get: { task.dueDate ?? Date.now },
                             set: { task.setDue(.exact, day: $0) }
                         ), displayedComponents: .date)
+                    }
+                    if !task.isDone && !dueIsTomorrow {
+                        Button("Move to tomorrow") { task.snoozeToTomorrow() }
+                    }
+                }
+                Section("How it is going") {
+                    Picker("Status", selection: $task.status) {
+                        ForEach(TaskStatus.allCases) { status in
+                            Text(status.label).tag(status)
+                        }
+                    }
+                    Picker("Energy it needs", selection: $task.energy) {
+                        ForEach(TaskEnergy.allCases) { energy in
+                            Text(energy.label).tag(energy)
+                        }
                     }
                 }
                 Section("Notes") {
