@@ -163,6 +163,9 @@ enum DemoMode {
                 ("I feel stretched thin", .same),
                 ("I say no to something", .opposite)
             ]).encoded()))
+        context.insert(FeedbackLoopDiagram(
+            title: "How a hard day spreads",
+            graphJSON: DiagramGraph.demoMap().encoded()))
 
         context.insert(FutureNote(unlockDate: now.addingTimeInterval(14 * 86_400), text: "You got through last time too."))
         context.insert(ThreadMessage(timestamp: ago(2), text: "Thanks for checking in on me.", withContactID: demoSam.id))
