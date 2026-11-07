@@ -6,44 +6,44 @@
 //  up" — a checkbox, not a score, and resolved items stay visible (toggled,
 //  not hidden) so the running history is still there to export.
 //
-//  Browse/edit split: the list is something you read (ticking an item off
-//  is a quick action, so it stays here). Adding is its own small compose
-//  sheet; rewording and deleting live behind Edit.
+//  Tap an item to reword it, the plus adds one, and Delete is inside the item
+//  and in its long-press menu. Ticking an item off stays on the card, because
+//  it is a quick action, not editing.
 //
 
 import SwiftUI
 import SwiftData
 
 struct BridgeDraftListView: View {
+    @Environment(\.modelContext) private var modelContext
     @Query(sort: \BridgeDraftItem.createdAt, order: .reverse) private var items: [BridgeDraftItem]
-    @State private var showingComposer = false
-    @State private var showingEditor = false
+    @State private var editing: BridgeDraftItem?
+    @State private var toDelete: BridgeDraftItem?
     @State private var showingExport = false
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: Anchor.Theme.spacing) {
-                if items.isEmpty {
+        Group {
+            if items.isEmpty {
+                ScrollView {
                     Anchor.EmptyState(
                         icon: "doc.text.fill",
                         title: "Nothing to bring up yet",
                         message: "Add things here as they come up, whenever they come up. They'll be waiting for your next session.",
                         actionTitle: "Add something",
                         tint: Anchor.Theme.accent
-                    ) { showingComposer = true }
-                } else {
-                    ForEach(items) { item in
-                        BridgeDraftItemCard(item: item)
-                    }
-                    Button {
-                        showingComposer = true
-                    } label: {
-                        Label("Add something", systemImage: "plus")
-                    }
-                    .buttonStyle(Anchor.SecondaryButtonStyle())
+                    ) { startNew() }
+                    .padding()
                 }
+            } else {
+                List {
+                    ForEach(items) { item in
+                        BridgeDraftItemCard(item: item) { editing = item }
+                            .anchorDeletable { modelContext.delete(item) }
+                            .anchorCardRow()
+                    }
+                }
+                .listStyle(.plain)
             }
-            .padding()
         }
         .anchorBackground()
         .navigationTitle("Bridge draft")
@@ -56,27 +56,39 @@ struct BridgeDraftListView: View {
                     Image(systemName: "square.and.arrow.up")
                 }
                 .accessibilityLabel("Export")
-                if !items.isEmpty {
-                    Anchor.EditToolbarButton { showingEditor = true }
-                }
+                Anchor.AddToolbarButton(label: "Add something") { startNew() }
             }
         }
         .sheet(isPresented: $showingExport) {
             BridgeExportView(items: items)
         }
-        .sheet(isPresented: $showingComposer) {
-            BridgeDraftComposer()
+        .sheet(item: $editing, onDismiss: finishEditing) { item in
+            BridgeDraftItemEditorSheet(item: item) { toDelete = item }
         }
-        .sheet(isPresented: $showingEditor) {
-            Anchor.EditorSheet(title: "Edit draft") {
-                BridgeDraftManageView()
-            }
+    }
+
+    private func startNew() {
+        let new = BridgeDraftItem(text: "")
+        modelContext.insert(new)
+        editing = new
+    }
+
+    /// Runs once the editor has closed, so the editor never reads an item that
+    /// is already gone. One added and left blank is dropped.
+    private func finishEditing() {
+        let deleting = toDelete
+        toDelete = nil
+        if let deleting { modelContext.delete(deleting) }
+        for item in items where item !== deleting
+            && item.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            modelContext.delete(item)
         }
     }
 }
 
 private struct BridgeDraftItemCard: View {
     @Bindable var item: BridgeDraftItem
+    let onEdit: () -> Void
 
     var body: some View {
         Anchor.Card {
@@ -91,80 +103,45 @@ private struct BridgeDraftItemCard: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(item.isResolved ? "Mark as not brought up" : "Mark as brought up")
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(item.text)
-                        .font(.system(.body, design: .rounded))
-                        .foregroundStyle(item.isResolved ? .secondary : .primary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text(item.createdAt.formatted(date: .abbreviated, time: .omitted))
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
+                Button(action: onEdit) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(item.text.isEmpty ? "Untitled" : item.text)
+                            .font(.system(.body, design: .rounded))
+                            .foregroundStyle(item.isResolved ? .secondary : .primary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text(item.createdAt.formatted(date: .abbreviated, time: .omitted))
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
-                Spacer(minLength: 0)
+                .buttonStyle(.plain)
+                .accessibilityHint("Opens the editor")
             }
         }
     }
 }
 
-/// A small compose sheet for adding one item.
-private struct BridgeDraftComposer: View {
-    @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) private var dismiss
-    @State private var text = ""
-
-    private var trimmed: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
+private struct BridgeDraftItemEditorSheet: View {
+    @Bindable var item: BridgeDraftItem
+    let onDelete: () -> Void
 
     var body: some View {
-        NavigationStack {
+        Anchor.ItemEditorSheet(
+            title: item.text.isEmpty ? "New item" : "Item",
+            onDelete: onDelete,
+            deleteQuestion: "Delete this item?"
+        ) {
             Form {
                 Section {
-                    TextField("Something to bring up next session", text: $text, axis: .vertical)
+                    TextField("Something to bring up next session", text: $item.text, axis: .vertical)
                         .lineLimit(3...8)
                 }
-            }
-            .anchorSettingsStyle()
-            .navigationTitle("Add to draft")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Add") {
-                        guard !trimmed.isEmpty else { return }
-                        modelContext.insert(BridgeDraftItem(text: trimmed))
-                        dismiss()
-                    }
-                    .disabled(trimmed.isEmpty)
+                Section {
+                    Toggle("Already brought up", isOn: $item.isResolved)
                 }
             }
         }
-    }
-}
-
-/// Reword or delete items. Presented from Edit.
-private struct BridgeDraftManageView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query(sort: \BridgeDraftItem.createdAt, order: .reverse) private var items: [BridgeDraftItem]
-
-    var body: some View {
-        List {
-            ForEach(items) { item in
-                BridgeDraftEditRow(item: item)
-            }
-            .onDelete { offsets in
-                for index in offsets { modelContext.delete(items[index]) }
-            }
-        }
-        .toolbar { EditButton() }
-    }
-}
-
-private struct BridgeDraftEditRow: View {
-    @Bindable var item: BridgeDraftItem
-
-    var body: some View {
-        TextField("Item", text: $item.text, axis: .vertical)
-            .font(.system(.subheadline, design: .rounded))
     }
 }

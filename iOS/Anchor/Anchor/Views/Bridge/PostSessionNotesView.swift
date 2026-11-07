@@ -6,8 +6,8 @@
 //  specific AppointmentOccurrence via postSessionNoteEntryID rather than
 //  living as an untethered journal entry.
 //
-//  Browse/edit split: the list and each session's notes are read screens;
-//  writing happens in a sheet behind Edit.
+//  Tap a session to write or change its notes. There is no separate page
+//  to read them on first, so it is one tap, not two.
 //
 
 import SwiftUI
@@ -15,6 +15,9 @@ import SwiftData
 
 struct PostSessionNotesView: View {
     @Bindable var series: AppointmentSeries
+    @Environment(\.modelContext) private var modelContext
+    @State private var editing: AppointmentOccurrence?
+    @State private var lastEdited: AppointmentOccurrence?
 
     private var pastOccurrences: [AppointmentOccurrence] {
         series.occurrences
@@ -34,8 +37,9 @@ struct PostSessionNotesView: View {
                     )
                 } else {
                     ForEach(pastOccurrences) { occurrence in
-                        NavigationLink {
-                            PostSessionNoteView(occurrence: occurrence)
+                        Button {
+                            lastEdited = occurrence
+                            editing = occurrence
                         } label: {
                             Anchor.Card {
                                 HStack {
@@ -52,9 +56,11 @@ struct PostSessionNotesView: View {
                                         .font(.caption.weight(.semibold))
                                         .foregroundStyle(.tertiary)
                                 }
+                                .contentShape(Rectangle())
                             }
                         }
                         .buttonStyle(.plain)
+                        .accessibilityHint("Opens the notes")
                     }
                 }
             }
@@ -63,49 +69,27 @@ struct PostSessionNotesView: View {
         .anchorBackground()
         .navigationTitle("Post-session notes")
         .navigationBarTitleDisplayMode(.inline)
-    }
-}
-
-/// One session's notes, as something to read. Edit opens the writing sheet.
-private struct PostSessionNoteView: View {
-    let occurrence: AppointmentOccurrence
-    @Environment(\.modelContext) private var modelContext
-    @State private var entry: JournalEntry?
-    @State private var showingEditor = false
-
-    var body: some View {
-        ScrollView {
-            VStack(spacing: Anchor.Theme.spacing) {
-                Anchor.TextCard(
-                    icon: "note.text",
-                    title: "Your notes",
-                    text: entry?.text ?? "",
-                    placeholder: "No notes for this session yet. Tap Edit to write some.",
-                    tint: Anchor.Theme.accent
-                )
-            }
-            .padding()
-        }
-        .anchorBackground()
-        .navigationTitle(occurrence.scheduledDate.formatted(date: .abbreviated, time: .omitted))
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Anchor.EditToolbarButton { showingEditor = true }
-            }
-        }
-        .sheet(isPresented: $showingEditor, onDismiss: loadEntry) {
-            Anchor.EditorSheet(title: "Session notes") {
+        .sheet(item: $editing, onDismiss: dropBlankNote) { occurrence in
+            Anchor.ItemEditorSheet(title: occurrence.scheduledDate.formatted(date: .abbreviated, time: .omitted)) {
                 PostSessionNoteEditor(occurrence: occurrence)
             }
         }
-        .onAppear(perform: loadEntry)
     }
 
-    private func loadEntry() {
-        guard let id = occurrence.postSessionNoteEntryID else { return }
+    /// Opening a session's notes creates an empty entry to write into. If
+    /// nothing was written, remove it, so the session doesn't say "Has notes".
+    private func dropBlankNote() {
+        guard let occurrence = lastEdited, let id = occurrence.postSessionNoteEntryID else { return }
+        lastEdited = nil
         let descriptor = FetchDescriptor<JournalEntry>(predicate: #Predicate { $0.id == id })
-        entry = try? modelContext.fetch(descriptor).first
+        guard let entry = try? modelContext.fetch(descriptor).first else {
+            occurrence.postSessionNoteEntryID = nil
+            return
+        }
+        if entry.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            modelContext.delete(entry)
+            occurrence.postSessionNoteEntryID = nil
+        }
     }
 }
 

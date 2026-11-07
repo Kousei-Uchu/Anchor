@@ -57,13 +57,18 @@ struct AppointmentPrepView: View {
                         onAddToNotes: appendToNotes
                     )
 
-                    Anchor.TextCard(
-                        icon: "list.bullet.clipboard.fill",
-                        title: "Prep notes",
-                        text: entry?.text ?? "",
-                        placeholder: "Nothing written yet. Tap Edit to jot down what you want to bring up.",
-                        tint: Anchor.Theme.accent
-                    )
+                    Button { showingEditor = true } label: {
+                        Anchor.TextCard(
+                            icon: "list.bullet.clipboard.fill",
+                            title: "Prep notes",
+                            text: entry?.text ?? "",
+                            placeholder: "Nothing written yet. Tap here to jot down what you want to bring up.",
+                            tint: Anchor.Theme.accent
+                        )
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Opens the editor")
                 } else {
                     Anchor.EmptyState(
                         icon: "calendar",
@@ -78,15 +83,8 @@ struct AppointmentPrepView: View {
         .anchorBackground()
         .navigationTitle("Session prep")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                if nextOccurrence != nil {
-                    Anchor.EditToolbarButton { showingEditor = true }
-                }
-            }
-        }
         .sheet(isPresented: $showingEditor) {
-            Anchor.EditorSheet(title: "Prep notes") {
+            Anchor.ItemEditorSheet(title: "Prep notes") {
                 if let entry {
                     Form {
                         Section {
