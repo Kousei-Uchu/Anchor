@@ -1,6 +1,6 @@
 # Anchor — Patch Plan (v2-recovery)
 
-*Living document. Last updated: 7 Nov 2026, after Patch 16 was written (Patches 1 to 13b are pushed; none confirmed building; Patches 15 and 16 await your paste, in that order).*
+*Living document. Last updated: 7 Nov 2026, after Patch 14a was written (Patches 1 to 16 are pushed, `15e1daf` at the time; none confirmed building; Patch 14a awaits your paste).*
 
 > ## READ THIS FIRST: THIS FILE IS THE PROMPT
 >
@@ -44,13 +44,16 @@ The source code repository is at <https://github.com/Kousei-Uchu/Anchor/tree/v2-
 | 12c: Plan screens, part 3: Decision presets | 🟡 Pushed by you; build not yet confirmed |
 | 12d: Plan screens, part 4: Appointments | 🟡 Pushed by you; build not yet confirmed |
 | 13a: Edit pattern on Now and Recovery: Affirmations, De-escalation scripts, Who I'm doing this for, Before tracking | 🟡 Pushed by you; build not yet confirmed |
-| 13b: Edit pattern on Bridge and the Journal entry preview; old Edit components removed | 🟡 Written (`patch-13b.sh`); awaiting your paste and build |
-| 14: Message log rework | ⏸ Waiting on D8 (your answer on the message log's main function) |
-| 15: Tasks: `TaskItem`, carry-over from Next hour only, basic list, Plan widget, export and import, demo data | 🟡 Written (`patch-15.sh`); awaiting your paste and build (paste after Patch 13b) |
-| 16: Task due dates, fuzzy values, grouping by time | 🟡 Written (`patch-16.sh`); awaiting your paste and build (paste after Patch 15) |
+| 13b: Edit pattern on Bridge and the Journal entry preview; old Edit components removed | 🟡 Pushed by you (`92d2c67`); build not yet confirmed |
+| 14a: Message log, part 1: quick write to a person, per-person history, Send again and Copy, a Write button on the widget | 🟡 Written (`patch-14a.sh`); awaiting your paste and build |
+| 14b: Message log, part 2: voice notes (record, play, attach when sending through Messages) | ⬜ Next |
+| 15: Tasks: `TaskItem`, carry-over from Next hour only, basic list, Plan widget, export and import, demo data | 🟡 Pushed by you (`698b6c0`); build not yet confirmed |
+| 16: Task due dates, fuzzy values, grouping by time | 🟡 Pushed by you (`15e1daf`); build not yet confirmed |
 | 17 onward | Not started |
 
 ## Change log of this plan
+
+- **7 Nov 2026 (25):** D4 to D8 answered (see the table); Patch 14 split in two because it came to about 600 lines. **What `main` shows about the message log:** the original screen had the composer on the same screen, with the "About" picker, the text box and the Save and Send buttons under the list, so writing to someone and sending it was one screen. The later "separate settings from information" commit turned the log into a read-only list and moved the composer behind a sheet, which is the loss you felt. Nothing on `main` ever recorded or played audio: `audioFileName` was an unused field. So quick sending is a regression to undo and voice notes are new, and per-person history was only ever a contact name on each row. **Patch 14a:** a "Write to" row of your contacts at the top of the log opens the composer already set to that person, with the keyboard up; the plus does the same for whoever the log is filtered to. A small menu narrows the log to one person (only people who have something in it are listed). Tapping a message now offers Send again (Messages, or Open Discord) and Copy text, besides Delete. The Message log widget has a Write button under it and an honest caption. `ThreadMessageComposer` is no longer private so the widget can open it. The demo's one message is now tied to Sam. **Patch 14b (next):** voice notes. Help text, CHANGELOG and this file are updated. Not compiled here.
 
 - **7 Nov 2026 (24):** Patch 16 written: task timing. Two new fields on `TaskItem` (`dueKind`, `dueDate`), both with defaults so no store migration is needed. The choices are No date, As soon as I can, Today, This week, This month, Someday, or a particular day, picked in a new "When" section of the task sheet. For the loose choices the stored date is the last moment of that day, week or month, so a plan that has passed can be told from one still ahead. The list is grouped Today, This week, Later and No date (Waiting arrives with dependencies in Patch 18). As soon as I can and a particular day that has arrived sit in Today. **Overdue is quiet:** a plan whose time has passed moves into Today with a plain line such as "Carried over from this week" or "Planned for Tue 4 Nov"; no red, no "late", no count. Reorder works within a group and leaves the other groups alone. Now's card and the Plan widget show open tasks in the same order. Export carries the two fields (optional, so older files import). The demo has a task for today and one for this week. Not compiled here.
 - **7 Nov 2026 (23):** Patch 15 written; Patch 14 is skipped for now because it needs your answer to D8. **Tasks:** a new `TaskItem` model (title, notes, done, created and completed dates, order, an optional Reminders link). Every field after the title has a default, so Patches 16 to 19 can add due dates, subtasks, dependencies and status without a store migration. **No migration plan was added:** adding a model to an existing SwiftData store is an automatic lightweight change, and a versioned plan is only worth writing once a field changes shape. If you would rather have one first, say so. **Carry-over:** the first launch after this copies any "Next hour only" rows into tasks, saves them, marks itself done and removes the old rows; if the saved store could not open it does nothing. `NextHourItem` stays in the schema, unused, until a later release removes it. **Screens:** Plan gains a Tasks widget (after Appointments in the default order; saved layouts get it at the end) and a classic-layout tile; the Tasks screen has tap to edit, the plus, a quick add bar, a labelled Reorder, swipe or long-press delete, a Done section with Clear done, and Import from Reminders. Now's "Next hour only" card is now a Tasks card showing the first four open tasks, with quick add and the header opening the list. **Dropped:** the old bell on the add row that also created a Reminders item; Reminders is import and tick-off only, per D2's recommendation. The Reminders permission text and Privacy page say so. Export, import, clear all and the data counts include tasks (the export key is optional, so older files still import). Demo data seeds three tasks. The new views live in `NextHourChecklistView.swift` so the project file needs no change; a rename can wait for a tidy-up patch. The web demo (`DemoApp.tsx`) still says "Next hour only" and is left alone while the web demo is deferred. Not compiled here.
@@ -124,11 +127,11 @@ The branch did not build because `iOS/Anchor/Anchor/Views/Widgets/` was untracke
 | D1 | Where is the missing widget-layout file? | Patch 0 | — | ✅ Closed |
 | D2 | Keep the Reminders (EventKit) import from the old "Next Hour" list? | Patch 15 | Keep as an optional import on the task list | ✅ Assumed, 7 Nov 2026: Patch 15 follows the recommendation (import only). Say if you want it changed. |
 | D3 | Demo strategy (point 25): shared-data rebuild with parity checks, or cross-platform rewrite? | Patches 49–50, 54 | Decide with D4 | Open |
-| D4 | Android: real goal or "nice to know"? | Point 28, D3, encryption (Patches 33–35) | Finish iOS first, decide *before* Patch 49 | Open |
-| D5 | Encryption approach (point 20) | Patches 33–35 | Field-level encryption, Keychain key, encrypted exports | Open |
-| D6 | Feedback loops: loops only, or loops plus free systems maps? | Patches 26–28 | Both, loops by default | Open |
-| D7 | Point 27: unlisted page named `/demo-preview`, hidden from nav/sitemap, `noindex`? (`/demo` already exists) | Patch 51 | Yes | Open |
-| D8 | Message log: what was its "main function" for you — voice notes, quick sending, or per-person history? | Patch 14 | — | Open |
+| D4 | Android: real goal or "nice to know"? | Point 28, D3, encryption (Patches 33–35) | Finish iOS first, decide *before* Patch 49 | ✅ Closed 7 Nov 2026: planned, but far in the future. Treat it as if it does not exist for now; nothing in the Swift patches waits on it. |
+| D5 | Encryption approach (point 20) | Patches 33–35 | Field-level encryption, Keychain key, encrypted exports | ✅ Closed 7 Nov 2026: option b (field-level encryption, Keychain key, encrypted exports). The earlier idea of revisiting this for React Native is dropped, since D4 is parked. Voice note files (Patch 14b) are not covered by field-level encryption of text fields; Patches 34 and 35 must decide how to protect them. |
+| D6 | Feedback loops: loops only, or loops plus free systems maps? | Patches 26–28 | Both, loops by default | ✅ Closed 7 Nov 2026: both, loops by default. |
+| D7 | Point 27: unlisted page named `/demo-preview`, hidden from nav/sitemap, `noindex`? (`/demo` already exists) | Patch 51 | Yes | ✅ Closed 7 Nov 2026: yes to unlisted and `noindex`, but the page advertises the TestFlight beta sign-ups, so it is named and framed around that, not around a demo. Working route name: `/beta` (change it if you prefer another). |
+| D8 | Message log: what was its "main function" for you — voice notes, quick sending, or per-person history? | Patch 14 | — | ✅ Closed 7 Nov 2026: all three. Checked `main` first (see the change log, entry 25): it explains the quick sending, and voice notes never existed, so 14a and 14b build all three. |
 | D9 | How long to keep investing in Swift UI polish before migrating to React Native? Polish-only patches (5, 7, 8–9) would be rewritten. | Phases B–D | Do bug fixes and behaviour first (1–4, 6, 10–14). Pause polish-only patches once a migration date exists. | ✅ Closed 7 Nov 2026: keep polishing in Swift for now. Revisit when a migration date exists. |
 
 **Update, 7 Nov 2026:** D3 and D4 answered in a comment. Android is wanted eventually, via a move from Swift to React Native, with demo and Android builds updating automatically. Both are parked as "eventually planned": Patches 49–50 and 54 are deferred. D5 should be revisited once the migration is decided (see point 28).
@@ -274,7 +277,7 @@ The branch did not build because `iOS/Anchor/Anchor/Views/Widgets/` was untracke
 
 **26. Remotion video.** (1) Refresh the existing promo with new screenshots and features. The compositions are duplicated (`remotion-project/src/Promo.tsx` and `website/src/promo/Promo.tsx`, synced by `sync:promo`); make `remotion-project` the single source. (2) A longer "full tour" video, scripted from the guide registry so captions match the docs. Do this **after** features stabilise.
 
-**27. Unlisted demo-advert page.** `/demo-preview` (D7): not linked from header or footer, excluded from the sitemap, `noindex`, with the pitch and a "coming soon" state behind a flag. `/demo` already exists (the current React demo), so naming needs a decision.
+**27. Unlisted beta sign-up page.** (D7, answered) The page advertises the TestFlight beta sign-ups, so it is named and framed around that, working route `/beta`: not linked from header or footer, excluded from the sitemap, `noindex`, with the pitch, a clear way to sign up and a flag to switch the sign-up on and off. `/demo` already exists (the current React demo) and stays separate.
 
 ### Review and platform (12, 28)
 
@@ -354,7 +357,8 @@ Order: unblock → visible quick wins → one shared pattern later screens inher
 | **13a** | Apply to Now and Recovery (Affirmations, De-escalation scripts, motivations, Before tracking) | 13 | M | 🟡 |
 | **13b** | Apply to Bridge and the Journal entry preview; then remove `EditToolbarButton` and `EditorSheet` | 13 | M | 🟡 |
 | ~~13~~ | ~~Apply to Bridge, Now (including De-escalation scripts and Affirmations, reached from Plan) and Recovery screens; then remove `EditToolbarButton` and `EditorSheet`~~ (split into 13a and 13b) | 13 | | |
-| **14** | Message log review and rework (needs D8); includes the widget caption and a write action | 10 | M | ⬜ |
+| **14a** | Message log part 1: quick write to a person, per-person history, Send again and Copy, widget caption and Write button | 10 | M | 🟡 |
+| **14b** | Message log part 2: voice notes | 10 | M | ⬜ |
 
 Widget drag-and-drop (Patch 20) is independent of the planner and can be pulled forward any time.
 
@@ -422,7 +426,7 @@ First add an explicit SwiftData migration plan: a store that fails to open shows
 | **48** | Website: About, FAQ, Privacy update | 24 | S | ⬜ |
 | **49** | Demo route A: shared seed and guide data feed the React demo | 25 | M | ⬜ |
 | **50** | Demo route C: CI screenshot flow and parity check | 25 | M | ⬜ |
-| **51** | Unlisted demo-advert page | 27 | S | ⬜ |
+| **51** | Unlisted TestFlight beta sign-up page (`/beta`, noindex, not in nav or sitemap) | 27 | S | ⬜ |
 | **52** | Update existing Remotion promo; single source | 26 | M | ⬜ |
 | **53** | Long "full tour" video, split into per-tab scenes | 26 | L (split) | ⬜ |
 | **54** | Android decision write-up, optional prototype spike | 28 | S | ⬜ |
@@ -512,4 +516,4 @@ A reminder you set yourself, per person, **off by default**. Lock-screen text is
 
 ## Appendix B: Suggested next session
 
-Patch **17** (subtasks with collapse and derived progress), once Patches 1 to 16 build. Patch 14 still needs your answer to D8; Patch 20 (widget drag and drop) is independent of both. D9 is closed, so Journal polish carries on in Swift.
+Patch **14b** (voice notes on messages), then Patch **17** (subtasks with collapse and derived progress), once Patches 1 to 16 build. Patch 20 (widget drag and drop) is independent of both. D4 to D9 are all answered, so nothing is waiting on a decision.
