@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 30g: press and hold a journal entry, or use the page button when one is open, to copy its first line into Things to raise for your next session; the entry itself is left as it was.
 - Patch 30f: Bridge has Personal goals: goals of your own in your own words, each with short dated notes along the way, and a place for ones you have reached or set aside; nothing is scored.
 - Patch 30e: an item in Things to raise can be marked as a question to ask, with room to write the answer after your session; the answer shows on the card and in the PDF export.
 - Patch 30d: a note to future you can be a letter you open when you choose: write a few words after "Open when" and the letter itself; it has no date, stays closed until you tap Open, and nothing counts or reminds you about it.

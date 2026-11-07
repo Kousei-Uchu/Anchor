@@ -662,6 +662,22 @@ final class BridgeDraftItem {
     }
 }
 
+extension BridgeDraftItem {
+    /// A Things to raise item made from a journal entry: its first line with
+    /// any heading, bullet or quote mark dropped, up to 160 characters. Nil
+    /// when the entry has no words. The entry itself is never changed or
+    /// linked, so the item can be reworded freely.
+    static func raising(fromJournal text: String) -> BridgeDraftItem? {
+        guard let first = text.split(separator: "\n")
+            .map({ $0.trimmingCharacters(in: .whitespaces) })
+            .first(where: { !$0.isEmpty }) else { return nil }
+        let marks = CharacterSet(charactersIn: "#-*>").union(.whitespaces)
+        let cleaned = first.trimmingCharacters(in: marks)
+        guard !cleaned.isEmpty else { return nil }
+        return BridgeDraftItem(text: String(cleaned.prefix(160)))
+    }
+}
+
 @Model
 final class FeedbackLoopDiagram {
     @Attribute(.unique) var id: UUID
