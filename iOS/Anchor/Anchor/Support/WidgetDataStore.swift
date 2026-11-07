@@ -11,6 +11,7 @@
 //
 
 import Foundation
+import ActivityKit
 
 /// How long the current run has lasted, in the largest sensible unit, never
 /// as "0 days". Lives here because this file is compiled into both the app
@@ -169,5 +170,19 @@ enum CounterWidgetStore {
         guard let defaults = UserDefaults(suiteName: WidgetDataStore.appGroupID),
               let data = defaults.data(forKey: key) else { return [] }
         return (try? JSONDecoder().decode([CounterWidgetItem].self, from: data)) ?? []
+    }
+}
+
+/// The focus timer on the lock screen. Compiled into the app and the widget
+/// extension. It shows only the phase and the time, never the task, for the
+/// same reason the lock-screen widget never shows plan content.
+struct PomodoroActivityAttributes: ActivityAttributes {
+    struct ContentState: Codable, Hashable {
+        var phaseTitle: String
+        var isBreak: Bool
+        var startDate: Date
+        var endDate: Date
+        var isPaused: Bool
+        var pausedRemaining: TimeInterval
     }
 }

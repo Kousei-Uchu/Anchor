@@ -16,6 +16,7 @@ import SwiftData
 import EventKit
 import UserNotifications
 import UIKit
+import ActivityKit
 
 // MARK: - Reminders (optional import)
 
@@ -821,6 +822,7 @@ enum PomodoroSettings {
     static let hapticKey = "anchor.focus.haptic"
     static let alertsKey = "anchor.focus.alertsEnabled"
     static let soundKey = "anchor.focus.alertSound"
+    static let lockScreenKey = "anchor.focus.lockScreen"
 
     private static func int(_ key: String, _ fallback: Int) -> Int {
         UserDefaults.standard.object(forKey: key) as? Int ?? fallback
@@ -838,6 +840,13 @@ enum PomodoroSettings {
     static var hapticOn: Bool { bool(hapticKey, true) }
     static var alertsOn: Bool { bool(alertsKey, false) }
     static var soundOn: Bool { bool(soundKey, false) }
+    static var lockScreenOn: Bool { bool(lockScreenKey, false) }
+
+    /// Called when the lock screen switch changes, here or in Settings.
+    @MainActor
+    static func lockScreenChanged(_ isOn: Bool) {
+        PomodoroTimer.shared.refreshActivity()
+    }
 
     /// Called when the alerts switch changes, here or in Settings. The system
     /// permission question is asked now, the first time it is switched on.
@@ -888,7 +897,12 @@ final class PomodoroTimer: ObservableObject {
 
     /// Gives the timer somewhere to record finished sessions. Called by the
     /// screens that can start it.
-    func use(_ context: ModelContext) { self.context = context }
+    func use(_ context: ModelContext) {
+        self.context = context
+        // A lock screen timer left behind by an earlier run of the app, which
+        // iOS closed while it was going, is cleared away.
+        if state == .idle { endAllActivities() }
+    }
 
     /// Whether the task can be changed now: not while a focus phase is under way.
     var canChangeTask: Bool { state == .idle || state == .waiting || phase.isBreak }
@@ -929,6 +943,7 @@ final class PomodoroTimer: ObservableObject {
         state = .running
         startTicker()
         scheduleAlert()
+        syncActivity()
     }
 
     func pause() {
@@ -937,6 +952,7 @@ final class PomodoroTimer: ObservableObject {
         state = .paused
         stopTicker()
         cancelAlert()
+        syncActivity()
     }
 
     func resume() {
@@ -945,6 +961,7 @@ final class PomodoroTimer: ObservableObject {
         state = .running
         startTicker()
         scheduleAlert()
+        syncActivity()
     }
 
     /// Ends the timer. Nothing is recorded for a phase that did not finish.
@@ -955,6 +972,7 @@ final class PomodoroTimer: ObservableObject {
         phase = .focus
         round = 1
         taskID = nil
+        syncActivity()
     }
 
     /// Skips the rest of a break and waits for you to start the next focus.
@@ -964,6 +982,7 @@ final class PomodoroTimer: ObservableObject {
         cancelAlert()
         advance(after: phase)
         state = .waiting
+        syncActivity()
     }
 
     // MARK: Ticking
@@ -996,6 +1015,7 @@ final class PomodoroTimer: ObservableObject {
         }
         advance(after: finished)
         state = .waiting
+        syncActivity()
         if lateBy < 5, PomodoroSettings.autoStart { startPhase() }
     }
 
@@ -1023,6 +1043,54 @@ final class PomodoroTimer: ObservableObject {
         guard let task = try? context.fetch(descriptor).first else { return }
         task.focusSessions += 1
         task.focusMinutes += Int((phaseLength / 60).rounded())
+    }
+
+    // MARK: Lock screen timer
+
+    private var activity: Activity<PomodoroActivityAttributes>?
+
+    /// Re-applies the lock screen timer after the setting changes.
+    func refreshActivity() { syncActivity() }
+
+    /// Shows, updates or removes the lock screen timer to match the timer. It
+    /// is only there while a phase is running or paused, only when it is
+    /// switched on, and it never carries the task's name.
+    private func syncActivity() {
+        guard PomodoroSettings.lockScreenOn,
+              ActivityAuthorizationInfo().areActivitiesEnabled,
+              state == .running || state == .paused else {
+            endActivity()
+            return
+        }
+        let content = ActivityContent(
+            state: PomodoroActivityAttributes.ContentState(
+                phaseTitle: phase.title,
+                isBreak: phase.isBreak,
+                startDate: endDate.addingTimeInterval(-max(phaseLength, 1)),
+                endDate: endDate,
+                isPaused: state == .paused,
+                pausedRemaining: pausedRemaining
+            ),
+            staleDate: state == .running ? endDate : nil
+        )
+        if let activity {
+            Task { await activity.update(content) }
+        } else {
+            activity = try? Activity.request(attributes: PomodoroActivityAttributes(), content: content, pushType: nil)
+        }
+    }
+
+    private func endActivity() {
+        guard let activity else { return }
+        self.activity = nil
+        Task { await activity.end(nil, dismissalPolicy: .immediate) }
+    }
+
+    private func endAllActivities() {
+        activity = nil
+        for running in Activity<PomodoroActivityAttributes>.activities {
+            Task { await running.end(nil, dismissalPolicy: .immediate) }
+        }
     }
 
     // MARK: Alert when the phase ends in the background
@@ -1114,6 +1182,7 @@ struct PomodoroView: View {
     @ObservedObject private var timer = PomodoroTimer.shared
     @Query(sort: \TaskItem.sortOrder) private var tasks: [TaskItem]
     @AppStorage(PomodoroSettings.alertsKey) private var alertsOn = false
+    @AppStorage(PomodoroSettings.lockScreenKey) private var lockScreenOn = false
     @AppStorage(PomodoroSettings.breaksKey) private var breaksOn = true
     @AppStorage(PomodoroSettings.roundsKey) private var rounds = 4
 
@@ -1171,6 +1240,15 @@ struct PomodoroView: View {
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                     }
+                    if !lockScreenOn {
+                        HStack(spacing: 4) {
+                            Text("The lock screen timer is off.")
+                            Button("Turn on") { lockScreenOn = true }
+                        }
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                    }
                 }
                 .padding()
                 .frame(maxWidth: .infinity)
@@ -1200,6 +1278,7 @@ struct PomodoroView: View {
                 UIApplication.shared.isIdleTimerDisabled = state == .running
             }
             .onChange(of: alertsOn) { _, isOn in PomodoroSettings.alertsChanged(isOn) }
+            .onChange(of: lockScreenOn) { _, isOn in PomodoroSettings.lockScreenChanged(isOn) }
         }
     }
 
@@ -1278,6 +1357,7 @@ struct PomodoroSettingsView: View {
     @AppStorage(PomodoroSettings.hapticKey) private var haptic = true
     @AppStorage(PomodoroSettings.alertsKey) private var alertsOn = false
     @AppStorage(PomodoroSettings.soundKey) private var sound = false
+    @AppStorage(PomodoroSettings.lockScreenKey) private var lockScreen = false
 
     var body: some View {
         Form {
@@ -1303,12 +1383,14 @@ struct PomodoroSettingsView: View {
                 if alertsOn {
                     Anchor.SettingsToggle(title: "Sound with the alert", isOn: $sound)
                 }
+                Anchor.SettingsToggle(title: "Show the timer on the lock screen", isOn: $lockScreen)
             }
         }
         .anchorSettingsStyle()
         .navigationTitle("Timer settings")
         .navigationBarTitleDisplayMode(.inline)
         .onChange(of: alertsOn) { _, isOn in PomodoroSettings.alertsChanged(isOn) }
+        .onChange(of: lockScreen) { _, isOn in PomodoroSettings.lockScreenChanged(isOn) }
     }
 }
 
