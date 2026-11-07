@@ -809,15 +809,19 @@ struct TaskItemDTO: Codable {
     var completedAt: Date?; var createdAt: Date; var sortOrder: Int
     /// Optional so exports made before tasks had dates still import.
     var dueKind: String?; var dueDate: Date?
+    /// Optional so exports made before tasks had steps still import.
+    var parentID: UUID?; var subtasksCollapsed: Bool?
     init(_ m: TaskItem) {
         id = m.id; title = m.title; notes = m.notes; isDone = m.isDone
         completedAt = m.completedAt; createdAt = m.createdAt; sortOrder = m.sortOrder
         dueKind = m.dueKind.rawValue; dueDate = m.dueDate
+        parentID = m.parentID; subtasksCollapsed = m.subtasksCollapsed
     }
     func toModel() -> TaskItem {
         TaskItem(id: id, title: title, notes: notes, isDone: isDone,
                  completedAt: completedAt, createdAt: createdAt, sortOrder: sortOrder,
-                 dueKind: TaskDueKind(rawValue: dueKind ?? "") ?? .noDate, dueDate: dueDate)
+                 dueKind: TaskDueKind(rawValue: dueKind ?? "") ?? .noDate, dueDate: dueDate,
+                 parentID: parentID, subtasksCollapsed: subtasksCollapsed ?? false)
     }
 }
 

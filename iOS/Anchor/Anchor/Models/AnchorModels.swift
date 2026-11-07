@@ -613,6 +613,12 @@ final class TaskItem {
     /// that a plan which has passed can be told apart from one still ahead.
     var dueKind: TaskDueKind = TaskDueKind.noDate
     var dueDate: Date? = nil
+    /// A step is a task with a `parentID`: the id of the task it belongs to.
+    /// Steps share this model so ticking, ordering, export and import all
+    /// work as they do for tasks, and no store migration is needed.
+    var parentID: UUID? = nil
+    /// Whether this task's steps are folded away on the list.
+    var subtasksCollapsed: Bool = false
 
     init(
         id: UUID = UUID(),
@@ -624,7 +630,9 @@ final class TaskItem {
         sortOrder: Int = 0,
         reminderIdentifier: String? = nil,
         dueKind: TaskDueKind = .noDate,
-        dueDate: Date? = nil
+        dueDate: Date? = nil,
+        parentID: UUID? = nil,
+        subtasksCollapsed: Bool = false
     ) {
         self.id = id
         self.title = title
@@ -636,6 +644,8 @@ final class TaskItem {
         self.reminderIdentifier = reminderIdentifier
         self.dueKind = dueKind
         self.dueDate = dueDate
+        self.parentID = parentID
+        self.subtasksCollapsed = subtasksCollapsed
     }
 
     /// Ticks the task off or back on, keeping `completedAt` in step.
@@ -746,10 +756,35 @@ extension TaskItem {
 
     /// Open tasks in the order the list shows them: group first, then your own order.
     static func listOrder(_ tasks: [TaskItem], now: Date = .now) -> [TaskItem] {
-        tasks.filter { !$0.isDone }.sorted {
+        topLevel(tasks).filter { !$0.isDone }.sorted {
             let a = $0.bucket(now: now), b = $1.bucket(now: now)
             return a.rawValue != b.rawValue ? a.rawValue < b.rawValue : $0.sortOrder < $1.sortOrder
         }
+    }
+}
+
+extension TaskItem {
+    /// Tasks that are not steps of another task. A step whose task is gone is
+    /// treated as a task of its own, so it never drops out of sight.
+    static func topLevel(_ tasks: [TaskItem]) -> [TaskItem] {
+        let ids = Set(tasks.map(\.id))
+        return tasks.filter { task in
+            guard let parent = task.parentID else { return true }
+            return !ids.contains(parent)
+        }
+    }
+
+    /// The steps of one task, in the order you set.
+    static func steps(of task: TaskItem, in tasks: [TaskItem]) -> [TaskItem] {
+        tasks.filter { $0.parentID == task.id }.sorted { $0.sortOrder < $1.sortOrder }
+    }
+}
+
+extension ModelContext {
+    /// Deleting a task takes its steps with it.
+    func deleteTask(_ task: TaskItem, among tasks: [TaskItem]) {
+        for step in TaskItem.steps(of: task, in: tasks) { delete(step) }
+        delete(task)
     }
 }
 

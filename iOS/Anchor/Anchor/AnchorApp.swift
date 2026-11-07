@@ -93,6 +93,9 @@ enum DemoMode {
         let reply = TaskItem(title: "Reply to one message", notes: "Just the easy one.", sortOrder: 1)
         reply.setDue(.thisWeek)
         context.insert(reply)
+        context.insert(TaskItem(title: "Pick the easy one", isDone: true, completedAt: ago(0, hour: 1), sortOrder: 0, parentID: reply.id))
+        context.insert(TaskItem(title: "Write two lines", sortOrder: 1, parentID: reply.id))
+        context.insert(TaskItem(title: "Send it", sortOrder: 2, parentID: reply.id))
         context.insert(TaskItem(title: "Step outside for five minutes", isDone: true, completedAt: ago(0, hour: 2), sortOrder: 2))
 
         context.insert(Affirmation(text: "I got through today. That counts.", sortOrder: 0))
