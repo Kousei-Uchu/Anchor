@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 30c: you can write short message starters of your own, from the speech bubble in the Message log or while writing; a tap puts one in the message box, and Quick contact on Now offers them too. Nothing is written for you and nothing is sent unless you send it.
 - Patch 30b: Thread has a Boundaries list: a few sections for what you would like people to know, what helps and what does not, which you can rename, reorder, hide and mark as shareable; Share sends only the sections you marked.
 - Patch 30a: the safety plan is a list of sections you own: rename, add, reorder, hide and delete them, and give each an icon and a colour; your existing four sections are copied across as they were, and one section is chosen for reminder quotes.
 - Patch 28: a diagram can start from a template (a few loops and a map, from the plus menu), and the menu on a diagram's page can share it as a picture or a PDF, with or without the written reading; the files are made on the device and removed when the sheet closes.

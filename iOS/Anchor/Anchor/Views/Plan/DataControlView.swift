@@ -41,6 +41,7 @@ struct DataControlView: View {
     @Query private var routines: [Routine]
     @Query private var itemLists: [ItemList]
     @Query private var boundarySections: [BoundarySection]
+    @Query private var messageStarters: [MessageStarter]
     @Query private var recoveryCounters: [RecoveryCounter]
     @Query private var recoveryMotivations: [RecoveryMotivation]
     @Query private var recoveryDayEntries: [RecoveryDayEntry]
@@ -89,6 +90,7 @@ struct DataControlView: View {
                 countRow("Routines", routines.count, icon: "list.number")
                 countRow("Item lists", itemLists.count, icon: "suitcase")
                 countRow("Boundaries sections", boundarySections.count, icon: "hand.raised.fill")
+                countRow("Message starters", messageStarters.count, icon: "text.bubble")
                 countRow("Recovery counters", recoveryCounters.count, icon: "calendar.badge.checkmark")
                 countRow("Urges logged", recoveryUrges.count, icon: "wind")
             }
@@ -209,7 +211,8 @@ struct DataControlView: View {
             quickLists: quickLists.map(QuickListDTO.init),
             routines: routines.map(RoutineDTO.init),
             itemLists: itemLists.map(ItemListDTO.init),
-            boundarySections: boundarySections.map(BoundarySectionDTO.init)
+            boundarySections: boundarySections.map(BoundarySectionDTO.init),
+            messageStarters: messageStarters.map(MessageStarterDTO.init)
         )
         guard let data = try? JSONEncoder.anchorExport.encode(export) else { return }
         writeAndShare(data: data, filename: "anchor-export-\(fileTimestamp()).json")
@@ -252,6 +255,7 @@ struct DataControlView: View {
         let existingRoutineIDs = Set(routines.map(\.id))
         let existingItemListIDs = Set(itemLists.map(\.id))
         let existingBoundaryIDs = Set(boundarySections.map(\.id))
+        let existingStarterIDs = Set(messageStarters.map(\.id))
 
         var importedCount = 0
         for dto in export.journalEntries where !existingJournalIDs.contains(dto.id) {
@@ -333,6 +337,9 @@ struct DataControlView: View {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
         for dto in export.boundarySections ?? [] where !existingBoundaryIDs.contains(dto.id) {
+            modelContext.insert(dto.toModel()); importedCount += 1
+        }
+        for dto in export.messageStarters ?? [] where !existingStarterIDs.contains(dto.id) {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
         // Recovery data is optional in the file, so exports from earlier versions still import.
@@ -487,6 +494,7 @@ struct DataControlView: View {
         for item in routines { modelContext.delete(item) }
         for item in itemLists { modelContext.delete(item) }
         for item in boundarySections { modelContext.delete(item) }
+        for item in messageStarters { modelContext.delete(item) }
         UserDefaults.standard.removeObject(forKey: DayPlan.key)
         for item in recoveryCounters { modelContext.delete(item) }
         for item in recoveryMotivations { modelContext.delete(item) }
@@ -660,6 +668,8 @@ struct AnchorDataExport: Codable {
     var itemLists: [ItemListDTO]? = nil
     /// Optional so exports made before the Boundaries list existed still import.
     var boundarySections: [BoundarySectionDTO]? = nil
+    /// Optional so exports made before message starters existed still import.
+    var messageStarters: [MessageStarterDTO]? = nil
 }
 
 /// Every section is optional in the file: an export from any earlier version,
@@ -671,7 +681,7 @@ extension AnchorDataExport {
         "bridgeDraftItems", "diagrams", "threadMessages", "supportCalendarEntries", "futureNotes",
         "unsentDrafts", "decisionCategories", "deEscalationScripts", "affirmations",
         "recoveryCounters", "recoveryMotivations", "recoveryDayEntries", "recoveryUrges", "tasks",
-        "quickLists", "routines", "itemLists", "safetySections", "boundarySections"
+        "quickLists", "routines", "itemLists", "safetySections", "boundarySections", "messageStarters"
     ]
 
     init(from decoder: Decoder) throws {
@@ -701,6 +711,7 @@ extension AnchorDataExport {
         routines = c.lossyArray(RoutineDTO.self, forKey: .routines)
         itemLists = c.lossyArray(ItemListDTO.self, forKey: .itemLists)
         boundarySections = c.lossyArray(BoundarySectionDTO.self, forKey: .boundarySections)
+        messageStarters = c.lossyArray(MessageStarterDTO.self, forKey: .messageStarters)
     }
 }
 
@@ -971,6 +982,16 @@ struct BoundarySectionDTO: Codable {
     func toModel() -> BoundarySection {
         BoundarySection(id: id, title: title, text: text, iconName: iconName, tintName: tintName,
                         sortOrder: sortOrder, isHidden: isHidden, isShareable: isShareable, lastEditedAt: lastEditedAt)
+    }
+}
+
+struct MessageStarterDTO: Codable {
+    var id: UUID; var text: String; var sortOrder: Int; var lastEditedAt: Date
+    init(_ m: MessageStarter) {
+        id = m.id; text = m.text; sortOrder = m.sortOrder; lastEditedAt = m.lastEditedAt
+    }
+    func toModel() -> MessageStarter {
+        MessageStarter(id: id, text: text, sortOrder: sortOrder, lastEditedAt: lastEditedAt)
     }
 }
 

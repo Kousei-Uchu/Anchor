@@ -277,7 +277,13 @@ struct ThreadMessagesView: View {
         .navigationTitle("Message log")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
+            ToolbarItemGroup(placement: .primaryAction) {
+                NavigationLink {
+                    MessageStartersView()
+                } label: {
+                    Image(systemName: "text.bubble")
+                }
+                .accessibilityLabel("Your message starters")
                 Anchor.AddToolbarButton(label: "Write something") {
                     composerRequest = MessageComposerRequest(contactID: filterContactID)
                 }
@@ -500,6 +506,7 @@ struct ThreadMessageComposer: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \TrustedContact.sortOrder) private var contacts: [TrustedContact]
+    @Query(sort: \MessageStarter.sortOrder) private var starters: [MessageStarter]
 
     @StateObject private var recorder = VoiceNoteRecorder()
     @StateObject private var player = VoiceNotePlayer()
@@ -533,6 +540,27 @@ struct ThreadMessageComposer: View {
                     TextField("Write something…", text: $newMessageText, axis: .vertical)
                         .lineLimit(4...10)
                         .focused($textFocused)
+                }
+
+                Section {
+                    ForEach(usableStarters) { starter in
+                        Button {
+                            newMessageText = MessageStarter.adding(starter.text, to: newMessageText)
+                            textFocused = true
+                        } label: {
+                            Text(starter.text)
+                                .foregroundStyle(.primary)
+                                .multilineTextAlignment(.leading)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                    NavigationLink {
+                        MessageStartersView()
+                    } label: {
+                        Text(usableStarters.isEmpty ? "Write a starter you can reuse" : "Change your starters")
+                    }
+                } header: {
+                    if !usableStarters.isEmpty { Text("Starters") }
                 }
 
                 Section("Voice note") {
@@ -645,6 +673,10 @@ struct ThreadMessageComposer: View {
         }
     }
 
+    private var usableStarters: [MessageStarter] {
+        starters.filter { !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    }
+
     private var canSave: Bool {
         !recorder.isRecording && (!newMessageTrimmed.isEmpty || recorder.fileName != nil)
     }
@@ -663,5 +695,116 @@ struct ThreadMessageComposer: View {
         modelContext.insert(ThreadMessage(text: trimmed, audioFileName: audio, withContactID: selectedContactID))
         newMessageText = ""
         return true
+    }
+}
+
+
+// MARK: - Message starters
+
+/// The person's own short lines for starting a message on a hard day. The list
+/// starts empty and nothing is written for them. Tap a card to reword it, the
+/// plus adds one, Delete is in the editor and in the card's long-press menu,
+/// and Reorder shows with two or more because the order is the order they are
+/// offered in. A starter only ever goes into the message box or the Messages
+/// sheet, where it can be changed, and nothing is sent unless they send it.
+struct MessageStartersView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \MessageStarter.sortOrder) private var starters: [MessageStarter]
+    @State private var editing: MessageStarter?
+    @State private var toDelete: MessageStarter?
+
+    var body: some View {
+        Group {
+            if starters.isEmpty {
+                ScrollView {
+                    Anchor.EmptyState(
+                        icon: "text.bubble",
+                        title: "Nothing here yet",
+                        message: "Short lines of your own for starting a message when talking is hard. They are there to tap, and you can change them before anything is sent.",
+                        actionTitle: "Write one",
+                        tint: Anchor.Theme.sage
+                    ) { startNew() }
+                    .padding()
+                }
+            } else {
+                List {
+                    ForEach(starters) { starter in
+                        Anchor.Card {
+                            Button { editing = starter } label: {
+                                Text(starter.text.isEmpty ? "Untitled" : starter.text)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityHint("Opens the editor")
+                        }
+                        .anchorDeletable { modelContext.delete(starter) }
+                        .anchorCardRow()
+                    }
+                    .onMove(perform: move)
+                }
+                .listStyle(.plain)
+            }
+        }
+        .anchorBackground()
+        .navigationTitle("Message starters")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItemGroup(placement: .primaryAction) {
+                if starters.count > 1 {
+                    Anchor.ReorderToolbarButton()
+                }
+                Anchor.AddToolbarButton(label: "Write a starter") { startNew() }
+            }
+        }
+        .sheet(item: $editing, onDismiss: finishEditing) { starter in
+            MessageStarterEditorSheet(starter: starter) { toDelete = starter }
+        }
+    }
+
+    private func startNew() {
+        let new = MessageStarter(text: "", sortOrder: (starters.map(\.sortOrder).max() ?? -1) + 1)
+        modelContext.insert(new)
+        editing = new
+    }
+
+    private func move(from offsets: IndexSet, to destination: Int) {
+        var reordered = starters
+        reordered.move(fromOffsets: offsets, toOffset: destination)
+        for (index, item) in reordered.enumerated() { item.sortOrder = index }
+    }
+
+    /// Runs once the editor has closed, so the editor never reads a starter
+    /// that is already gone. One added and left blank is dropped.
+    private func finishEditing() {
+        let deleting = toDelete
+        toDelete = nil
+        if let deleting { modelContext.delete(deleting) }
+        for item in starters where item !== deleting
+            && item.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            modelContext.delete(item)
+        }
+    }
+}
+
+private struct MessageStarterEditorSheet: View {
+    @Bindable var starter: MessageStarter
+    let onDelete: () -> Void
+
+    var body: some View {
+        Anchor.ItemEditorSheet(
+            title: starter.text.isEmpty ? "New starter" : "Starter",
+            onDelete: onDelete,
+            deleteQuestion: "Delete this starter?"
+        ) {
+            Form {
+                Section {
+                    TextField("Something short you could send", text: $starter.text, axis: .vertical)
+                        .lineLimit(3...8)
+                }
+            }
+            .onChange(of: starter.text) { _, _ in starter.lastEditedAt = .now }
+        }
     }
 }

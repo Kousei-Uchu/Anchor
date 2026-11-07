@@ -142,6 +142,9 @@ enum DemoMode {
         boundaryHeadings[2].text = "Being asked to explain myself in the moment"
         for section in boundaryHeadings { context.insert(section) }
 
+        context.insert(MessageStarter(text: "I'm not up to talking right now, but I'm safe.", sortOrder: 0))
+        context.insert(MessageStarter(text: "Could you check in on me tomorrow?", sortOrder: 1))
+
         let days = ListVariable(name: "Day", value: 3)
         let weekend = ItemList(name: "Weekend away", createdAt: ago(4), variables: [days], items: [
             ListItem(name: "Phone charger", category: "Things", isDone: true),
