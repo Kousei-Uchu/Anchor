@@ -608,6 +608,11 @@ final class TaskItem {
     var createdAt: Date = Date.now
     var sortOrder: Int = 0
     var reminderIdentifier: String? = nil
+    /// How the task is timed. `dueDate` holds the exact day for `.exact`, and
+    /// the last moment of the day, week or month for those loose choices, so
+    /// that a plan which has passed can be told apart from one still ahead.
+    var dueKind: TaskDueKind = TaskDueKind.noDate
+    var dueDate: Date? = nil
 
     init(
         id: UUID = UUID(),
@@ -617,7 +622,9 @@ final class TaskItem {
         completedAt: Date? = nil,
         createdAt: Date = .now,
         sortOrder: Int = 0,
-        reminderIdentifier: String? = nil
+        reminderIdentifier: String? = nil,
+        dueKind: TaskDueKind = .noDate,
+        dueDate: Date? = nil
     ) {
         self.id = id
         self.title = title
@@ -627,12 +634,122 @@ final class TaskItem {
         self.createdAt = createdAt
         self.sortOrder = sortOrder
         self.reminderIdentifier = reminderIdentifier
+        self.dueKind = dueKind
+        self.dueDate = dueDate
     }
 
     /// Ticks the task off or back on, keeping `completedAt` in step.
     func setDone(_ done: Bool) {
         isDone = done
         completedAt = done ? Date.now : nil
+    }
+}
+
+/// When a task is meant to happen. Loose choices ("this week") are as valid as
+/// an exact date, and nothing here is ever shown as late or overdue.
+enum TaskDueKind: String, Codable, CaseIterable, Identifiable {
+    case noDate, asap, today, thisWeek, thisMonth, someday, exact
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .noDate: return "No date"
+        case .asap: return "As soon as I can"
+        case .today: return "Today"
+        case .thisWeek: return "This week"
+        case .thisMonth: return "This month"
+        case .someday: return "Someday"
+        case .exact: return "A particular day"
+        }
+    }
+}
+
+/// The groups the task list is shown in, in this order.
+enum TaskBucket: Int, CaseIterable, Identifiable {
+    case today, thisWeek, later, noDate
+
+    var id: Int { rawValue }
+
+    var title: String {
+        switch self {
+        case .today: return "Today"
+        case .thisWeek: return "This week"
+        case .later: return "Later"
+        case .noDate: return "No date"
+        }
+    }
+}
+
+extension TaskItem {
+    /// Sets the timing, working out the stored date for the loose choices.
+    /// `day` is only used for `.exact`.
+    func setDue(_ kind: TaskDueKind, day: Date? = nil, now: Date = .now, calendar: Calendar = .current) {
+        dueKind = kind
+        switch kind {
+        case .noDate, .asap, .someday:
+            dueDate = nil
+        case .exact:
+            dueDate = calendar.startOfDay(for: day ?? dueDate ?? now)
+        case .today:
+            dueDate = Self.lastMoment(of: .day, containing: now, calendar: calendar)
+        case .thisWeek:
+            dueDate = Self.lastMoment(of: .weekOfYear, containing: now, calendar: calendar)
+        case .thisMonth:
+            dueDate = Self.lastMoment(of: .month, containing: now, calendar: calendar)
+        }
+    }
+
+    private static func lastMoment(of component: Calendar.Component, containing date: Date, calendar: Calendar) -> Date? {
+        guard let interval = calendar.dateInterval(of: component, for: date) else { return nil }
+        return interval.end.addingTimeInterval(-1)
+    }
+
+    /// Where the task sits in the list. A plan whose time has passed moves
+    /// into Today, quietly, rather than being flagged as late.
+    func bucket(now: Date = .now, calendar: Calendar = .current) -> TaskBucket {
+        switch dueKind {
+        case .noDate: return .noDate
+        case .asap: return .today
+        case .someday: return .later
+        case .exact:
+            guard let due = dueDate else { return .noDate }
+            let day = calendar.startOfDay(for: due)
+            if day <= calendar.startOfDay(for: now) { return .today }
+            if let week = calendar.dateInterval(of: .weekOfYear, for: now), day < week.end { return .thisWeek }
+            return .later
+        case .today, .thisWeek, .thisMonth:
+            if let end = dueDate, end < now { return .today }
+            switch dueKind {
+            case .today: return .today
+            case .thisWeek: return .thisWeek
+            default: return .later
+            }
+        }
+    }
+
+    /// A short, calm line about the timing, or nil when there is none.
+    func dueText(now: Date = .now, calendar: Calendar = .current) -> String? {
+        switch dueKind {
+        case .noDate: return nil
+        case .asap: return "As soon as I can"
+        case .someday: return "Someday"
+        case .exact:
+            guard let due = dueDate else { return nil }
+            let text = due.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))
+            return calendar.startOfDay(for: due) < calendar.startOfDay(for: now) ? "Planned for \(text)" : text
+        case .today, .thisWeek, .thisMonth:
+            if let end = dueDate, end < now { return "Carried over from \(dueKind.label.lowercased())" }
+            return dueKind.label
+        }
+    }
+
+    /// Open tasks in the order the list shows them: group first, then your own order.
+    static func listOrder(_ tasks: [TaskItem], now: Date = .now) -> [TaskItem] {
+        tasks.filter { !$0.isDone }.sorted {
+            let a = $0.bucket(now: now), b = $1.bucket(now: now)
+            return a.rawValue != b.rawValue ? a.rawValue < b.rawValue : $0.sortOrder < $1.sortOrder
+        }
     }
 }
 

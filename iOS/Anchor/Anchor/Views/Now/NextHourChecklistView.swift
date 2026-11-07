@@ -70,7 +70,7 @@ struct TasksNowCard: View {
     @Query(sort: \TaskItem.sortOrder) private var tasks: [TaskItem]
     @State private var newTitle = ""
 
-    private var open: [TaskItem] { tasks.filter { !$0.isDone } }
+    private var open: [TaskItem] { TaskItem.listOrder(tasks) }
     private let shown = 4
 
     var body: some View {
@@ -154,7 +154,7 @@ struct TasksView: View {
     @State private var remindersDenied = false
     @State private var confirmingClearDone = false
 
-    private var open: [TaskItem] { tasks.filter { !$0.isDone } }
+    private var open: [TaskItem] { TaskItem.listOrder(tasks) }
     private var done: [TaskItem] {
         tasks.filter(\.isDone).sorted { ($0.completedAt ?? .distantPast) > ($1.completedAt ?? .distantPast) }
     }
@@ -174,12 +174,24 @@ struct TasksView: View {
                 }
             } else {
                 List {
-                    ForEach(open) { task in
-                        TaskCard(task: task, onToggle: { toggle(task) }, onEdit: { editing = task })
-                            .anchorDeletable { modelContext.delete(task) }
-                            .anchorCardRow()
+                    ForEach(TaskBucket.allCases) { bucket in
+                        let group = open.filter { $0.bucket() == bucket }
+                        if !group.isEmpty {
+                            Text(bucket.title)
+                                .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                                .foregroundStyle(.secondary)
+                                .anchorCardRow()
+
+                            ForEach(group) { task in
+                                TaskCard(task: task, onToggle: { toggle(task) }, onEdit: { editing = task })
+                                    .anchorDeletable { modelContext.delete(task) }
+                                    .anchorCardRow()
+                            }
+                            .onMove { offsets, destination in
+                                move(group, from: offsets, to: destination)
+                            }
+                        }
                     }
-                    .onMove(perform: moveOpen)
 
                     if !done.isEmpty {
                         HStack {
@@ -287,10 +299,13 @@ struct TasksView: View {
         withAnimation(.snappy) { setTask(task, done: !task.isDone, among: tasks) }
     }
 
-    private func moveOpen(from offsets: IndexSet, to destination: Int) {
-        var reordered = open
+    /// Reorders within one group. The group's own order values are shared out
+    /// again in the new order, so tasks in other groups are not disturbed.
+    private func move(_ group: [TaskItem], from offsets: IndexSet, to destination: Int) {
+        let slots = group.map(\.sortOrder).sorted()
+        var reordered = group
         reordered.move(fromOffsets: offsets, toOffset: destination)
-        for (index, task) in reordered.enumerated() { task.sortOrder = index }
+        for (index, task) in reordered.enumerated() { task.sortOrder = slots[index] }
     }
 
     /// Runs once the editor has closed, so the editor never reads a task that
@@ -343,6 +358,11 @@ private struct TaskCard: View {
                             .strikethrough(task.isDone)
                             .foregroundStyle(task.isDone ? .secondary : .primary)
                             .fixedSize(horizontal: false, vertical: true)
+                        if !task.isDone, let due = task.dueText() {
+                            Label(due, systemImage: "calendar")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                         if !task.notes.isEmpty {
                             Text(task.notes)
                                 .font(.caption)
@@ -375,6 +395,22 @@ private struct TaskEditorSheet: View {
                 Section {
                     TextField("What needs doing?", text: $task.title, axis: .vertical)
                         .lineLimit(1...4)
+                }
+                Section("When") {
+                    Picker("When", selection: Binding(
+                        get: { task.dueKind },
+                        set: { task.setDue($0) }
+                    )) {
+                        ForEach(TaskDueKind.allCases) { kind in
+                            Text(kind.label).tag(kind)
+                        }
+                    }
+                    if task.dueKind == .exact {
+                        DatePicker("Day", selection: Binding(
+                            get: { task.dueDate ?? Date.now },
+                            set: { task.setDue(.exact, day: $0) }
+                        ), displayedComponents: .date)
+                    }
                 }
                 Section("Notes") {
                     TextField("Anything to remember", text: $task.notes, axis: .vertical)
