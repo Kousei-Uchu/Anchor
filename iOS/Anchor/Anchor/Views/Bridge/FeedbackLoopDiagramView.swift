@@ -244,6 +244,8 @@ struct FeedbackLoopDiagramListView: View {
     @Query private var diagrams: [FeedbackLoopDiagram]
     @State private var openedDiagram: FeedbackLoopDiagram?
     @State private var justCreatedID: UUID?
+    @State private var showingTemplates = false
+    @State private var pendingFromTemplate: FeedbackLoopDiagram?
 
     var body: some View {
         Group {
@@ -258,6 +260,8 @@ struct FeedbackLoopDiagramListView: View {
                             tint: Anchor.Theme.sage
                         ) { addDiagram(kind: .loop) }
                         Button("Or draw a free map instead") { addDiagram(kind: .map) }
+                            .font(.footnote)
+                        Button("Or start from a template") { showingTemplates = true }
                             .font(.footnote)
                     }
                     .padding()
@@ -300,6 +304,7 @@ struct FeedbackLoopDiagramListView: View {
                 Menu {
                     Button("New loop") { addDiagram(kind: .loop) }
                     Button("New map") { addDiagram(kind: .map) }
+                    Button("From a template") { showingTemplates = true }
                 } label: {
                     Image(systemName: "plus")
                 }
@@ -308,6 +313,18 @@ struct FeedbackLoopDiagramListView: View {
         }
         .navigationDestination(item: $openedDiagram) { diagram in
             FeedbackLoopDiagramView(diagram: diagram, startsInEditor: justCreatedID == diagram.id)
+        }
+        .sheet(isPresented: $showingTemplates, onDismiss: {
+            // Open the new diagram only once the picker has gone, so the
+            // two do not fight over the screen.
+            if let made = pendingFromTemplate {
+                pendingFromTemplate = nil
+                openedDiagram = made
+            }
+        }) {
+            DiagramTemplatePickerView { template in
+                addDiagram(from: template)
+            }
         }
     }
 
@@ -325,6 +342,16 @@ struct FeedbackLoopDiagramListView: View {
             if graph.nodes.isEmpty { return "Map, nothing drawn yet" }
             return "Map, \(graph.nodes.count) \(graph.nodes.count == 1 ? "item" : "items")"
         }
+    }
+
+    /// A copy of a template becomes the person's own diagram. Nothing links
+    /// it back to the template, so changing it later changes only the copy.
+    private func addDiagram(from template: DiagramTemplate) {
+        let new = FeedbackLoopDiagram(title: template.name, graphJSON: template.build().encoded())
+        modelContext.insert(new)
+        justCreatedID = nil
+        pendingFromTemplate = new
+        showingTemplates = false
     }
 
     /// A new diagram opens straight away, ready to be drawn on. A new loop
@@ -349,6 +376,7 @@ struct FeedbackLoopDiagramView: View {
     @State private var showingEditor = false
     @State private var didAutoOpen = false
     @State private var confirmingMap = false
+    @State private var showingShare = false
 
     private var graph: DiagramGraph {
         DiagramGraph.decoded(from: diagram.graphJSON)
@@ -366,10 +394,17 @@ struct FeedbackLoopDiagramView: View {
         .navigationTitle(diagram.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if graph.kind == .loop && !graph.nodes.isEmpty {
+            if !graph.nodes.isEmpty {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
-                        Button("Open as a free map") { confirmingMap = true }
+                        Button {
+                            showingShare = true
+                        } label: {
+                            Label("Share as picture or PDF", systemImage: "square.and.arrow.up")
+                        }
+                        if graph.kind == .loop {
+                            Button("Open as a free map") { confirmingMap = true }
+                        }
                     } label: {
                         Image(systemName: "ellipsis.circle")
                     }
@@ -394,6 +429,9 @@ struct FeedbackLoopDiagramView: View {
                 didAutoOpen = true
                 showingEditor = true
             }
+        }
+        .sheet(isPresented: $showingShare) {
+            DiagramShareView(title: diagram.title, graph: graph)
         }
         .sheet(isPresented: $showingEditor) {
             if graph.kind == .loop {
@@ -1468,5 +1506,368 @@ struct MapItemSheet: View {
     private func deleteItem() {
         graph.nodes.removeAll { $0.id == nodeID }
         graph.edges.removeAll { $0.fromID == nodeID || $0.toID == nodeID }
+    }
+}
+
+
+// MARK: - Templates
+
+/// A starting point the person can copy and then rewrite. Each one is built
+/// fresh in code, so a copy never shares ids or storage with another.
+struct DiagramTemplate: Identifiable {
+    let id: String
+    let name: String
+    let summary: String
+    let build: () -> DiagramGraph
+
+    /// One plain line about what kind of diagram it makes.
+    var kindLine: String {
+        let graph = build()
+        switch graph.kind {
+        case .loop:
+            if let character = graph.loopCharacter { return "Loop, \(character.name.lowercased())" }
+            return "Loop"
+        case .map:
+            return "Map, \(graph.nodes.count) items"
+        }
+    }
+}
+
+enum DiagramTemplates {
+    static let all: [DiagramTemplate] = [
+        DiagramTemplate(
+            id: "putting-off",
+            name: "Putting something off",
+            summary: "Each time round, the thing feels bigger.",
+            build: {
+                DiagramGraph.loop([
+                    ("I put it off", .same),
+                    ("It feels bigger", .same),
+                    ("I worry about it more", .same)
+                ])
+            }
+        ),
+        DiagramTemplate(
+            id: "sleep-and-energy",
+            name: "Poor sleep and low energy",
+            summary: "A rough night leads to a rough day, which leads to another rough night.",
+            build: {
+                DiagramGraph.loop([
+                    ("I sleep badly", .same),
+                    ("I have less energy", .same),
+                    ("I do less of what looks after me", .same)
+                ])
+            }
+        ),
+        DiagramTemplate(
+            id: "stretched-then-break",
+            name: "Stretched, then a break",
+            summary: "Feeling stretched leads to a break, and the break eases it.",
+            build: {
+                DiagramGraph.loop([
+                    ("Feeling stretched", .same),
+                    ("I take a break", .same),
+                    ("I feel more rested", .opposite)
+                ])
+            }
+        ),
+        DiagramTemplate(
+            id: "around-me",
+            name: "What is around me",
+            summary: "A map with you in the middle. Rename, move and add whatever fits.",
+            build: {
+                var graph = DiagramGraph(kind: .map)
+                let middle = DiagramNode(label: "Me", x: 300, y: 200, colour: .amber)
+                let others = [
+                    DiagramNode(label: "Home", x: 300, y: 50),
+                    DiagramNode(label: "Work or school", x: 520, y: 200),
+                    DiagramNode(label: "People I trust", x: 300, y: 350),
+                    DiagramNode(label: "My body", x: 80, y: 200)
+                ]
+                graph.nodes = [middle] + others
+                for other in others {
+                    graph.edges.append(DiagramEdge(fromID: other.id, toID: middle.id, polarity: .none))
+                }
+                return graph
+            }
+        )
+    ]
+}
+
+struct DiagramTemplatePickerView: View {
+    var onPick: (DiagramTemplate) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 12) {
+                    ForEach(DiagramTemplates.all) { template in
+                        Button { onPick(template) } label: {
+                            Anchor.Card(accentColor: Anchor.Theme.sage) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(template.name)
+                                        .font(.system(.headline, design: .rounded))
+                                        .foregroundStyle(.primary)
+                                    Text(template.summary)
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                        .multilineTextAlignment(.leading)
+                                    Text(template.kindLine)
+                                        .font(.footnote)
+                                        .foregroundStyle(.tertiary)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .contentShape(Rectangle())
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityHint("Makes a copy you can change")
+                    }
+                }
+                .padding()
+            }
+            .anchorBackground()
+            .navigationTitle("Start from a template")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Sharing a diagram
+
+/// One line of the written reading: how a step leads to the next, and the
+/// person's own words on that link if they wrote any.
+struct DiagramReadingLine {
+    let sentence: String
+    let words: String?
+}
+
+extension DiagramGraph {
+    /// The links in plain words, in loop order for a loop. A loop that is
+    /// not closed yet has nothing to read out.
+    var readingLines: [DiagramReadingLine] {
+        if kind == .loop && !isClosedLoop { return [] }
+        let fallback = kind == .loop ? "A step" : "An item"
+        let names = Dictionary(nodes.map { ($0.id, $0.label.isEmpty ? fallback : $0.label) },
+                               uniquingKeysWith: { first, _ in first })
+        let ordered: [DiagramEdge] = kind == .loop ? nodes.compactMap { edge(from: $0.id) } : edges
+        return ordered.compactMap { edge in
+            guard let from = names[edge.fromID], let to = names[edge.toID] else { return nil }
+            let sign: String
+            switch edge.polarity {
+            case .same: sign = " More leads to more."
+            case .opposite: sign = " More leads to less."
+            case .none: sign = ""
+            }
+            return DiagramReadingLine(sentence: "\(from) leads to \(to).\(sign)",
+                                      words: edge.label.isEmpty ? nil : edge.label)
+        }
+    }
+}
+
+/// The page that becomes the picture and the PDF. It is always drawn light on
+/// white with a fixed text size, so what is shared looks the same whatever the
+/// phone is set to, and it is easy to print.
+struct DiagramSharePage: View {
+    let title: String
+    let graph: DiagramGraph
+    let includeReading: Bool
+
+    static let width: CGFloat = 612
+    private static let inset: CGFloat = 40
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text(title.isEmpty ? "Untitled" : title)
+                .font(.system(size: 24, weight: .bold, design: .rounded))
+            Text(Date.now.formatted(date: .long, time: .omitted))
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+            diagram
+            if includeReading && (!graph.readingLines.isEmpty || graph.loopCharacter != nil) {
+                reading
+            }
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(Self.inset)
+        .frame(width: Self.width, alignment: .topLeading)
+        .background(Color.white)
+        .foregroundStyle(Color.black)
+        .environment(\.colorScheme, .light)
+        .environment(\.dynamicTypeSize, .large)
+    }
+
+    @ViewBuilder
+    private var diagram: some View {
+        let side = Self.width - Self.inset * 2
+        if graph.kind == .loop {
+            LoopRingView(graph: graph)
+                .frame(width: side, height: 420)
+        } else {
+            MapReadView(graph: graph)
+                .frame(width: side, height: 400)
+        }
+    }
+
+    private var reading: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if let character = graph.loopCharacter {
+                Text(character.name)
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                Text(character.sentence)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+            }
+            ForEach(Array(graph.readingLines.enumerated()), id: \.offset) { _, line in
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(line.sentence)
+                        .font(.system(size: 12))
+                    if let words = line.words {
+                        Text(words)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// The two files made from a page, and the folder they sit in.
+struct DiagramShareFiles {
+    let preview: UIImage
+    let pngURL: URL
+    let pdfURL: URL
+    let folder: URL
+}
+
+/// Shows the page and hands it to the system share sheet as a picture or a
+/// PDF. Everything is made on the device and kept in a temporary folder that
+/// is removed when this closes; nothing is uploaded.
+struct DiagramShareView: View {
+    let title: String
+    let graph: DiagramGraph
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var includeReading = true
+    @State private var files: DiagramShareFiles?
+    @State private var failed = false
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 16) {
+                    if let files {
+                        Image(uiImage: files.preview)
+                            .resizable()
+                            .scaledToFit()
+                            .background(Color.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.secondary.opacity(0.3)))
+                            .accessibilityLabel("Preview of the page you will share")
+                    } else if failed {
+                        Text("The page could not be made. Close this and try again.")
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    } else {
+                        ProgressView()
+                            .padding(.vertical, 40)
+                    }
+
+                    Toggle("Include the written reading", isOn: $includeReading)
+
+                    if let files {
+                        ShareLink(item: files.pngURL) {
+                            Label("Share as picture", systemImage: "photo")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        ShareLink(item: files.pdfURL) {
+                            Label("Share as PDF", systemImage: "doc.richtext")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                }
+                .padding()
+            }
+            .anchorBackground()
+            .navigationTitle("Share diagram")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") { dismiss() }
+                }
+            }
+            .task(id: includeReading) { prepare() }
+            .onDisappear { removeFiles() }
+        }
+    }
+
+    private func removeFiles() {
+        if let folder = files?.folder {
+            try? FileManager.default.removeItem(at: folder)
+        }
+        files = nil
+    }
+
+    private func prepare() {
+        removeFiles()
+        failed = false
+        let renderer = ImageRenderer(content: DiagramSharePage(title: title, graph: graph, includeReading: includeReading))
+        renderer.scale = 3
+        guard let image = renderer.uiImage, let png = image.pngData() else {
+            failed = true
+            return
+        }
+
+        let manager = FileManager.default
+        let folder = manager.temporaryDirectory.appendingPathComponent("diagram-share-\(UUID().uuidString)", isDirectory: true)
+        let base = Self.fileName(for: title)
+        let pngURL = folder.appendingPathComponent("\(base).png")
+        let pdfURL = folder.appendingPathComponent("\(base).pdf")
+
+        do {
+            try manager.createDirectory(at: folder, withIntermediateDirectories: true,
+                                        attributes: [.protectionKey: FileProtectionType.complete])
+            try png.write(to: pngURL, options: .completeFileProtection)
+
+            var wrotePDF = false
+            renderer.render { size, draw in
+                var box = CGRect(origin: .zero, size: size)
+                guard let pdf = CGContext(pdfURL as CFURL, mediaBox: &box, nil) else { return }
+                pdf.beginPDFPage(nil)
+                draw(pdf)
+                pdf.endPDFPage()
+                pdf.closePDF()
+                wrotePDF = true
+            }
+            guard wrotePDF else {
+                try? manager.removeItem(at: folder)
+                failed = true
+                return
+            }
+            try? manager.setAttributes([.protectionKey: FileProtectionType.complete], ofItemAtPath: pdfURL.path)
+            files = DiagramShareFiles(preview: image, pngURL: pngURL, pdfURL: pdfURL, folder: folder)
+        } catch {
+            try? manager.removeItem(at: folder)
+            failed = true
+        }
+    }
+
+    /// The diagram's own title as the file name, with anything a file name
+    /// cannot hold taken out.
+    private static func fileName(for title: String) -> String {
+        let bad = CharacterSet(charactersIn: "/\\:?%*|\"<>")
+        let cleaned = title.components(separatedBy: bad).joined(separator: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return cleaned.isEmpty ? "Diagram" : String(cleaned.prefix(60))
     }
 }
