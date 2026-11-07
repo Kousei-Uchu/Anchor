@@ -1,6 +1,6 @@
 # Anchor — Patch Plan (v2-recovery)
 
-*Living document. Last updated: 7 Nov 2026, after Patch 5 was written (Patch 1 is pushed; Patches 2 to 5 await your paste; none confirmed building).*
+*Living document. Last updated: 7 Nov 2026, after Patch 6 was written (Patches 1 to 5 are pushed; Patch 6 awaits your paste; none confirmed building).*
 
 > ## READ THIS FIRST: THIS FILE IS THE PROMPT
 >
@@ -29,14 +29,16 @@ The source code repository is at <https://github.com/Kousei-Uchu/Anchor/tree/v2-
 | --- | --- |
 | 0: Missing widget files | ✅ Done (you committed them; verified by re-clone) |
 | 1: Never show "0 days" | 🟡 Pushed by you (`41a858e`); build not yet confirmed |
-| 2: Cut-off labels | 🟡 Written (`patch-02.sh`); awaiting your build |
-| 3: Check-in pinned action bar, and this plan moved into the repo | 🟡 Written (`patch-03.sh`); awaiting your build |
-| 4: Check-in question sub-text and sentence starters | 🟡 Written (`patch-04.sh`); awaiting your paste and build |
-| 5: Check-in visual refresh | 🟡 Written (`patch-05.sh`); awaiting your paste and build |
-| 6 onward | Not started |
+| 2: Cut-off labels | 🟡 Pushed by you; build not yet confirmed |
+| 3: Check-in pinned action bar, and this plan moved into the repo | 🟡 Pushed by you; build not yet confirmed |
+| 4: Check-in question sub-text and sentence starters | 🟡 Pushed by you; build not yet confirmed |
+| 5: Check-in visual refresh | 🟡 Pushed by you (`1a95f15`); build not yet confirmed |
+| 6: Journal newest first, jump to today | 🟡 Written (`patch-06.sh`); awaiting your paste and build |
+| 7 onward | Not started |
 
 ## Change log of this plan
 
+- **7 Nov 2026 (11):** Patch 6 written: the Journal timeline is newest day first and newest entry first within a day, and a "Jump to today" action in the toolbar menu scrolls back to the top, which is where today sits. Patches 2 to 5 confirmed pushed (HEAD was `1a95f15`); their build is still unconfirmed. Not compiled here.
 - **7 Nov 2026 (10):** Patch 5 written: the check-in `Form` is now a scrolling stack of `Anchor.Card`s, each slider with an icon and gentle end labels ("running on empty" to "fully charged" and so on); the mascot's mood follows the sliders (quiet day, gentle, encouraging; picture only, nothing stored, scored or compared) and its line is re-picked from the reviewed pool when the mood changes; each optional question has its own mascot mood. **Not done:** the calm "done" moment with a mascot line, because it needs a new reviewed line pool and trigger (the mascot never gets generated dialogue). Added as an open item for Patch 5b.
 - **7 Nov 2026 (9):** Patch 4 written: `CheckInPrompt` struct (question, detail, starters), a "Need a start?" chip row that appends a starter to the answer, and a scrolling question screen with pinned buttons so it fits an SE-size screen. The same prompt data can later feed the Journal editor and the guide.
 - **7 Nov 2026 (8):** Patch 1 confirmed pushed (`41a858e`). This plan moved into the repo as `ANCHOR_PATCH_PLAN.md` (Patch 3) and now carries the standing instructions for Claude at the top. Edit it here, not in the Claude Doc. Patch 3 written: both check-in actions are pinned in a bottom bar.
@@ -307,7 +309,7 @@ Order: unblock → visible quick wins → one shared pattern later screens inher
 | --- | --- | --- | --- | --- |
 | **4** | Check-in questions: sub-text and sentence starters | 3 | S | 🟡 |
 | **5** | Check-in visual refresh: themed cards, reacting mascot, mascot on questions | 2 | M | 🟡 |
-| **6** | Journal order fix (newest first, jump to today) | 5 | S | ⬜ |
+| **6** | Journal order fix (newest first, jump to today) | 5 | S | 🟡 |
 | **7** | Journal editor declutter; labelled "+" sheet; discoverable Suggestions | 4 | M | ⬜ |
 | **8** | Journal month-calendar zoom | 5 | M | ⬜ |
 | **9** | Journal year overview (+ optional lenses) | 5 | M | ⬜ |
@@ -478,4 +480,4 @@ A reminder you set yourself, per person, **off by default**. Lock-screen text is
 
 ## Appendix B: Suggested next session
 
-Patches **5** and **6** (the check-in visual refresh and the Journal order fix), once Patches 1 to 4 build. Patch 5 is polish-only, so consider doing Patch 6 first; see D9 before spending effort there.
+Patch **7** (Journal editor declutter and a discoverable Suggestions entry), once Patches 1 to 6 build. Patches 7 to 9 are Journal polish, so check D9 before spending effort there.

@@ -66,21 +66,27 @@ struct JournalView: View {
     private var timelineItems: [TimelineItem] {
         let entryItems = filteredEntries.map(TimelineItem.entry)
         let checkInItems = searchText.isEmpty ? checkIns.map(TimelineItem.checkIn) : []
-        return (entryItems + checkInItems).sorted { $0.timestamp < $1.timestamp }
+        return (entryItems + checkInItems).sorted { $0.timestamp > $1.timestamp }
     }
 
+    /// Newest day first, and newest item first within each day, so the
+    /// most recent thing is always at the top.
     private var groupedByDay: [(day: Date, items: [TimelineItem])] {
         let calendar = Calendar.current
         let grouped = Dictionary(grouping: timelineItems) { calendar.startOfDay(for: $0.timestamp) }
-        return grouped.keys.sorted().map { day in
-            (day, grouped[day]!.sorted { $0.timestamp < $1.timestamp })
+        return grouped.keys.sorted(by: >).map { day in
+            (day, grouped[day]!.sorted { $0.timestamp > $1.timestamp })
         }
     }
 
+    private let topAnchorID = "journal-top"
+
     var body: some View {
         NavigationStack {
+            ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
+                    Color.clear.frame(height: 0).id(topAnchorID)
                     if groupedByDay.isEmpty {
                         emptyState
                     }
@@ -109,6 +115,14 @@ struct JournalView: View {
                 ToolbarItem(placement: .navigationBarLeading) {
                     HelpToolbarButton(topic: .journal)
                 }
+                ToolbarItem(placement: .secondaryAction) {
+                    Button {
+                        withAnimation { proxy.scrollTo(topAnchorID, anchor: .top) }
+                    } label: {
+                        Label("Jump to today", systemImage: "arrow.up.to.line")
+                    }
+                    .disabled(groupedByDay.isEmpty)
+                }
                 ToolbarItem(placement: .primaryAction) {
                     Button {
                         let entry = JournalEntry(text: "", linkedContext: .manualOpen)
@@ -127,6 +141,7 @@ struct JournalView: View {
             }
             .sheet(item: $checkInToView) { checkIn in
                 CheckInDetailSheet(checkIn: checkIn)
+            }
             }
         }
     }
