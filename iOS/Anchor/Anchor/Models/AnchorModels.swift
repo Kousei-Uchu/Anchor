@@ -1168,6 +1168,83 @@ extension ModelContext {
     }
 }
 
+// MARK: - Routines
+//
+// A routine is a named list of steps done in the same order each time ("School
+// mornings"), with an optional rough time on each step. It sits beside the
+// decision presets and is run one step at a time. The steps are a small array
+// of values inside the routine (the way a quick list keeps its items), so a
+// routine is one record and one entry in an export. Every field has a default,
+// and it is a new model, so there is no store migration.
+
+struct RoutineStep: Codable, Identifiable, Hashable {
+    var id: UUID = UUID()
+    var text: String
+    /// Rough minutes for this step. 0 means no estimate.
+    var minutes: Int = 0
+}
+
+@Model
+final class Routine {
+    @Attribute(.unique) var id: UUID
+    var name: String
+    var createdAt: Date = Date.now
+    var steps: [RoutineStep] = []
+
+    init(id: UUID = UUID(), name: String, createdAt: Date = .now, steps: [RoutineStep] = []) {
+        self.id = id
+        self.name = name
+        self.createdAt = createdAt
+        self.steps = steps
+    }
+}
+
+extension Routine {
+    /// The most steps a routine can hold. It only stops a huge paste from
+    /// making the screen slow.
+    static let maxSteps = 60
+
+    /// The minute choices offered on a step. 0 is no estimate.
+    static let minuteChoices = [0, 1, 2, 3, 5, 10, 15, 20, 30, 45, 60]
+
+    var displayName: String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Untitled routine" : name
+    }
+
+    /// Steps with some text in them. A step left blank is never run or counted.
+    var writtenSteps: [RoutineStep] {
+        steps.filter { !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    }
+
+    var totalMinutes: Int { writtenSteps.reduce(0) { $0 + $1.minutes } }
+    var stepsWithoutEstimate: Int { writtenSteps.filter { $0.minutes == 0 }.count }
+
+    /// "6 steps, about 25 min", or "6 steps, about 25 min plus 2 with no
+    /// estimate", or just "6 steps" when nothing has a time. nil when empty.
+    var summaryText: String? {
+        let count = writtenSteps.count
+        guard count > 0 else { return nil }
+        let steps = count == 1 ? "1 step" : "\(count) steps"
+        guard totalMinutes > 0 else { return steps }
+        var text = "\(steps), about \(TaskItem.durationText(totalMinutes))"
+        let missing = stepsWithoutEstimate
+        if missing > 0 { text += " plus \(missing) with no estimate" }
+        return text
+    }
+
+    /// True for a routine added and then left with no name and no steps.
+    var isBlank: Bool {
+        name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && writtenSteps.isEmpty
+    }
+
+    /// Splits pasted text into steps, one per line. A bullet, dash, number or
+    /// tick box at the start of a line is dropped (the marker needs a space
+    /// after it, so "-5 degrees" and "2024 taxes" are left alone).
+    static func parsedSteps(from text: String) -> [RoutineStep] {
+        QuickList.parsedItems(from: text).map { RoutineStep(text: $0.text) }
+    }
+}
+
 // MARK: - Mascot (pre-written lines only — never generative at runtime)
 
 enum MascotMood: String, Codable {
@@ -1213,7 +1290,7 @@ enum AnchorSchema {
             MascotLine.self, DecisionPresetCategory.self, DecisionPresetChoice.self,
             DeEscalationScript.self, NextHourItem.self, TaskItem.self, Affirmation.self,
             RecoveryCounter.self, RecoveryMotivation.self, RecoveryDayEntry.self, RecoveryUrge.self,
-            QuickList.self
+            QuickList.self, Routine.self
         ]
     }
 
