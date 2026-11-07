@@ -54,6 +54,15 @@ final class JournalEntry {
     }
 }
 
+extension JournalEntry {
+    /// What the person sees as a bookmark. It is kept in the existing
+    /// `isFavorited` field, so nothing about the stored data or exports changes.
+    var isBookmarked: Bool {
+        get { isFavorited }
+        set { isFavorited = newValue }
+    }
+}
+
 enum EntryOrigin: String, Codable {
     case checkInSlider
     case groundingTool
@@ -668,9 +677,10 @@ extension BridgeDraftItem {
     /// when the entry has no words. The entry itself is never changed or
     /// linked, so the item can be reworded freely.
     static func raising(fromJournal text: String) -> BridgeDraftItem? {
+        // Photo and card lines are blocks, not words, so they are skipped.
         guard let first = text.split(separator: "\n")
             .map({ $0.trimmingCharacters(in: .whitespaces) })
-            .first(where: { !$0.isEmpty }) else { return nil }
+            .first(where: { !$0.isEmpty && !$0.hasPrefix("![") && !$0.contains("](anchorcard://") }) else { return nil }
         let marks = CharacterSet(charactersIn: "#-*>").union(.whitespaces)
         let cleaned = first.trimmingCharacters(in: marks)
         guard !cleaned.isEmpty else { return nil }

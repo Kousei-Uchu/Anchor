@@ -27,7 +27,7 @@ import JournalingSuggestions
 
 struct JournalContextSuggestionsView: View {
     let day: Date
-    let onInsert: (String) -> Void
+    let onInsert: ([JournalBlock.Kind]) -> Void
     @Environment(\.dismiss) private var dismiss
 
     @State private var events: [EKEvent] = []
@@ -50,8 +50,24 @@ struct JournalContextSuggestionsView: View {
                         JournalingSuggestionsPicker {
                             Label("Browse suggestions", systemImage: "sparkles")
                         } onCompletion: { suggestion in
+                            var kinds: [JournalBlock.Kind] = [
+                                .card(JournalCard(kind: .suggestion, title: suggestion.title,
+                                                  detail: "From Apple's journaling suggestions"))
+                            ]
+                            let photos = await suggestion.content(forType: JournalingSuggestion.Photo.self)
+                            for item in photos {
+                                if let data = try? Data(contentsOf: item.photo),
+                                   let name = JournalAttachmentStore.save(imageData: data) {
+                                    kinds.append(.image(name))
+                                }
+                            }
+                            let songs = await suggestion.content(forType: JournalingSuggestion.Song.self)
+                            for item in songs {
+                                kinds.append(.card(JournalCard(kind: .song, title: item.song ?? "Song",
+                                                               detail: item.artist ?? "")))
+                            }
                             await MainActor.run {
-                                onInsert("✨ \(suggestion.title)")
+                                onInsert(kinds)
                                 dismiss()
                             }
                         }
@@ -68,11 +84,14 @@ struct JournalContextSuggestionsView: View {
                     }
                     ForEach(events, id: \.eventIdentifier) { event in
                         Button {
-                            onInsert("📅 \(event.title ?? "Event")")
+                            onInsert([.card(card(for: event))])
                             dismiss()
                         } label: {
-                            Text(event.title ?? "Untitled event")
+                            JournalCardView(card: card(for: event))
                         }
+                        .buttonStyle(.plain)
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
                     }
                 }
 
@@ -114,11 +133,14 @@ struct JournalContextSuggestionsView: View {
                     }
                     ForEach(Array(recentSongs.enumerated()), id: \.offset) { _, song in
                         Button {
-                            onInsert("🎵 \(song.title), \(song.artist)")
+                            onInsert([.card(JournalCard(kind: .song, title: song.title, detail: song.artist))])
                             dismiss()
                         } label: {
-                            Text("\(song.title), \(song.artist)")
+                            JournalCardView(card: JournalCard(kind: .song, title: song.title, detail: song.artist))
                         }
+                        .buttonStyle(.plain)
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
                     }
                 } header: {
                     Text("Recently played")
@@ -139,6 +161,19 @@ struct JournalContextSuggestionsView: View {
                 await loadRecentMusic()
             }
         }
+    }
+
+    private func card(for event: EKEvent) -> JournalCard {
+        let when: String
+        if event.isAllDay {
+            when = "All day"
+        } else {
+            let start = event.startDate.formatted(date: .omitted, time: .shortened)
+            let end = event.endDate.formatted(date: .omitted, time: .shortened)
+            when = "\(start) to \(end)"
+        }
+        return JournalCard(kind: .event, title: event.title ?? "Event", detail: when,
+                           extra: event.location ?? "")
     }
 
     private func loadCalendarEvents() async {
@@ -208,7 +243,7 @@ struct JournalContextSuggestionsView: View {
         ) { image, _ in
             guard let image, let data = image.jpegData(compressionQuality: 0.85),
                   let filename = JournalAttachmentStore.save(imageData: data) else { return }
-            onInsert("![](\(filename))")
+            onInsert([.image(filename)])
             dismiss()
         }
     }
