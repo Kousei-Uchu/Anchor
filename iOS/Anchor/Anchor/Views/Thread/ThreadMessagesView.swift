@@ -224,6 +224,12 @@ struct ThreadMessagesView: View {
     @State private var messageToDelete: ThreadMessage?
     @State private var filterContactID: UUID?
 
+    /// Opens the log already narrowed to one person, as from their page.
+    /// With no one given it shows everyone, as before.
+    init(startingWith contactID: UUID? = nil) {
+        _filterContactID = State(initialValue: contactID)
+    }
+
     private var shownMessages: [ThreadMessage] {
         guard let filterContactID else { return messages }
         return messages.filter { $0.withContactID == filterContactID }

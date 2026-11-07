@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 30l: Thread has People: each of your contacts gets a page of their own, with sections you write and arrange yourself, the last few messages in your log with them, and the support calendar days you have shared with them. Nothing on a page is counted or scored, and deleting a contact deletes their page.
 - Patch 30k: with two or more providers, a thing to raise can be for anyone or for one of them; a filter in Things to raise shows what is for one person and for anyone, and the PDF made out to a provider leaves out what was meant for someone else. Removing a provider keeps their items and makes them for anyone.
 - Patch 30j: you can keep more than one provider, each with their own sessions, notes and a name to use on exports; a row of names at the top of the appointments, session prep and after-session screens switches between them, and the Things to raise PDF can be made out to one of them. Appointments are now part of the JSON export and import.
 - Patch 30i: the journal page is rebuilt like Apple's Journal: the date at the top, your writing in paragraphs, and photos, events, songs and suggestions as their own blocks you can move or remove, with one slim row of tools at the bottom; entries can be bookmarked, and the list can show only bookmarked ones.

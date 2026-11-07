@@ -73,6 +73,12 @@ enum DemoMode {
         context.insert(demoSam)
         context.insert(TrustedContact(name: "Alex", phoneNumber: "0400 000 002", sortOrder: 1))
         context.insert(TrustedContact(name: "Jordan", phoneNumber: "0400 000 003", sortOrder: 2))
+        context.insert(PersonSection(contactID: demoSam.id, title: "Notes",
+                                     text: "Prefers a short text to a call.\nUsually free on Sunday evenings.",
+                                     iconName: "doc.text.fill", tintName: "sage", sortOrder: 0))
+        context.insert(PersonSection(contactID: demoSam.id, title: "Things I've told them",
+                                     text: "That sleep has been rough lately.",
+                                     iconName: "heart.fill", tintName: "accent", sortOrder: 1))
 
         for section in SafetyPlanSections.makeSections(
             warningSigns: "Skipping meals\nStaying up very late\nNot answering messages",
@@ -206,6 +212,9 @@ enum DemoMode {
         context.insert(FutureNote(unlockDate: now.addingTimeInterval(14 * 86_400), text: "You got through last time too."))
         context.insert(FutureNote(unlockDate: now, text: "Be gentle with yourself tonight. Some water, something small to eat, and one message to someone.", openWhen: "it is a hard night"))
         context.insert(ThreadMessage(timestamp: ago(2), text: "Thanks for checking in on me.", withContactID: demoSam.id))
+        context.insert(SupportCalendarEntry(date: now.addingTimeInterval(5 * 86_400),
+                                            note: "A hard day coming up. A check-in would help.",
+                                            visibleToContactIDs: [demoSam.id]))
 
         try? context.save()
         return container

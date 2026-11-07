@@ -74,7 +74,7 @@ struct ContactsView: View {
                             ContactCard(contact: contact, isQuickContact: index < 2)
                         }
                         .buttonStyle(.plain)
-                        .anchorDeletable { modelContext.delete(contact) }
+                        .anchorDeletable { remove(contact) }
                         .anchorCardRow()
                     }
                     .onMove(perform: move)
@@ -148,10 +148,16 @@ struct ContactsView: View {
     private func finishEditing() {
         let deleting = contactToDelete
         contactToDelete = nil
-        if let deleting { modelContext.delete(deleting) }
+        if let deleting { remove(deleting) }
         for contact in contacts where contact !== deleting && isBlank(contact) {
-            modelContext.delete(contact)
+            remove(contact)
         }
+    }
+
+    /// Deleting a person also removes the page of notes kept about them.
+    private func remove(_ contact: TrustedContact) {
+        PersonSection.removeAll(for: contact.id, in: modelContext)
+        modelContext.delete(contact)
     }
 
     private func isBlank(_ contact: TrustedContact) -> Bool {

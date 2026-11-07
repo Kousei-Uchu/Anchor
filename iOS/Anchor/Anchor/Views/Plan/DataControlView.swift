@@ -41,6 +41,7 @@ struct DataControlView: View {
     @Query private var routines: [Routine]
     @Query private var itemLists: [ItemList]
     @Query private var boundarySections: [BoundarySection]
+    @Query private var personSections: [PersonSection]
     @Query private var messageStarters: [MessageStarter]
     @Query private var personalGoals: [PersonalGoal]
     @Query private var recoveryCounters: [RecoveryCounter]
@@ -91,6 +92,7 @@ struct DataControlView: View {
                 countRow("Routines", routines.count, icon: "list.number")
                 countRow("Item lists", itemLists.count, icon: "suitcase")
                 countRow("Boundaries sections", boundarySections.count, icon: "hand.raised.fill")
+                countRow("Person page sections", personSections.count, icon: "person.crop.circle.fill")
                 countRow("Message starters", messageStarters.count, icon: "text.bubble")
                 countRow("Personal goals", personalGoals.count, icon: "flag.fill")
                 countRow("Recovery counters", recoveryCounters.count, icon: "calendar.badge.checkmark")
@@ -216,7 +218,8 @@ struct DataControlView: View {
             boundarySections: boundarySections.map(BoundarySectionDTO.init),
             messageStarters: messageStarters.map(MessageStarterDTO.init),
             personalGoals: personalGoals.map(PersonalGoalDTO.init),
-            appointmentSeries: appointmentSeries.map(AppointmentSeriesDTO.init)
+            appointmentSeries: appointmentSeries.map(AppointmentSeriesDTO.init),
+            personSections: personSections.map(PersonSectionDTO.init)
         )
         guard let data = try? JSONEncoder.anchorExport.encode(export) else { return }
         writeAndShare(data: data, filename: "anchor-export-\(fileTimestamp()).json")
@@ -259,6 +262,7 @@ struct DataControlView: View {
         let existingRoutineIDs = Set(routines.map(\.id))
         let existingItemListIDs = Set(itemLists.map(\.id))
         let existingBoundaryIDs = Set(boundarySections.map(\.id))
+        let existingPersonSectionIDs = Set(personSections.map(\.id))
         let existingStarterIDs = Set(messageStarters.map(\.id))
         let existingGoalIDs = Set(personalGoals.map(\.id))
         let existingProviderIDs = Set(appointmentSeries.map(\.id))
@@ -343,6 +347,13 @@ struct DataControlView: View {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
         for dto in export.boundarySections ?? [] where !existingBoundaryIDs.contains(dto.id) {
+            modelContext.insert(dto.toModel()); importedCount += 1
+        }
+        // A person's page only comes in when that person is here, either already
+        // on this device or in the same file, so nothing arrives that cannot be seen.
+        let knownContactIDs = Set(contacts.map(\.id)).union(export.contacts.map(\.id))
+        for dto in export.personSections ?? []
+        where !existingPersonSectionIDs.contains(dto.id) && knownContactIDs.contains(dto.contactID) {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
         for dto in export.messageStarters ?? [] where !existingStarterIDs.contains(dto.id) {
@@ -506,6 +517,7 @@ struct DataControlView: View {
         for item in routines { modelContext.delete(item) }
         for item in itemLists { modelContext.delete(item) }
         for item in boundarySections { modelContext.delete(item) }
+        for item in personSections { modelContext.delete(item) }
         for item in messageStarters { modelContext.delete(item) }
         for item in personalGoals { modelContext.delete(item) }
         UserDefaults.standard.removeObject(forKey: DayPlan.key)
@@ -687,6 +699,8 @@ struct AnchorDataExport: Codable {
     var personalGoals: [PersonalGoalDTO]? = nil
     /// Providers with their sessions. Optional so exports made before this one still import.
     var appointmentSeries: [AppointmentSeriesDTO]? = nil
+    /// The sections on each person's page. Optional so exports made before person pages still import.
+    var personSections: [PersonSectionDTO]? = nil
 }
 
 /// Every section is optional in the file: an export from any earlier version,
@@ -698,7 +712,7 @@ extension AnchorDataExport {
         "bridgeDraftItems", "diagrams", "threadMessages", "supportCalendarEntries", "futureNotes",
         "unsentDrafts", "decisionCategories", "deEscalationScripts", "affirmations",
         "recoveryCounters", "recoveryMotivations", "recoveryDayEntries", "recoveryUrges", "tasks",
-        "quickLists", "routines", "itemLists", "safetySections", "boundarySections", "messageStarters", "personalGoals", "appointmentSeries"
+        "quickLists", "routines", "itemLists", "safetySections", "boundarySections", "messageStarters", "personalGoals", "appointmentSeries", "personSections"
     ]
 
     init(from decoder: Decoder) throws {
@@ -731,6 +745,7 @@ extension AnchorDataExport {
         messageStarters = c.lossyArray(MessageStarterDTO.self, forKey: .messageStarters)
         personalGoals = c.lossyArray(PersonalGoalDTO.self, forKey: .personalGoals)
         appointmentSeries = c.lossyArray(AppointmentSeriesDTO.self, forKey: .appointmentSeries)
+        personSections = c.lossyArray(PersonSectionDTO.self, forKey: .personSections)
     }
 }
 
@@ -1022,6 +1037,21 @@ struct BoundarySectionDTO: Codable {
     func toModel() -> BoundarySection {
         BoundarySection(id: id, title: title, text: text, iconName: iconName, tintName: tintName,
                         sortOrder: sortOrder, isHidden: isHidden, isShareable: isShareable, lastEditedAt: lastEditedAt)
+    }
+}
+
+struct PersonSectionDTO: Codable {
+    var id: UUID; var contactID: UUID; var title: String; var text: String
+    var iconName: String; var tintName: String
+    var sortOrder: Int; var isHidden: Bool; var lastEditedAt: Date
+    init(_ m: PersonSection) {
+        id = m.id; contactID = m.contactID; title = m.title; text = m.text
+        iconName = m.iconName; tintName = m.tintName
+        sortOrder = m.sortOrder; isHidden = m.isHidden; lastEditedAt = m.lastEditedAt
+    }
+    func toModel() -> PersonSection {
+        PersonSection(id: id, contactID: contactID, title: title, text: text, iconName: iconName,
+                      tintName: tintName, sortOrder: sortOrder, isHidden: isHidden, lastEditedAt: lastEditedAt)
     }
 }
 

@@ -32,7 +32,7 @@ enum WidgetID: String, CaseIterable, Identifiable {
     // Bridge
     case thingsToRaise, nextSession, reframing, feedbackLoops, nswLaw, personalGoals
     // Thread
-    case messageLog, supportCalendar, futureNotes, unsentDrafts, boundaries
+    case messageLog, supportCalendar, futureNotes, unsentDrafts, boundaries, people
 }
 
 extension WidgetID {
@@ -76,6 +76,7 @@ extension WidgetID {
         case .unsentDrafts: return "Things I haven't said"
         case .boundaries: return "Boundaries"
         case .personalGoals: return "Personal goals"
+        case .people: return "People"
         }
     }
 
@@ -103,6 +104,7 @@ extension WidgetID {
         case .unsentDrafts: return "square.and.pencil"
         case .boundaries: return "hand.raised.fill"
         case .personalGoals: return "flag.fill"
+        case .people: return "person.crop.circle.fill"
         }
     }
 
@@ -749,6 +751,33 @@ struct BoundariesWidget: View {
             } else {
                 Anchor.WidgetCaption(text: "Not filled in yet. Tap to write yours.")
             }
+        }
+    }
+}
+
+struct PeopleWidget: View {
+    @Query(sort: \TrustedContact.sortOrder) private var contacts: [TrustedContact]
+
+    /// Who is there, by name. Never a count of messages or of anything done.
+    private var caption: String {
+        let names = contacts
+            .map { $0.name.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        switch names.count {
+        case 0:
+            return "Add people under Contacts in Plan. Each gets a page of their own."
+        case 1...3:
+            return ListFormatter.localizedString(byJoining: names)
+        default:
+            return names.prefix(2).joined(separator: ", ") + " and \(names.count - 2) more"
+        }
+    }
+
+    var body: some View {
+        Anchor.Widget(icon: "person.crop.circle.fill", title: "People") {
+            PeopleView()
+        } content: {
+            Anchor.WidgetCaption(text: caption, lines: 2)
         }
     }
 }

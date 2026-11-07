@@ -354,6 +354,45 @@ final class BoundarySection {
     }
 }
 
+/// One section of a person's page: a note about them, what helps, things the
+/// person has told them, or anything else the person decides to keep. The
+/// same shape as a safety plan section, tied to one trusted contact by id.
+/// Nothing is made for anyone, and nothing here is counted or scored.
+@Model
+final class PersonSection {
+    @Attribute(.unique) var id: UUID
+    /// The `TrustedContact` this page belongs to.
+    var contactID: UUID
+    var title: String
+    var text: String
+    var iconName: String
+    var tintName: String
+    var sortOrder: Int
+    var isHidden: Bool
+    var lastEditedAt: Date
+
+    init(id: UUID = UUID(), contactID: UUID, title: String = "", text: String = "",
+         iconName: String = "doc.text.fill", tintName: String = "sage",
+         sortOrder: Int = 0, isHidden: Bool = false, lastEditedAt: Date = .now) {
+        self.id = id
+        self.contactID = contactID
+        self.title = title
+        self.text = text
+        self.iconName = iconName
+        self.tintName = tintName
+        self.sortOrder = sortOrder
+        self.isHidden = isHidden
+        self.lastEditedAt = lastEditedAt
+    }
+
+    /// Removes every section on one person's page. Called when the person is
+    /// deleted, so nothing is left behind that can no longer be seen.
+    static func removeAll(for contactID: UUID, in context: ModelContext) {
+        guard let all = try? context.fetch(FetchDescriptor<PersonSection>()) else { return }
+        for section in all where section.contactID == contactID { context.delete(section) }
+    }
+}
+
 /// A short dated note the person adds to one of their goals along the way.
 struct GoalNote: Codable, Identifiable, Hashable {
     var id: UUID = UUID()
@@ -1829,7 +1868,7 @@ enum AnchorSchema {
     static var models: [any PersistentModel.Type] {
         [
             JournalEntry.self, CheckIn.self, TrustedContact.self, GroundingTool.self,
-            SafetyPlan.self, SafetyPlanSection.self, BoundarySection.self, MessageStarter.self, PersonalGoal.self, TriggerWindow.self, AppointmentSeries.self, AppointmentOccurrence.self,
+            SafetyPlan.self, SafetyPlanSection.self, BoundarySection.self, PersonSection.self, MessageStarter.self, PersonalGoal.self, TriggerWindow.self, AppointmentSeries.self, AppointmentOccurrence.self,
             BridgeDraftItem.self, FeedbackLoopDiagram.self,
             ThreadMessage.self, SupportCalendarEntry.self, FutureNote.self, UnsentDraft.self,
             MascotLine.self, DecisionPresetCategory.self, DecisionPresetChoice.self,
