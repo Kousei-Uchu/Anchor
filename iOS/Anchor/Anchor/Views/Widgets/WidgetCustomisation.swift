@@ -50,7 +50,7 @@ enum WidgetTab: String, CaseIterable, Identifiable {
             #endif
             return ids
         case .thread:
-            return [.messageLog, .supportCalendar, .futureNotes, .unsentDrafts]
+            return [.messageLog, .supportCalendar, .futureNotes, .unsentDrafts, .boundaries]
         }
     }
 }

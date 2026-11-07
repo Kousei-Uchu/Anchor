@@ -32,7 +32,7 @@ enum WidgetID: String, CaseIterable, Identifiable {
     // Bridge
     case thingsToRaise, nextSession, reframing, feedbackLoops, nswLaw
     // Thread
-    case messageLog, supportCalendar, futureNotes, unsentDrafts
+    case messageLog, supportCalendar, futureNotes, unsentDrafts, boundaries
 }
 
 extension WidgetID {
@@ -74,6 +74,7 @@ extension WidgetID {
         case .supportCalendar: return "Support calendar"
         case .futureNotes: return "To future me"
         case .unsentDrafts: return "Things I haven't said"
+        case .boundaries: return "Boundaries"
         }
     }
 
@@ -99,13 +100,14 @@ extension WidgetID {
         case .supportCalendar: return "calendar.badge.clock"
         case .futureNotes: return "envelope.open.badge.clock"
         case .unsentDrafts: return "square.and.pencil"
+        case .boundaries: return "hand.raised.fill"
         }
     }
 
     var tint: Color {
         switch self {
         case .triggerWindows, .appointments, .deEscalation, .grounding, .recovery,
-             .reframing, .feedbackLoops, .futureNotes, .unsentDrafts:
+             .reframing, .feedbackLoops, .futureNotes, .unsentDrafts, .boundaries:
             return Anchor.Theme.sage
         default:
             return Anchor.Theme.accent
@@ -678,6 +680,35 @@ struct FutureNotesWidget: View {
                 Anchor.WidgetCaption(text: "Next unlocks in \(max(days, 1)) \(max(days, 1) == 1 ? "day" : "days")")
             } else {
                 Anchor.WidgetCaption(text: "Write something for a later day.")
+            }
+        }
+    }
+}
+
+struct BoundariesWidget: View {
+    @Query(sort: \BoundarySection.sortOrder) private var sections: [BoundarySection]
+
+    /// The first shown section that has words, with its first line.
+    private var glance: (title: String, line: String)? {
+        for section in sections where !section.isHidden {
+            if let line = SafetyPlanSections.firstLine(section.text) {
+                return (section.title.isEmpty ? "Untitled" : section.title, line)
+            }
+        }
+        return nil
+    }
+
+    var body: some View {
+        Anchor.Widget(icon: "hand.raised.fill", title: "Boundaries", tint: Anchor.Theme.sage) {
+            BoundariesView()
+        } content: {
+            if let glance {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(glance.title).font(.caption2).foregroundStyle(.secondary)
+                    Text(glance.line).font(.system(.subheadline, design: .rounded)).lineLimit(2)
+                }
+            } else {
+                Anchor.WidgetCaption(text: "Not filled in yet. Tap to write yours.")
             }
         }
     }

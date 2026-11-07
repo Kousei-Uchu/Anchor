@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 30b: Thread has a Boundaries list: a few sections for what you would like people to know, what helps and what does not, which you can rename, reorder, hide and mark as shareable; Share sends only the sections you marked.
 - Patch 30a: the safety plan is a list of sections you own: rename, add, reorder, hide and delete them, and give each an icon and a colour; your existing four sections are copied across as they were, and one section is chosen for reminder quotes.
 - Patch 28: a diagram can start from a template (a few loops and a map, from the plus menu), and the menu on a diagram's page can share it as a picture or a PDF, with or without the written reading; the files are made on the device and removed when the sheet closes.
 - Patch 27: the free map is rebuilt: pan and zoom, undo and redo, arrows on links with an optional plus or minus and a few words, item colours, and linking by dragging from one item onto another. A loop can be opened as a free map.
