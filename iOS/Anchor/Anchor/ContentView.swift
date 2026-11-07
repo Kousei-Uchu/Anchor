@@ -81,59 +81,11 @@ enum Anchor {
         }
     }
 
-    // MARK: Browse vs. edit
-    //
-    // Every content screen is a READ screen first: cards, big rounded type,
-    // calm empty states, no text fields or reorder handles. Changing the
-    // content is a separate, deliberate step: one `EditToolbarButton` in the
-    // toolbar opens the editor as a sheet (`EditorSheet`, settings look).
-    // Quick, in-the-moment actions (log, check in, mark done, call, run a
-    // tool) stay on the read screen; they aren't "editing".
-
-    /// The one "Edit" button used on read screens. Text, not an icon, so
-    /// it's clearly a mode switch and never confused with the settings gear.
-    struct EditToolbarButton: View {
-        var label: String = "Edit"
-        let action: () -> Void
-
-        var body: some View {
-            Button(label, action: action)
-        }
-    }
-
-    /// Wraps an editor (a `Form`/`List`) for presentation as a sheet:
-    /// its own navigation bar with a Done button, on the settings
-    /// background, so editing looks and feels like a different place from
-    /// browsing.
-    struct EditorSheet<Content: View>: View {
-        @Environment(\.dismiss) private var dismiss
-        let title: String
-        var onDone: (() -> Void)? = nil
-        @ViewBuilder var content: () -> Content
-
-        var body: some View {
-            NavigationStack {
-                content()
-                    .anchorSettingsStyle()
-                    .navigationTitle(title)
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button("Done") {
-                                onDone?()
-                                dismiss()
-                            }
-                        }
-                    }
-            }
-        }
-    }
-
     // MARK: Tap-to-edit pattern
     //
-    // The replacement for the Edit button and the manage-list sheet above.
-    // Patches 11 to 13 move the screens over one area at a time, and the
-    // two older types are removed when the last screen has moved.
+    // Every content screen works the same way. Quick, in-the-moment actions
+    // (log, check in, tick off, call, run a tool) stay on the screen; they
+    // aren't "editing".
     //
     //   - Tap a row to edit that item (`TapToEditRow`).
     //   - Swipe a row to delete it (`anchorDeletable`). Screens made of cards

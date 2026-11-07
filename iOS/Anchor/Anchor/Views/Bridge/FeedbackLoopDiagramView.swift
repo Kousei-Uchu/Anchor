@@ -34,12 +34,12 @@ struct DiagramGraph: Codable, Equatable {
 struct FeedbackLoopDiagramListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var diagrams: [FeedbackLoopDiagram]
-    @State private var showingEditor = false
+    @State private var openedDiagram: FeedbackLoopDiagram?
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: Anchor.Theme.spacing) {
-                if diagrams.isEmpty {
+        Group {
+            if diagrams.isEmpty {
+                ScrollView {
                     Anchor.EmptyState(
                         icon: "point.3.connected.trianglepath.dotted",
                         title: "No diagrams yet",
@@ -47,11 +47,12 @@ struct FeedbackLoopDiagramListView: View {
                         actionTitle: "New diagram",
                         tint: Anchor.Theme.sage
                     ) { addDiagram() }
-                } else {
+                    .padding()
+                }
+            } else {
+                List {
                     ForEach(diagrams) { diagram in
-                        NavigationLink {
-                            FeedbackLoopDiagramView(diagram: diagram)
-                        } label: {
+                        Button { openedDiagram = diagram } label: {
                             Anchor.Card(accentColor: Anchor.Theme.sage) {
                                 HStack {
                                     Text(diagram.title.isEmpty ? "Untitled" : diagram.title)
@@ -62,66 +63,44 @@ struct FeedbackLoopDiagramListView: View {
                                         .font(.caption.weight(.semibold))
                                         .foregroundStyle(.tertiary)
                                 }
+                                .contentShape(Rectangle())
                             }
                         }
                         .buttonStyle(.plain)
+                        .anchorDeletable { modelContext.delete(diagram) }
+                        .anchorCardRow()
                     }
-                    Button {
-                        addDiagram()
-                    } label: {
-                        Label("New diagram", systemImage: "plus")
-                    }
-                    .buttonStyle(Anchor.SecondaryButtonStyle())
                 }
+                .listStyle(.plain)
             }
-            .padding()
         }
         .anchorBackground()
         .navigationTitle("Feedback-loop diagrams")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                if !diagrams.isEmpty {
-                    Anchor.EditToolbarButton { showingEditor = true }
-                }
+                Anchor.AddToolbarButton(label: "New diagram") { addDiagram() }
             }
         }
-        .sheet(isPresented: $showingEditor) {
-            Anchor.EditorSheet(title: "Edit diagrams") {
-                FeedbackLoopDiagramsManageView()
-            }
+        .navigationDestination(item: $openedDiagram) { diagram in
+            FeedbackLoopDiagramView(diagram: diagram)
         }
     }
 
+    /// A new diagram opens straight away, ready to be drawn on.
     private func addDiagram() {
         let emptyGraph = DiagramGraph()
         let data = (try? JSONEncoder().encode(emptyGraph)) ?? Data()
-        modelContext.insert(FeedbackLoopDiagram(title: "New diagram", graphJSON: data))
-    }
-}
-
-/// Delete diagrams. Presented from Edit; a diagram's own contents are
-/// edited from inside the diagram.
-private struct FeedbackLoopDiagramsManageView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var diagrams: [FeedbackLoopDiagram]
-
-    var body: some View {
-        List {
-            ForEach(diagrams) { diagram in
-                Text(diagram.title.isEmpty ? "Untitled" : diagram.title)
-                    .font(.system(.subheadline, design: .rounded))
-            }
-            .onDelete { offsets in
-                for index in offsets { modelContext.delete(diagrams[index]) }
-            }
-        }
-        .toolbar { EditButton() }
+        let new = FeedbackLoopDiagram(title: "New diagram", graphJSON: data)
+        modelContext.insert(new)
+        openedDiagram = new
     }
 }
 
 /// A diagram as something to look at (and show a clinician): nodes and
-/// connections, nothing draggable. Edit opens the canvas editor.
+/// connections, nothing draggable. Dragging and tapping on a canvas can't
+/// share a screen with just looking at it, so this one keeps a plain Edit
+/// button that opens the canvas editor.
 struct FeedbackLoopDiagramView: View {
     @Bindable var diagram: FeedbackLoopDiagram
     @State private var graph = DiagramGraph()
@@ -167,12 +146,12 @@ struct FeedbackLoopDiagramView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Anchor.EditToolbarButton { showingEditor = true }
+                Button("Edit") { showingEditor = true }
             }
         }
         .onAppear(perform: loadGraph)
         .sheet(isPresented: $showingEditor, onDismiss: loadGraph) {
-            Anchor.EditorSheet(title: "Edit diagram") {
+            Anchor.ItemEditorSheet(title: "Edit diagram") {
                 FeedbackLoopDiagramEditorView(diagram: diagram)
             }
         }

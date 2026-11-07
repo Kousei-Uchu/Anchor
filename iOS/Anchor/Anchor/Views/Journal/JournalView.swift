@@ -755,8 +755,8 @@ private struct CheckInDetailSheet: View {
 
 
 /// Opening an existing entry shows it as rendered text (formatting, photos,
-/// drawings), not a text box. Edit switches to the editor; Done in the
-/// editor returns here.
+/// drawings), not a text box. Tapping the entry switches to the editor; Done
+/// in the editor returns here.
 private struct JournalEntryReadSheet: View {
     let entry: JournalEntry
     @Environment(\.dismiss) private var dismiss
@@ -772,13 +772,18 @@ private struct JournalEntryReadSheet: View {
                     RecoveryDayChips(date: entry.createdAt, counters: recoveryCounters, topPadding: 6)
                         .padding(.horizontal)
                     MarkdownPreviewView(markdown: entry.text)
+                        .contentShape(Rectangle())
+                        .onTapGesture { isEditing = true }
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityHint("Opens the editor")
                 }
                 .anchorBackground()
                 .navigationTitle(entry.createdAt.formatted(date: .abbreviated, time: .shortened))
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .navigationBarLeading) {
-                        Anchor.EditToolbarButton { isEditing = true }
+                        Button { isEditing = true } label: { Image(systemName: "pencil") }
+                            .accessibilityLabel("Edit entry")
                     }
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Done") { dismiss() }
