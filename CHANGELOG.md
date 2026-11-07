@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 20: on Plan, Bridge and Thread, Customise (under the widgets, or hold a widget) lets you arrange them where they are: drag one onto another to move it, tap the minus to hide it and add it back from the Hidden row, make a half-width widget full width, and Reset to start again.
 - Patch 19: a task can have a tiny first step, say how much energy it needs, be marked started or set aside for now, and be moved to tomorrow with a swipe; the Tasks list can show only the lighter ones on a low day, and Now and the Tasks widget leave out whatever is set aside.
 - Patch 18: a task can wait on other tasks: it moves to "Waiting on something else", dimmed and showing what it is waiting on, and goes back to its usual place when those are ticked off; Now and the Tasks widget show only what can be done now.
 - Patch 17: a task can have steps: add them in the task's editor, tick them on the list, fold them away with the chevron, and see "2 of 5 steps" with a small bar; ticking every step leaves the task for you to finish.

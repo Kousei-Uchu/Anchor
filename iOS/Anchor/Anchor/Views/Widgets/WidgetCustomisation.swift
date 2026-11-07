@@ -2,12 +2,19 @@
 //  WidgetCustomisation.swift
 //  Anchor
 //
-//  Phase 2 of the widget layout: per-tab order and visibility for Plan,
-//  Bridge and Thread. The saved layout is two small strings per tab in
-//  @AppStorage (an ordered list of `WidgetID` raw values, and the hidden
-//  ones). Anything hidden moves to a "More" row at the bottom of the tab, so
-//  no feature ever becomes unreachable. Widgets added in a later version
-//  that aren't in the saved order simply appear after the saved ones.
+//  Phase 2 of the widget layout: per-tab order, visibility and width for
+//  Plan, Bridge and Thread. The saved layout is three small strings per tab
+//  in @AppStorage (an ordered list of `WidgetID` raw values, the hidden ones,
+//  and the half-width widgets that have been made full width). Anything
+//  hidden moves to a "More" row at the bottom of the tab, so no feature ever
+//  becomes unreachable. Widgets added in a later version that aren't in the
+//  saved order simply appear after the saved ones.
+//
+//  Editing happens on the tab itself: the Customise button under the widgets
+//  (or a long-press on one) makes the cards wiggle. Drag a card onto another
+//  to move it, tap the minus to hide it, add hidden ones back from the tray,
+//  and use the resize button to make a half-width widget full width. The
+//  older list in Settings > Layout does the same job for people who prefer it.
 //
 
 import SwiftUI
@@ -27,6 +34,8 @@ enum WidgetTab: String, CaseIterable, Identifiable {
 
     var orderKey: String { "widgetOrder.\(rawValue)" }
     var hiddenKey: String { "widgetHidden.\(rawValue)" }
+    /// Widgets that are half width by default but have been made full width.
+    var fullKey: String { "widgetFull.\(rawValue)" }
 
     /// The shipped order; also what "Reset" returns to.
     var defaultOrder: [WidgetID] {
@@ -88,9 +97,10 @@ extension Anchor {
         }
     }
 
-    /// Lays out a tab's widgets from its saved order/visibility: adjacent
-    /// half-width widgets pair up, a lone one goes full width, and hidden
-    /// ones collect in a "More" row. Long-press a widget to move or hide it.
+    /// Lays out a tab's widgets from its saved order, visibility and width:
+    /// adjacent half-width widgets pair up, a lone one goes full width, and
+    /// hidden ones collect in a "More" row. The Customise button under them
+    /// (or a long-press on a widget) starts editing right here.
     struct WidgetStack<Content: View, More: View>: View {
         let tab: WidgetTab
         let content: (WidgetID) -> Content
@@ -98,7 +108,10 @@ extension Anchor {
 
         @AppStorage private var orderRaw: String
         @AppStorage private var hiddenRaw: String
-        @State private var showCustomise = false
+        @AppStorage private var fullRaw: String
+        @State private var editing = false
+        @State private var targeted: WidgetID?
+        @State private var confirmingReset = false
 
         init(
             tab: WidgetTab,
@@ -110,6 +123,7 @@ extension Anchor {
             self.more = more
             _orderRaw = AppStorage(wrappedValue: "", tab.orderKey)
             _hiddenRaw = AppStorage(wrappedValue: "", tab.hiddenKey)
+            _fullRaw = AppStorage(wrappedValue: "", tab.fullKey)
         }
 
         private enum Row: Identifiable {
@@ -125,11 +139,19 @@ extension Anchor {
         }
 
         @Environment(\.dynamicTypeSize) private var typeSize
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
         private var ordered: [WidgetID] { WidgetLayoutStore.ordering(for: tab, orderRaw: orderRaw) }
         private var hidden: Set<WidgetID> { Set(WidgetLayoutStore.decode(hiddenRaw)) }
+        private var fullWidth: Set<WidgetID> { Set(WidgetLayoutStore.decode(fullRaw)) }
         private var visible: [WidgetID] { ordered.filter { !hidden.contains($0) } }
         private var tucked: [WidgetID] { ordered.filter { hidden.contains($0) } }
+
+        /// Everything is full width at accessibility text sizes, and a widget
+        /// that can be half width is only half width until it is made full.
+        private func isHalfWidth(_ id: WidgetID) -> Bool {
+            !typeSize.isAccessibilitySize && id.isHalf && !fullWidth.contains(id)
+        }
 
         private var rows: [Row] {
             let ids = visible
@@ -137,7 +159,7 @@ extension Anchor {
             var i = 0
             while i < ids.count {
                 let a = ids[i]
-                if !typeSize.isAccessibilitySize, a.isHalf, i + 1 < ids.count, ids[i + 1].isHalf {
+                if isHalfWidth(a), i + 1 < ids.count, isHalfWidth(ids[i + 1]) {
                     result.append(.pair(a, ids[i + 1]))
                     i += 2
                 } else {
@@ -154,32 +176,43 @@ extension Anchor {
                     rowView(row)
                 }
 
-                if !tucked.isEmpty {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("More")
-                            .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                            .foregroundStyle(.secondary)
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(alignment: .top, spacing: 14) {
-                                ForEach(tucked) { id in
-                                    more(id)
+                if editing {
+                    editingFooter
+                } else {
+                    if !tucked.isEmpty {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("More")
+                                .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                                .foregroundStyle(.secondary)
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(alignment: .top, spacing: 14) {
+                                    ForEach(tucked) { id in
+                                        more(id)
+                                    }
                                 }
+                                .padding(.bottom, 4)
                             }
-                            .padding(.bottom, 4)
                         }
+                    }
+                    Button(action: startEditing) {
+                        Label("Customise", systemImage: "slider.horizontal.3")
+                            .font(.system(.footnote, design: .rounded))
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .toolbar {
+                if editing {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button("Done", action: stopEditing)
                     }
                 }
             }
-            .sheet(isPresented: $showCustomise) {
-                NavigationStack {
-                    CustomiseWidgetsView(initialTab: tab)
-                        .toolbar {
-                            ToolbarItem(placement: .confirmationAction) {
-                                Button("Done") { showCustomise = false }
-                            }
-                        }
-                }
-            }
+            .onDisappear { editing = false }
+            .sensoryFeedback(.selection, trigger: orderRaw)
+            .sensoryFeedback(.impact(weight: .light), trigger: editing)
         }
 
         @ViewBuilder
@@ -196,14 +229,148 @@ extension Anchor {
             }
         }
 
+        @ViewBuilder
         private func widget(_ id: WidgetID) -> some View {
+            if editing {
+                editableCell(id)
+            } else {
+                content(id)
+                    .contextMenu {
+                        Button { move(id, by: -1) } label: { Label("Move up", systemImage: "arrow.up") }
+                        Button { move(id, by: 1) } label: { Label("Move down", systemImage: "arrow.down") }
+                        Button { hide(id) } label: { Label("Hide", systemImage: "eye.slash") }
+                        Button(action: startEditing) { Label("Customise", systemImage: "slider.horizontal.3") }
+                    }
+            }
+        }
+
+        // MARK: Editing
+
+        /// A widget while editing: its content is dimmed and cannot be opened,
+        /// the whole card can be dragged, and the controls sit on top of it.
+        private func editableCell(_ id: WidgetID) -> some View {
             content(id)
-                .contextMenu {
-                    Button { move(id, by: -1) } label: { Label("Move up", systemImage: "arrow.up") }
-                    Button { move(id, by: 1) } label: { Label("Move down", systemImage: "arrow.down") }
-                    Button { hide(id) } label: { Label("Hide", systemImage: "eye.slash") }
-                    Button { showCustomise = true } label: { Label("Customise widgets", systemImage: "slider.horizontal.3") }
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+                .opacity(0.35)
+                .overlay { Color.clear.contentShape(Rectangle()) }
+                .overlay {
+                    HStack(spacing: 12) {
+                        cellButton("minus", label: "Hide \(id.title)") { hide(id) }
+                        if id.isHalf && !typeSize.isAccessibilitySize {
+                            let isFull = fullWidth.contains(id)
+                            cellButton(isFull ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right",
+                                       label: isFull ? "Make \(id.title) half width" : "Make \(id.title) full width") {
+                                toggleFull(id)
+                            }
+                        }
+                        Image(systemName: "line.3.horizontal")
+                            .font(.title3)
+                            .foregroundStyle(.secondary)
+                            .accessibilityHidden(true)
+                    }
                 }
+                .overlay {
+                    if targeted == id {
+                        RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous)
+                            .strokeBorder(Theme.accent, lineWidth: 2)
+                    }
+                }
+                .modifier(WiggleModifier(active: !reduceMotion))
+                .draggable(id.rawValue)
+                .dropDestination(for: String.self) { items, _ in
+                    targeted = nil
+                    guard let raw = items.first else { return false }
+                    withAnimation(.snappy) { drop(raw, onto: id) }
+                    return true
+                } isTargeted: { isOver in
+                    if isOver { targeted = id } else if targeted == id { targeted = nil }
+                }
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel(id.title)
+                .accessibilityAction(named: "Move up") { move(id, by: -1) }
+                .accessibilityAction(named: "Move down") { move(id, by: 1) }
+        }
+
+        private func cellButton(_ symbol: String, label: String, action: @escaping () -> Void) -> some View {
+            Button {
+                withAnimation(.snappy, action)
+            } label: {
+                Image(systemName: symbol)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .frame(width: 44, height: 44)
+                    .background(.regularMaterial, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(label)
+        }
+
+        /// Hidden widgets to add back, then Reset and Done. Shown in place of
+        /// the More row while editing.
+        private var editingFooter: some View {
+            VStack(alignment: .leading, spacing: 12) {
+                if !tucked.isEmpty {
+                    Text("Hidden")
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            ForEach(tucked) { id in
+                                Button {
+                                    withAnimation(.snappy) { show(id) }
+                                } label: {
+                                    Label(id.title, systemImage: "plus.circle.fill")
+                                        .font(.system(.subheadline, design: .rounded))
+                                        .foregroundStyle(.primary)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 10)
+                                        .background(Capsule().fill(id.tint.opacity(0.16)))
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel("Show \(id.title)")
+                            }
+                        }
+                    }
+                }
+                HStack {
+                    Button("Reset") { confirmingReset = true }
+                        .font(.system(.subheadline, design: .rounded))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Done", action: stopEditing)
+                        .buttonStyle(SecondaryButtonStyle())
+                }
+            }
+            .confirmationDialog("Put \(tab.title) back the way it started?",
+                                isPresented: $confirmingReset, titleVisibility: .visible) {
+                Button("Reset \(tab.title)", role: .destructive) {
+                    withAnimation(.snappy) { reset() }
+                }
+                Button("Keep my layout", role: .cancel) {}
+            }
+        }
+
+        private func startEditing() {
+            withAnimation(.snappy) { editing = true }
+        }
+
+        private func stopEditing() {
+            targeted = nil
+            withAnimation(.snappy) { editing = false }
+        }
+
+        // MARK: Changing the layout
+
+        /// Moves the dragged widget to where the one it was dropped on sits:
+        /// after it when dragging down, before it when dragging up.
+        private func drop(_ raw: String, onto target: WidgetID) {
+            guard let dragged = WidgetID(rawValue: raw), dragged != target else { return }
+            var shown = visible
+            guard let from = shown.firstIndex(of: dragged), let to = shown.firstIndex(of: target) else { return }
+            shown.remove(at: from)
+            shown.insert(dragged, at: to)
+            apply(visibleOrder: shown)
         }
 
         /// Swaps with the neighbouring *visible* widget; hidden ones keep their slots.
@@ -213,6 +380,12 @@ extension Anchor {
             let target = index + delta
             guard shown.indices.contains(target) else { return }
             shown.swapAt(index, target)
+            apply(visibleOrder: shown)
+        }
+
+        /// Writes a new order for the visible widgets into the slots they
+        /// already occupy, so hidden widgets keep theirs.
+        private func apply(visibleOrder shown: [WidgetID]) {
             var full = ordered
             let hiddenSet = hidden
             let slots = full.indices.filter { !hiddenSet.contains(full[$0]) }
@@ -224,6 +397,38 @@ extension Anchor {
             var set = hidden
             set.insert(id)
             hiddenRaw = WidgetLayoutStore.encode(ordered.filter { set.contains($0) })
+        }
+
+        private func show(_ id: WidgetID) {
+            var set = hidden
+            set.remove(id)
+            hiddenRaw = WidgetLayoutStore.encode(ordered.filter { set.contains($0) })
+        }
+
+        private func toggleFull(_ id: WidgetID) {
+            var set = fullWidth
+            if set.contains(id) { set.remove(id) } else { set.insert(id) }
+            fullRaw = WidgetLayoutStore.encode(ordered.filter { set.contains($0) })
+        }
+
+        private func reset() {
+            orderRaw = ""
+            hiddenRaw = ""
+            fullRaw = ""
+        }
+    }
+
+    /// A very small tilt back and forth, the way icons wiggle on the Home
+    /// Screen. Off when Reduce Motion is on.
+    private struct WiggleModifier: ViewModifier {
+        let active: Bool
+        @State private var tilt = false
+
+        func body(content: Content) -> some View {
+            content
+                .rotationEffect(.degrees(active ? (tilt ? 0.5 : -0.5) : 0))
+                .animation(active ? Animation.easeInOut(duration: 0.16).repeatForever(autoreverses: true) : nil, value: tilt)
+                .onAppear { if active { tilt.toggle() } }
         }
     }
 }
@@ -264,11 +469,13 @@ private struct CustomiseWidgetsList: View {
     let tab: WidgetTab
     @AppStorage private var orderRaw: String
     @AppStorage private var hiddenRaw: String
+    @AppStorage private var fullRaw: String
 
     init(tab: WidgetTab) {
         self.tab = tab
         _orderRaw = AppStorage(wrappedValue: "", tab.orderKey)
         _hiddenRaw = AppStorage(wrappedValue: "", tab.hiddenKey)
+        _fullRaw = AppStorage(wrappedValue: "", tab.fullKey)
     }
 
     private func visibleBinding(_ id: WidgetID) -> Binding<Bool> {
@@ -320,6 +527,7 @@ private struct CustomiseWidgetsList: View {
                 Button("Reset \(tab.title) to default", role: .destructive) {
                     orderRaw = ""
                     hiddenRaw = ""
+                    fullRaw = ""
                 }
                 .font(.system(.subheadline, design: .rounded))
             }
