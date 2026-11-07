@@ -33,6 +33,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \RecoveryCounter.sortOrder) private var allCounters: [RecoveryCounter]
+    @Query(sort: \Routine.createdAt) private var routines: [Routine]
 
     @StateObject private var appLock = AppLock.shared
     @State private var faceIDEnabled = AppLock.shared.isEnabled
@@ -83,6 +84,17 @@ struct SettingsView: View {
                     }
                     Anchor.SettingsToggle(title: "Focus timer alerts", isOn: $focusAlertsEnabled)
                     Anchor.SettingsToggle(title: "Focus timer on the lock screen", isOn: $focusLockScreenEnabled)
+                }
+
+                if routines.contains(where: { !$0.isBlank }) {
+                    Anchor.SettingsSection(
+                        title: "Routine reminders",
+                        footer: "Off until you switch one on. The days are set in the routine itself, and the lock screen never shows its name."
+                    ) {
+                        ForEach(routines.filter { !$0.isBlank }) { routine in
+                            RoutineReminderSettingsRow(routine: routine)
+                        }
+                    }
                 }
 
                 if showsRecovery {
@@ -195,5 +207,49 @@ struct SettingsView: View {
                 minute.wrappedValue = parts.minute ?? minute.wrappedValue
             }
         )
+    }
+}
+
+/// One routine's reminder in Settings: the switch, and the time once it is on.
+/// The days are chosen in the routine itself.
+private struct RoutineReminderSettingsRow: View {
+    @Bindable var routine: Routine
+    @Environment(\.modelContext) private var modelContext
+
+    private var timeBinding: Binding<Date> {
+        Binding(
+            get: {
+                Calendar.current.date(bySettingHour: routine.reminderHour, minute: routine.reminderMinute,
+                                      second: 0, of: .now) ?? .now
+            },
+            set: { newValue in
+                let parts = Calendar.current.dateComponents([.hour, .minute], from: newValue)
+                routine.reminderHour = parts.hour ?? routine.reminderHour
+                routine.reminderMinute = parts.minute ?? routine.reminderMinute
+            }
+        )
+    }
+
+    var body: some View {
+        Group {
+            Anchor.SettingsToggle(title: routine.displayName, isOn: $routine.reminderEnabled)
+            if routine.reminderEnabled {
+                Anchor.SettingsTimeRow(time: timeBinding)
+                if let summary = routine.reminderSummary {
+                    Text(summary).font(.footnote).foregroundStyle(.secondary)
+                } else {
+                    Text("No days picked yet. Choose them in the routine.").font(.footnote).foregroundStyle(.secondary)
+                }
+            }
+        }
+        .onChange(of: routine.reminderEnabled) { _, isOn in
+            if isOn {
+                if routine.reminderDays.isEmpty { routine.reminderDays = Array(1...7) }
+                NotificationScheduler.askForPermissionIfNeeded()
+            }
+            RoutineReminders.refresh(using: modelContext)
+        }
+        .onChange(of: routine.reminderHour) { _, _ in RoutineReminders.refresh(using: modelContext) }
+        .onChange(of: routine.reminderMinute) { _, _ in RoutineReminders.refresh(using: modelContext) }
     }
 }

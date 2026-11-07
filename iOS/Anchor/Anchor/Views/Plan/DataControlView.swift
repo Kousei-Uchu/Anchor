@@ -318,6 +318,7 @@ struct DataControlView: View {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
         RecoveryNotifications.refresh(using: modelContext)
+        RoutineReminders.refresh(using: modelContext)
 
         importResultMessage = importedCount == 0
             ? "Nothing new to import. Everything in that file is already here."
@@ -454,6 +455,7 @@ struct DataControlView: View {
         for item in recoveryDayEntries { modelContext.delete(item) }
         for item in recoveryUrges { modelContext.delete(item) }
         RecoveryNotifications.refresh(counters: [])
+        RoutineReminders.refresh(routines: [])
         RecoveryWidgetSync.refresh(counters: [])
         clearJournalAttachments()
         showClearedAlert = true
@@ -882,11 +884,18 @@ struct QuickListDTO: Codable {
 struct RoutineDTO: Codable {
     var id: UUID; var name: String; var createdAt: Date
     var steps: [RoutineStep]
+    /// Optional so exports made before routine reminders existed still import.
+    var reminderEnabled: Bool?; var reminderDays: [Int]?
+    var reminderHour: Int?; var reminderMinute: Int?
     init(_ m: Routine) {
         id = m.id; name = m.name; createdAt = m.createdAt; steps = m.steps
+        reminderEnabled = m.reminderEnabled; reminderDays = m.reminderDays
+        reminderHour = m.reminderHour; reminderMinute = m.reminderMinute
     }
     func toModel() -> Routine {
-        Routine(id: id, name: name, createdAt: createdAt, steps: steps)
+        Routine(id: id, name: name, createdAt: createdAt, steps: steps,
+                reminderEnabled: reminderEnabled ?? false, reminderDays: reminderDays ?? [],
+                reminderHour: reminderHour ?? 8, reminderMinute: reminderMinute ?? 0)
     }
 }
 
