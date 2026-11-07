@@ -124,6 +124,18 @@ enum DemoMode {
             RoutineStep(text: "Head out")
         ]))
 
+        let days = ListVariable(name: "Day", value: 3)
+        let weekend = ItemList(name: "Weekend away", createdAt: ago(4), variables: [days], items: [
+            ListItem(name: "Phone charger", category: "Things", isDone: true),
+            ListItem(name: "Keys", category: "Things"),
+            ListItem(name: "T-shirts", category: "Clothes", rule: QuantityRule(variableID: days.id, per: 1)),
+            ListItem(name: "Socks", category: "Clothes",
+                     rule: QuantityRule(variableID: days.id, per: 1, extra: 1, extraEvery: 3)),
+            ListItem(name: "Toothbrush", category: "Wash bag", isDone: true),
+            ListItem(name: "Medication organiser", category: "Wash bag")
+        ])
+        context.insert(weekend)
+
         context.insert(Affirmation(text: "I got through today. That counts.", sortOrder: 0))
         context.insert(Affirmation(text: "Small steps still move me forward.", sortOrder: 1))
 

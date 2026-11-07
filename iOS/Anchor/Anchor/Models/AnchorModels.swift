@@ -1272,6 +1272,167 @@ extension Routine {
     }
 }
 
+// MARK: - Item lists
+//
+// A packing-style checklist: items sorted under categories, each with a
+// quantity that is either a fixed number or worked out from a variable the
+// list holds ("Day: 5", "Person: 2"). A rule like "1 per day + 1 extra for
+// every 3" follows the variable, so changing the number of days updates every
+// quantity at once. Variables, items and rules are small arrays of values
+// inside the list (the way a quick list keeps its items), so a list is one
+// record and one entry in an export. A new model with defaults on every field,
+// so there is no store migration.
+
+struct ListVariable: Codable, Identifiable, Hashable {
+    var id: UUID = UUID()
+    var name: String
+    var value: Int = 1
+}
+
+/// How many of an item. Fixed, or `per` for each of a variable, plus an
+/// optional `extra` for every `extraEvery` of it (rounded down).
+struct QuantityRule: Codable, Hashable {
+    var fixed: Int = 1
+    var variableID: UUID? = nil
+    var per: Int = 1
+    var extra: Int = 0
+    var extraEvery: Int = 0
+
+    /// `variableValue` is nil when the rule has no variable or the variable
+    /// has been deleted; the fixed number is used then.
+    func quantity(variableValue: Int?) -> Int {
+        guard variableID != nil, let value = variableValue else { return fixed }
+        var total = per * value
+        if extra > 0 && extraEvery > 0 { total += extra * (value / extraEvery) }
+        return max(total, 0)
+    }
+}
+
+struct ListItem: Codable, Identifiable, Hashable {
+    var id: UUID = UUID()
+    var name: String
+    var category: String = ""
+    var rule: QuantityRule = QuantityRule()
+    var isDone: Bool = false
+}
+
+@Model
+final class ItemList {
+    @Attribute(.unique) var id: UUID
+    var name: String
+    var createdAt: Date = Date.now
+    var variables: [ListVariable] = []
+    var items: [ListItem] = []
+
+    init(id: UUID = UUID(), name: String, createdAt: Date = .now,
+         variables: [ListVariable] = [], items: [ListItem] = []) {
+        self.id = id
+        self.name = name
+        self.createdAt = createdAt
+        self.variables = variables
+        self.items = items
+    }
+}
+
+extension ItemList {
+    static let maxItems = 300
+    static let maxVariables = 6
+    static let otherCategory = "Other"
+
+    var displayName: String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Untitled list" : name
+    }
+
+    var isBlank: Bool {
+        name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && items.isEmpty
+    }
+
+    var tickedCount: Int { items.filter(\.isDone).count }
+
+    /// "12 items", or "5 of 12 ticked" once something is ticked. Never a
+    /// percentage, and nothing changes when everything is ticked.
+    var summaryText: String {
+        let count = items.count == 1 ? "1 item" : "\(items.count) items"
+        if items.isEmpty { return "No items yet" }
+        return tickedCount == 0 ? count : "\(tickedCount) of \(items.count) ticked"
+    }
+
+    func variableValue(for id: UUID?) -> Int? {
+        guard let id else { return nil }
+        return variables.first { $0.id == id }?.value
+    }
+
+    func variableName(for id: UUID?) -> String? {
+        guard let id else { return nil }
+        return variables.first { $0.id == id }?.name
+    }
+
+    func quantity(of item: ListItem) -> Int {
+        item.rule.quantity(variableValue: variableValue(for: item.rule.variableID))
+    }
+
+    /// "x5", or "" for one, so a list of single things stays quiet.
+    func quantityBadge(of item: ListItem) -> String {
+        let quantity = quantity(of: item)
+        return quantity == 1 ? "" : "\u{00D7}\(quantity)"
+    }
+
+    /// "1 per day + 1 extra for every 3", or "" for a fixed number.
+    func ruleDescription(for item: ListItem) -> String {
+        let rule = item.rule
+        guard let name = variableName(for: rule.variableID) else { return "" }
+        let label = name.trimmingCharacters(in: .whitespaces).lowercased()
+        var text = "\(rule.per) per \(label.isEmpty ? "unit" : label)"
+        if rule.extra > 0 && rule.extraEvery > 0 {
+            text += " + \(rule.extra) extra for every \(rule.extraEvery)"
+        }
+        return text
+    }
+
+    /// Category names in the order they first appear, with items that have
+    /// none gathered under "Other" at the end.
+    var categoryNames: [String] {
+        var seen: [String] = []
+        for item in items {
+            let name = Self.categoryName(for: item)
+            if name != Self.otherCategory, !seen.contains(name) { seen.append(name) }
+        }
+        if items.contains(where: { Self.categoryName(for: $0) == Self.otherCategory }) { seen.append(Self.otherCategory) }
+        return seen
+    }
+
+    static func categoryName(for item: ListItem) -> String {
+        let trimmed = item.category.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? otherCategory : trimmed
+    }
+
+    func items(in category: String) -> [ListItem] {
+        items.filter { Self.categoryName(for: $0) == category }
+    }
+
+    /// Unticks everything, so the same list can be used again.
+    func resetTicks() {
+        for index in items.indices { items[index].isDone = false }
+    }
+
+    /// A new list with the same variables and items, all unticked, new ids so
+    /// the copy's rules follow the copy's own variables.
+    func copied(named newName: String) -> ItemList {
+        var idMap: [UUID: UUID] = [:]
+        let newVariables = variables.map { variable -> ListVariable in
+            let fresh = ListVariable(name: variable.name, value: variable.value)
+            idMap[variable.id] = fresh.id
+            return fresh
+        }
+        let newItems = items.map { item -> ListItem in
+            var rule = item.rule
+            if let old = rule.variableID { rule.variableID = idMap[old] }
+            return ListItem(name: item.name, category: item.category, rule: rule, isDone: false)
+        }
+        return ItemList(name: newName, variables: newVariables, items: newItems)
+    }
+}
+
 // MARK: - Mascot (pre-written lines only — never generative at runtime)
 
 enum MascotMood: String, Codable {
@@ -1317,7 +1478,7 @@ enum AnchorSchema {
             MascotLine.self, DecisionPresetCategory.self, DecisionPresetChoice.self,
             DeEscalationScript.self, NextHourItem.self, TaskItem.self, Affirmation.self,
             RecoveryCounter.self, RecoveryMotivation.self, RecoveryDayEntry.self, RecoveryUrge.self,
-            QuickList.self, Routine.self
+            QuickList.self, Routine.self, ItemList.self
         ]
     }
 
