@@ -14,5 +14,6 @@ struct AnchorWidgetBundle: WidgetBundle {
         AnchorNextWindowWidget()
         AnchorAffirmationWidget()
         AnchorCounterWidget()
+        PomodoroLiveActivity()
     }
 }

@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 21b: the focus timer can show on the lock screen and in the Dynamic Island, with the phase and a live countdown but never the task; it is off until you switch it on in the timer's settings or in Settings.
 - Patch 22: a task can have a rough time estimate, and Plan my day (in the Tasks menu) lets you say how much time you have, pick tasks and steps, put them in order and go through them one at a time, with Focus on this, Done and Not now on each.
 - Patch 21: a task or step can be worked on with a focus timer: hold it and choose Focus on this, or open Focus timer from the Tasks menu; set the lengths, breaks and rounds with the gear; a bar on the Tasks screen shows it while it runs; alerts when a phase ends are off until you turn them on, and a task keeps a plain count of the sessions that ran to the end.
 - Patch 20: on Plan, Bridge and Thread, Customise (under the widgets, or hold a widget) lets you arrange them where they are: drag one onto another to move it, tap the minus to hide it and add it back from the Hidden row, make a half-width widget full width, and Reset to start again.

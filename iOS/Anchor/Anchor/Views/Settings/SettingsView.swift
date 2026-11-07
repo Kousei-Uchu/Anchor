@@ -44,6 +44,7 @@ struct SettingsView: View {
     @AppStorage(DailyCheckInSettings.minuteKey) private var dailyCheckInMinute = 0
 
     @AppStorage(PomodoroSettings.alertsKey) private var focusAlertsEnabled = false
+    @AppStorage(PomodoroSettings.lockScreenKey) private var focusLockScreenEnabled = false
 
     @AppStorage(RecoverySettings.pledgeEnabled) private var pledgeEnabled = false
     @AppStorage(RecoverySettings.pledgeHour) private var pledgeHour = 8
@@ -81,6 +82,7 @@ struct SettingsView: View {
                         Anchor.SettingsTimeRow(time: timeBinding($dailyCheckInHour, $dailyCheckInMinute))
                     }
                     Anchor.SettingsToggle(title: "Focus timer alerts", isOn: $focusAlertsEnabled)
+                    Anchor.SettingsToggle(title: "Focus timer on the lock screen", isOn: $focusLockScreenEnabled)
                 }
 
                 if showsRecovery {
@@ -155,6 +157,7 @@ struct SettingsView: View {
             .onChange(of: faceIDEnabled) { _, isOn in appLock.isEnabled = isOn }
             .onChange(of: dailyCheckInEnabled) { _, _ in applyDailyCheckIn() }
             .onChange(of: focusAlertsEnabled) { _, isOn in PomodoroSettings.alertsChanged(isOn) }
+            .onChange(of: focusLockScreenEnabled) { _, isOn in PomodoroSettings.lockScreenChanged(isOn) }
             .onChange(of: dailyCheckInHour) { _, _ in applyDailyCheckIn() }
             .onChange(of: dailyCheckInMinute) { _, _ in applyDailyCheckIn() }
             .onChange(of: pledgeEnabled) { _, isOn in recoveryRemindersChanged(isOn) }

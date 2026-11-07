@@ -10,6 +10,7 @@
 
 import WidgetKit
 import SwiftUI
+import ActivityKit
 
 struct AnchorEntry: TimelineEntry {
     let date: Date
@@ -436,5 +437,87 @@ struct AnchorCounterWidget: Widget {
         .configurationDisplayName("Anchor: Counter")
         .description("A day count. It shows the discreet label you chose, never the counter's name, unless you opt in.")
         .supportedFamilies([.accessoryRectangular, .accessoryCircular, .systemSmall, .systemMedium])
+    }
+}
+
+// MARK: - Focus timer Live Activity
+
+private func pomodoroClock(_ seconds: TimeInterval) -> String {
+    let total = Int(seconds.rounded(.up))
+    return String(format: "%d:%02d", total / 60, total % 60)
+}
+
+private struct PomodoroTime: View {
+    let state: PomodoroActivityAttributes.ContentState
+    let isStale: Bool
+
+    var body: some View {
+        if isStale {
+            Text("0:00")
+        } else if state.isPaused {
+            Text(pomodoroClock(state.pausedRemaining))
+        } else {
+            Text(timerInterval: state.startDate...state.endDate, countsDown: true, showsHours: false)
+        }
+    }
+}
+
+private struct PomodoroLockScreenView: View {
+    let state: PomodoroActivityAttributes.ContentState
+    let isStale: Bool
+
+    private var subtitle: String {
+        if isStale { return "Time is up" }
+        return state.isPaused ? "Paused" : "Anchor"
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: state.isBreak ? "cup.and.saucer" : "timer")
+                .font(.title2)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(state.phaseTitle)
+                    .font(.headline)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            PomodoroTime(state: state, isStale: isStale)
+                .font(.system(.title, design: .rounded).weight(.semibold))
+                .monospacedDigit()
+                .multilineTextAlignment(.trailing)
+        }
+        .padding()
+    }
+}
+
+struct PomodoroLiveActivity: Widget {
+    var body: some WidgetConfiguration {
+        ActivityConfiguration(for: PomodoroActivityAttributes.self) { context in
+            PomodoroLockScreenView(state: context.state, isStale: context.isStale)
+        } dynamicIsland: { context in
+            let icon = context.state.isBreak ? "cup.and.saucer" : "timer"
+            return DynamicIsland {
+                DynamicIslandExpandedRegion(.leading) {
+                    Label(context.state.phaseTitle, systemImage: icon)
+                        .font(.headline)
+                }
+                DynamicIslandExpandedRegion(.trailing) {
+                    PomodoroTime(state: context.state, isStale: context.isStale)
+                        .font(.system(.title2, design: .rounded).weight(.semibold))
+                        .monospacedDigit()
+                        .frame(maxWidth: 90, alignment: .trailing)
+                }
+            } compactLeading: {
+                Image(systemName: icon)
+            } compactTrailing: {
+                PomodoroTime(state: context.state, isStale: context.isStale)
+                    .monospacedDigit()
+                    .frame(width: 46)
+            } minimal: {
+                Image(systemName: icon)
+            }
+        }
     }
 }
