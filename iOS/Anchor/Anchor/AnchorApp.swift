@@ -168,7 +168,9 @@ enum DemoMode {
 
         context.insert(BridgeDraftItem(text: "Sleep has been off"))
         context.insert(BridgeDraftItem(text: "Medication question"))
-        context.insert(BridgeDraftItem(text: "Ask about next steps"))
+        context.insert(BridgeDraftItem(text: "Ask about next steps", isQuestion: true))
+        context.insert(BridgeDraftItem(createdAt: ago(9), text: "Is it worth trying a different time of day?", isResolved: true,
+                                       isQuestion: true, answer: "Worth a try for two weeks, then we look again."))
 
         context.insert(FeedbackLoopDiagram(
             title: "Waking in the night",

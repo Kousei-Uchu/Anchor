@@ -591,12 +591,20 @@ final class BridgeDraftItem {
     var createdAt: Date
     var text: String
     var isResolved: Bool   // "brought this up already" — not a score, just a checkbox
+    /// True when the item is a question to ask rather than something to raise.
+    var isQuestion: Bool = false
+    /// What was said in answer, written by the person after the session.
+    /// Only used when the item is a question.
+    var answer: String = ""
 
-    init(id: UUID = UUID(), createdAt: Date = .now, text: String, isResolved: Bool = false) {
+    init(id: UUID = UUID(), createdAt: Date = .now, text: String, isResolved: Bool = false,
+         isQuestion: Bool = false, answer: String = "") {
         self.id = id
         self.createdAt = createdAt
         self.text = text
         self.isResolved = isResolved
+        self.isQuestion = isQuestion
+        self.answer = answer
     }
 }
 

@@ -78,15 +78,24 @@ enum BridgeExporter {
                         context.beginPage()
                         y = margin
                     }
-                    let prefix = item.isResolved ? "[already discussed] " : "• "
-                    let text = prefix + item.text
-                    let rect = CGRect(x: margin, y: y, width: pageWidth - margin * 2, height: 200)
-                    let boundingRect = (text as NSString).boundingRect(
-                        with: CGSize(width: rect.width, height: .greatestFiniteMagnitude),
-                        options: .usesLineFragmentOrigin, attributes: bodyAttributes, context: nil
-                    )
-                    text.draw(in: rect, withAttributes: bodyAttributes)
-                    y += boundingRect.height + 4
+                    let prefix: String
+                    if item.isQuestion {
+                        prefix = item.isResolved ? "[asked] Question: " : "Question: "
+                    } else {
+                        prefix = item.isResolved ? "[already discussed] " : "• "
+                    }
+                    var paragraphs = [prefix + item.text]
+                    let answer = item.answer.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if item.isQuestion, !answer.isEmpty { paragraphs.append("Answer: " + answer) }
+                    for text in paragraphs {
+                        let rect = CGRect(x: margin, y: y, width: pageWidth - margin * 2, height: 200)
+                        let boundingRect = (text as NSString).boundingRect(
+                            with: CGSize(width: rect.width, height: .greatestFiniteMagnitude),
+                            options: .usesLineFragmentOrigin, attributes: bodyAttributes, context: nil
+                        )
+                        text.draw(in: rect, withAttributes: bodyAttributes)
+                        y += boundingRect.height + 4
+                    }
                     item.createdAt.formatted(date: .abbreviated, time: .omitted)
                         .draw(at: CGPoint(x: margin, y: y), withAttributes: subAttributes)
                     y += 20
