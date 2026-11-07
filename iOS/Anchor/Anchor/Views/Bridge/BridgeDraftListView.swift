@@ -165,3 +165,204 @@ private struct BridgeDraftItemEditorSheet: View {
         }
     }
 }
+
+
+// MARK: - Personal goals
+
+/// The person's own goals, in their own words, each with short dated notes
+/// along the way. No scores, no percentages and no framing as treatment.
+/// Tap a goal to open it, the plus adds one, and Delete is in the goal and in
+/// its long-press menu. Reorder shows with two or more goals being worked on,
+/// because the order is theirs to set. Goals that are reached or set aside
+/// move to their own groups, and moving one back is a change in its sheet.
+struct PersonalGoalsView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \PersonalGoal.sortOrder) private var goals: [PersonalGoal]
+    @State private var editing: PersonalGoal?
+    @State private var toDelete: PersonalGoal?
+
+    private func group(_ status: GoalStatus) -> [PersonalGoal] {
+        goals.filter { $0.status == status }
+    }
+
+    var body: some View {
+        Group {
+            if goals.isEmpty {
+                ScrollView {
+                    Anchor.EmptyState(
+                        icon: "flag.fill",
+                        title: "Nothing here yet",
+                        message: "Goals of your own, in your own words, with a few notes along the way. There are no scores and nothing to keep up.",
+                        actionTitle: "Write one",
+                        tint: Anchor.Theme.sage
+                    ) { startNew() }
+                    .padding()
+                }
+            } else {
+                List {
+                    ForEach(group(.active)) { goal in
+                        row(goal)
+                    }
+                    .onMove(perform: move)
+
+                    if !group(.reached).isEmpty {
+                        Section {
+                            ForEach(group(.reached)) { goal in row(goal) }
+                        } header: {
+                            Text("Reached")
+                        }
+                        .listRowBackground(Color.clear)
+                    }
+                    if !group(.setAside).isEmpty {
+                        Section {
+                            ForEach(group(.setAside)) { goal in row(goal) }
+                        } header: {
+                            Text("Set aside for now")
+                        }
+                        .listRowBackground(Color.clear)
+                    }
+                }
+                .listStyle(.plain)
+            }
+        }
+        .anchorBackground()
+        .navigationTitle("Personal goals")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItemGroup(placement: .primaryAction) {
+                if group(.active).count > 1 {
+                    Anchor.ReorderToolbarButton()
+                }
+                Anchor.AddToolbarButton(label: "Write a goal") { startNew() }
+            }
+        }
+        .sheet(item: $editing, onDismiss: finishEditing) { goal in
+            PersonalGoalEditorSheet(goal: goal) { toDelete = goal }
+        }
+    }
+
+    private func row(_ goal: PersonalGoal) -> some View {
+        Button { editing = goal } label: {
+            Anchor.Card(accentColor: Anchor.Theme.sage) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(goal.title.isEmpty ? "Untitled" : goal.title)
+                        .font(.system(.headline, design: .rounded))
+                        .foregroundStyle(goal.status == .active ? .primary : .secondary)
+                        .multilineTextAlignment(.leading)
+                    if let line = SafetyPlanSections.firstLine(goal.why) {
+                        Text(line)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                    }
+                    if !goal.notes.isEmpty {
+                        Text(goal.notes.count == 1 ? "1 note" : "\(goal.notes.count) notes")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Opens the goal")
+        .anchorDeletable { modelContext.delete(goal) }
+        .anchorCardRow()
+    }
+
+    private func startNew() {
+        let new = PersonalGoal(sortOrder: (goals.map(\.sortOrder).max() ?? -1) + 1)
+        modelContext.insert(new)
+        editing = new
+    }
+
+    private func move(from offsets: IndexSet, to destination: Int) {
+        var reordered = group(.active)
+        reordered.move(fromOffsets: offsets, toOffset: destination)
+        let others = goals.filter { $0.status != .active }
+        for (index, goal) in (reordered + others).enumerated() { goal.sortOrder = index }
+    }
+
+    /// Runs once the sheet has closed, so it never reads a goal that is
+    /// already gone. A goal added and left with no title and no why is dropped.
+    private func finishEditing() {
+        let deleting = toDelete
+        toDelete = nil
+        if let deleting { modelContext.delete(deleting) }
+        for goal in goals where goal !== deleting
+            && goal.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && goal.why.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && goal.notes.isEmpty {
+            modelContext.delete(goal)
+        }
+    }
+}
+
+private struct PersonalGoalEditorSheet: View {
+    @Bindable var goal: PersonalGoal
+    let onDelete: () -> Void
+    @State private var newNote = ""
+
+    private var sortedNotes: [GoalNote] { goal.notes.sorted { $0.date > $1.date } }
+
+    private var trimmedNewNote: String {
+        newNote.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    var body: some View {
+        Anchor.ItemEditorSheet(
+            title: goal.title.isEmpty ? "New goal" : "Goal",
+            onDelete: onDelete,
+            deleteQuestion: "Delete this goal and its notes?"
+        ) {
+            Form {
+                Section {
+                    TextField("What I want", text: $goal.title, axis: .vertical)
+                        .lineLimit(1...4)
+                    TextField("Why it matters to me", text: $goal.why, axis: .vertical)
+                        .lineLimit(2...8)
+                }
+                Section {
+                    Picker("Where it is", selection: Binding(
+                        get: { goal.status },
+                        set: { goal.status = $0; goal.lastEditedAt = .now }
+                    )) {
+                        ForEach(GoalStatus.allCases) { status in
+                            Text(status.label).tag(status)
+                        }
+                    }
+                }
+                Section("Notes along the way") {
+                    ForEach(sortedNotes) { note in
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(note.text)
+                            Text(note.date.formatted(date: .abbreviated, time: .omitted))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .onDelete { offsets in
+                        let sorted = sortedNotes
+                        let ids = Set(offsets.map { sorted[$0].id })
+                        goal.notes.removeAll { ids.contains($0.id) }
+                        goal.lastEditedAt = .now
+                    }
+                    HStack(alignment: .top) {
+                        TextField("Add a note", text: $newNote, axis: .vertical)
+                        Button("Add") {
+                            goal.notes.append(GoalNote(text: trimmedNewNote))
+                            goal.lastEditedAt = .now
+                            newNote = ""
+                        }
+                        .buttonStyle(.borderless)
+                        .disabled(trimmedNewNote.isEmpty)
+                    }
+                }
+            }
+            .onChange(of: goal.title) { _, _ in goal.lastEditedAt = .now }
+            .onChange(of: goal.why) { _, _ in goal.lastEditedAt = .now }
+        }
+    }
+}
