@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 30e: an item in Things to raise can be marked as a question to ask, with room to write the answer after your session; the answer shows on the card and in the PDF export.
 - Patch 30d: a note to future you can be a letter you open when you choose: write a few words after "Open when" and the letter itself; it has no date, stays closed until you tap Open, and nothing counts or reminds you about it.
 - Patch 30c: you can write short message starters of your own, from the speech bubble in the Message log or while writing; a tap puts one in the message box, and Quick contact on Now offers them too. Nothing is written for you and nothing is sent unless you send it.
 - Patch 30b: Thread has a Boundaries list: a few sections for what you would like people to know, what helps and what does not, which you can rename, reorder, hide and mark as shareable; Share sends only the sections you marked.

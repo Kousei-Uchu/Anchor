@@ -105,10 +105,21 @@ private struct BridgeDraftItemCard: View {
 
                 Button(action: onEdit) {
                     VStack(alignment: .leading, spacing: 4) {
+                        if item.isQuestion {
+                            Label("Question", systemImage: "questionmark.circle")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                         Text(item.text.isEmpty ? "Untitled" : item.text)
                             .font(.system(.body, design: .rounded))
                             .foregroundStyle(item.isResolved ? .secondary : .primary)
                             .fixedSize(horizontal: false, vertical: true)
+                        if item.isQuestion, !item.answer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            Text("Answer: \(item.answer)")
+                                .font(.system(.subheadline, design: .rounded))
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                         Text(item.createdAt.formatted(date: .abbreviated, time: .omitted))
                             .font(.caption)
                             .foregroundStyle(.tertiary)
@@ -137,6 +148,15 @@ private struct BridgeDraftItemEditorSheet: View {
                 Section {
                     TextField("Something to bring up next session", text: $item.text, axis: .vertical)
                         .lineLimit(3...8)
+                }
+                Section {
+                    Toggle("It is a question to ask", isOn: $item.isQuestion)
+                }
+                if item.isQuestion {
+                    Section("Answer") {
+                        TextField("What they said, once you have asked", text: $item.answer, axis: .vertical)
+                            .lineLimit(3...8)
+                    }
                 }
                 Section {
                     Toggle("Already brought up", isOn: $item.isResolved)

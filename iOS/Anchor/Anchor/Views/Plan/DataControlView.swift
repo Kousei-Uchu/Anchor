@@ -834,8 +834,18 @@ struct TriggerWindowDTO: Codable {
 
 struct BridgeDraftItemDTO: Codable {
     var id: UUID; var createdAt: Date; var text: String; var isResolved: Bool
-    init(_ m: BridgeDraftItem) { id = m.id; createdAt = m.createdAt; text = m.text; isResolved = m.isResolved }
-    func toModel() -> BridgeDraftItem { BridgeDraftItem(id: id, createdAt: createdAt, text: text, isResolved: isResolved) }
+    /// Optional so exports made before questions existed still import.
+    var isQuestion: Bool? = nil
+    var answer: String? = nil
+    init(_ m: BridgeDraftItem) {
+        id = m.id; createdAt = m.createdAt; text = m.text; isResolved = m.isResolved
+        isQuestion = m.isQuestion ? true : nil
+        answer = m.answer.isEmpty ? nil : m.answer
+    }
+    func toModel() -> BridgeDraftItem {
+        BridgeDraftItem(id: id, createdAt: createdAt, text: text, isResolved: isResolved,
+                        isQuestion: isQuestion ?? false, answer: answer ?? "")
+    }
 }
 
 struct FeedbackLoopDiagramDTO: Codable {
