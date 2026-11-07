@@ -3,6 +3,7 @@
 - Patch 12a: on the Safety plan, tap a section to change it; on Trigger windows, tap a card to open it, use the plus to add, and delete from inside the card or its long-press menu; deleting a trigger window now also stops its reminders.
 - Patch 12b: Contacts and Grounding tools open in one sheet when tapped, add with the plus, delete from inside or from the long-press menu, and have a labelled Reorder; a tool with steps has a play button on its card.
 - Patch 12c: Decision presets: tap an option to edit it, tap a category name to rename it, add a category with the plus and an option from inside its card; steps have a labelled Reorder.
+- Patch 12d: Appointments is one screen: tap a calendar day to schedule or open a session, use the plus for any date, and set the typical cadence right on the screen.
 - Patch 11: on the Thread screens, tap a card to open it, use the plus to add, and delete from inside the card or its long-press menu; the Edit buttons and list sheets are gone.
 - Patch 10: the shared pieces for tap a row to edit it, swipe to delete, a plus to add and a labelled Reorder are in place; no screen uses them yet.
 - Patch 9: the Journal has a Year view with twelve small months; tap a month to open it.
