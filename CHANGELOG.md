@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 26: feedback-loop diagrams start as a guided loop: write what happens first, what it leads to and so on, mark each link as more leading to more or more leading to less, and the app says in plain words whether the loop tends to keep itself going or to settle back. Free maps are still there from the plus menu.
 - Patch 25: Presets has a Lists side: make a checklist with headings, set numbers like Day or Person, and let an item's amount follow one (for example 1 per day plus 1 extra for every 3), so changing the days updates every amount; reset the ticks to reuse a list, or make a copy.
 - Patch 24b: a routine can have a reminder on the days and time you pick: it is off until you switch it on, in the routine or in Settings under Routine reminders, and the lock screen only says your routine is ready, never which one.
 - Patch 24: Presets has a Routines side next to Decisions: a routine is a named list of steps, each with an optional rough time, that you run one step at a time; routines you have made also show on the Decision presets widget.
