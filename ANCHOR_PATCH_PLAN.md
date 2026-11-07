@@ -1,6 +1,6 @@
 # Anchor — Patch Plan (v2-recovery)
 
-*Living document. Last updated: 7 Nov 2026, after Patch 19 was written (Patches 1 to 18 are pushed, `03b920d` at the time; none confirmed building; Patch 19 awaits your paste).*
+*Living document. Last updated: 7 Nov 2026, after Patch 20 was written (Patches 1 to 18 are pushed, `03b920d` at the time; none confirmed building; Patches 19 and 20 await your paste, in that order).*
 
 > ## READ THIS FIRST: THIS FILE IS THE PROMPT
 >
@@ -52,9 +52,12 @@ The source code repository is at <https://github.com/Kousei-Uchu/Anchor/tree/v2-
 | 17: Subtasks with collapse and derived progress | 🟡 Pushed by you (`484caca`); build not yet confirmed |
 | 18: Task dependencies: greyed blocked tasks, "Waiting on…", auto-unlock | 🟡 Pushed by you (`03b920d`); build not yet confirmed |
 | 19: Task status, energy tag, tiny first step, snooze to tomorrow | 🟡 Written (`patch-19.sh`); awaiting your paste and build |
+| 20: Widget editing on the tab: drag to rearrange, hide and add back, half or full width | 🟡 Written (`patch-20.sh`); awaiting your paste and build (paste after Patch 19) |
 | 19 onward | Not started |
 
 ## Change log of this plan
+
+- **7 Nov 2026 (30):** Patch 20 written: widget editing on the tab itself (point 14). **Entry:** a quiet **Customise** button under the widgets on Plan, Bridge and Thread, and the long-press menu's last item (it used to open the Customise sheet). Move up, Move down and Hide stay in the long-press menu as the way to do it without dragging. **While editing:** the cards wiggle a little (off when Reduce Motion is on), their content is dimmed and cannot be opened, and each card has a minus (hide), a resize button where the widget has a half-width form, and a grip mark. **Drag** a card onto another to move it: it lands after the one it was dropped on when dragging down and before it when dragging up, the target gets an outline, and the order changes with a light haptic. Hidden widgets keep their slots, exactly as the old list did. **Hidden tray:** while editing, the More row is replaced by a Hidden row of buttons (plus icon and the widget's name) to add them back. **Size:** only widgets that are half width by default (Trigger windows, Appointments, Recovery, Who I'm doing this for and so on, as `WidgetID.isHalf` already decides, including the 16-character title rule) get the resize button, because the full-width ones were never designed to be narrow and I cannot check how they look. A new per-tab key `widgetFull.<tab>` stores the ones made full width; nothing changes for existing saved layouts. At accessibility text sizes everything is full width and the resize button is hidden, as before. **Leaving:** Done is in the navigation bar and also at the bottom next to Reset (Reset asks first and clears order, hidden and widths). VoiceOver gets Move up, Move down, Hide and the resize action on each card. **Kept:** Settings, Layout, Customise widgets still has the list with toggles and drag handles, and its Reset now clears widths too. **Not done:** dragging a card into the Hidden row (the minus does that); moving a widget to another tab; making a full-width widget half width. **Needs a real check:** I could not run any of this, so these are the parts to try first on a device: the drag and drop (long press then drag on the dimmed card, including the auto-scroll near the screen edge), the Done button appearing in the navigation bar (it is declared inside the stack, which I believe propagates to the bar; the Done at the bottom is the fallback if it does not), and the wiggle. Checked only with a Swift syntax parser, not compiled.
 
 - **7 Nov 2026 (29):** Patches 17 and 18 confirmed pushed (HEAD was `03b920d`). Patch 19 written: the last of the task fields. **Model:** three fields on `TaskItem`, all with defaults, so no store migration: `status` (Not started, Started, Set aside for now), `energy` (Not set, A little, Some, A lot) and `firstStep` (one line of text). **Deviation from the plan:** the plan said "Parked"; the app says **Set aside for now**, which reads as relief rather than failure. **Status:** a task counts as Started when you say so or as soon as one of its steps is ticked, with no manual step. A set-aside task moves to a last group, "Set aside for now", dimmed, with its steps folded away; Now and the Tasks widget leave it out, like a waiting task. Ticking a set-aside task off still works. **Energy:** a small "Needs a little / some / a lot of energy" line on the card, and a filter in the Tasks screen's menu (Everything, Some energy or less, Only a little energy). Tasks with no energy set are always shown, and a line above the list says what the filter is doing and has a Show everything button. The filter is not remembered: it resets when the screen is reopened, so nothing stays hidden by accident. **First tiny step:** its own one-line field, shown on the card as "Start with: ..." until the task is started; separate from steps so it can be one line. **Snooze:** swipe right on a task (or long-press) for Move to tomorrow or Set aside; the editor has a Move to tomorrow button. It sets the day to tomorrow, shows as "Tomorrow", and the task returns to Today on its own when the day arrives. Nothing is marked as late. Swipe left still deletes. Export carries `status`, `energy` and `firstStep` (optional, so older files import). Demo: energy tags on three tasks, a first step on the call, and "Sort out the old paperwork" set aside. Help (Plan) mentions it. **Size:** about 250 changed lines in 6 files, larger than S, because the energy filter and the row actions came with it. **Not done:** recurring tasks and a priority or category field from the original task idea; they are not in the patch list, so say if you want them. Checked here only with a Swift syntax parser, not compiled.
 
@@ -381,7 +384,7 @@ First add an explicit SwiftData migration plan: a store that fails to open shows
 | **17** | Subtasks with collapse/expand and derived progress | 7 | M | 🟡 |
 | **18** | Dependencies: greyed blocked tasks, "Waiting on…", auto-unlock | 7 | M | 🟡 |
 | **19** | Status, progress display, extras (energy tag, tiny first step, snooze) | 7 | S | 🟡 |
-| **20** | Widget drag-and-drop editing on the tab (see point 14) | 14 | M | ⬜ |
+| **20** | Widget drag-and-drop editing on the tab (see point 14) | 14 | M | 🟡 |
 | **21** | Pomodoro: settings, notifications, optional Live Activity | 7 | M | ⬜ |
 | **22** | "Plan my day" screen | 7 | M | ⬜ |
 | **23** | Quick list (one-time) shortcut | 9 | S | ⬜ |
@@ -524,4 +527,4 @@ A reminder you set yourself, per person, **off by default**. Lock-screen text is
 
 ## Appendix B: Suggested next session
 
-Patch **20** (widget drag and drop on the tab), then 21 (Pomodoro), once Patches 1 to 19 build. D4 to D9 are all answered, so nothing is waiting on a decision.
+Patch **21** (Pomodoro), then 22 (Plan my day), once Patches 1 to 20 build. D4 to D9 are all answered, so nothing is waiting on a decision.
