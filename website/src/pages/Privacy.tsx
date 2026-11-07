@@ -32,7 +32,7 @@ export default function Privacy() {
       <ul>
         <li><strong>Face ID or passcode.</strong> Anchor can lock itself using Face ID, Touch ID or your passcode. This is handled entirely by iOS. Anchor never receives your biometric data.</li>
         <li><strong>Notifications.</strong> Used for the reminders you set up: trigger windows, the daily check-in, and the optional reminder to reach out to a contact you chose. Anchor asks the first time you turn one of these on. They are scheduled on your device, and no push notification server is involved.</li>
-        <li><strong>Calendar and Reminders.</strong> Used to suggest events for a journal day, to import today&rsquo;s reminders into &ldquo;Next hour only&rdquo;, and to add items you create there to Reminders. This information is read on your device and is only saved in Anchor if you tap to add it.</li>
+        <li><strong>Calendar and Reminders.</strong> Used to suggest events for a journal day, to import reminders you choose into your task list, and to tick them off in Reminders when you finish them in Anchor. This information is read on your device and is only saved in Anchor if you tap to add it.</li>
         <li><strong>Photos.</strong> Used to suggest photos from the day you are journaling about, and to attach photos you pick. Only photos you choose are copied into Anchor.</li>
         <li><strong>Apple Music (MusicKit).</strong> Used to suggest recently played songs as journal context. This request is handled by Apple.</li>
         <li><strong>Journaling Suggestions.</strong> If you use Apple&rsquo;s suggestions picker, iOS shows you suggestions and passes back only the one you choose. Apple&rsquo;s own privacy terms apply to that feature.</li>

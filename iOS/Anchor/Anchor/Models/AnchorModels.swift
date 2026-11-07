@@ -592,6 +592,88 @@ final class NextHourItem {
     }
 }
 
+// MARK: - Tasks
+//
+// Replaces the self-clearing "Next hour only" list with a real, lasting task
+// list. Every property after `title` has a default, so later patches can add
+// fields (due dates, subtasks, dependencies) without a store migration.
+// `reminderIdentifier` links a task that was imported from the Reminders app.
+@Model
+final class TaskItem {
+    @Attribute(.unique) var id: UUID
+    var title: String
+    var notes: String = ""
+    var isDone: Bool = false
+    var completedAt: Date? = nil
+    var createdAt: Date = Date.now
+    var sortOrder: Int = 0
+    var reminderIdentifier: String? = nil
+
+    init(
+        id: UUID = UUID(),
+        title: String,
+        notes: String = "",
+        isDone: Bool = false,
+        completedAt: Date? = nil,
+        createdAt: Date = .now,
+        sortOrder: Int = 0,
+        reminderIdentifier: String? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.notes = notes
+        self.isDone = isDone
+        self.completedAt = completedAt
+        self.createdAt = createdAt
+        self.sortOrder = sortOrder
+        self.reminderIdentifier = reminderIdentifier
+    }
+
+    /// Ticks the task off or back on, keeping `completedAt` in step.
+    func setDone(_ done: Bool) {
+        isDone = done
+        completedAt = done ? Date.now : nil
+    }
+}
+
+enum TaskMigration {
+    private static let flagKey = "anchor.tasksMigratedFromNextHour"
+
+    /// One time: turns any "Next hour only" rows into tasks and removes the old
+    /// rows, so nothing shows twice. It does nothing when the saved store could
+    /// not be opened (the app is then on a temporary store), and it only marks
+    /// itself done once the copy has been saved.
+    @MainActor
+    static func migrateNextHourItemsIfNeeded(container: ModelContainer) {
+        guard AnchorSchema.openedPersistentStore,
+              !UserDefaults.standard.bool(forKey: flagKey) else { return }
+        let context = container.mainContext
+        guard let old = try? context.fetch(FetchDescriptor<NextHourItem>(sortBy: [SortDescriptor(\.createdAt)])) else { return }
+        let existing = (try? context.fetchCount(FetchDescriptor<TaskItem>())) ?? 0
+        for (index, item) in old.enumerated() {
+            context.insert(TaskItem(
+                title: item.text,
+                isDone: item.isDone,
+                completedAt: item.isDone ? item.createdAt : nil,
+                createdAt: item.createdAt,
+                sortOrder: existing + index,
+                reminderIdentifier: item.reminderIdentifier
+            ))
+        }
+        do {
+            try context.save()
+        } catch {
+            // Nothing was kept. The next launch starts again from the old rows.
+            return
+        }
+        // The tasks are saved, so never copy again, even if removing the old
+        // rows below fails. They are no longer read anywhere.
+        UserDefaults.standard.set(true, forKey: flagKey)
+        for item in old { context.delete(item) }
+        try? context.save()
+    }
+}
+
 // MARK: - Mascot (pre-written lines only — never generative at runtime)
 
 enum MascotMood: String, Codable {
@@ -635,7 +717,7 @@ enum AnchorSchema {
             BridgeDraftItem.self, FeedbackLoopDiagram.self,
             ThreadMessage.self, SupportCalendarEntry.self, FutureNote.self, UnsentDraft.self,
             MascotLine.self, DecisionPresetCategory.self, DecisionPresetChoice.self,
-            DeEscalationScript.self, NextHourItem.self, Affirmation.self,
+            DeEscalationScript.self, NextHourItem.self, TaskItem.self, Affirmation.self,
             RecoveryCounter.self, RecoveryMotivation.self, RecoveryDayEntry.self, RecoveryUrge.self
         ]
     }

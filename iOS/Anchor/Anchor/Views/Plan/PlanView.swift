@@ -84,6 +84,7 @@ struct PlanView: View {
         case .affirmations: AffirmationsWidget()
         case .recovery: RecoveryWidget()
         case .motivations: MotivationsWidget()
+        case .tasks: TasksWidget()
         default: EmptyView()
         }
     }
@@ -101,6 +102,7 @@ struct PlanView: View {
         case .affirmations: Anchor.MoreTile(id: id) { AffirmationsView() }
         case .recovery: Anchor.MoreTile(id: id) { RecoveryHomeView() }
         case .motivations: Anchor.MoreTile(id: id) { RecoveryMotivationsView() }
+        case .tasks: Anchor.MoreTile(id: id) { TasksView() }
         default: EmptyView()
         }
     }
@@ -126,6 +128,9 @@ struct PlanView: View {
                     Anchor.TileRow(title: "Presets & tools") {
                         NavigationLink { GroundingToolsListView() } label: {
                             Anchor.TileButtonLabel(icon: "leaf.fill", title: "Grounding tools", tint: Anchor.Theme.sage)
+                        }
+                        NavigationLink { TasksView() } label: {
+                            Anchor.TileButtonLabel(icon: "checkmark.circle.fill", title: "Tasks", tint: Anchor.Theme.accent)
                         }
                         NavigationLink { DecisionFatigueView() } label: {
                             Anchor.TileButtonLabel(icon: "checklist", title: "Decision presets", tint: Anchor.Theme.accent)

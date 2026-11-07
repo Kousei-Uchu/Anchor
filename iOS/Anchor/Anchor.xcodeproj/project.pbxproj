@@ -726,7 +726,7 @@
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Anchor can suggest calendar events from the day you're journaling about, if you choose to look.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Anchor uses Face ID to keep your safety plan and journal private, independent of your phone's own lock.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Anchor can suggest photos from the day you're journaling about, if you choose to look. Only that day's photos are ever read.";
-				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Anchor can import today's reminders into Next Hour Only, and add items you create there to Reminders, if you choose to.";
+				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Anchor can import reminders you choose into your task list, and tick them off in Reminders when you finish them here.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -901,7 +901,7 @@
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Anchor can suggest calendar events from the day you're journaling about, if you choose to look.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Anchor uses Face ID to keep your safety plan and journal private, independent of your phone's own lock.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Anchor can suggest photos from the day you're journaling about, if you choose to look. Only that day's photos are ever read.";
-				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Anchor can import today's reminders into Next Hour Only, and add items you create there to Reminders, if you choose to.";
+				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Anchor can import reminders you choose into your task list, and tick them off in Reminders when you finish them here.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";

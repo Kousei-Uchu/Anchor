@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 15: there is a Tasks list that lasts until you remove things: tick tasks off, tap one to add notes, add with the plus or the bar at the bottom, reorder, and optionally import from Reminders; Now shows your first few open tasks, and anything on the old "Next hour only" list is carried over once.
 - Patch 13b: on Bridge, tap a draft item, your prep notes or a past session to write in it, add with the plus, delete from the long-press menu or by swiping; a new feedback-loop diagram opens straight away; a Journal entry opens in the editor when tapped; the old Edit button and list sheets are gone everywhere.
 - Patch 13a: Affirmations, De-escalation scripts and Who I'm doing this for open in one sheet when tapped, add with the plus, delete from inside or from the long-press menu, and the first two have a labelled Reorder; "Before tracking" on the Streaks screen is tap to change.
 - Patch 12a: on the Safety plan, tap a section to change it; on Trigger windows, tap a card to open it, use the plus to add, and delete from inside the card or its long-press menu; deleting a trigger window now also stops its reminders.

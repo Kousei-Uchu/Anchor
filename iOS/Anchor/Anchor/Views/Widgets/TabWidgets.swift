@@ -28,7 +28,7 @@ enum TabLayoutStyle: String {
 enum WidgetID: String, CaseIterable, Identifiable {
     // Plan
     case safetyPlan, triggerWindows, appointments, contacts, deEscalation
-    case grounding, decisionPresets, affirmations, recovery, motivations
+    case grounding, decisionPresets, affirmations, recovery, motivations, tasks
     // Bridge
     case thingsToRaise, nextSession, reframing, feedbackLoops, nswLaw
     // Thread
@@ -64,6 +64,7 @@ extension WidgetID {
         case .affirmations: return "Affirmations"
         case .recovery: return "Recovery"
         case .motivations: return "Who I'm doing this for"
+        case .tasks: return "Tasks"
         case .thingsToRaise: return "Things to raise"
         case .nextSession: return "Next session"
         case .reframing: return "Reframing"
@@ -88,6 +89,7 @@ extension WidgetID {
         case .affirmations: return "sparkles"
         case .recovery: return "calendar.badge.checkmark"
         case .motivations: return "heart.fill"
+        case .tasks: return "checkmark.circle.fill"
         case .thingsToRaise: return "doc.text.fill"
         case .nextSession: return "calendar.badge.clock"
         case .reframing: return "arrow.triangle.2.circlepath"
@@ -438,6 +440,27 @@ struct MotivationsWidget: View {
                 }
             } else {
                 Anchor.WidgetCaption(text: "Add the people and reasons that matter.")
+            }
+        }
+    }
+}
+
+struct TasksWidget: View {
+    @Query(sort: \TaskItem.sortOrder) private var tasks: [TaskItem]
+
+    private var open: [TaskItem] { tasks.filter { !$0.isDone } }
+
+    var body: some View {
+        Anchor.Widget(icon: "checkmark.circle.fill", title: "Tasks", fillsHeight: true) {
+            TasksView()
+        } content: {
+            if let first = open.first {
+                VStack(alignment: .leading, spacing: 2) {
+                    Anchor.WidgetBig(text: "\(open.count) to do")
+                    Anchor.WidgetCaption(text: first.title, lines: 1)
+                }
+            } else {
+                Anchor.WidgetCaption(text: tasks.isEmpty ? "Nothing here yet. Tap to add something small." : "All ticked off.", lines: 1)
             }
         }
     }
