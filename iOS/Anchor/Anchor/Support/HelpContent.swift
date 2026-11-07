@@ -49,7 +49,7 @@ enum HelpTopic: String, CaseIterable, Identifiable {
         case .bridge:
             return "Everything that makes talking to your psych easier. Drafting what you want to say, prepping for a session, notes afterward, optional cognitive tools (reframing, feedback-loop diagrams), and a plain-language reference for NSW mental health law. If you keep a Recovery counter, session prep can show how it's gone since your last session, and you choose whether to add that to your notes."
         case .thread:
-            return "Where you keep track of the people who matter. A message log tied to real contacts: write to someone in one tap, send it through Messages or Discord or just keep it, and look back over what you've told each person, a support calendar you can share with someone outside the app, notes to your future self, and a private space for bigger things you might never send to anyone."
+            return "Where you keep track of the people who matter. A message log tied to real contacts: write to someone in one tap, send it through Messages or Discord or just keep it, add a voice note, and look back over what you've told each person, a support calendar you can share with someone outside the app, notes to your future self, and a private space for bigger things you might never send to anyone."
         }
     }
 }

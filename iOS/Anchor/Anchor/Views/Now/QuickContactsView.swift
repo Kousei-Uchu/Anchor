@@ -147,11 +147,15 @@ enum DiscordOpener {
 struct MessageComposeView: UIViewControllerRepresentable {
     let recipient: String
     let body: String
+    var attachmentURL: URL? = nil
 
     func makeUIViewController(context: Context) -> MFMessageComposeViewController {
         let controller = MFMessageComposeViewController()
         controller.recipients = [recipient]
         controller.body = body
+        if let attachmentURL, MFMessageComposeViewController.canSendAttachments() {
+            controller.addAttachmentURL(attachmentURL, withAlternateFilename: "Voice note.m4a")
+        }
         controller.messageComposeDelegate = context.coordinator
         return controller
     }

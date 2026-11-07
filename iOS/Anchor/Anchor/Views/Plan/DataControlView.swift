@@ -424,7 +424,7 @@ struct DataControlView: View {
         for item in appointmentSeries { modelContext.delete(item) }
         for item in bridgeDraftItems { modelContext.delete(item) }
         for item in diagrams { modelContext.delete(item) }
-        for item in threadMessages { modelContext.delete(item) }
+        for item in threadMessages { modelContext.deleteMessage(item) }
         for item in supportCalendarEntries { modelContext.delete(item) }
         for item in futureNotes { modelContext.delete(item) }
         for item in unsentDrafts { modelContext.delete(item) }
