@@ -41,6 +41,7 @@ struct JournalView: View {
     @State private var entryToEdit: JournalEntry?
     @State private var entryToRead: JournalEntry?
     @State private var checkInToView: CheckIn?
+    @State private var addedToBridge = false
     @AppStorage("anchor.journal.layout") private var layout: JournalLayout = .days
     @State private var displayedMonth = Date()
     @State private var pendingScrollDay: Date?
@@ -224,6 +225,11 @@ struct JournalView: View {
             .sheet(item: $checkInToView) { checkIn in
                 CheckInDetailSheet(checkIn: checkIn)
             }
+            .alert("Added to Things to raise", isPresented: $addedToBridge) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("You can reword it in Bridge. The journal entry is unchanged.")
+            }
             }
         }
     }
@@ -275,6 +281,15 @@ struct JournalView: View {
             .padding(.bottom, 12)
         }
         .contextMenu {
+            Button {
+                if let item = BridgeDraftItem.raising(fromJournal: entry.text) {
+                    modelContext.insert(item)
+                    addedToBridge = true
+                }
+            } label: {
+                Label("Add to things to raise", systemImage: "doc.text")
+            }
+            .disabled(BridgeDraftItem.raising(fromJournal: entry.text) == nil)
             Button(role: .destructive) {
                 modelContext.delete(entry)
             } label: {
@@ -761,7 +776,9 @@ private struct JournalEntryReadSheet: View {
     let entry: JournalEntry
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \RecoveryCounter.sortOrder) private var recoveryCounters: [RecoveryCounter]
+    @Environment(\.modelContext) private var modelContext
     @State private var isEditing = false
+    @State private var addedToBridge = false
 
     var body: some View {
         if isEditing {
@@ -785,9 +802,24 @@ private struct JournalEntryReadSheet: View {
                         Button { isEditing = true } label: { Image(systemName: "pencil") }
                             .accessibilityLabel("Edit entry")
                     }
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button {
+                            if let item = BridgeDraftItem.raising(fromJournal: entry.text) {
+                                modelContext.insert(item)
+                                addedToBridge = true
+                            }
+                        } label: { Image(systemName: "doc.text") }
+                            .disabled(BridgeDraftItem.raising(fromJournal: entry.text) == nil)
+                            .accessibilityLabel("Add to things to raise")
+                    }
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Done") { dismiss() }
                     }
+                }
+                .alert("Added to Things to raise", isPresented: $addedToBridge) {
+                    Button("OK", role: .cancel) {}
+                } message: {
+                    Text("You can reword it in Bridge. The journal entry is unchanged.")
                 }
             }
         }
