@@ -10,18 +10,32 @@
 //  underneath, because real sessions get moved and this needs to survive
 //  that without losing history.
 //
+//  One screen, no Edit button. Tap an empty day to schedule a session, tap a
+//  day with a session (or its row in the list) to move or cancel it, and the
+//  plus schedules one for any date. The typical cadence is a stepper right on
+//  the screen.
+//
 
 import SwiftUI
 import SwiftData
 
-/// Sessions as something to look at: the next one, a read-only month, and
-/// the list of sessions. Scheduling, moving, cancelling and the typical
-/// cadence all live behind Edit (`AppointmentEditorView`).
+/// Asks for the schedule sheet for one date.
+private struct ScheduleRequest: Identifiable {
+    let id = UUID()
+    let date: Date
+}
+
+/// Sessions: the next one, a month calendar you can tap, the list of
+/// sessions, and the typical cadence.
 struct AppointmentView: View {
-    let series: AppointmentSeries
+    @Environment(\.modelContext) private var modelContext
+    @Bindable var series: AppointmentSeries
 
     @State private var displayedMonth: Date = .now
-    @State private var showingEditor = false
+    @State private var scheduling: ScheduleRequest?
+    @State private var editingOccurrence: AppointmentOccurrence?
+    @State private var occurrenceToDelete: AppointmentOccurrence?
+    @State private var showRemoveAllConfirm = false
 
     private var calendar: Calendar { Calendar.current }
 
@@ -52,7 +66,7 @@ struct AppointmentView: View {
                         } else {
                             Text("Nothing scheduled yet.")
                                 .foregroundStyle(.secondary)
-                            Button("Schedule a session") { showingEditor = true }
+                            Button("Schedule a session") { scheduling = ScheduleRequest(date: .now) }
                                 .buttonStyle(Anchor.SecondaryButtonStyle())
                                 .padding(.top, 4)
                         }
@@ -66,7 +80,7 @@ struct AppointmentView: View {
                         MonthCalendarGrid(
                             displayedMonth: displayedMonth,
                             occurrencesByDay: occurrencesByDay,
-                            onSelectDay: nil
+                            onSelectDay: selectDay
                         )
 
                         HStack(spacing: 16) {
@@ -83,143 +97,36 @@ struct AppointmentView: View {
                 if !sortedOccurrences.isEmpty {
                     Anchor.Card {
                         VStack(alignment: .leading, spacing: 10) {
-                            Anchor.SectionHeader(icon: "list.bullet", title: "All sessions")
-                            ForEach(sortedOccurrences) { occurrence in
-                                HStack {
-                                    Text(occurrence.scheduledDate.formatted(date: .abbreviated, time: .shortened))
-                                    if occurrence.wasMoved {
-                                        Text("moved").font(.caption2).foregroundStyle(Anchor.Theme.sage)
-                                    }
-                                    Spacer()
+                            HStack {
+                                Anchor.SectionHeader(icon: "list.bullet", title: "All sessions")
+                                Spacer()
+                                Button("Remove all", role: .destructive) {
+                                    showRemoveAllConfirm = true
                                 }
-                                .foregroundStyle(occurrence.scheduledDate < .now ? .secondary : .primary)
-                            }
-                        }
-                    }
-                }
-
-                Text("Usually about every \(series.typicalCadenceDays) days.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-            }
-            .padding()
-        }
-        .anchorBackground()
-        .navigationTitle(series.clinicianLabel)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Anchor.EditToolbarButton { showingEditor = true }
-            }
-        }
-        .sheet(isPresented: $showingEditor) {
-            Anchor.EditorSheet(title: "Edit sessions") {
-                AppointmentEditorView(series: series)
-            }
-        }
-    }
-
-    private var monthHeader: some View {
-        HStack {
-            Button {
-                withAnimation { displayedMonth = calendar.date(byAdding: .month, value: -1, to: displayedMonth) ?? displayedMonth }
-            } label: {
-                Image(systemName: "chevron.left")
-            }
-            Spacer()
-            Text(displayedMonth.formatted(.dateTime.month(.wide).year()))
-                .font(.system(.headline, design: .rounded))
-            Spacer()
-            Button {
-                withAnimation { displayedMonth = calendar.date(byAdding: .month, value: 1, to: displayedMonth) ?? displayedMonth }
-            } label: {
-                Image(systemName: "chevron.right")
-            }
-        }
-        .tint(Anchor.Theme.accent)
-    }
-
-    private func daysUntil(_ date: Date) -> String {
-        let days = calendar.dateComponents([.day], from: .now, to: date).day ?? 0
-        if days <= 0 { return "Today" }
-        if days == 1 { return "Tomorrow" }
-        return "In \(days) days"
-    }
-}
-
-/// The scheduling editor: tap a date to schedule or move a session, set the
-/// typical cadence, delete sessions. Presented from `AppointmentView` via
-/// Edit, never browsed to directly.
-struct AppointmentEditorView: View {
-    @Bindable var series: AppointmentSeries
-    @Environment(\.modelContext) private var modelContext
-
-    @State private var displayedMonth: Date = .now
-    @State private var selectedDate: Date?
-    @State private var occurrenceForSelectedDate: AppointmentOccurrence?
-    @State private var showScheduleSheet = false
-    @State private var showOccurrenceSheet = false
-    @State private var showRemoveAllConfirm = false
-
-    private var calendar: Calendar { Calendar.current }
-
-    private var occurrencesByDay: [Date: [AppointmentOccurrence]] {
-        Dictionary(grouping: series.occurrences) { calendar.startOfDay(for: $0.scheduledDate) }
-    }
-
-    private var nextOccurrence: AppointmentOccurrence? {
-        series.occurrences
-            .filter { $0.scheduledDate > .now }
-            .sorted { $0.scheduledDate < $1.scheduledDate }
-            .first
-    }
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                Anchor.Card {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Anchor.SectionHeader(icon: "calendar.badge.clock", title: "Next session")
-                        if let next = nextOccurrence {
-                            Text(next.scheduledDate.formatted(date: .abbreviated, time: .shortened))
-                                .font(.system(.title3, design: .rounded))
-                            Text(daysUntil(next.scheduledDate))
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
-                        } else {
-                            Text("Nothing scheduled. Tap a date below.")
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-
-                Anchor.Card {
-                    VStack(alignment: .leading, spacing: 12) {
-                        monthHeader
-
-                        MonthCalendarGrid(
-                            displayedMonth: displayedMonth,
-                            occurrencesByDay: occurrencesByDay
-                        ) { date in
-                            selectedDate = date
-                            let day = calendar.startOfDay(for: date)
-                            if let existing = occurrencesByDay[day]?.first {
-                                occurrenceForSelectedDate = existing
-                                showOccurrenceSheet = true
-                            } else {
-                                showScheduleSheet = true
+                            }
+                            ForEach(sortedOccurrences) { occurrence in
+                                Button {
+                                    editingOccurrence = occurrence
+                                } label: {
+                                    HStack {
+                                        Text(occurrence.scheduledDate.formatted(date: .abbreviated, time: .shortened))
+                                        if occurrence.wasMoved {
+                                            Text("moved").font(.caption2).foregroundStyle(Anchor.Theme.sage)
+                                        }
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(.tertiary)
+                                    }
+                                    .foregroundStyle(occurrence.scheduledDate < .now ? .secondary : .primary)
+                                    .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityHint("Opens the session")
+                                .anchorDeletable("Cancel session") { modelContext.delete(occurrence) }
                             }
                         }
-
-                        HStack(spacing: 16) {
-                            Label("Scheduled", systemImage: "circle.fill")
-                                .foregroundStyle(Anchor.Theme.accent)
-                            Label("Moved", systemImage: "circle.fill")
-                                .foregroundStyle(Anchor.Theme.sage)
-                        }
-                        .font(.caption2)
-                        .labelStyle(.titleAndIcon)
                     }
                 }
 
@@ -232,66 +139,51 @@ struct AppointmentEditorView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-
-                if !series.occurrences.isEmpty {
-                    Anchor.Card {
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                Anchor.SectionHeader(icon: "list.bullet", title: "All sessions")
-                                Spacer()
-                                Button("Remove all", role: .destructive) {
-                                    showRemoveAllConfirm = true
-                                }
-                                .font(.caption)
-                            }
-                            ForEach(series.occurrences.sorted { $0.scheduledDate < $1.scheduledDate }) { occurrence in
-                                HStack {
-                                    Button {
-                                        selectedDate = occurrence.scheduledDate
-                                        occurrenceForSelectedDate = occurrence
-                                        showOccurrenceSheet = true
-                                    } label: {
-                                        HStack {
-                                            Text(occurrence.scheduledDate.formatted(date: .abbreviated, time: .shortened))
-                                            if occurrence.wasMoved {
-                                                Text("moved").font(.caption2).foregroundStyle(Anchor.Theme.sage)
-                                            }
-                                            Spacer()
-                                        }
-                                    }
-                                    .buttonStyle(.plain)
-                                    .foregroundStyle(.primary)
-
-                                    Button {
-                                        modelContext.delete(occurrence)
-                                    } label: {
-                                        Image(systemName: "trash")
-                                            .foregroundStyle(.red)
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
-                        }
-                    }
-                    .confirmationDialog("Remove all sessions?", isPresented: $showRemoveAllConfirm, titleVisibility: .visible) {
-                        Button("Remove all", role: .destructive) {
-                            for occurrence in series.occurrences { modelContext.delete(occurrence) }
-                        }
-                        Button("Cancel", role: .cancel) {}
-                    }
-                }
             }
             .padding()
         }
-        .sheet(isPresented: $showScheduleSheet) {
-            if let selectedDate {
-                ScheduleSessionSheet(series: series, date: selectedDate)
+        .anchorBackground()
+        .navigationTitle(series.clinicianLabel)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Anchor.AddToolbarButton(label: "Schedule a session") {
+                    scheduling = ScheduleRequest(date: .now)
+                }
             }
         }
-        .sheet(isPresented: $showOccurrenceSheet) {
-            if let occurrenceForSelectedDate {
-                OccurrenceEditorSheet(occurrence: occurrenceForSelectedDate)
+        .sheet(item: $scheduling) { request in
+            ScheduleSessionSheet(series: series, date: request.date)
+        }
+        .sheet(item: $editingOccurrence, onDismiss: finishEditing) { occurrence in
+            OccurrenceEditorSheet(occurrence: occurrence) { occurrenceToDelete = occurrence }
+        }
+        .confirmationDialog("Remove all sessions?", isPresented: $showRemoveAllConfirm, titleVisibility: .visible) {
+            Button("Remove all", role: .destructive) {
+                for occurrence in series.occurrences { modelContext.delete(occurrence) }
             }
+            Button("Cancel", role: .cancel) {}
+        }
+    }
+
+    /// A day with a session opens that session. An empty day opens the
+    /// schedule sheet for that date.
+    private func selectDay(_ date: Date) {
+        let day = calendar.startOfDay(for: date)
+        if let existing = occurrencesByDay[day]?.first {
+            editingOccurrence = existing
+        } else {
+            scheduling = ScheduleRequest(date: date)
+        }
+    }
+
+    /// Runs once the session sheet has closed. Cancelling here, not while the
+    /// sheet is still on screen, keeps the sheet from reading a session that
+    /// is already gone.
+    private func finishEditing() {
+        if let occurrence = occurrenceToDelete {
+            occurrenceToDelete = nil
+            modelContext.delete(occurrence)
         }
     }
 
@@ -411,25 +303,29 @@ private struct MonthCalendarGrid: View {
     }
 }
 
-/// Shown when tapping an empty date: schedule either just this one date,
-/// or a repeating run of sessions starting here (spaced by the series'
-/// cadence, since that's the exact "typical cadence" the user already set).
+/// Schedule either just one date, or a repeating run of sessions starting
+/// there (spaced by the series' cadence, since that's the exact "typical
+/// cadence" the user already set). The date can be changed here, so the plus
+/// in the bar and a tap on an empty calendar day open the same sheet.
 private struct ScheduleSessionSheet: View {
-    @Bindable var series: AppointmentSeries
-    let date: Date
+    let series: AppointmentSeries
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.modelContext) private var modelContext
 
+    @State private var date: Date
     @State private var time = Date()
     @State private var repeats = false
     @State private var numberOfSessions = 4
+
+    init(series: AppointmentSeries, date: Date) {
+        self.series = series
+        _date = State(initialValue: date)
+    }
 
     var body: some View {
         NavigationStack {
             Form {
                 Section("Date") {
-                    Text(date.formatted(date: .complete, time: .omitted))
-                        .foregroundStyle(.secondary)
+                    DatePicker("Date", selection: $date, displayedComponents: .date)
                     DatePicker("Time", selection: $time, displayedComponents: .hourAndMinute)
                 }
 
@@ -475,16 +371,19 @@ private struct ScheduleSessionSheet: View {
     }
 }
 
-/// Shown when tapping a date that already has a session: move it (which
-/// marks it moved, keeping history honest) or cancel it outright.
+/// One session in one sheet: move it (which marks it moved, keeping history
+/// honest) or cancel it outright.
 private struct OccurrenceEditorSheet: View {
     @Bindable var occurrence: AppointmentOccurrence
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.modelContext) private var modelContext
-    @State private var showCancelConfirm = false
+    let onDelete: () -> Void
 
     var body: some View {
-        NavigationStack {
+        Anchor.ItemEditorSheet(
+            title: "Session",
+            onDelete: onDelete,
+            deleteTitle: "Cancel this session",
+            deleteQuestion: "Cancel this session?"
+        ) {
             Form {
                 Section("Date & time") {
                     DatePicker("Scheduled", selection: Binding(
@@ -500,27 +399,6 @@ private struct OccurrenceEditorSheet: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-
-                Section {
-                    Button("Cancel this session", role: .destructive) {
-                        showCancelConfirm = true
-                    }
-                }
-            }
-            .anchorSettingsStyle()
-            .navigationTitle("Session")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                }
-            }
-            .confirmationDialog("Cancel this session?", isPresented: $showCancelConfirm, titleVisibility: .visible) {
-                Button("Cancel session", role: .destructive) {
-                    modelContext.delete(occurrence)
-                    dismiss()
-                }
-                Button("Keep it", role: .cancel) {}
             }
         }
     }
