@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 28: a diagram can start from a template (a few loops and a map, from the plus menu), and the menu on a diagram's page can share it as a picture or a PDF, with or without the written reading; the files are made on the device and removed when the sheet closes.
 - Patch 27: the free map is rebuilt: pan and zoom, undo and redo, arrows on links with an optional plus or minus and a few words, item colours, and linking by dragging from one item onto another. A loop can be opened as a free map.
 - Patch 26: feedback-loop diagrams start as a guided loop: write what happens first, what it leads to and so on, mark each link as more leading to more or more leading to less, and the app says in plain words whether the loop tends to keep itself going or to settle back. Free maps are still there from the plus menu.
 - Patch 25: Presets has a Lists side: make a checklist with headings, set numbers like Day or Person, and let an item's amount follow one (for example 1 per day plus 1 extra for every 3), so changing the days updates every amount; reset the ticks to reuse a list, or make a copy.
