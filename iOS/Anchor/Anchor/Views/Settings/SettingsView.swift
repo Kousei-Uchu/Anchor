@@ -19,6 +19,7 @@ enum DailyCheckInSettings {
     static let hourKey = "anchor.dailyCheckIn.hour"
     static let minuteKey = "anchor.dailyCheckIn.minute"
 
+    @MainActor
     static func reapplyIfEnabled(using context: ModelContext) {
         let defaults = UserDefaults.standard
         guard defaults.bool(forKey: enabledKey) else { return }
