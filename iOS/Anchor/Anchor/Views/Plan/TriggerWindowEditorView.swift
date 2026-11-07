@@ -6,17 +6,20 @@
 //  location-based trigger is ever requested again, that decision belongs
 //  to the user's psych, not a feature added here.
 //
+//  Editing follows the app-wide pattern: tap a window to edit it, the plus
+//  adds one, and Delete is in the editor and in the long-press menu.
+//
 
 import SwiftUI
 import SwiftData
 
-/// Trigger windows as something to browse: a card per window, with whether
-/// it's active shown as a label. Adding, deleting and changing windows
-/// happens behind Edit.
+/// Trigger windows as cards, with whether each is active shown as a label.
+/// Tap one to change it.
 struct TriggerWindowListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var windows: [TriggerWindow]
-    @State private var showingEditor = false
+    @State private var editingWindow: TriggerWindow?
+    @State private var windowToDelete: TriggerWindow?
 
     var body: some View {
         ScrollView {
@@ -28,10 +31,19 @@ struct TriggerWindowListView: View {
                         message: "Add the times of day that tend to be hard, and Anchor can check in with you then.",
                         actionTitle: "Add a window",
                         tint: Anchor.Theme.sage
-                    ) { showingEditor = true }
+                    ) { startNewWindow() }
                 } else {
                     ForEach(windows) { window in
-                        TriggerWindowCard(window: window)
+                        Button {
+                            editingWindow = window
+                        } label: {
+                            TriggerWindowCard(window: window)
+                        }
+                        .buttonStyle(.plain)
+                        .anchorDeletable {
+                            remove(window)
+                            NotificationScheduler.resyncTriggerWindows(using: modelContext)
+                        }
                     }
                 }
             }
@@ -42,16 +54,43 @@ struct TriggerWindowListView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Anchor.EditToolbarButton { showingEditor = true }
+                Anchor.AddToolbarButton(label: "Add a window") { startNewWindow() }
             }
         }
-        .sheet(isPresented: $showingEditor, onDismiss: {
-            NotificationScheduler.resyncTriggerWindows(using: modelContext)
-        }) {
-            Anchor.EditorSheet(title: "Edit trigger windows") {
-                TriggerWindowsEditorList()
-            }
+        .sheet(item: $editingWindow, onDismiss: finishEditing) { window in
+            TriggerWindowEditorView(window: window, onDelete: { windowToDelete = window })
         }
+    }
+
+    private func startNewWindow() {
+        let new = TriggerWindow(
+            label: "New window",
+            daysOfWeek: [2, 3, 4, 5, 6],
+            startTime: DateComponents(hour: 7, minute: 0),
+            endTime: DateComponents(hour: 9, minute: 0)
+        )
+        modelContext.insert(new)
+        editingWindow = new
+    }
+
+    /// Takes a window's pending reminders away and deletes it, so a deleted
+    /// window can't keep notifying. Saves straight away so the re-sync that
+    /// follows doesn't see it.
+    private func remove(_ window: TriggerWindow) {
+        NotificationScheduler(context: modelContext).removeTriggerWindowNotifications(for: window)
+        modelContext.delete(window)
+        try? modelContext.save()
+    }
+
+    /// Runs once the editor has closed. Deleting here, not while the editor
+    /// is still on screen, keeps the editor from reading a window that is
+    /// already gone. Then reminders are brought in line with what is left.
+    private func finishEditing() {
+        if let window = windowToDelete {
+            windowToDelete = nil
+            remove(window)
+        }
+        NotificationScheduler.resyncTriggerWindows(using: modelContext)
     }
 }
 
@@ -69,6 +108,9 @@ private struct TriggerWindowCard: View {
                           systemImage: window.isActive ? "bell.fill" : "bell.slash")
                         .font(.caption)
                         .foregroundStyle(window.isActive ? Anchor.Theme.accent : .secondary)
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tertiary)
                 }
                 Text(triggerWindowSummary(window))
                     .font(.subheadline)
@@ -79,7 +121,7 @@ private struct TriggerWindowCard: View {
     }
 }
 
-/// "Mon Tue Wed · 07:00–09:00" — shared by the read cards and the editor list.
+/// "Mon Tue Wed · 07:00–09:00"
 private func triggerWindowSummary(_ window: TriggerWindow) -> String {
     let dayNames = window.daysOfWeek.sorted().compactMap { weekday -> String? in
         let symbols = Calendar.current.shortWeekdaySymbols
@@ -89,49 +131,6 @@ private func triggerWindowSummary(_ window: TriggerWindow) -> String {
     let start = String(format: "%02d:%02d", window.startTime.hour ?? 0, window.startTime.minute ?? 0)
     let end = String(format: "%02d:%02d", window.endTime.hour ?? 0, window.endTime.minute ?? 0)
     return "\(dayNames) · \(start)–\(end)"
-}
-
-/// The editable list: add, delete, and open a window's details. Presented
-/// from `TriggerWindowListView` via Edit, never browsed to directly.
-private struct TriggerWindowsEditorList: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var windows: [TriggerWindow]
-    @State private var editingWindow: TriggerWindow?
-
-    var body: some View {
-        List {
-            ForEach(windows) { window in
-                Button {
-                    editingWindow = window
-                } label: {
-                    VStack(alignment: .leading) {
-                        Text(window.label).font(.headline)
-                        Text(triggerWindowSummary(window))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .buttonStyle(.plain)
-            }
-            .onDelete { offsets in
-                for index in offsets { modelContext.delete(windows[index]) }
-            }
-
-            Button("Add trigger window") {
-                let new = TriggerWindow(
-                    label: "New window",
-                    daysOfWeek: [2, 3, 4, 5, 6],
-                    startTime: DateComponents(hour: 7, minute: 0),
-                    endTime: DateComponents(hour: 9, minute: 0)
-                )
-                modelContext.insert(new)
-                editingWindow = new
-            }
-        }
-        .sheet(item: $editingWindow) { window in
-            TriggerWindowEditorView(window: window)
-        }
-    }
 }
 
 /// Circle letter toggles for day-of-week selection — same visual pattern
@@ -168,9 +167,12 @@ struct WeekdayCirclePicker: View {
     }
 }
 
+/// One window in one sheet. Also opened from Recovery, where a new window is
+/// suggested from the user's urge times; that caller passes no `onDelete`,
+/// so no Delete button appears there.
 struct TriggerWindowEditorView: View {
     @Bindable var window: TriggerWindow
-    @Environment(\.dismiss) private var dismiss
+    var onDelete: (() -> Void)? = nil
 
     private var startBinding: Binding<Date> {
         Binding(
@@ -186,7 +188,15 @@ struct TriggerWindowEditorView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        Anchor.ItemEditorSheet(
+            title: "Trigger window",
+            onDelete: onDelete,
+            deleteQuestion: "Delete this window?",
+            onDone: {
+                // New windows start active, so this is the first time the user commits to one.
+                if window.isActive { NotificationScheduler.askForPermissionIfNeeded() }
+            }
+        ) {
             Form {
                 Section {
                     TextField("Label", text: $window.label)
@@ -205,18 +215,6 @@ struct TriggerWindowEditorView: View {
                 Section("Time of day") {
                     DatePicker("Start", selection: startBinding, displayedComponents: .hourAndMinute)
                     DatePicker("End", selection: endBinding, displayedComponents: .hourAndMinute)
-                }
-            }
-            .anchorSettingsStyle()
-            .navigationTitle("Trigger window")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        // New windows start active, so this is the first time the user commits to one.
-                        if window.isActive { NotificationScheduler.askForPermissionIfNeeded() }
-                        dismiss()
-                    }
                 }
             }
         }

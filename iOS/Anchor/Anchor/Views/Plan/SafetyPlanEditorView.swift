@@ -2,23 +2,78 @@
 //  SafetyPlanEditorView.swift
 //  Anchor
 //
-//  Two screens: `SafetyPlanView` is what you read (in a hard moment, or just
-//  to look at it); `SafetyPlanEditorView` is the form you write it in, only
-//  reached from the Edit button.
+//  One screen. `SafetyPlanView` is what you read (in a hard moment, or just
+//  to look at it), and each card on it opens its own section in a sheet when
+//  tapped. There is no Edit button and no separate form: the plan has four
+//  fixed sections, so there is nothing to add or delete, only words to change.
 //
 
 import SwiftUI
 import SwiftData
 
-/// The safety plan as something to read: four calm cards, no text boxes.
+/// The four sections of the plan, with how each one looks and where its text
+/// is stored.
+private enum SafetyPlanSection: String, Identifiable, CaseIterable {
+    case warningSigns
+    case copingStrategies
+    case reasonsToKeepGoing
+    case environmentSafety
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .warningSigns: return "Warning signs"
+        case .copingStrategies: return "Coping strategies"
+        case .reasonsToKeepGoing: return "Reasons to keep going"
+        case .environmentSafety: return "Making the environment safer"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .warningSigns: return "exclamationmark.triangle.fill"
+        case .copingStrategies: return "leaf.fill"
+        case .reasonsToKeepGoing: return "heart.fill"
+        case .environmentSafety: return "house.fill"
+        }
+    }
+
+    var tint: Color {
+        switch self {
+        case .warningSigns, .reasonsToKeepGoing: return Anchor.Theme.accent
+        case .copingStrategies, .environmentSafety: return Anchor.Theme.sage
+        }
+    }
+
+    var footer: String? {
+        switch self {
+        case .reasonsToKeepGoing:
+            return "This is what your trigger-window notifications quote from. Always your own words, never generated."
+        default:
+            return nil
+        }
+    }
+
+    var keyPath: ReferenceWritableKeyPath<SafetyPlan, String> {
+        switch self {
+        case .warningSigns: return \.warningSignsText
+        case .copingStrategies: return \.copingStrategiesText
+        case .reasonsToKeepGoing: return \.reasonsToKeepGoingText
+        case .environmentSafety: return \.environmentSafetyStepsText
+        }
+    }
+}
+
+/// The safety plan as something to read: four calm cards. Tap one to change it.
 struct SafetyPlanView: View {
     let plan: SafetyPlan
-    @State private var showingEditor = false
+    @State private var editingSection: SafetyPlanSection?
 
     private var isEmpty: Bool {
-        [plan.warningSignsText, plan.copingStrategiesText,
-         plan.reasonsToKeepGoingText, plan.environmentSafetyStepsText]
-            .allSatisfy { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        SafetyPlanSection.allCases.allSatisfy {
+            plan[keyPath: $0.keyPath].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
     }
 
     var body: some View {
@@ -31,16 +86,24 @@ struct SafetyPlanView: View {
                         message: "Write it once while you're calm, and it'll be here, ready to read, when you need it.",
                         actionTitle: "Start writing",
                         tint: Anchor.Theme.accent
-                    ) { showingEditor = true }
+                    ) { editingSection = .warningSigns }
                 } else {
-                    Anchor.TextCard(icon: "exclamationmark.triangle.fill", title: "Warning signs",
-                                    text: plan.warningSignsText, tint: Anchor.Theme.accent)
-                    Anchor.TextCard(icon: "leaf.fill", title: "Coping strategies",
-                                    text: plan.copingStrategiesText, tint: Anchor.Theme.sage)
-                    Anchor.TextCard(icon: "heart.fill", title: "Reasons to keep going",
-                                    text: plan.reasonsToKeepGoingText, tint: Anchor.Theme.accent)
-                    Anchor.TextCard(icon: "house.fill", title: "Making the environment safer",
-                                    text: plan.environmentSafetyStepsText, tint: Anchor.Theme.sage)
+                    ForEach(SafetyPlanSection.allCases) { section in
+                        Button {
+                            editingSection = section
+                        } label: {
+                            Anchor.TextCard(icon: section.icon, title: section.title,
+                                            text: plan[keyPath: section.keyPath], tint: section.tint)
+                                .overlay(alignment: .topTrailing) {
+                                    Image(systemName: "pencil")
+                                        .font(.footnote)
+                                        .foregroundStyle(.tertiary)
+                                        .padding(14)
+                                }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityHint("Opens the editor")
+                    }
 
                     Text("Last updated \(plan.lastEditedAt.formatted(date: .abbreviated, time: .omitted))")
                         .font(.caption)
@@ -53,45 +116,35 @@ struct SafetyPlanView: View {
         .anchorBackground()
         .navigationTitle("Safety plan")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Anchor.EditToolbarButton { showingEditor = true }
-            }
-        }
-        .sheet(isPresented: $showingEditor) {
-            Anchor.EditorSheet(title: "Edit safety plan") {
-                SafetyPlanEditorView(plan: plan)
-            }
+        .sheet(item: $editingSection) { section in
+            SafetyPlanSectionEditor(plan: plan, section: section)
         }
     }
 }
 
-struct SafetyPlanEditorView: View {
-    @Bindable var plan: SafetyPlan
+/// One section of the plan, in one sheet.
+private struct SafetyPlanSectionEditor: View {
+    let plan: SafetyPlan
+    let section: SafetyPlanSection
 
     var body: some View {
-        Form {
-            Section("Warning signs") {
-                TextEditor(text: $plan.warningSignsText).frame(minHeight: 80)
-            }
-            Section("Coping strategies") {
-                TextEditor(text: $plan.copingStrategiesText).frame(minHeight: 80)
-            }
-            Section {
-                TextEditor(text: $plan.reasonsToKeepGoingText)
-                    .frame(minHeight: 80)
-            } header: {
-                Text("Reasons to keep going")
-            } footer: {
-                Text("This is what your trigger-window notifications quote from. Always your own words, never generated.")
-            }
-            Section("Making the environment safer") {
-                TextEditor(text: $plan.environmentSafetyStepsText).frame(minHeight: 80)
+        Anchor.ItemEditorSheet(title: section.title) {
+            Form {
+                Section {
+                    TextEditor(text: Binding(
+                        get: { plan[keyPath: section.keyPath] },
+                        set: { newText in
+                            plan[keyPath: section.keyPath] = newText
+                            plan.lastEditedAt = .now
+                        }
+                    ))
+                    .frame(minHeight: 220)
+                } footer: {
+                    if let footer = section.footer {
+                        Text(footer)
+                    }
+                }
             }
         }
-        .onChange(of: plan.warningSignsText) { _, _ in plan.lastEditedAt = .now }
-        .onChange(of: plan.copingStrategiesText) { _, _ in plan.lastEditedAt = .now }
-        .onChange(of: plan.reasonsToKeepGoingText) { _, _ in plan.lastEditedAt = .now }
-        .onChange(of: plan.environmentSafetyStepsText) { _, _ in plan.lastEditedAt = .now }
     }
 }

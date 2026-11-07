@@ -1,6 +1,6 @@
 # Anchor — Patch Plan (v2-recovery)
 
-*Living document. Last updated: 7 Nov 2026, after Patch 11 was written (Patches 1 to 9 are pushed; Patches 10 and 11 await your paste; none confirmed building).*
+*Living document. Last updated: 7 Nov 2026, after Patch 12a was written (Patches 1 to 11 are pushed; Patch 12a awaits your paste; none confirmed building).*
 
 > ## READ THIS FIRST: THIS FILE IS THE PROMPT
 >
@@ -37,12 +37,14 @@ The source code repository is at <https://github.com/Kousei-Uchu/Anchor/tree/v2-
 | 7: Journal editor declutter, labelled Add sheet, discoverable Suggestions | 🟡 Pushed by you (`08b0dcc`); build not yet confirmed |
 | 8: Journal month calendar | 🟡 Pushed by you (`19b9105`); build not yet confirmed |
 | 9: Journal year overview | 🟡 Pushed by you (`041c874`); build not yet confirmed |
-| 10: Tap-to-edit building blocks | 🟡 Written (`patch-10.sh`); awaiting your paste and build (paste after Patch 9) |
-| 11: Edit pattern on the Thread screens | 🟡 Written (`patch-11.sh`); awaiting your paste and build (paste after Patch 10) |
-| 12 onward | Not started |
+| 10: Tap-to-edit building blocks | 🟡 Pushed by you; build not yet confirmed |
+| 11: Edit pattern on the Thread screens | 🟡 Pushed by you (`320930d`); build not yet confirmed |
+| 12a: Edit pattern on the Plan screens, part 1: Safety plan and Trigger windows | 🟡 Written (`patch-12a.sh`); awaiting your paste and build (paste after Patch 11) |
+| 12b onward | Not started |
 
 ## Change log of this plan
 
+- **7 Nov 2026 (17):** Patch 12a written: the Safety plan and Trigger windows screens use the new edit pattern, the first Plan screens to move. Patch 12 as one patch came to about 1,400 changed lines, over the size limit for a patch, so it is split into 12a to 12d, pasted in order. **Safety plan:** each of the four cards opens its own section in a sheet. There is nothing to add or delete, so there is no plus, no Edit button and no separate form. **Trigger windows:** tap a card to open it, the plus adds one, and Delete is inside the sheet (with a question first) and in the card's long-press menu. Deleting happens after the sheet has closed, and a window deleted that way no longer leaves its reminders behind, which it did before. `TriggerWindowEditorView` stays because Recovery opens it too, and gains an optional `onDelete`. `SafetyPlanEditorView` and the trigger-window manage list are removed; the file names stay so the project file needs no change. Patches 10 and 11 confirmed pushed (HEAD was `320930d`). Not compiled here.
 - **7 Nov 2026 (16):** Patch 11 written: the four Thread screens use the new edit pattern. No Edit buttons, no manage-list sheets, no second Edit button. A plus adds on each screen. Tapping a card opens that item in one sheet: a draft, a support day (both editable), a future note (its text only if it has unlocked; a locked note shows just its date) or a logged message (read only, because it is a record of what was said). Each sheet has a Delete that asks first, and the card's long-press menu has Delete too. Deleting happens after the sheet has closed, so a sheet never reads something that is already gone. Locked notes can now be deleted by tapping them, which the old Edit list did but the card itself did not allow. The empty drafts left behind by closing a new draft without writing anything are removed. The extra full-width buttons at the bottom of each list are gone because the plus does that job. `UnsentDraftView` (the read page for one draft) is removed; the editor shows the same fields. Patch 14 can add resend and copy to the message sheet. Patches 8 and 9 confirmed pushed. Not compiled here.
 - **7 Nov 2026 (15):** Patch 10 written. Nothing changes on screen yet. `ContentView.swift` gains the pieces of the new edit pattern: `AddToolbarButton` (a plus), `ReorderToolbarButton` (a text button that says Reorder, then Done), `TapToEditRow` (the whole row opens its editor), `ItemEditorSheet` (one item in one sheet, with an optional Delete that asks first) and a `.anchorDeletable` modifier (swipe, and the same action on long-press). The older `EditToolbarButton` and `EditorSheet` stay until Patches 11 to 13 have moved every screen. Deletion inside a reorder session uses swipe only, so reorder mode shows handles and no red minus buttons. Not compiled here.
 - **7 Nov 2026 (14):** Patch 9 written: the Journal switch gains Year. Twelve small months, a filled square for each day with something on it (darker if more than one thing), tap a month to open it in Month view. Deliberately plain: no colour for better or worse and no totals, so it cannot turn into a streak chart. Year arrows stop at the earliest entry and this year; future months are dimmed. Patches 6 and 7 confirmed pushed (`7859612`, `08b0dcc`). **Not done:** the optional lenses (entries only, check-ins only, by origin); the plan said "later". Not compiled here.
@@ -330,7 +332,10 @@ Order: unblock → visible quick wins → one shared pattern later screens inher
 | --- | --- | --- | --- | --- |
 | **10** | New edit pattern implemented in shared `Anchor` components only | 13 | S | 🟡 |
 | **11** | Apply to Thread screens | 13 | M | 🟡 |
-| **12** | Apply to Plan screens | 13 | M | ⬜ |
+| **12a** | Apply to Plan screens: Safety plan, Trigger windows | 13 | S | 🟡 |
+| **12b** | Plan screens: Contacts, Grounding tools (List of cards, Reorder) | 13 | M | ⬜ |
+| **12c** | Plan screens: Decision presets | 13 | M | ⬜ |
+| **12d** | Plan screens: Appointments | 13 | M | ⬜ |
 | **13** | Apply to Bridge, Now, Recovery screens | 13 | M | ⬜ |
 | **14** | Message log review and rework (needs D8); includes the widget caption and a write action | 10 | M | ⬜ |
 
