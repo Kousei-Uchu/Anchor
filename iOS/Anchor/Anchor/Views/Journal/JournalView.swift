@@ -22,6 +22,7 @@ import Charts
 enum JournalLayout: String, CaseIterable, Identifiable {
     case days = "Days"
     case month = "Month"
+    case year = "Year"
     var id: String { rawValue }
 }
 
@@ -129,6 +130,17 @@ struct JournalView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     Color.clear.frame(height: 0).id(topAnchorID)
+                    if layout == .year {
+                        JournalYearView(
+                            counts: dayCounts,
+                            earliest: timelineItems.last?.timestamp ?? Date(),
+                            year: $displayedMonth,
+                            onPickMonth: { month in
+                                displayedMonth = month
+                                layout = .month
+                            }
+                        )
+                    }
                     if layout == .month {
                         JournalMonthView(
                             counts: dayCounts,
@@ -185,7 +197,7 @@ struct JournalView: View {
                         switch layout {
                         case .days:
                             withAnimation { proxy.scrollTo(topAnchorID, anchor: .top) }
-                        case .month:
+                        case .month, .year:
                             displayedMonth = Date()
                         }
                     } label: {
@@ -521,6 +533,157 @@ struct JournalMonthView: View {
         var parts = [day.formatted(.dateTime.day().month(.wide))]
         if let n = count?.entries, n > 0 { parts.append(n == 1 ? "1 entry" : "\(n) entries") }
         if let c = count?.checkIns, c > 0 { parts.append(c == 1 ? "1 check-in" : "\(c) check-ins") }
+        return parts.joined(separator: ", ")
+    }
+}
+
+// MARK: - Year view
+
+/// Twelve small months. A day with something on it is a filled square,
+/// a little darker if there was more than one thing. There is no target,
+/// no colour for better or worse, and empty days look like empty days.
+/// Tapping a month opens it in the Month view.
+struct JournalYearView: View {
+    let counts: [Date: JournalDayCount]
+    let earliest: Date
+    @Binding var year: Date
+    let onPickMonth: (Date) -> Void
+
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    private var calendar: Calendar { Calendar.current }
+
+    private var yearStart: Date {
+        calendar.dateInterval(of: .year, for: year)?.start ?? year
+    }
+
+    private var canGoBack: Bool {
+        guard let first = calendar.dateInterval(of: .year, for: earliest)?.start else { return false }
+        return yearStart > first
+    }
+
+    private var canGoForward: Bool {
+        guard let current = calendar.dateInterval(of: .year, for: Date())?.start else { return false }
+        return yearStart < current
+    }
+
+    private var months: [Date] {
+        (0..<12).compactMap { calendar.date(byAdding: .month, value: $0, to: yearStart) }
+    }
+
+    private var currentMonthStart: Date {
+        calendar.dateInterval(of: .month, for: Date())?.start ?? Date()
+    }
+
+    private var columns: [GridItem] {
+        let count = typeSize.isAccessibilitySize ? 2 : 3
+        return Array(repeating: GridItem(.flexible(), spacing: 10), count: count)
+    }
+
+    var body: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Button { shift(-1) } label: { Image(systemName: "chevron.left") }
+                    .disabled(!canGoBack)
+                    .accessibilityLabel("Previous year")
+                Spacer()
+                Text(yearStart.formatted(.dateTime.year()))
+                    .font(.system(.headline, design: .rounded))
+                Spacer()
+                Button { shift(1) } label: { Image(systemName: "chevron.right") }
+                    .disabled(!canGoForward)
+                    .accessibilityLabel("Next year")
+            }
+            .foregroundStyle(Anchor.Theme.accent)
+
+            LazyVGrid(columns: columns, spacing: 10) {
+                ForEach(months, id: \.self) { start in
+                    miniMonth(start)
+                }
+            }
+        }
+        .padding(.vertical, 8)
+    }
+
+    private func shift(_ years: Int) {
+        if let next = calendar.date(byAdding: .year, value: years, to: yearStart) {
+            year = next
+        }
+    }
+
+    private func days(in start: Date) -> [Date?] {
+        guard let range = calendar.range(of: .day, in: .month, for: start) else { return [] }
+        let firstWeekday = calendar.component(.weekday, from: start)
+        let lead = (firstWeekday - calendar.firstWeekday + 7) % 7
+        var result: [Date?] = Array(repeating: nil, count: lead)
+        for offset in 0..<range.count {
+            result.append(calendar.date(byAdding: .day, value: offset, to: start))
+        }
+        return result
+    }
+
+    private func totals(of days: [Date?]) -> JournalDayCount {
+        var total = JournalDayCount()
+        for day in days.compactMap({ $0 }) {
+            if let count = counts[calendar.startOfDay(for: day)] {
+                total.entries += count.entries
+                total.checkIns += count.checkIns
+            }
+        }
+        return total
+    }
+
+    @ViewBuilder
+    private func miniMonth(_ start: Date) -> some View {
+        let cells = days(in: start)
+        let total = totals(of: cells)
+        let isFuture = start > currentMonthStart
+        let name = start.formatted(.dateTime.month(.abbreviated))
+
+        let content = VStack(alignment: .leading, spacing: 6) {
+            Text(name)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(isFuture ? Color.secondary : Color.primary)
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 2), count: 7), spacing: 2) {
+                ForEach(Array(cells.enumerated()), id: \.offset) { _, day in
+                    if let day {
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(shade(for: counts[calendar.startOfDay(for: day)]))
+                            .aspectRatio(1, contentMode: .fit)
+                    } else {
+                        Color.clear.aspectRatio(1, contentMode: .fit)
+                    }
+                }
+            }
+        }
+        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Anchor.Theme.sageSoft, in: RoundedRectangle(cornerRadius: 10))
+        .opacity(isFuture ? 0.5 : 1)
+
+        if isFuture {
+            content.accessibilityLabel(name)
+        } else {
+            Button { onPickMonth(start) } label: { content }
+                .buttonStyle(.plain)
+                .accessibilityLabel(label(name: name, total: total))
+        }
+    }
+
+    private func shade(for count: JournalDayCount?) -> Color {
+        let n = (count?.entries ?? 0) + (count?.checkIns ?? 0)
+        switch n {
+        case 0: return Color.secondary.opacity(0.14)
+        case 1: return Anchor.Theme.accent.opacity(0.45)
+        default: return Anchor.Theme.accent
+        }
+    }
+
+    private func label(name: String, total: JournalDayCount) -> String {
+        var parts = [name]
+        if total.entries > 0 { parts.append(total.entries == 1 ? "1 entry" : "\(total.entries) entries") }
+        if total.checkIns > 0 { parts.append(total.checkIns == 1 ? "1 check-in" : "\(total.checkIns) check-ins") }
+        if parts.count == 1 { parts.append("nothing yet") }
         return parts.joined(separator: ", ")
     }
 }
