@@ -70,7 +70,7 @@ struct TasksNowCard: View {
     @Query(sort: \TaskItem.sortOrder) private var tasks: [TaskItem]
     @State private var newTitle = ""
 
-    private var open: [TaskItem] { TaskItem.listOrder(tasks) }
+    private var open: [TaskItem] { TaskItem.listOrder(tasks, includeWaiting: false) }
     private let shown = 4
 
     var body: some View {
@@ -90,7 +90,7 @@ struct TasksNowCard: View {
             .buttonStyle(.plain)
 
             if open.isEmpty {
-                Text(tasks.isEmpty ? "Nothing added yet." : "All ticked off.")
+                Text(tasks.isEmpty ? "Nothing added yet." : (TaskItem.listOrder(tasks).isEmpty ? "All ticked off." : "Nothing to do right now."))
                     .font(.caption)
                     .foregroundStyle(.tertiary)
                     .padding(.vertical, 4)
@@ -175,7 +175,7 @@ struct TasksView: View {
             } else {
                 List {
                     ForEach(TaskBucket.allCases) { bucket in
-                        let group = open.filter { $0.bucket() == bucket }
+                        let group = open.filter { $0.listBucket(among: tasks) == bucket }
                         if !group.isEmpty {
                             Text(bucket.title)
                                 .font(.system(.subheadline, design: .rounded).weight(.semibold))
@@ -184,6 +184,7 @@ struct TasksView: View {
 
                             ForEach(group) { task in
                                 TaskCard(task: task, steps: TaskItem.steps(of: task, in: tasks),
+                                         blockedBy: task.openBlockers(among: tasks),
                                          onToggle: { toggle(task) }, onEdit: { editing = task })
                                     .anchorDeletable { modelContext.deleteTask(task, among: tasks) }
                                     .anchorCardRow()
@@ -207,6 +208,7 @@ struct TasksView: View {
 
                         ForEach(done) { task in
                             TaskCard(task: task, steps: TaskItem.steps(of: task, in: tasks),
+                                     blockedBy: [],
                                      onToggle: { toggle(task) }, onEdit: { editing = task })
                                 .anchorDeletable { modelContext.deleteTask(task, among: tasks) }
                                 .anchorCardRow()
@@ -342,23 +344,38 @@ struct TasksView: View {
 private struct TaskCard: View {
     @Bindable var task: TaskItem
     let steps: [TaskItem]
+    /// The open tasks this one is waiting on. Empty when it is free to do.
+    let blockedBy: [TaskItem]
     let onToggle: () -> Void
     let onEdit: () -> Void
 
     private var doneSteps: Int { steps.filter(\.isDone).count }
-    private var showsSteps: Bool { !task.isDone && !steps.isEmpty }
+    private var isBlocked: Bool { !task.isDone && !blockedBy.isEmpty }
+    private var showsSteps: Bool { !task.isDone && !isBlocked && !steps.isEmpty }
+
+    private var waitingText: String {
+        let first = blockedBy[0].title.isEmpty ? "an untitled task" : blockedBy[0].title
+        return blockedBy.count == 1 ? "Waiting on \(first)" : "Waiting on \(first) and \(blockedBy.count - 1) more"
+    }
 
     var body: some View {
         Anchor.Card {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .top, spacing: 12) {
-                    Button(action: onToggle) {
-                        Image(systemName: task.isDone ? "checkmark.circle.fill" : "circle")
+                    if isBlocked {
+                        Image(systemName: "hourglass")
                             .font(.title3)
-                            .foregroundStyle(task.isDone ? Anchor.Theme.sage : Anchor.Theme.accent)
+                            .foregroundStyle(.secondary)
+                            .accessibilityLabel("Waiting")
+                    } else {
+                        Button(action: onToggle) {
+                            Image(systemName: task.isDone ? "checkmark.circle.fill" : "circle")
+                                .font(.title3)
+                                .foregroundStyle(task.isDone ? Anchor.Theme.sage : Anchor.Theme.accent)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(task.isDone ? "Mark as not done" : "Mark as done")
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(task.isDone ? "Mark as not done" : "Mark as done")
 
                     Button(action: onEdit) {
                         VStack(alignment: .leading, spacing: 4) {
@@ -367,6 +384,11 @@ private struct TaskCard: View {
                                 .strikethrough(task.isDone)
                                 .foregroundStyle(task.isDone ? .secondary : .primary)
                                 .fixedSize(horizontal: false, vertical: true)
+                            if isBlocked {
+                                Text(waitingText)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                             if !task.isDone, let due = task.dueText() {
                                 Label(due, systemImage: "calendar")
                                     .font(.caption)
@@ -432,6 +454,7 @@ private struct TaskCard: View {
                 }
             }
         }
+        .opacity(isBlocked ? 0.6 : 1)
     }
 }
 
@@ -446,6 +469,10 @@ private struct TaskEditorSheet: View {
     @State private var editMode: EditMode = .inactive
 
     private var steps: [TaskItem] { TaskItem.steps(of: task, in: liveTasks) }
+    private var blockers: [TaskItem] {
+        task.blockedByIDs.compactMap { id in liveTasks.first(where: { $0.id == id }) }
+    }
+    private var possibleBlockers: [TaskItem] { task.possibleBlockers(among: liveTasks) }
 
     var body: some View {
         Anchor.ItemEditorSheet(
@@ -488,6 +515,33 @@ private struct TaskEditorSheet: View {
                             }
                             .font(.footnote)
                             .textCase(nil)
+                        }
+                    }
+                }
+                if !blockers.isEmpty || !possibleBlockers.isEmpty {
+                    Section("Waiting on") {
+                        ForEach(blockers) { blocker in
+                            Label(blocker.title.isEmpty ? "Untitled" : blocker.title,
+                                  systemImage: blocker.isDone ? "checkmark.circle" : "hourglass")
+                                .foregroundStyle(blocker.isDone ? .secondary : .primary)
+                                .swipeActions(edge: .trailing) {
+                                    Button(role: .destructive) {
+                                        task.blockedByIDs.removeAll { $0 == blocker.id }
+                                    } label: {
+                                        Label("Remove", systemImage: "xmark")
+                                    }
+                                }
+                        }
+                        if !possibleBlockers.isEmpty {
+                            Menu {
+                                ForEach(possibleBlockers) { candidate in
+                                    Button(candidate.title.isEmpty ? "Untitled" : candidate.title) {
+                                        task.blockedByIDs.append(candidate.id)
+                                    }
+                                }
+                            } label: {
+                                Label("Wait on another task", systemImage: "plus")
+                            }
                         }
                     }
                 }
