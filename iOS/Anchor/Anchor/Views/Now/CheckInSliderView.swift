@@ -48,6 +48,8 @@ struct CheckInSliderView: View {
         let text: String
         let detail: String
         let starters: [String]
+        /// A different mood per question, so the mascot isn't a fixed face.
+        let mood: MascotMood
     }
 
     /// Fixed, reviewed set, deliberately short so answering all of them
@@ -57,27 +59,32 @@ struct CheckInSliderView: View {
         CheckInPrompt(
             text: "What's currently on your mind?",
             detail: "Anything at all is fine, big or small. It doesn't need to make sense yet.",
-            starters: ["Right now I'm thinking about\u{2026}", "I keep coming back to\u{2026}", "What's taking up space is\u{2026}"]
+            starters: ["Right now I'm thinking about\u{2026}", "I keep coming back to\u{2026}", "What's taking up space is\u{2026}"],
+            mood: .neutral
         ),
         CheckInPrompt(
             text: "What's your biggest emotion right now?",
             detail: "Naming a feeling, even roughly, can make it a little less heavy.",
-            starters: ["Right now I feel\u{2026}", "Mostly I'm feeling\u{2026}", "It's hard to name, but it's something like\u{2026}"]
+            starters: ["Right now I feel\u{2026}", "Mostly I'm feeling\u{2026}", "It's hard to name, but it's something like\u{2026}"],
+            mood: .gentle
         ),
         CheckInPrompt(
             text: "Is there anything coming up that's on your mind?",
             detail: "A date, a conversation, a task, or anything else that's waiting for you.",
-            starters: ["Coming up, I'm thinking about\u{2026}", "I'm a bit unsure about\u{2026}", "Nothing big, but\u{2026}"]
+            starters: ["Coming up, I'm thinking about\u{2026}", "I'm a bit unsure about\u{2026}", "Nothing big, but\u{2026}"],
+            mood: .quietDay
         ),
         CheckInPrompt(
             text: "Would you say today's closer to a good day, a bad day, or somewhere in between?",
             detail: "There's no right answer. \"In between\" is a very normal one.",
-            starters: ["Today feels like\u{2026}", "It's been a good day because\u{2026}", "It's been a harder day because\u{2026}", "Somewhere in between, since\u{2026}"]
+            starters: ["Today feels like\u{2026}", "It's been a good day because\u{2026}", "It's been a harder day because\u{2026}", "Somewhere in between, since\u{2026}"],
+            mood: .encouragingNotPerformative
         ),
         CheckInPrompt(
             text: "What's something you're looking forward to?",
             detail: "It can be tiny, like a meal or a quiet evening.",
-            starters: ["I'm looking forward to\u{2026}", "One small thing I'm hoping for is\u{2026}"]
+            starters: ["I'm looking forward to\u{2026}", "One small thing I'm hoping for is\u{2026}"],
+            mood: .gentle
         )
     ]
 
@@ -99,30 +106,44 @@ struct CheckInSliderView: View {
             .onAppear {
                 mascotLine = MascotEngine(context: modelContext).line(for: .checkInPrompt, mood: .gentle)
             }
+            .onChange(of: sliderMood) { _, mood in
+                if let line = MascotEngine(context: modelContext).line(for: .checkInPrompt, mood: mood) {
+                    mascotLine = line
+                }
+            }
         }
     }
 
     @State private var mascotLine: MascotLine?
 
     private var sliderStage: some View {
-        Form {
-            Section {
-                MascotPresenceView(line: mascotLine, mood: .gentle)
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
-            }
+        ScrollView {
+            VStack(spacing: 14) {
+                MascotPresenceView(line: mascotLine, mood: sliderMood)
+                    .animation(.easeInOut(duration: 0.4), value: sliderMood)
 
-            Section {
-                sliderRow("Physical energy", value: $physicalEnergyLevel)
-                sliderRow("Mental clarity", value: $mentalClarityLevel)
-                sliderRow("Room in your head", value: $mentalSpaceLevel)
-                sliderRow("Physical energy to move", value: $physicalEnergy)
-                sliderRow("Social energy", value: $socialEnergy)
-            } footer: {
+                sliderCard("Physical energy", icon: "bolt.fill",
+                           low: "running on empty", high: "fully charged", value: $physicalEnergyLevel)
+                sliderCard("Mental clarity", icon: "lightbulb.fill",
+                           low: "foggy", high: "clear", value: $mentalClarityLevel)
+                sliderCard("Room in your head", icon: "cloud.fill",
+                           low: "crowded", high: "plenty of space", value: $mentalSpaceLevel)
+                sliderCard("Physical energy to move", icon: "figure.walk",
+                           low: "hard to move", high: "ready to move", value: $physicalEnergy)
+                sliderCard("Social energy", icon: "person.2.fill",
+                           low: "need space", high: "up for company", value: $socialEnergy)
+
                 Text("More = better, across all five. Just for you, nothing here is scored, averaged, or shown as a streak.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 8)
             }
-
+            .padding(.horizontal)
+            .padding(.top, 8)
+            .padding(.bottom, 16)
         }
+        .anchorBackground()
         // Both actions live in a bar pinned to the bottom, so neither can be
         // pushed below the fold on a small screen and "A few optional
         // questions" can't be missed.
@@ -157,6 +178,10 @@ struct CheckInSliderView: View {
         let current = Self.prompts[promptIndex]
         return ScrollView {
             VStack(spacing: 16) {
+                MascotPresenceView(line: nil, mood: current.mood)
+                    .padding(.horizontal, 24)
+                    .id(promptIndex)
+
                 ProgressView(value: Double(promptIndex + 1), total: Double(Self.prompts.count))
                     .tint(Anchor.Theme.accent)
                     .padding(.horizontal)
@@ -243,13 +268,34 @@ struct CheckInSliderView: View {
         promptAnswers[prompt.text] = existing + (needsSpace ? " " : "") + starter + " "
     }
 
-    private func sliderRow(_ label: String, value: Binding<Double>) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label).font(.system(.subheadline, design: .rounded))
-            Slider(value: value, in: 0...1)
-                .tint(Anchor.Theme.accent)
+    /// The mascot's mood follows where the sliders sit. It is only a mood for
+    /// the picture: nothing is stored, shown as a number, or compared with
+    /// earlier check-ins, and the words it says still come from the reviewed
+    /// line pool.
+    private var sliderMood: MascotMood {
+        let level = (physicalEnergyLevel + mentalClarityLevel + mentalSpaceLevel + physicalEnergy + socialEnergy) / 5
+        if level < 0.34 { return .quietDay }
+        if level > 0.66 { return .encouragingNotPerformative }
+        return .gentle
+    }
+
+    private func sliderCard(_ label: String, icon: String, low: String, high: String,
+                            value: Binding<Double>) -> some View {
+        Anchor.Card {
+            VStack(alignment: .leading, spacing: 8) {
+                Anchor.SectionHeader(icon: icon, title: label)
+                Slider(value: value, in: 0...1)
+                    .tint(Anchor.Theme.accent)
+                    .accessibilityLabel(label)
+                HStack(alignment: .firstTextBaseline) {
+                    Text(low)
+                    Spacer(minLength: 12)
+                    Text(high).multilineTextAlignment(.trailing)
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
         }
-        .padding(.vertical, 4)
     }
 
     @discardableResult

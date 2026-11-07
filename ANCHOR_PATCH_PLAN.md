@@ -1,6 +1,6 @@
 # Anchor — Patch Plan (v2-recovery)
 
-*Living document. Last updated: 7 Nov 2026, after Patch 4 was written (Patch 1 is pushed; Patches 2 to 4 await your paste; none confirmed building).*
+*Living document. Last updated: 7 Nov 2026, after Patch 5 was written (Patch 1 is pushed; Patches 2 to 5 await your paste; none confirmed building).*
 
 > ## READ THIS FIRST: THIS FILE IS THE PROMPT
 >
@@ -32,10 +32,12 @@ The source code repository is at <https://github.com/Kousei-Uchu/Anchor/tree/v2-
 | 2: Cut-off labels | 🟡 Written (`patch-02.sh`); awaiting your build |
 | 3: Check-in pinned action bar, and this plan moved into the repo | 🟡 Written (`patch-03.sh`); awaiting your build |
 | 4: Check-in question sub-text and sentence starters | 🟡 Written (`patch-04.sh`); awaiting your paste and build |
-| 5 onward | Not started |
+| 5: Check-in visual refresh | 🟡 Written (`patch-05.sh`); awaiting your paste and build |
+| 6 onward | Not started |
 
 ## Change log of this plan
 
+- **7 Nov 2026 (10):** Patch 5 written: the check-in `Form` is now a scrolling stack of `Anchor.Card`s, each slider with an icon and gentle end labels ("running on empty" to "fully charged" and so on); the mascot's mood follows the sliders (quiet day, gentle, encouraging; picture only, nothing stored, scored or compared) and its line is re-picked from the reviewed pool when the mood changes; each optional question has its own mascot mood. **Not done:** the calm "done" moment with a mascot line, because it needs a new reviewed line pool and trigger (the mascot never gets generated dialogue). Added as an open item for Patch 5b.
 - **7 Nov 2026 (9):** Patch 4 written: `CheckInPrompt` struct (question, detail, starters), a "Need a start?" chip row that appends a starter to the answer, and a scrolling question screen with pinned buttons so it fits an SE-size screen. The same prompt data can later feed the Journal editor and the guide.
 - **7 Nov 2026 (8):** Patch 1 confirmed pushed (`41a858e`). This plan moved into the repo as `ANCHOR_PATCH_PLAN.md` (Patch 3) and now carries the standing instructions for Claude at the top. Edit it here, not in the Claude Doc. Patch 3 written: both check-in actions are pinned in a bottom bar.
 - **7 Nov 2026 (7):** Patches are delivered as a `.sh` text file whose contents are pasted into Terminal, not run (no shebang or `set -e`). Patch 1 re-sent that way. Patch 2 written: titles, `WidgetBig` and `WidgetCaption` wrap to three lines then shrink, `TileButtonLabel` loses its fixed height, half-width is limited to titles of 16 characters or fewer, and nothing pairs up at accessibility text sizes.
@@ -304,7 +306,7 @@ Order: unblock → visible quick wins → one shared pattern later screens inher
 | Patch | Contents | Points | Size | Status |
 | --- | --- | --- | --- | --- |
 | **4** | Check-in questions: sub-text and sentence starters | 3 | S | 🟡 |
-| **5** | Check-in visual refresh: themed cards, reacting mascot, mascot on questions | 2 | M | ⬜ |
+| **5** | Check-in visual refresh: themed cards, reacting mascot, mascot on questions | 2 | M | 🟡 |
 | **6** | Journal order fix (newest first, jump to today) | 5 | S | ⬜ |
 | **7** | Journal editor declutter; labelled "+" sheet; discoverable Suggestions | 4 | M | ⬜ |
 | **8** | Journal month-calendar zoom | 5 | M | ⬜ |
