@@ -13,6 +13,7 @@ import MessageUI
 
 struct QuickContactsView: View {
     let contacts: [TrustedContact]
+    @Query(sort: \MessageStarter.sortOrder) private var starters: [MessageStarter]
     @State private var pendingMessage: PendingMessage?
     @State private var discordFailureMessage: String?
     @State private var selectedContactID: UUID?
@@ -50,16 +51,17 @@ struct QuickContactsView: View {
                     HStack(spacing: 8) {
                         ForEach(templates) { template in
                             Button(template.label) {
-                                switch contact.contactMethod {
-                                case .phone:
-                                    pendingMessage = PendingMessage(recipient: contact.phoneNumber, body: template.body)
-                                case .discord:
-                                    DiscordOpener.openUser(contact.discordUserID) { message in
-                                        discordFailureMessage = message
-                                    }
-                                }
+                                send(template.body, to: contact)
                             }
                             .buttonStyle(Anchor.SecondaryButtonStyle())
+                        }
+                        ForEach(usableStarters) { starter in
+                            Button(starter.text) {
+                                send(starter.text, to: contact)
+                            }
+                            .lineLimit(1)
+                            .buttonStyle(Anchor.SecondaryButtonStyle())
+                            .frame(maxWidth: 260)
                         }
                     }
                 }
@@ -80,6 +82,21 @@ struct QuickContactsView: View {
             Button("OK", role: .cancel) { discordFailureMessage = nil }
         } message: {
             Text(discordFailureMessage ?? "")
+        }
+    }
+
+    private var usableStarters: [MessageStarter] {
+        starters.filter { !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    }
+
+    private func send(_ body: String, to contact: TrustedContact) {
+        switch contact.contactMethod {
+        case .phone:
+            pendingMessage = PendingMessage(recipient: contact.phoneNumber, body: body)
+        case .discord:
+            DiscordOpener.openUser(contact.discordUserID) { message in
+                discordFailureMessage = message
+            }
         }
     }
 

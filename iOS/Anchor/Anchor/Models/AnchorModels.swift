@@ -345,6 +345,35 @@ final class BoundarySection {
     }
 }
 
+/// One of the person's own short lines for starting a message on a hard day,
+/// such as "I'm not up to talking, but I'm safe". Nothing is written for them:
+/// the list starts empty. Tapping one puts it in the message box, where it can
+/// be changed before anything is saved or sent.
+@Model
+final class MessageStarter {
+    @Attribute(.unique) var id: UUID
+    var text: String
+    var sortOrder: Int
+    var lastEditedAt: Date
+
+    init(id: UUID = UUID(), text: String = "", sortOrder: Int = 0, lastEditedAt: Date = .now) {
+        self.id = id
+        self.text = text
+        self.sortOrder = sortOrder
+        self.lastEditedAt = lastEditedAt
+    }
+
+    /// `existing` with `starter` put in: it replaces nothing, so a message the
+    /// person has already begun keeps its words and the starter follows them.
+    static func adding(_ starter: String, to existing: String) -> String {
+        let line = starter.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !line.isEmpty else { return existing }
+        if existing.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return line }
+        let separator = existing.last?.isWhitespace == true ? "" : " "
+        return existing + separator + line
+    }
+}
+
 enum SafetyPlanSections {
     /// The four sections the plan always had, in their old order, holding the
     /// given text. Used for the one-time copy and for a plan started fresh.
@@ -1650,7 +1679,7 @@ enum AnchorSchema {
     static var models: [any PersistentModel.Type] {
         [
             JournalEntry.self, CheckIn.self, TrustedContact.self, GroundingTool.self,
-            SafetyPlan.self, SafetyPlanSection.self, BoundarySection.self, TriggerWindow.self, AppointmentSeries.self, AppointmentOccurrence.self,
+            SafetyPlan.self, SafetyPlanSection.self, BoundarySection.self, MessageStarter.self, TriggerWindow.self, AppointmentSeries.self, AppointmentOccurrence.self,
             BridgeDraftItem.self, FeedbackLoopDiagram.self,
             ThreadMessage.self, SupportCalendarEntry.self, FutureNote.self, UnsentDraft.self,
             MascotLine.self, DecisionPresetCategory.self, DecisionPresetChoice.self,
