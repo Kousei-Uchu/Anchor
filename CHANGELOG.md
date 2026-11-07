@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 14b: a message can carry a voice note: record it when you write, play it from the log, send it through Messages as an attachment, or share it anywhere; it stays on your device and is removed when you delete the message.
 - Patch 14a: the Message log has a "Write to" row so writing to a person is one tap from the log, a menu to show only one person's messages, and Send again and Copy on each message; the widget on Thread has a Write button.
 - Patch 16: tasks can be timed loosely ("as soon as I can", today, this week, this month, someday) or for a particular day, and the list groups them as Today, This week, Later and No date; a plan whose time has passed moves quietly into Today, never marked as late.
 - Patch 15: there is a Tasks list that lasts until you remove things: tick tasks off, tap one to add notes, add with the plus or the bar at the bottom, reorder, and optionally import from Reminders; Now shows your first few open tasks, and anything on the old "Next hour only" list is carried over once.

@@ -603,7 +603,7 @@ struct MessageLogWidget: View {
             if let last = messages.first {
                 VStack(alignment: .leading, spacing: 2) {
                     Anchor.WidgetCaption(text: last.timestamp.formatted(date: .abbreviated, time: .shortened), lines: 1)
-                    Text(last.text)
+                    Text(last.text.isEmpty ? "Voice note" : last.text)
                         .font(.system(.subheadline, design: .rounded))
                         .lineLimit(2)
                 }

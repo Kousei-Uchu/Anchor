@@ -1,6 +1,6 @@
 # Anchor — Patch Plan (v2-recovery)
 
-*Living document. Last updated: 7 Nov 2026, after Patch 14a was written (Patches 1 to 16 are pushed, `15e1daf` at the time; none confirmed building; Patch 14a awaits your paste).*
+*Living document. Last updated: 7 Nov 2026, after Patch 14b was written (Patches 1 to 16 are pushed, `15e1daf` at the time; none confirmed building; Patches 14a and 14b await your paste, in that order).*
 
 > ## READ THIS FIRST: THIS FILE IS THE PROMPT
 >
@@ -46,13 +46,14 @@ The source code repository is at <https://github.com/Kousei-Uchu/Anchor/tree/v2-
 | 13a: Edit pattern on Now and Recovery: Affirmations, De-escalation scripts, Who I'm doing this for, Before tracking | 🟡 Pushed by you; build not yet confirmed |
 | 13b: Edit pattern on Bridge and the Journal entry preview; old Edit components removed | 🟡 Pushed by you (`92d2c67`); build not yet confirmed |
 | 14a: Message log, part 1: quick write to a person, per-person history, Send again and Copy, a Write button on the widget | 🟡 Written (`patch-14a.sh`); awaiting your paste and build |
-| 14b: Message log, part 2: voice notes (record, play, attach when sending through Messages) | ⬜ Next |
+| 14b: Message log, part 2: voice notes (record, play, attach when sending through Messages) | 🟡 Written (`patch-14b.sh`); awaiting your paste and build (paste after Patch 14a) |
 | 15: Tasks: `TaskItem`, carry-over from Next hour only, basic list, Plan widget, export and import, demo data | 🟡 Pushed by you (`698b6c0`); build not yet confirmed |
 | 16: Task due dates, fuzzy values, grouping by time | 🟡 Pushed by you (`15e1daf`); build not yet confirmed |
 | 17 onward | Not started |
 
 ## Change log of this plan
 
+- **7 Nov 2026 (26):** Patch 14b written: voice notes on messages. **Recording:** the composer has a Record a voice note button; it asks for the microphone the first time, shows the time while recording, stops by itself at five minutes, and offers Record again and Remove after. A recording with nothing in it is thrown away, and one that is never saved is deleted when the sheet closes. A message can be text, a voice note, or both. **Playing:** each card on the log has a play button with the length, and the same is in the message sheet, which also has Share voice note (so it can go over Discord or anywhere else). **Sending:** through Messages the recording is attached to the text (the Messages sheet is given the file; iMessage and SMS decide what they accept), and Send again does the same. Discord cannot take an attachment from the app, so it only opens the chat and the Share button is the way. **Storage:** files live in Application Support/VoiceNotes with the same file protection as the database; deleting a message, swiping, or Clear everything removes its file. Export and import carry only the file name, not the audio, so an imported message says the voice note is not on this device; real backups of audio belong to Patch 33. **Open for Patches 34 and 35:** voice files are not covered by field-level encryption yet (D5). The microphone key is added to both build configurations, the Privacy page gets a Microphone line, Help is updated, and the widget shows "Voice note" when the latest message has no text. The demo has no voice note, because audio cannot be seeded. Not compiled here, and recording and playback need a real device or the simulator's microphone to check.
 - **7 Nov 2026 (25):** D4 to D8 answered (see the table); Patch 14 split in two because it came to about 600 lines. **What `main` shows about the message log:** the original screen had the composer on the same screen, with the "About" picker, the text box and the Save and Send buttons under the list, so writing to someone and sending it was one screen. The later "separate settings from information" commit turned the log into a read-only list and moved the composer behind a sheet, which is the loss you felt. Nothing on `main` ever recorded or played audio: `audioFileName` was an unused field. So quick sending is a regression to undo and voice notes are new, and per-person history was only ever a contact name on each row. **Patch 14a:** a "Write to" row of your contacts at the top of the log opens the composer already set to that person, with the keyboard up; the plus does the same for whoever the log is filtered to. A small menu narrows the log to one person (only people who have something in it are listed). Tapping a message now offers Send again (Messages, or Open Discord) and Copy text, besides Delete. The Message log widget has a Write button under it and an honest caption. `ThreadMessageComposer` is no longer private so the widget can open it. The demo's one message is now tied to Sam. **Patch 14b (next):** voice notes. Help text, CHANGELOG and this file are updated. Not compiled here.
 
 - **7 Nov 2026 (24):** Patch 16 written: task timing. Two new fields on `TaskItem` (`dueKind`, `dueDate`), both with defaults so no store migration is needed. The choices are No date, As soon as I can, Today, This week, This month, Someday, or a particular day, picked in a new "When" section of the task sheet. For the loose choices the stored date is the last moment of that day, week or month, so a plan that has passed can be told from one still ahead. The list is grouped Today, This week, Later and No date (Waiting arrives with dependencies in Patch 18). As soon as I can and a particular day that has arrived sit in Today. **Overdue is quiet:** a plan whose time has passed moves into Today with a plain line such as "Carried over from this week" or "Planned for Tue 4 Nov"; no red, no "late", no count. Reorder works within a group and leaves the other groups alone. Now's card and the Plan widget show open tasks in the same order. Export carries the two fields (optional, so older files import). The demo has a task for today and one for this week. Not compiled here.
@@ -358,7 +359,7 @@ Order: unblock → visible quick wins → one shared pattern later screens inher
 | **13b** | Apply to Bridge and the Journal entry preview; then remove `EditToolbarButton` and `EditorSheet` | 13 | M | 🟡 |
 | ~~13~~ | ~~Apply to Bridge, Now (including De-escalation scripts and Affirmations, reached from Plan) and Recovery screens; then remove `EditToolbarButton` and `EditorSheet`~~ (split into 13a and 13b) | 13 | | |
 | **14a** | Message log part 1: quick write to a person, per-person history, Send again and Copy, widget caption and Write button | 10 | M | 🟡 |
-| **14b** | Message log part 2: voice notes | 10 | M | ⬜ |
+| **14b** | Message log part 2: voice notes | 10 | M | 🟡 |
 
 Widget drag-and-drop (Patch 20) is independent of the planner and can be pulled forward any time.
 
@@ -516,4 +517,4 @@ A reminder you set yourself, per person, **off by default**. Lock-screen text is
 
 ## Appendix B: Suggested next session
 
-Patch **14b** (voice notes on messages), then Patch **17** (subtasks with collapse and derived progress), once Patches 1 to 16 build. Patch 20 (widget drag and drop) is independent of both. D4 to D9 are all answered, so nothing is waiting on a decision.
+Patch **17** (subtasks with collapse and derived progress), once Patches 1 to 16 build. Patch 20 (widget drag and drop) is independent of both. D4 to D9 are all answered, so nothing is waiting on a decision.
