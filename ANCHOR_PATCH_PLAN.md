@@ -1,6 +1,6 @@
 # Anchor — Patch Plan (v2-recovery)
 
-*Living document. Last updated: 7 Nov 2026, after Patch 12b was written (Patches 1 to 11 are pushed; Patches 12a and 12b await your paste; none confirmed building).*
+*Living document. Last updated: 7 Nov 2026, after Patch 12c was written (Patches 1 to 11 are pushed; Patches 12a to 12c await your paste; none confirmed building).*
 
 > ## READ THIS FIRST: THIS FILE IS THE PROMPT
 >
@@ -41,10 +41,12 @@ The source code repository is at <https://github.com/Kousei-Uchu/Anchor/tree/v2-
 | 11: Edit pattern on the Thread screens | 🟡 Pushed by you (`320930d`); build not yet confirmed |
 | 12a: Edit pattern on the Plan screens, part 1: Safety plan and Trigger windows | 🟡 Written (`patch-12a.sh`); awaiting your paste and build (paste after Patch 11) |
 | 12b: Plan screens, part 2: Contacts and Grounding tools, with Reorder | 🟡 Written (`patch-12b.sh`); awaiting your paste and build (paste after Patch 12a) |
-| 12c onward | Not started |
+| 12c: Plan screens, part 3: Decision presets | 🟡 Written (`patch-12c.sh`); awaiting your paste and build (paste after Patch 12b) |
+| 12d onward | Not started |
 
 ## Change log of this plan
 
+- **7 Nov 2026 (19):** Patch 12c written: Decision-fatigue presets. Tap an option to edit it, tap a category's name to rename it, the plus in the bar adds a category, and an "Add an option" button inside each card adds an option. Delete is inside each sheet, and an option's long-press menu has it too. A small play button on an option with steps runs it. Steps inside an option have a labelled Reorder in the section header, and the red minus buttons are hidden while you reorder. Blank categories and options left behind are removed. The manage list and the second `EditButton` are gone. Categories and options themselves still cannot be reordered, same as before. Not compiled here.
 - **7 Nov 2026 (18):** Patch 12b written: Contacts and Grounding tools. Both are now a List of cards so dragging to reorder works; a new `anchorCardRow()` helper in `ContentView.swift` strips the row chrome so they still look like cards. Tap a card to edit it, the plus adds (on Contacts the plus is a small menu: pick from Contacts, or add manually), and Delete is inside the sheet and in the long-press menu. **Reorder** is a labelled button that shows when there are two or more, because order matters on both screens: the top two contacts are the quick buttons on Now, and the tools show in this order on Now. A tool with written steps keeps a small play button on its card, because running it is using it, not editing it. Someone picked from the system Contacts app opens in the editor once the picker has closed. A contact or tool added and left blank is removed. "Who's awake right now" stays at the top of Contacts, outside the rows you can reorder. `ContactsEditorView` and `GroundingToolsEditorView` (the manage lists) are removed. Not compiled here.
 - **7 Nov 2026 (17):** Patch 12a written: the Safety plan and Trigger windows screens use the new edit pattern, the first Plan screens to move. Patch 12 as one patch came to about 1,400 changed lines, over the size limit for a patch, so it is split into 12a to 12d, pasted in order. **Safety plan:** each of the four cards opens its own section in a sheet. There is nothing to add or delete, so there is no plus, no Edit button and no separate form. **Trigger windows:** tap a card to open it, the plus adds one, and Delete is inside the sheet (with a question first) and in the card's long-press menu. Deleting happens after the sheet has closed, and a window deleted that way no longer leaves its reminders behind, which it did before. `TriggerWindowEditorView` stays because Recovery opens it too, and gains an optional `onDelete`. `SafetyPlanEditorView` and the trigger-window manage list are removed; the file names stay so the project file needs no change. Patches 10 and 11 confirmed pushed (HEAD was `320930d`). Not compiled here.
 - **7 Nov 2026 (16):** Patch 11 written: the four Thread screens use the new edit pattern. No Edit buttons, no manage-list sheets, no second Edit button. A plus adds on each screen. Tapping a card opens that item in one sheet: a draft, a support day (both editable), a future note (its text only if it has unlocked; a locked note shows just its date) or a logged message (read only, because it is a record of what was said). Each sheet has a Delete that asks first, and the card's long-press menu has Delete too. Deleting happens after the sheet has closed, so a sheet never reads something that is already gone. Locked notes can now be deleted by tapping them, which the old Edit list did but the card itself did not allow. The empty drafts left behind by closing a new draft without writing anything are removed. The extra full-width buttons at the bottom of each list are gone because the plus does that job. `UnsentDraftView` (the read page for one draft) is removed; the editor shows the same fields. Patch 14 can add resend and copy to the message sheet. Patches 8 and 9 confirmed pushed. Not compiled here.
@@ -336,7 +338,7 @@ Order: unblock → visible quick wins → one shared pattern later screens inher
 | **11** | Apply to Thread screens | 13 | M | 🟡 |
 | **12a** | Apply to Plan screens: Safety plan, Trigger windows | 13 | S | 🟡 |
 | **12b** | Plan screens: Contacts, Grounding tools (List of cards, Reorder) | 13 | M | 🟡 |
-| **12c** | Plan screens: Decision presets | 13 | M | ⬜ |
+| **12c** | Plan screens: Decision presets | 13 | M | 🟡 |
 | **12d** | Plan screens: Appointments | 13 | M | ⬜ |
 | **13** | Apply to Bridge, Now, Recovery screens | 13 | M | ⬜ |
 | **14** | Message log review and rework (needs D8); includes the widget caption and a write action | 10 | M | ⬜ |
