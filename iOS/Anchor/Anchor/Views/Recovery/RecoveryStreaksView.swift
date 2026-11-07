@@ -37,7 +37,7 @@ struct RecoveryStreaksView: View {
         .navigationTitle(counter.name)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingPriorEditor) {
-            Anchor.EditorSheet(title: "Before tracking") {
+            Anchor.ItemEditorSheet(title: "Before tracking") {
                 Form {
                     Section {
                         Stepper("\(counter.priorTimesPerDay) \(counter.priorTimesPerDay == 1 ? "time" : "times")",
@@ -139,16 +139,15 @@ struct RecoveryStreaksView: View {
                 Divider()
             }
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Before tracking").font(.system(.headline, design: .rounded))
-                Text("On a typical day before you started tracking, how many times did it happen? Just for your own reference.")
-                    .font(.subheadline).foregroundStyle(.secondary)
-                Text("\(counter.priorTimesPerDay) \(counter.priorTimesPerDay == 1 ? "time" : "times") on a typical day")
-                    .font(.system(.title3, design: .rounded).weight(.semibold))
-                Button { showingPriorEditor = true } label: {
-                    Label("Change", systemImage: "gearshape").font(.footnote)
+            Anchor.TapToEditRow(action: { showingPriorEditor = true }) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Before tracking").font(.system(.headline, design: .rounded))
+                    Text("On a typical day before you started tracking, how many times did it happen? Just for your own reference.")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                    Text("\(counter.priorTimesPerDay) \(counter.priorTimesPerDay == 1 ? "time" : "times") on a typical day")
+                        .font(.system(.title3, design: .rounded).weight(.semibold))
                 }
-                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(.top, 8)
         }

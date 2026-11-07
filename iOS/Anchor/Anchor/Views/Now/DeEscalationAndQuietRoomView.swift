@@ -49,52 +49,111 @@ struct DeEscalationCardView: View {
     }
 }
 
-/// The de-escalation scripts as something to read: a quoted card per script.
-/// Rewriting, reordering and deleting live behind Edit
-/// (`DeEscalationScriptsEditorView`). Seeded with a few varied starting
-/// points only when there are none, as before.
+/// The de-escalation scripts, one quoted card each. Tap a card to rewrite it,
+/// the plus adds one, and Delete is in the editor and in the card's long-press
+/// menu. Order is the order "Try another" steps through on Now, so there is a
+/// labelled Reorder. Seeded with a few varied starting points only when there
+/// are none, as before.
 struct DeEscalationScriptsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \DeEscalationScript.sortOrder) private var scripts: [DeEscalationScript]
-    @State private var showingEditor = false
+    @State private var editing: DeEscalationScript?
+    @State private var toDelete: DeEscalationScript?
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: Anchor.Theme.spacing) {
-                if scripts.isEmpty {
+        Group {
+            if scripts.isEmpty {
+                ScrollView {
                     Anchor.EmptyState(
                         icon: "wind",
                         title: "No scripts yet",
                         message: "What actually gets you 10 minutes of space, in words that sound like you?",
                         actionTitle: "Write one",
                         tint: Anchor.Theme.sage
-                    ) { showingEditor = true }
-                } else {
+                    ) { startNew() }
+                    .padding()
+                }
+            } else {
+                List {
                     ForEach(scripts) { script in
                         Anchor.Card(accentColor: Anchor.Theme.sage) {
-                            Text("\u{201C}\(script.text)\u{201D}")
-                                .font(.system(.title3, design: .rounded))
-                                .fixedSize(horizontal: false, vertical: true)
+                            Button { editing = script } label: {
+                                Text("\u{201C}\(script.text)\u{201D}")
+                                    .font(.system(.title3, design: .rounded))
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityHint("Opens the editor")
                         }
+                        .anchorDeletable { modelContext.delete(script) }
+                        .anchorCardRow()
                     }
+                    .onMove(perform: move)
                 }
+                .listStyle(.plain)
             }
-            .padding()
         }
         .anchorBackground()
         .navigationTitle("De-escalation scripts")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Anchor.EditToolbarButton { showingEditor = true }
+            ToolbarItemGroup(placement: .primaryAction) {
+                if scripts.count > 1 {
+                    Anchor.ReorderToolbarButton()
+                }
+                Anchor.AddToolbarButton(label: "Write a script") { startNew() }
             }
         }
-        .sheet(isPresented: $showingEditor) {
-            Anchor.EditorSheet(title: "Edit scripts") {
-                DeEscalationScriptsEditorView()
-            }
+        .sheet(item: $editing, onDismiss: finishEditing) { script in
+            DeEscalationScriptEditorSheet(script: script) { toDelete = script }
         }
         .onAppear { seedDeEscalationDefaultsIfNeeded(scripts: scripts, context: modelContext) }
+    }
+
+    private func startNew() {
+        let new = DeEscalationScript(text: "", sortOrder: scripts.count)
+        modelContext.insert(new)
+        editing = new
+    }
+
+    private func move(from offsets: IndexSet, to destination: Int) {
+        var reordered = scripts
+        reordered.move(fromOffsets: offsets, toOffset: destination)
+        for (index, script) in reordered.enumerated() { script.sortOrder = index }
+    }
+
+    /// Runs once the editor has closed, so the editor never reads a script that
+    /// is already gone. One added and left blank is dropped.
+    private func finishEditing() {
+        let deleting = toDelete
+        toDelete = nil
+        if let deleting { modelContext.delete(deleting) }
+        for script in scripts where script !== deleting
+            && script.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            modelContext.delete(script)
+        }
+    }
+}
+
+private struct DeEscalationScriptEditorSheet: View {
+    @Bindable var script: DeEscalationScript
+    let onDelete: () -> Void
+
+    var body: some View {
+        Anchor.ItemEditorSheet(
+            title: script.text.isEmpty ? "New script" : "Script",
+            onDelete: onDelete,
+            deleteQuestion: "Delete this script?"
+        ) {
+            Form {
+                Section {
+                    TextField("What would you say?", text: $script.text, axis: .vertical)
+                        .lineLimit(3...8)
+                }
+            }
+        }
     }
 }
 
@@ -107,53 +166,5 @@ private func seedDeEscalationDefaultsIfNeeded(scripts: [DeEscalationScript], con
     ]
     for (index, text) in starters.enumerated() {
         context.insert(DeEscalationScript(text: text, sortOrder: index))
-    }
-}
-
-/// The scripts editor. Presented from `DeEscalationScriptsView` via Edit,
-/// never browsed to directly. Whatever the user has is authoritative,
-/// including if they delete everything.
-struct DeEscalationScriptsEditorView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query(sort: \DeEscalationScript.sortOrder) private var scripts: [DeEscalationScript]
-    @State private var newScriptText = ""
-
-    var body: some View {
-        List {
-            Section {
-                Text("These are yours to rewrite. What actually gets you 10 minutes of space, in words that sound like you?")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .listRowBackground(Color.clear)
-
-            Section {
-                ForEach(scripts) { script in
-                    TextField("Script", text: Binding(
-                        get: { script.text },
-                        set: { script.text = $0 }
-                    ), axis: .vertical)
-                }
-                .onDelete { offsets in
-                    for index in offsets { modelContext.delete(scripts[index]) }
-                }
-                .onMove { source, destination in
-                    var reordered = scripts
-                    reordered.move(fromOffsets: source, toOffset: destination)
-                    for (index, script) in reordered.enumerated() { script.sortOrder = index }
-                }
-
-                HStack {
-                    TextField("Add a script", text: $newScriptText, axis: .vertical)
-                    Button("Add") {
-                        let trimmed = newScriptText.trimmingCharacters(in: .whitespacesAndNewlines)
-                        guard !trimmed.isEmpty else { return }
-                        modelContext.insert(DeEscalationScript(text: trimmed, sortOrder: scripts.count))
-                        newScriptText = ""
-                    }
-                }
-            }
-        }
-        .toolbar { EditButton() }
     }
 }

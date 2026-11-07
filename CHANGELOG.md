@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 13a: Affirmations, De-escalation scripts and Who I'm doing this for open in one sheet when tapped, add with the plus, delete from inside or from the long-press menu, and the first two have a labelled Reorder; "Before tracking" on the Streaks screen is tap to change.
 - Patch 12a: on the Safety plan, tap a section to change it; on Trigger windows, tap a card to open it, use the plus to add, and delete from inside the card or its long-press menu; deleting a trigger window now also stops its reminders.
 - Patch 12b: Contacts and Grounding tools open in one sheet when tapped, add with the plus, delete from inside or from the long-press menu, and have a labelled Reorder; a tool with steps has a play button on its card.
 - Patch 12c: Decision presets: tap an option to edit it, tap a category name to rename it, add a category with the plus and an option from inside its card; steps have a labelled Reorder.
