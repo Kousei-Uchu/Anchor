@@ -15,12 +15,99 @@ struct PlanView: View {
     @Query(sort: \DeEscalationScript.sortOrder) private var deEscalationScripts: [DeEscalationScript]
     @Query(sort: \Affirmation.sortOrder) private var affirmations: [Affirmation]
 
+    @Query(sort: \GroundingTool.sortOrder) private var groundingTools: [GroundingTool]
+    @AppStorage(TabLayoutStyle.storageKey) private var layoutRaw = TabLayoutStyle.widgets.rawValue
+
     @State private var showSettings = false
+
+    private var usesWidgets: Bool { layoutRaw != TabLayoutStyle.icons.rawValue }
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 26) {
+                Group {
+                    if usesWidgets {
+                        widgetLayout
+                    } else {
+                        tileLayout
+                    }
+                }
+                .padding(.vertical, 8)
+            }
+            .anchorBackground()
+            .navigationTitle("Plan")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Anchor.GearButton { showSettings = true }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    HelpToolbarButton(topic: .plan)
+                }
+            }
+            .sheet(isPresented: $showSettings) {
+                SettingsView()
+            }
+            .onAppear {
+                NotificationScheduler.registerCategories()
+                // No permission prompt here: Anchor asks the first time the user turns on
+                // something that needs notifications (see NotificationScheduler.askForPermissionIfNeeded).
+                RecoveryNotifications.refresh(using: modelContext)
+                let scheduler = NotificationScheduler(context: modelContext)
+                refreshWidgetSnapshot()
+                rescheduleTriggerWindowNotifications(using: scheduler)
+                // Keeps the daily check-in notification alive; the toggle itself lives in Settings.
+                DailyCheckInSettings.reapplyIfEnabled(using: modelContext)
+            }
+        }
+    }
+
+    // Widgets (default): live content you can use in place; tap a widget to open its screen.
+    // Order and visibility come from the saved layout (Settings > Layout > Customise widgets).
+    private var widgetLayout: some View {
+        Anchor.WidgetStack(tab: .plan) { id in
+            planWidget(id)
+        } more: { id in
+            planMoreTile(id)
+        }
+        .padding(.horizontal)
+    }
+
+    @ViewBuilder private func planWidget(_ id: WidgetID) -> some View {
+        switch id {
+        case .safetyPlan: SafetyPlanWidget(plan: currentPlan)
+        case .triggerWindows: TriggerWindowsWidget()
+        case .appointments: AppointmentsWidget(fallbackSeries: currentAppointmentSeries)
+        case .contacts: ContactsWidget(contacts: contacts)
+        case .deEscalation: DeEscalationWidget()
+        case .grounding: GroundingWidget(tools: groundingTools)
+        case .decisionPresets: DecisionPresetsQuickView()
+        case .affirmations: AffirmationsWidget()
+        case .recovery: RecoveryWidget()
+        case .motivations: MotivationsWidget()
+        default: EmptyView()
+        }
+    }
+
+    /// Where a hidden widget still lives, in the "More" row.
+    @ViewBuilder private func planMoreTile(_ id: WidgetID) -> some View {
+        switch id {
+        case .safetyPlan: Anchor.MoreTile(id: id) { SafetyPlanView(plan: currentPlan) }
+        case .triggerWindows: Anchor.MoreTile(id: id) { TriggerWindowListView() }
+        case .appointments: Anchor.MoreTile(id: id) { AppointmentView(series: currentAppointmentSeries) }
+        case .contacts: Anchor.MoreTile(id: id) { ContactsView() }
+        case .deEscalation: Anchor.MoreTile(id: id) { DeEscalationScriptsView() }
+        case .grounding: Anchor.MoreTile(id: id) { GroundingToolsListView() }
+        case .decisionPresets: Anchor.MoreTile(id: id) { DecisionFatigueView() }
+        case .affirmations: Anchor.MoreTile(id: id) { AffirmationsView() }
+        case .recovery: Anchor.MoreTile(id: id) { RecoveryHomeView() }
+        case .motivations: Anchor.MoreTile(id: id) { RecoveryMotivationsView() }
+        default: EmptyView()
+        }
+    }
+
+    // Icons (classic): the original tile rows.
+    private var tileLayout: some View {
+        VStack(alignment: .leading, spacing: 26) {
                     Anchor.TileRow(title: "Safety & people") {
                         NavigationLink { ContactsView() } label: {
                             Anchor.TileButtonLabel(icon: "person.2.fill", title: "Contacts", tint: Anchor.Theme.accent)
@@ -63,33 +150,6 @@ struct PlanView: View {
                         }
                     }
                 }
-                .padding(.vertical, 8)
-            }
-            .anchorBackground()
-            .navigationTitle("Plan")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Anchor.GearButton { showSettings = true }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    HelpToolbarButton(topic: .plan)
-                }
-            }
-            .sheet(isPresented: $showSettings) {
-                SettingsView()
-            }
-            .onAppear {
-                NotificationScheduler.registerCategories()
-                // No permission prompt here: Anchor asks the first time the user turns on
-                // something that needs notifications (see NotificationScheduler.askForPermissionIfNeeded).
-                RecoveryNotifications.refresh(using: modelContext)
-                let scheduler = NotificationScheduler(context: modelContext)
-                refreshWidgetSnapshot()
-                rescheduleTriggerWindowNotifications(using: scheduler)
-                // Keeps the daily check-in notification alive; the toggle itself lives in Settings.
-                DailyCheckInSettings.reapplyIfEnabled(using: modelContext)
-            }
-        }
     }
 
     /// Re-syncs every active trigger window's local notification, including

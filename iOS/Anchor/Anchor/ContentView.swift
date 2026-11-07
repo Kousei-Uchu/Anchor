@@ -249,12 +249,14 @@ enum Anchor {
     struct Card<Content: View>: View {
         @Environment(\.colorScheme) private var scheme
         var accentColor: Color = Theme.accent
+        /// Stretches to the tallest card in a row, so half-width widgets side by side line up.
+        var fillsHeight: Bool = false
         @ViewBuilder var content: () -> Content
 
         var body: some View {
             content()
                 .padding(Theme.spacing)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity, maxHeight: fillsHeight ? .infinity : nil, alignment: .topLeading)
                 .background(
                     RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous)
                         .fill(Theme.cardBackground(scheme))

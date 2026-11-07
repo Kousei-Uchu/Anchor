@@ -38,6 +38,7 @@ struct SettingsView: View {
     @State private var faceIDEnabled = AppLock.shared.isEnabled
     @State private var showTour = false
 
+    @AppStorage(TabLayoutStyle.storageKey) private var layoutRaw = TabLayoutStyle.widgets.rawValue
     @AppStorage(DailyCheckInSettings.enabledKey) private var dailyCheckInEnabled = false
     @AppStorage(DailyCheckInSettings.hourKey) private var dailyCheckInHour = 20
     @AppStorage(DailyCheckInSettings.minuteKey) private var dailyCheckInMinute = 0
@@ -93,6 +94,32 @@ struct SettingsView: View {
                             Anchor.SettingsTimeRow(time: timeBinding($reviewHour, $reviewMinute))
                         }
                         Anchor.SettingsToggle(title: "Milestones", isOn: $milestonesEnabled)
+                    }
+                }
+
+                Anchor.SettingsSection(
+                    title: "Layout",
+                    footer: "Widgets show live content you can use directly. Icons is the classic grid of buttons."
+                ) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Plan, Bridge & Thread")
+                            .font(.system(.subheadline, design: .rounded))
+                        Picker("Plan, Bridge & Thread", selection: $layoutRaw) {
+                            Text("Widgets").tag(TabLayoutStyle.widgets.rawValue)
+                            Text("Icons").tag(TabLayoutStyle.icons.rawValue)
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                    }
+                    .padding(.vertical, 2)
+
+                    if layoutRaw != TabLayoutStyle.icons.rawValue {
+                        NavigationLink {
+                            CustomiseWidgetsView()
+                        } label: {
+                            Text("Customise widgets")
+                                .font(.system(.subheadline, design: .rounded))
+                        }
                     }
                 }
 
