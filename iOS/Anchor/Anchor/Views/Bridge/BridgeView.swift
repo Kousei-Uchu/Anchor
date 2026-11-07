@@ -7,8 +7,6 @@ import SwiftUI
 import SwiftData
 
 struct BridgeView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var appointmentSeries: [AppointmentSeries]
     @AppStorage(TabLayoutStyle.storageKey) private var layoutRaw = TabLayoutStyle.widgets.rawValue
     @State private var showReframing = false
 
@@ -52,7 +50,7 @@ struct BridgeView: View {
     @ViewBuilder private func bridgeWidget(_ id: WidgetID) -> some View {
         switch id {
         case .thingsToRaise: ThingsToRaiseWidget()
-        case .nextSession: NextSessionWidget(fallbackSeries: currentAppointmentSeries)
+        case .nextSession: NextSessionWidget()
         case .reframing: ReframingWidget { showReframing = true }
         case .feedbackLoops: FeedbackLoopsWidget()
         case .personalGoals: PersonalGoalsWidget()
@@ -72,7 +70,7 @@ struct BridgeView: View {
     @ViewBuilder private func bridgeMoreTile(_ id: WidgetID) -> some View {
         switch id {
         case .thingsToRaise: Anchor.MoreTile(id: id) { BridgeDraftListView() }
-        case .nextSession: Anchor.MoreTile(id: id) { AppointmentPrepView(series: currentAppointmentSeries) }
+        case .nextSession: Anchor.MoreTile(id: id) { ProviderPageHost(page: .prep) }
         case .reframing:
             Button { showReframing = true } label: {
                 Anchor.TileButtonLabel(icon: id.icon, title: id.title, tint: id.tint)
@@ -94,10 +92,10 @@ struct BridgeView: View {
                         NavigationLink { BridgeDraftListView() } label: {
                             Anchor.TileButtonLabel(icon: "doc.text.fill", title: "Draft notes", tint: Anchor.Theme.accent)
                         }
-                        NavigationLink { AppointmentPrepView(series: currentAppointmentSeries) } label: {
+                        NavigationLink { ProviderPageHost(page: .prep) } label: {
                             Anchor.TileButtonLabel(icon: "list.bullet.clipboard.fill", title: "Session prep", tint: Anchor.Theme.accent)
                         }
-                        NavigationLink { PostSessionNotesView(series: currentAppointmentSeries) } label: {
+                        NavigationLink { ProviderPageHost(page: .afterSession) } label: {
                             Anchor.TileButtonLabel(icon: "note.text", title: "Post-session notes", tint: Anchor.Theme.accent)
                         }
                     }
@@ -122,12 +120,5 @@ struct BridgeView: View {
                         #endif
                     }
                 }
-    }
-
-    private var currentAppointmentSeries: AppointmentSeries {
-        if let existing = appointmentSeries.first { return existing }
-        let new = AppointmentSeries(clinicianLabel: "Psych")
-        modelContext.insert(new)
-        return new
     }
 }

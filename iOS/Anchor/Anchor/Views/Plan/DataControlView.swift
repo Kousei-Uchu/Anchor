@@ -76,7 +76,7 @@ struct DataControlView: View {
                 countRow("Grounding tools", groundingTools.count, icon: "leaf.fill")
                 countRow("Safety plan sections", planSections.count, icon: "shield.fill")
                 countRow("Trigger windows", triggerWindows.count, icon: "clock.fill")
-                countRow("Appointment series", appointmentSeries.count, icon: "calendar")
+                countRow("Providers", appointmentSeries.count, icon: "calendar")
                 countRow("Bridge draft items", bridgeDraftItems.count, icon: "doc.text.fill")
                 countRow("Feedback-loop diagrams", diagrams.count, icon: "point.3.connected.trianglepath.dotted")
                 countRow("Thread messages", threadMessages.count, icon: "bubble.left.and.bubble.right.fill")
@@ -215,7 +215,8 @@ struct DataControlView: View {
             itemLists: itemLists.map(ItemListDTO.init),
             boundarySections: boundarySections.map(BoundarySectionDTO.init),
             messageStarters: messageStarters.map(MessageStarterDTO.init),
-            personalGoals: personalGoals.map(PersonalGoalDTO.init)
+            personalGoals: personalGoals.map(PersonalGoalDTO.init),
+            appointmentSeries: appointmentSeries.map(AppointmentSeriesDTO.init)
         )
         guard let data = try? JSONEncoder.anchorExport.encode(export) else { return }
         writeAndShare(data: data, filename: "anchor-export-\(fileTimestamp()).json")
@@ -260,6 +261,7 @@ struct DataControlView: View {
         let existingBoundaryIDs = Set(boundarySections.map(\.id))
         let existingStarterIDs = Set(messageStarters.map(\.id))
         let existingGoalIDs = Set(personalGoals.map(\.id))
+        let existingProviderIDs = Set(appointmentSeries.map(\.id))
 
         var importedCount = 0
         for dto in export.journalEntries where !existingJournalIDs.contains(dto.id) {
@@ -347,6 +349,9 @@ struct DataControlView: View {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
         for dto in export.personalGoals ?? [] where !existingGoalIDs.contains(dto.id) {
+            modelContext.insert(dto.toModel()); importedCount += 1
+        }
+        for dto in export.appointmentSeries ?? [] where !existingProviderIDs.contains(dto.id) {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
         // Recovery data is optional in the file, so exports from earlier versions still import.
@@ -680,6 +685,8 @@ struct AnchorDataExport: Codable {
     var messageStarters: [MessageStarterDTO]? = nil
     /// Optional so exports made before personal goals existed still import.
     var personalGoals: [PersonalGoalDTO]? = nil
+    /// Providers with their sessions. Optional so exports made before this one still import.
+    var appointmentSeries: [AppointmentSeriesDTO]? = nil
 }
 
 /// Every section is optional in the file: an export from any earlier version,
@@ -691,7 +698,7 @@ extension AnchorDataExport {
         "bridgeDraftItems", "diagrams", "threadMessages", "supportCalendarEntries", "futureNotes",
         "unsentDrafts", "decisionCategories", "deEscalationScripts", "affirmations",
         "recoveryCounters", "recoveryMotivations", "recoveryDayEntries", "recoveryUrges", "tasks",
-        "quickLists", "routines", "itemLists", "safetySections", "boundarySections", "messageStarters", "personalGoals"
+        "quickLists", "routines", "itemLists", "safetySections", "boundarySections", "messageStarters", "personalGoals", "appointmentSeries"
     ]
 
     init(from decoder: Decoder) throws {
@@ -723,6 +730,7 @@ extension AnchorDataExport {
         boundarySections = c.lossyArray(BoundarySectionDTO.self, forKey: .boundarySections)
         messageStarters = c.lossyArray(MessageStarterDTO.self, forKey: .messageStarters)
         personalGoals = c.lossyArray(PersonalGoalDTO.self, forKey: .personalGoals)
+        appointmentSeries = c.lossyArray(AppointmentSeriesDTO.self, forKey: .appointmentSeries)
     }
 }
 
@@ -1033,6 +1041,43 @@ struct PersonalGoalDTO: Codable {
     func toModel() -> PersonalGoal {
         PersonalGoal(id: id, title: title, why: why, status: GoalStatus(rawValue: statusRaw) ?? .active,
                      notes: notes, sortOrder: sortOrder, createdAt: createdAt, lastEditedAt: lastEditedAt)
+    }
+}
+
+struct AppointmentOccurrenceDTO: Codable {
+    var id: UUID; var scheduledDate: Date; var wasMoved: Bool
+    var prepNoteEntryID: UUID?; var postSessionNoteEntryID: UUID?
+    init(_ m: AppointmentOccurrence) {
+        id = m.id; scheduledDate = m.scheduledDate; wasMoved = m.wasMoved
+        prepNoteEntryID = m.prepNoteEntryID; postSessionNoteEntryID = m.postSessionNoteEntryID
+    }
+    func toModel() -> AppointmentOccurrence {
+        AppointmentOccurrence(id: id, scheduledDate: scheduledDate, wasMoved: wasMoved,
+                              prepNoteEntryID: prepNoteEntryID, postSessionNoteEntryID: postSessionNoteEntryID)
+    }
+}
+
+/// A provider with their sessions. The Journal entries that hold a session's
+/// prep and after-session notes are in the journal part of the file.
+struct AppointmentSeriesDTO: Codable {
+    var id: UUID; var clinicianLabel: String; var role: String; var exportLabel: String; var notes: String
+    var typicalDayOfWeek: Int?; var typicalHour: Int?; var typicalMinute: Int?
+    var typicalCadenceDays: Int; var sortOrder: Int
+    var occurrences: [AppointmentOccurrenceDTO]
+    init(_ m: AppointmentSeries) {
+        id = m.id; clinicianLabel = m.clinicianLabel; role = m.role; exportLabel = m.exportLabel; notes = m.notes
+        typicalDayOfWeek = m.typicalDayOfWeek; typicalHour = m.typicalHour; typicalMinute = m.typicalMinute
+        typicalCadenceDays = m.typicalCadenceDays; sortOrder = m.sortOrder
+        occurrences = m.occurrences.map(AppointmentOccurrenceDTO.init)
+    }
+    func toModel() -> AppointmentSeries {
+        var time: DateComponents?
+        if let typicalHour, let typicalMinute { time = DateComponents(hour: typicalHour, minute: typicalMinute) }
+        return AppointmentSeries(
+            id: id, clinicianLabel: clinicianLabel, typicalDayOfWeek: typicalDayOfWeek, typicalTime: time,
+            typicalCadenceDays: typicalCadenceDays, occurrences: occurrences.map { $0.toModel() },
+            role: role, exportLabel: exportLabel, notes: notes, sortOrder: sortOrder
+        )
     }
 }
 

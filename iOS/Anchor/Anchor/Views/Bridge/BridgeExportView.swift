@@ -8,16 +8,34 @@
 //
 
 import SwiftUI
+import SwiftData
 import UIKit
 
 struct BridgeExportView: View {
     let items: [BridgeDraftItem]
     @Environment(\.dismiss) private var dismiss
+    @Query(sort: \AppointmentSeries.sortOrder) private var providers: [AppointmentSeries]
+    @State private var forProviderID: UUID?
     @State private var pdfURL: URL?
+
+    /// The export label of the provider chosen, if any. Never the name as
+    /// shown in the app unless no label was written.
+    private var chosenName: String? {
+        providers.first { $0.id == forProviderID }?.exportName
+    }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 16) {
+                if !providers.isEmpty {
+                    Picker("Notes for", selection: $forProviderID) {
+                        Text("No one in particular").tag(UUID?.none)
+                        ForEach(providers) { provider in
+                            Text(provider.exportName).tag(UUID?.some(provider.id))
+                        }
+                    }
+                    .pickerStyle(.menu)
+                }
                 if let pdfURL {
                     ShareLink(item: pdfURL) {
                         Label("Share / email PDF", systemImage: "square.and.arrow.up")
@@ -34,15 +52,16 @@ struct BridgeExportView: View {
                     Button("Close") { dismiss() }
                 }
             }
-            .task {
-                pdfURL = BridgeExporter.makePDF(items: items)
+            .task(id: forProviderID) {
+                pdfURL = nil
+                pdfURL = BridgeExporter.makePDF(items: items, forName: chosenName)
             }
         }
     }
 }
 
 enum BridgeExporter {
-    static func makePDF(items: [BridgeDraftItem]) -> URL? {
+    static func makePDF(items: [BridgeDraftItem], forName: String? = nil) -> URL? {
         let pageWidth: CGFloat = 612
         let pageHeight: CGFloat = 792
         let margin: CGFloat = 48
@@ -58,7 +77,7 @@ enum BridgeExporter {
                 let titleAttributes: [NSAttributedString.Key: Any] = [
                     .font: UIFont.boldSystemFont(ofSize: 20)
                 ]
-                let title = "Bridge: notes for my session"
+                let title = forName.map { "Bridge: notes for \($0)" } ?? "Bridge: notes for my session"
                 title.draw(at: CGPoint(x: margin, y: y), withAttributes: titleAttributes)
                 y += 36
 

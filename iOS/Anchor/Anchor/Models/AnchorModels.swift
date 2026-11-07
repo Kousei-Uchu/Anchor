@@ -596,6 +596,15 @@ final class AppointmentSeries {
 
     var typicalCadenceDays: Int
 
+    /// What they do, in the person's own words ("GP", "Counsellor"). Optional.
+    var role: String = ""
+    /// The name used on anything exported or shared. Empty means the name as shown.
+    var exportLabel: String = ""
+    /// Anything the person wants to remember about them, in their own words.
+    var notes: String = ""
+    /// Position in the list of providers.
+    var sortOrder: Int = 0
+
     @Relationship(deleteRule: .cascade)
     var occurrences: [AppointmentOccurrence]
 
@@ -605,7 +614,11 @@ final class AppointmentSeries {
         typicalDayOfWeek: Int? = nil,
         typicalTime: DateComponents? = nil,
         typicalCadenceDays: Int = 14,
-        occurrences: [AppointmentOccurrence] = []
+        occurrences: [AppointmentOccurrence] = [],
+        role: String = "",
+        exportLabel: String = "",
+        notes: String = "",
+        sortOrder: Int = 0
     ) {
         self.id = id
         self.clinicianLabel = clinicianLabel
@@ -616,6 +629,24 @@ final class AppointmentSeries {
 
         self.typicalCadenceDays = typicalCadenceDays
         self.occurrences = occurrences
+        self.role = role
+        self.exportLabel = exportLabel
+        self.notes = notes
+        self.sortOrder = sortOrder
+    }
+
+    /// The name shown in the app. Never empty, so a provider added and left
+    /// unnamed still has something to tap.
+    var displayName: String {
+        let trimmed = clinicianLabel.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? "Unnamed" : trimmed
+    }
+
+    /// The name that goes on anything exported or shared: the export label
+    /// if one was written, otherwise the name as shown.
+    var exportName: String {
+        let trimmed = exportLabel.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? displayName : trimmed
     }
 
     var typicalTime: DateComponents? {
