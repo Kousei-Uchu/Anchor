@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 17: a task can have steps: add them in the task's editor, tick them on the list, fold them away with the chevron, and see "2 of 5 steps" with a small bar; ticking every step leaves the task for you to finish.
 - Patch 14b: a message can carry a voice note: record it when you write, play it from the log, send it through Messages as an attachment, or share it anywhere; it stays on your device and is removed when you delete the message.
 - Patch 14a: the Message log has a "Write to" row so writing to a person is one tap from the log, a menu to show only one person's messages, and Send again and Copy on each message; the widget on Thread has a Write button.
 - Patch 16: tasks can be timed loosely ("as soon as I can", today, this week, this month, someday) or for a particular day, and the list groups them as Today, This week, Later and No date; a plan whose time has passed moves quietly into Today, never marked as late.

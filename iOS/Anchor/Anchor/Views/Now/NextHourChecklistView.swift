@@ -156,7 +156,7 @@ struct TasksView: View {
 
     private var open: [TaskItem] { TaskItem.listOrder(tasks) }
     private var done: [TaskItem] {
-        tasks.filter(\.isDone).sorted { ($0.completedAt ?? .distantPast) > ($1.completedAt ?? .distantPast) }
+        TaskItem.topLevel(tasks).filter(\.isDone).sorted { ($0.completedAt ?? .distantPast) > ($1.completedAt ?? .distantPast) }
     }
 
     var body: some View {
@@ -183,8 +183,9 @@ struct TasksView: View {
                                 .anchorCardRow()
 
                             ForEach(group) { task in
-                                TaskCard(task: task, onToggle: { toggle(task) }, onEdit: { editing = task })
-                                    .anchorDeletable { modelContext.delete(task) }
+                                TaskCard(task: task, steps: TaskItem.steps(of: task, in: tasks),
+                                         onToggle: { toggle(task) }, onEdit: { editing = task })
+                                    .anchorDeletable { modelContext.deleteTask(task, among: tasks) }
                                     .anchorCardRow()
                             }
                             .onMove { offsets, destination in
@@ -205,8 +206,9 @@ struct TasksView: View {
                         .anchorCardRow()
 
                         ForEach(done) { task in
-                            TaskCard(task: task, onToggle: { toggle(task) }, onEdit: { editing = task })
-                                .anchorDeletable { modelContext.delete(task) }
+                            TaskCard(task: task, steps: TaskItem.steps(of: task, in: tasks),
+                                     onToggle: { toggle(task) }, onEdit: { editing = task })
+                                .anchorDeletable { modelContext.deleteTask(task, among: tasks) }
                                 .anchorCardRow()
                         }
                     }
@@ -256,7 +258,7 @@ struct TasksView: View {
         .confirmationDialog("Clear \(done.count) done \(done.count == 1 ? "task" : "tasks")?",
                             isPresented: $confirmingClearDone, titleVisibility: .visible) {
             Button("Clear done", role: .destructive) {
-                for task in done { modelContext.delete(task) }
+                for task in done { modelContext.deleteTask(task, among: tasks) }
             }
             Button("Keep them", role: .cancel) {}
         }
@@ -309,14 +311,16 @@ struct TasksView: View {
     }
 
     /// Runs once the editor has closed, so the editor never reads a task that
-    /// is already gone. A task added and left blank is dropped.
+    /// is already gone. A task or step added and left blank is dropped; a
+    /// blank task that has steps is kept.
     private func finishEditing() {
         let deleting = toDelete
         toDelete = nil
-        if let deleting { modelContext.delete(deleting) }
+        if let deleting { modelContext.deleteTask(deleting, among: tasks) }
         for task in tasks where task !== deleting
             && task.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && task.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            && task.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && TaskItem.steps(of: task, in: tasks).isEmpty {
             modelContext.delete(task)
         }
     }
@@ -337,53 +341,111 @@ struct TasksView: View {
 
 private struct TaskCard: View {
     @Bindable var task: TaskItem
+    let steps: [TaskItem]
     let onToggle: () -> Void
     let onEdit: () -> Void
 
+    private var doneSteps: Int { steps.filter(\.isDone).count }
+    private var showsSteps: Bool { !task.isDone && !steps.isEmpty }
+
     var body: some View {
         Anchor.Card {
-            HStack(alignment: .top, spacing: 12) {
-                Button(action: onToggle) {
-                    Image(systemName: task.isDone ? "checkmark.circle.fill" : "circle")
-                        .font(.title3)
-                        .foregroundStyle(task.isDone ? Anchor.Theme.sage : Anchor.Theme.accent)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(task.isDone ? "Mark as not done" : "Mark as done")
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .top, spacing: 12) {
+                    Button(action: onToggle) {
+                        Image(systemName: task.isDone ? "checkmark.circle.fill" : "circle")
+                            .font(.title3)
+                            .foregroundStyle(task.isDone ? Anchor.Theme.sage : Anchor.Theme.accent)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(task.isDone ? "Mark as not done" : "Mark as done")
 
-                Button(action: onEdit) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(task.title.isEmpty ? "Untitled" : task.title)
-                            .font(.system(.body, design: .rounded))
-                            .strikethrough(task.isDone)
-                            .foregroundStyle(task.isDone ? .secondary : .primary)
-                            .fixedSize(horizontal: false, vertical: true)
-                        if !task.isDone, let due = task.dueText() {
-                            Label(due, systemImage: "calendar")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                    Button(action: onEdit) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(task.title.isEmpty ? "Untitled" : task.title)
+                                .font(.system(.body, design: .rounded))
+                                .strikethrough(task.isDone)
+                                .foregroundStyle(task.isDone ? .secondary : .primary)
+                                .fixedSize(horizontal: false, vertical: true)
+                            if !task.isDone, let due = task.dueText() {
+                                Label(due, systemImage: "calendar")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            if showsSteps {
+                                Text("\(doneSteps) of \(steps.count) steps")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                ProgressView(value: Double(doneSteps), total: Double(steps.count))
+                                    .tint(Anchor.Theme.sage)
+                            }
+                            if !task.notes.isEmpty {
+                                Text(task.notes)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(2)
+                            }
                         }
-                        if !task.notes.isEmpty {
-                            Text(task.notes)
-                                .font(.caption)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Opens the editor")
+
+                    if showsSteps {
+                        Button {
+                            withAnimation(.snappy) { task.subtasksCollapsed.toggle() }
+                        } label: {
+                            Image(systemName: task.subtasksCollapsed ? "chevron.down" : "chevron.up")
+                                .font(.caption.weight(.semibold))
                                 .foregroundStyle(.secondary)
-                                .lineLimit(2)
+                                .frame(width: 28, height: 28)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(task.subtasksCollapsed ? "Show steps" : "Hide steps")
+                    }
+                }
+
+                if showsSteps && !task.subtasksCollapsed {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(steps) { step in
+                            Button {
+                                withAnimation(.snappy) { step.setDone(!step.isDone) }
+                            } label: {
+                                HStack(spacing: 10) {
+                                    Image(systemName: step.isDone ? "checkmark.circle.fill" : "circle")
+                                        .foregroundStyle(step.isDone ? Anchor.Theme.sage : Color.secondary)
+                                    Text(step.title.isEmpty ? "Untitled step" : step.title)
+                                        .font(.system(.subheadline, design: .rounded))
+                                        .strikethrough(step.isDone)
+                                        .foregroundStyle(step.isDone ? .secondary : .primary)
+                                        .multilineTextAlignment(.leading)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(step.isDone ? "Mark step as not done" : "Mark step as done")
                         }
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
+                    .padding(.leading, 34)
                 }
-                .buttonStyle(.plain)
-                .accessibilityHint("Opens the editor")
             }
         }
     }
 }
 
 private struct TaskEditorSheet: View {
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \TaskItem.sortOrder) private var liveTasks: [TaskItem]
     @Bindable var task: TaskItem
     let allTasks: [TaskItem]
     let onDelete: () -> Void
+
+    @State private var newStep = ""
+    @State private var editMode: EditMode = .inactive
+
+    private var steps: [TaskItem] { TaskItem.steps(of: task, in: liveTasks) }
 
     var body: some View {
         Anchor.ItemEditorSheet(
@@ -395,6 +457,39 @@ private struct TaskEditorSheet: View {
                 Section {
                     TextField("What needs doing?", text: $task.title, axis: .vertical)
                         .lineLimit(1...4)
+                }
+                Section {
+                    ForEach(steps) { step in
+                        StepEditorRow(step: step)
+                            .swipeActions(edge: .trailing) {
+                                Button(role: .destructive) {
+                                    modelContext.delete(step)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                    }
+                    .onMove(perform: moveSteps)
+
+                    HStack {
+                        TextField("Add a step", text: $newStep)
+                            .onSubmit(addStep)
+                        Button("Add", action: addStep)
+                            .buttonStyle(.borderless)
+                            .disabled(newStep.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                } header: {
+                    HStack {
+                        Text("Steps")
+                        Spacer()
+                        if steps.count > 1 {
+                            Button(editMode.isEditing ? "Done" : "Reorder") {
+                                withAnimation { editMode = editMode.isEditing ? .inactive : .active }
+                            }
+                            .font(.footnote)
+                            .textCase(nil)
+                        }
+                    }
                 }
                 Section("When") {
                     Picker("When", selection: Binding(
@@ -423,6 +518,45 @@ private struct TaskEditorSheet: View {
                     ))
                 }
             }
+            .environment(\.editMode, $editMode)
+        }
+    }
+
+    private func addStep() {
+        let trimmed = newStep.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        newStep = ""
+        modelContext.insert(TaskItem(
+            title: trimmed,
+            sortOrder: (steps.map(\.sortOrder).max() ?? -1) + 1,
+            parentID: task.id
+        ))
+    }
+
+    /// Shares the steps' own order values out again in the new order.
+    private func moveSteps(from offsets: IndexSet, to destination: Int) {
+        let slots = steps.map(\.sortOrder).sorted()
+        var reordered = steps
+        reordered.move(fromOffsets: offsets, toOffset: destination)
+        for (index, step) in reordered.enumerated() { step.sortOrder = slots[index] }
+    }
+}
+
+private struct StepEditorRow: View {
+    @Bindable var step: TaskItem
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Button {
+                step.setDone(!step.isDone)
+            } label: {
+                Image(systemName: step.isDone ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(step.isDone ? Anchor.Theme.sage : Anchor.Theme.accent)
+            }
+            .buttonStyle(.borderless)
+            .accessibilityLabel(step.isDone ? "Mark step as not done" : "Mark step as done")
+            TextField("Step", text: $step.title, axis: .vertical)
+                .foregroundStyle(step.isDone ? .secondary : .primary)
         }
     }
 }

@@ -1,6 +1,6 @@
 # Anchor — Patch Plan (v2-recovery)
 
-*Living document. Last updated: 7 Nov 2026, after Patch 14b was written (Patches 1 to 16 are pushed, `15e1daf` at the time; none confirmed building; Patches 14a and 14b await your paste, in that order).*
+*Living document. Last updated: 7 Nov 2026, after Patch 17 was written (Patches 1 to 16, 14a and 14b are pushed, `464a9a0` at the time; none confirmed building; Patch 17 awaits your paste).*
 
 > ## READ THIS FIRST: THIS FILE IS THE PROMPT
 >
@@ -45,14 +45,16 @@ The source code repository is at <https://github.com/Kousei-Uchu/Anchor/tree/v2-
 | 12d: Plan screens, part 4: Appointments | 🟡 Pushed by you; build not yet confirmed |
 | 13a: Edit pattern on Now and Recovery: Affirmations, De-escalation scripts, Who I'm doing this for, Before tracking | 🟡 Pushed by you; build not yet confirmed |
 | 13b: Edit pattern on Bridge and the Journal entry preview; old Edit components removed | 🟡 Pushed by you (`92d2c67`); build not yet confirmed |
-| 14a: Message log, part 1: quick write to a person, per-person history, Send again and Copy, a Write button on the widget | 🟡 Written (`patch-14a.sh`); awaiting your paste and build |
-| 14b: Message log, part 2: voice notes (record, play, attach when sending through Messages) | 🟡 Written (`patch-14b.sh`); awaiting your paste and build (paste after Patch 14a) |
+| 14a: Message log, part 1: quick write to a person, per-person history, Send again and Copy, a Write button on the widget | 🟡 Pushed by you; build not yet confirmed |
+| 14b: Message log, part 2: voice notes (record, play, attach when sending through Messages) | 🟡 Pushed by you (`464a9a0`); build not yet confirmed |
 | 15: Tasks: `TaskItem`, carry-over from Next hour only, basic list, Plan widget, export and import, demo data | 🟡 Pushed by you (`698b6c0`); build not yet confirmed |
 | 16: Task due dates, fuzzy values, grouping by time | 🟡 Pushed by you (`15e1daf`); build not yet confirmed |
-| 17 onward | Not started |
+| 17: Subtasks with collapse and derived progress | 🟡 Written (`patch-17.sh`); awaiting your paste and build |
+| 18 onward | Not started |
 
 ## Change log of this plan
 
+- **7 Nov 2026 (27):** Patch 17 written: steps on tasks. **Model:** a step is a `TaskItem` with a `parentID` (the id of its task), plus a `subtasksCollapsed` flag on the task. Both have defaults, so there is still no store migration, and ticking, ordering, export and import all reuse what tasks already do. `TaskItem.topLevel` is what the list, Now and the Plan widget show, so steps never appear as tasks of their own; a step whose task has gone is treated as a task so it cannot vanish. **Card:** a task with steps shows "2 of 5 steps" and a thin bar (no percentage, nothing red, nothing when all are done beyond the full bar), a chevron to fold the steps away, and the steps themselves underneath; tap a step to tick it. Ticking every step does **not** tick the task, because finishing is your call. A done task hides its steps. **Editor:** a Steps section with a field to add one, tap to reword, swipe to delete, a labelled Reorder, and the tick. A blank task that has steps is kept when the editor closes. Deleting a task, clearing done tasks or swiping removes its steps too. Export carries `parentID` and `subtasksCollapsed` (optional, so older files import). **Known quirk:** the data screen's Tasks count includes steps. Demo: "Reply to one message" has three steps, one done. Help (Plan) mentions steps. Not compiled here.
 - **7 Nov 2026 (26):** Patch 14b written: voice notes on messages. **Recording:** the composer has a Record a voice note button; it asks for the microphone the first time, shows the time while recording, stops by itself at five minutes, and offers Record again and Remove after. A recording with nothing in it is thrown away, and one that is never saved is deleted when the sheet closes. A message can be text, a voice note, or both. **Playing:** each card on the log has a play button with the length, and the same is in the message sheet, which also has Share voice note (so it can go over Discord or anywhere else). **Sending:** through Messages the recording is attached to the text (the Messages sheet is given the file; iMessage and SMS decide what they accept), and Send again does the same. Discord cannot take an attachment from the app, so it only opens the chat and the Share button is the way. **Storage:** files live in Application Support/VoiceNotes with the same file protection as the database; deleting a message, swiping, or Clear everything removes its file. Export and import carry only the file name, not the audio, so an imported message says the voice note is not on this device; real backups of audio belong to Patch 33. **Open for Patches 34 and 35:** voice files are not covered by field-level encryption yet (D5). The microphone key is added to both build configurations, the Privacy page gets a Microphone line, Help is updated, and the widget shows "Voice note" when the latest message has no text. The demo has no voice note, because audio cannot be seeded. Not compiled here, and recording and playback need a real device or the simulator's microphone to check.
 - **7 Nov 2026 (25):** D4 to D8 answered (see the table); Patch 14 split in two because it came to about 600 lines. **What `main` shows about the message log:** the original screen had the composer on the same screen, with the "About" picker, the text box and the Save and Send buttons under the list, so writing to someone and sending it was one screen. The later "separate settings from information" commit turned the log into a read-only list and moved the composer behind a sheet, which is the loss you felt. Nothing on `main` ever recorded or played audio: `audioFileName` was an unused field. So quick sending is a regression to undo and voice notes are new, and per-person history was only ever a contact name on each row. **Patch 14a:** a "Write to" row of your contacts at the top of the log opens the composer already set to that person, with the keyboard up; the plus does the same for whoever the log is filtered to. A small menu narrows the log to one person (only people who have something in it are listed). Tapping a message now offers Send again (Messages, or Open Discord) and Copy text, besides Delete. The Message log widget has a Write button under it and an honest caption. `ThreadMessageComposer` is no longer private so the widget can open it. The demo's one message is now tied to Sam. **Patch 14b (next):** voice notes. Help text, CHANGELOG and this file are updated. Not compiled here.
 
@@ -371,7 +373,7 @@ First add an explicit SwiftData migration plan: a store that fails to open shows
 | --- | --- | --- | --- | --- |
 | **15** | `TaskItem` model, migration from `NextHourItem`, basic list; new `WidgetID` entry; DTO, data-viewer row, seed data | 7 | M | 🟡 |
 | **16** | Due dates incl. fuzzy values, time-bucket grouping | 7 | S | 🟡 |
-| **17** | Subtasks with collapse/expand and derived progress | 7 | M | ⬜ |
+| **17** | Subtasks with collapse/expand and derived progress | 7 | M | 🟡 |
 | **18** | Dependencies: greyed blocked tasks, "Waiting on…", auto-unlock | 7 | M | ⬜ |
 | **19** | Status, progress display, extras (energy tag, tiny first step, snooze) | 7 | S | ⬜ |
 | **20** | Widget drag-and-drop editing on the tab (see point 14) | 14 | M | ⬜ |
@@ -517,4 +519,4 @@ A reminder you set yourself, per person, **off by default**. Lock-screen text is
 
 ## Appendix B: Suggested next session
 
-Patch **17** (subtasks with collapse and derived progress), once Patches 1 to 16 build. Patch 20 (widget drag and drop) is independent of both. D4 to D9 are all answered, so nothing is waiting on a decision.
+Patch **18** (task dependencies: greyed blocked tasks, "Waiting on…", auto-unlock), once Patches 1 to 17 build. Patch 20 (widget drag and drop) is independent of both. D4 to D9 are all answered, so nothing is waiting on a decision.
