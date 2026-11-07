@@ -87,18 +87,18 @@ enum DemoMode {
             typicalTime: DateComponents(hour: 10, minute: 30), typicalCadenceDays: 14,
             occurrences: [AppointmentOccurrence(scheduledDate: tuesday)]))
 
-        let water = TaskItem(title: "Drink some water", sortOrder: 0, energy: .little)
+        let water = TaskItem(title: "Drink some water", sortOrder: 0, energy: .little, estimateMinutes: 5)
         water.setDue(.today)
         context.insert(water)
         let reply = TaskItem(title: "Reply to one message", notes: "Just the easy one.", sortOrder: 1, energy: .some,
-                             focusSessions: 2, focusMinutes: 50)
+                             focusSessions: 2, focusMinutes: 50, estimateMinutes: 30)
         reply.setDue(.thisWeek)
         context.insert(reply)
         context.insert(TaskItem(title: "Pick the easy one", isDone: true, completedAt: ago(0, hour: 1), sortOrder: 0, parentID: reply.id))
         context.insert(TaskItem(title: "Write two lines", sortOrder: 1, parentID: reply.id))
         context.insert(TaskItem(title: "Send it", sortOrder: 2, parentID: reply.id))
         let call = TaskItem(title: "Call to book the appointment", sortOrder: 3, energy: .some,
-                            firstStep: "Find the number and put it on the screen.")
+                            firstStep: "Find the number and put it on the screen.", estimateMinutes: 15)
         context.insert(call)
         context.insert(TaskItem(title: "Bring the form along", sortOrder: 4, blockedByIDs: [call.id]))
         context.insert(TaskItem(title: "Step outside for five minutes", isDone: true, completedAt: ago(0, hour: 2), sortOrder: 2))
