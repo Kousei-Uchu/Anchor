@@ -594,6 +594,7 @@ struct FeedbackLoopsWidget: View {
 
 struct MessageLogWidget: View {
     @Query(sort: \ThreadMessage.timestamp, order: .reverse) private var messages: [ThreadMessage]
+    @State private var composerRequest: MessageComposerRequest?
 
     var body: some View {
         Anchor.Widget(icon: "bubble.left.and.bubble.right.fill", title: "Message log") {
@@ -607,8 +608,18 @@ struct MessageLogWidget: View {
                         .lineLimit(2)
                 }
             } else {
-                Anchor.WidgetCaption(text: "Tied to a real contact, and can actually send.")
+                Anchor.WidgetCaption(text: "Write to someone, or keep a note of what you've told them.")
             }
+        } footer: {
+            Button {
+                composerRequest = MessageComposerRequest()
+            } label: {
+                Label("Write", systemImage: "square.and.pencil")
+            }
+            .buttonStyle(Anchor.SecondaryButtonStyle())
+        }
+        .sheet(item: $composerRequest) { request in
+            ThreadMessageComposer(startingContactID: request.contactID)
         }
     }
 }

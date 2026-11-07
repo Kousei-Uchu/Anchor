@@ -68,7 +68,8 @@ enum DemoMode {
         let now = Date.now
         func ago(_ days: Double, hour: Double = 0) -> Date { now.addingTimeInterval(-days * 86_400 - hour * 3_600) }
 
-        context.insert(TrustedContact(name: "Sam", phoneNumber: "0400 000 001", sortOrder: 0))
+        let demoSam = TrustedContact(name: "Sam", phoneNumber: "0400 000 001", sortOrder: 0)
+        context.insert(demoSam)
         context.insert(TrustedContact(name: "Alex", phoneNumber: "0400 000 002", sortOrder: 1))
         context.insert(TrustedContact(name: "Jordan", phoneNumber: "0400 000 003", sortOrder: 2))
 
@@ -108,7 +109,7 @@ enum DemoMode {
         context.insert(BridgeDraftItem(text: "Ask about next steps"))
 
         context.insert(FutureNote(unlockDate: now.addingTimeInterval(14 * 86_400), text: "You got through last time too."))
-        context.insert(ThreadMessage(timestamp: ago(2), text: "Thanks for checking in on me."))
+        context.insert(ThreadMessage(timestamp: ago(2), text: "Thanks for checking in on me.", withContactID: demoSam.id))
 
         try? context.save()
         return container
