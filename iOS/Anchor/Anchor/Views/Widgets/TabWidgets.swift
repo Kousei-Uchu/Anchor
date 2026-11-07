@@ -448,7 +448,7 @@ struct MotivationsWidget: View {
 struct TasksWidget: View {
     @Query(sort: \TaskItem.sortOrder) private var tasks: [TaskItem]
 
-    private var open: [TaskItem] { TaskItem.listOrder(tasks) }
+    private var open: [TaskItem] { TaskItem.listOrder(tasks, includeWaiting: false) }
 
     var body: some View {
         Anchor.Widget(icon: "checkmark.circle.fill", title: "Tasks", fillsHeight: true) {
@@ -460,7 +460,7 @@ struct TasksWidget: View {
                     Anchor.WidgetCaption(text: first.title, lines: 1)
                 }
             } else {
-                Anchor.WidgetCaption(text: tasks.isEmpty ? "Nothing here yet. Tap to add something small." : "All ticked off.", lines: 1)
+                Anchor.WidgetCaption(text: tasks.isEmpty ? "Nothing here yet. Tap to add something small." : (TaskItem.listOrder(tasks).isEmpty ? "All ticked off." : "Nothing to do right now."), lines: 1)
             }
         }
     }

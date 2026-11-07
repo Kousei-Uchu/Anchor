@@ -619,6 +619,10 @@ final class TaskItem {
     var parentID: UUID? = nil
     /// Whether this task's steps are folded away on the list.
     var subtasksCollapsed: Bool = false
+    /// Tasks this one is waiting on. While any of them is still open, this
+    /// task sits under "Waiting on something else". A blocker that has been
+    /// deleted is simply ignored.
+    var blockedByIDs: [UUID] = []
 
     init(
         id: UUID = UUID(),
@@ -632,7 +636,8 @@ final class TaskItem {
         dueKind: TaskDueKind = .noDate,
         dueDate: Date? = nil,
         parentID: UUID? = nil,
-        subtasksCollapsed: Bool = false
+        subtasksCollapsed: Bool = false,
+        blockedByIDs: [UUID] = []
     ) {
         self.id = id
         self.title = title
@@ -646,6 +651,7 @@ final class TaskItem {
         self.dueDate = dueDate
         self.parentID = parentID
         self.subtasksCollapsed = subtasksCollapsed
+        self.blockedByIDs = blockedByIDs
     }
 
     /// Ticks the task off or back on, keeping `completedAt` in step.
@@ -677,7 +683,7 @@ enum TaskDueKind: String, Codable, CaseIterable, Identifiable {
 
 /// The groups the task list is shown in, in this order.
 enum TaskBucket: Int, CaseIterable, Identifiable {
-    case today, thisWeek, later, noDate
+    case today, thisWeek, later, noDate, waiting
 
     var id: Int { rawValue }
 
@@ -687,6 +693,7 @@ enum TaskBucket: Int, CaseIterable, Identifiable {
         case .thisWeek: return "This week"
         case .later: return "Later"
         case .noDate: return "No date"
+        case .waiting: return "Waiting on something else"
         }
     }
 }
@@ -755,15 +762,54 @@ extension TaskItem {
     }
 
     /// Open tasks in the order the list shows them: group first, then your own order.
-    static func listOrder(_ tasks: [TaskItem], now: Date = .now) -> [TaskItem] {
-        topLevel(tasks).filter { !$0.isDone }.sorted {
-            let a = $0.bucket(now: now), b = $1.bucket(now: now)
+    /// `includeWaiting: false` leaves out tasks that are waiting on another, for
+    /// places that show what can be done now.
+    static func listOrder(_ tasks: [TaskItem], now: Date = .now, includeWaiting: Bool = true) -> [TaskItem] {
+        topLevel(tasks).filter { !$0.isDone && (includeWaiting || !$0.isBlocked(among: tasks)) }.sorted {
+            let a = $0.listBucket(among: tasks, now: now), b = $1.listBucket(among: tasks, now: now)
             return a.rawValue != b.rawValue ? a.rawValue < b.rawValue : $0.sortOrder < $1.sortOrder
         }
     }
 }
 
 extension TaskItem {
+    /// The open tasks this one is waiting on, if any.
+    func openBlockers(among tasks: [TaskItem]) -> [TaskItem] {
+        guard !isDone else { return [] }
+        return blockedByIDs.compactMap { id in tasks.first(where: { $0.id == id }) }.filter { !$0.isDone }
+    }
+
+    func isBlocked(among tasks: [TaskItem]) -> Bool {
+        !openBlockers(among: tasks).isEmpty
+    }
+
+    /// Where the list puts the task: Waiting while blocked, otherwise by its timing.
+    func listBucket(among tasks: [TaskItem], now: Date = .now, calendar: Calendar = .current) -> TaskBucket {
+        isBlocked(among: tasks) ? .waiting : bucket(now: now, calendar: calendar)
+    }
+
+    /// True when `candidate` already waits on this task, directly or through
+    /// others, so choosing it as a blocker would make two tasks wait on each other.
+    func wouldCycle(waitingOn candidate: TaskItem, among tasks: [TaskItem]) -> Bool {
+        var seen = Set<UUID>()
+        var stack = [candidate]
+        while let current = stack.popLast() {
+            if current.id == id { return true }
+            guard seen.insert(current.id).inserted else { continue }
+            for blockerID in current.blockedByIDs {
+                if let next = tasks.first(where: { $0.id == blockerID }) { stack.append(next) }
+            }
+        }
+        return false
+    }
+
+    /// Tasks that could be chosen as something to wait on.
+    func possibleBlockers(among tasks: [TaskItem]) -> [TaskItem] {
+        TaskItem.topLevel(tasks)
+            .filter { $0.id != id && !$0.isDone && !blockedByIDs.contains($0.id) && !wouldCycle(waitingOn: $0, among: tasks) }
+            .sorted { $0.sortOrder < $1.sortOrder }
+    }
+
     /// Tasks that are not steps of another task. A step whose task is gone is
     /// treated as a task of its own, so it never drops out of sight.
     static func topLevel(_ tasks: [TaskItem]) -> [TaskItem] {
