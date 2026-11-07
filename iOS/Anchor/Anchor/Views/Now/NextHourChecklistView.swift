@@ -14,6 +14,8 @@
 import SwiftUI
 import SwiftData
 import EventKit
+import UserNotifications
+import UIKit
 
 // MARK: - Reminders (optional import)
 
@@ -71,7 +73,7 @@ private extension View {
     /// Swipe right to move a task to tomorrow or set it aside, swipe left to
     /// delete. The long-press menu carries the same three, for people who do
     /// not use swipes.
-    func taskRowActions(_ task: TaskItem, onDelete: @escaping () -> Void) -> some View {
+    func taskRowActions(_ task: TaskItem, onFocus: @escaping () -> Void, onDelete: @escaping () -> Void) -> some View {
         self
             .swipeActions(edge: .leading, allowsFullSwipe: false) {
                 Button {
@@ -94,6 +96,11 @@ private extension View {
                 }
             }
             .contextMenu {
+                if !task.isDone {
+                    Button(action: onFocus) {
+                        Label("Focus on this", systemImage: "timer")
+                    }
+                }
                 Button {
                     withAnimation(.snappy) { task.snoozeToTomorrow() }
                 } label: {
@@ -204,6 +211,7 @@ struct TasksView: View {
     @State private var remindersDenied = false
     @State private var confirmingClearDone = false
     @State private var energyFilter: TaskEnergyFilter = .everything
+    @State private var showFocus = false
 
     private var open: [TaskItem] { TaskItem.listOrder(tasks).filter { energyFilter.allows($0.energy) } }
     private var done: [TaskItem] {
@@ -248,8 +256,9 @@ struct TasksView: View {
                             ForEach(group) { task in
                                 TaskCard(task: task, steps: TaskItem.steps(of: task, in: tasks),
                                          blockedBy: task.openBlockers(among: tasks),
-                                         onToggle: { toggle(task) }, onEdit: { editing = task })
-                                    .taskRowActions(task) { modelContext.deleteTask(task, among: tasks) }
+                                         onToggle: { toggle(task) }, onEdit: { editing = task },
+                                         onFocusStep: { openFocus($0) })
+                                    .taskRowActions(task, onFocus: { openFocus(task) }) { modelContext.deleteTask(task, among: tasks) }
                                     .anchorCardRow()
                             }
                             .onMove { offsets, destination in
@@ -283,6 +292,9 @@ struct TasksView: View {
         }
         .anchorBackground()
         .safeAreaInset(edge: .bottom) { quickAddBar }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            PomodoroBar { showFocus = true }
+        }
         .navigationTitle("Tasks")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -299,6 +311,9 @@ struct TasksView: View {
                         }
                         .pickerStyle(.inline)
                     }
+                    Button { openFocus(nil) } label: {
+                        Label("Focus timer", systemImage: "timer")
+                    }
                     Button { importFromReminders() } label: {
                         Label("Import from Reminders", systemImage: "arrow.down.doc")
                     }
@@ -311,6 +326,9 @@ struct TasksView: View {
         }
         .sheet(item: $editing, onDismiss: finishEditing) { task in
             TaskEditorSheet(task: task, allTasks: tasks) { toDelete = task }
+        }
+        .sheet(isPresented: $showFocus) {
+            PomodoroView()
         }
         .confirmationDialog("Import which reminders?", isPresented: $showImporter, titleVisibility: .visible) {
             ForEach(importable) { reminder in
@@ -356,6 +374,14 @@ struct TasksView: View {
     }
 
     private func nextSortOrder() -> Int { (tasks.map(\.sortOrder).max() ?? -1) + 1 }
+
+    /// Opens the focus timer, pointed at a task or step when one is given.
+    /// A timer in the middle of a focus phase keeps the task it has.
+    private func openFocus(_ task: TaskItem?) {
+        PomodoroTimer.shared.use(modelContext)
+        if let task { PomodoroTimer.shared.setTask(task) }
+        showFocus = true
+    }
 
     private func quickAdd() {
         let trimmed = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -419,6 +445,7 @@ private struct TaskCard: View {
     let blockedBy: [TaskItem]
     let onToggle: () -> Void
     let onEdit: () -> Void
+    var onFocusStep: ((TaskItem) -> Void)? = nil
 
     private var doneSteps: Int { steps.filter(\.isDone).count }
     private var isBlocked: Bool { !task.isDone && !blockedBy.isEmpty }
@@ -490,6 +517,11 @@ private struct TaskCard: View {
                                 ProgressView(value: Double(doneSteps), total: Double(steps.count))
                                     .tint(Anchor.Theme.sage)
                             }
+                            if let focus = task.focusSummary {
+                                Label(focus, systemImage: "timer")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                             if !task.notes.isEmpty {
                                 Text(task.notes)
                                     .font(.caption)
@@ -537,6 +569,13 @@ private struct TaskCard: View {
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel(step.isDone ? "Mark step as not done" : "Mark step as done")
+                            .contextMenu {
+                                if !step.isDone, let onFocusStep {
+                                    Button { onFocusStep(step) } label: {
+                                        Label("Focus on this step", systemImage: "timer")
+                                    }
+                                }
+                            }
                         }
                     }
                     .padding(.leading, 34)
@@ -556,6 +595,7 @@ private struct TaskEditorSheet: View {
 
     @State private var newStep = ""
     @State private var editMode: EditMode = .inactive
+    @State private var showFocus = false
 
     private var steps: [TaskItem] { TaskItem.steps(of: task, in: liveTasks) }
     private var blockers: [TaskItem] {
@@ -672,6 +712,22 @@ private struct TaskEditorSheet: View {
                         }
                     }
                 }
+                Section("Focus") {
+                    if !task.isDone {
+                        Button {
+                            PomodoroTimer.shared.use(modelContext)
+                            PomodoroTimer.shared.setTask(task)
+                            showFocus = true
+                        } label: {
+                            Label("Focus on this task", systemImage: "timer")
+                        }
+                    }
+                    if let focus = task.focusSummary {
+                        Text(focus)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
                 Section("Notes") {
                     TextField("Anything to remember", text: $task.notes, axis: .vertical)
                         .lineLimit(3...8)
@@ -684,6 +740,9 @@ private struct TaskEditorSheet: View {
                 }
             }
             .environment(\.editMode, $editMode)
+        }
+        .sheet(isPresented: $showFocus) {
+            PomodoroView()
         }
     }
 
@@ -723,5 +782,511 @@ private struct StepEditorRow: View {
             TextField("Step", text: $step.title, axis: .vertical)
                 .foregroundStyle(step.isDone ? .secondary : .primary)
         }
+    }
+}
+
+
+// MARK: - Focus timer
+
+/// Focus timer settings. Everything is optional and the defaults are the
+/// usual 25 and 5; alerts are off until you switch them on.
+enum PomodoroSettings {
+    static let focusKey = "anchor.focus.focusMinutes"
+    static let shortBreakKey = "anchor.focus.shortBreakMinutes"
+    static let longBreakKey = "anchor.focus.longBreakMinutes"
+    static let roundsKey = "anchor.focus.roundsBeforeLongBreak"
+    static let breaksKey = "anchor.focus.breaksOn"
+    static let autoStartKey = "anchor.focus.autoStart"
+    static let hapticKey = "anchor.focus.haptic"
+    static let alertsKey = "anchor.focus.alertsEnabled"
+    static let soundKey = "anchor.focus.alertSound"
+
+    private static func int(_ key: String, _ fallback: Int) -> Int {
+        UserDefaults.standard.object(forKey: key) as? Int ?? fallback
+    }
+    private static func bool(_ key: String, _ fallback: Bool) -> Bool {
+        UserDefaults.standard.object(forKey: key) as? Bool ?? fallback
+    }
+
+    static var focusMinutes: Int { int(focusKey, 25) }
+    static var shortBreakMinutes: Int { int(shortBreakKey, 5) }
+    static var longBreakMinutes: Int { int(longBreakKey, 15) }
+    static var roundsBeforeLongBreak: Int { max(2, int(roundsKey, 4)) }
+    static var breaksOn: Bool { bool(breaksKey, true) }
+    static var autoStart: Bool { bool(autoStartKey, false) }
+    static var hapticOn: Bool { bool(hapticKey, true) }
+    static var alertsOn: Bool { bool(alertsKey, false) }
+    static var soundOn: Bool { bool(soundKey, false) }
+
+    /// Called when the alerts switch changes, here or in Settings. The system
+    /// permission question is asked now, the first time it is switched on.
+    @MainActor
+    static func alertsChanged(_ isOn: Bool) {
+        if isOn { NotificationScheduler.askForPermissionIfNeeded() }
+        PomodoroTimer.shared.refreshAlert()
+    }
+}
+
+enum PomodoroPhase {
+    case focus, shortBreak, longBreak
+
+    var title: String {
+        switch self {
+        case .focus: return "Focus"
+        case .shortBreak: return "Short break"
+        case .longBreak: return "Long break"
+        }
+    }
+
+    var isBreak: Bool { self != .focus }
+}
+
+/// One timer for the whole app, so it keeps going when its screen is closed.
+/// It works from an end time rather than a count, so it stays right while the
+/// app is in the background. A focus session is added to its task only when
+/// the time has run all the way out; stopping early adds nothing and says
+/// nothing.
+@MainActor
+final class PomodoroTimer: ObservableObject {
+    static let shared = PomodoroTimer()
+
+    enum State { case idle, running, paused, waiting }
+
+    @Published private(set) var state: State = .idle
+    /// The phase running now, or the one that is next while `waiting`.
+    @Published private(set) var phase: PomodoroPhase = .focus
+    @Published private(set) var round = 1
+    @Published private(set) var taskID: UUID?
+    @Published private(set) var endDate = Date.now
+    private(set) var phaseLength: TimeInterval = 0
+    private var pausedRemaining: TimeInterval = 0
+    private var context: ModelContext?
+    private var ticker: Timer?
+
+    static let alertIdentifier = "focus-timer-phase"
+
+    /// Gives the timer somewhere to record finished sessions. Called by the
+    /// screens that can start it.
+    func use(_ context: ModelContext) { self.context = context }
+
+    /// Whether the task can be changed now: not while a focus phase is under way.
+    var canChangeTask: Bool { state == .idle || state == .waiting || phase.isBreak }
+
+    func setTask(_ task: TaskItem?) {
+        guard canChangeTask else { return }
+        taskID = task?.id
+    }
+
+    func minutes(for phase: PomodoroPhase) -> Int {
+        switch phase {
+        case .focus: return PomodoroSettings.focusMinutes
+        case .shortBreak: return PomodoroSettings.shortBreakMinutes
+        case .longBreak: return PomodoroSettings.longBreakMinutes
+        }
+    }
+
+    func remaining(at now: Date) -> TimeInterval {
+        switch state {
+        case .running: return max(0, endDate.timeIntervalSince(now))
+        case .paused: return pausedRemaining
+        case .idle, .waiting: return TimeInterval(minutes(for: phase) * 60)
+        }
+    }
+
+    func progress(at now: Date) -> Double {
+        guard phaseLength > 0, state == .running || state == .paused else { return 0 }
+        return min(1, max(0, 1 - remaining(at: now) / phaseLength))
+    }
+
+    // MARK: Controls
+
+    /// Starts the phase that is up next (focus when idle).
+    func startPhase() {
+        guard state == .idle || state == .waiting else { return }
+        phaseLength = TimeInterval(minutes(for: phase) * 60)
+        endDate = Date.now.addingTimeInterval(phaseLength)
+        state = .running
+        startTicker()
+        scheduleAlert()
+    }
+
+    func pause() {
+        guard state == .running else { return }
+        pausedRemaining = max(0, endDate.timeIntervalSinceNow)
+        state = .paused
+        stopTicker()
+        cancelAlert()
+    }
+
+    func resume() {
+        guard state == .paused else { return }
+        endDate = Date.now.addingTimeInterval(pausedRemaining)
+        state = .running
+        startTicker()
+        scheduleAlert()
+    }
+
+    /// Ends the timer. Nothing is recorded for a phase that did not finish.
+    func stop() {
+        stopTicker()
+        cancelAlert()
+        state = .idle
+        phase = .focus
+        round = 1
+        taskID = nil
+    }
+
+    /// Skips the rest of a break and waits for you to start the next focus.
+    func skipBreak() {
+        guard phase.isBreak, state != .idle else { return }
+        stopTicker()
+        cancelAlert()
+        advance(after: phase)
+        state = .waiting
+    }
+
+    // MARK: Ticking
+
+    private func startTicker() {
+        ticker?.invalidate()
+        let timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.tick() }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        ticker = timer
+    }
+
+    private func stopTicker() {
+        ticker?.invalidate()
+        ticker = nil
+    }
+
+    /// Moves on when a phase has run out. If the app was asleep when it ended,
+    /// the next one is never started on your behalf.
+    func tick(now: Date = .now) {
+        guard state == .running, now >= endDate else { return }
+        let finished = phase
+        let lateBy = now.timeIntervalSince(endDate)
+        if finished == .focus { recordSession() }
+        cancelAlert()
+        stopTicker()
+        if lateBy < 5, PomodoroSettings.hapticOn {
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+        }
+        advance(after: finished)
+        state = .waiting
+        if lateBy < 5, PomodoroSettings.autoStart { startPhase() }
+    }
+
+    private func advance(after finished: PomodoroPhase) {
+        switch finished {
+        case .focus:
+            if PomodoroSettings.breaksOn {
+                phase = round >= PomodoroSettings.roundsBeforeLongBreak ? .longBreak : .shortBreak
+            } else {
+                phase = .focus
+                round += 1
+            }
+        case .shortBreak:
+            phase = .focus
+            round += 1
+        case .longBreak:
+            phase = .focus
+            round = 1
+        }
+    }
+
+    private func recordSession() {
+        guard let id = taskID, let context else { return }
+        let descriptor = FetchDescriptor<TaskItem>(predicate: #Predicate { $0.id == id })
+        guard let task = try? context.fetch(descriptor).first else { return }
+        task.focusSessions += 1
+        task.focusMinutes += Int((phaseLength / 60).rounded())
+    }
+
+    // MARK: Alert when the phase ends in the background
+
+    /// Re-applies the alert after the setting changes.
+    func refreshAlert() {
+        cancelAlert()
+        if state == .running { scheduleAlert() }
+    }
+
+    private func scheduleAlert() {
+        guard PomodoroSettings.alertsOn else { return }
+        let seconds = endDate.timeIntervalSinceNow
+        guard seconds > 1 else { return }
+        let content = UNMutableNotificationContent()
+        content.title = "Anchor"
+        // Generic on purpose: no task name on the lock screen.
+        switch phase {
+        case .focus:
+            content.body = PomodoroSettings.breaksOn ? "Focus time is up. A break could be nice." : "Focus time is up."
+        case .shortBreak, .longBreak:
+            content.body = "Break's over. Ready when you are."
+        }
+        content.sound = PomodoroSettings.soundOn ? .default : nil
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: seconds, repeats: false)
+        UNUserNotificationCenter.current().add(
+            UNNotificationRequest(identifier: Self.alertIdentifier, content: content, trigger: trigger)
+        )
+    }
+
+    private func cancelAlert() {
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: [Self.alertIdentifier])
+        center.removeDeliveredNotifications(withIdentifiers: [Self.alertIdentifier])
+    }
+}
+
+private func clockText(_ seconds: TimeInterval) -> String {
+    let total = Int(seconds.rounded(.up))
+    return String(format: "%d:%02d", total / 60, total % 60)
+}
+
+/// A slim bar at the top of the task list while a timer is going, which
+/// reopens the timer.
+private struct PomodoroBar: View {
+    @ObservedObject private var timer = PomodoroTimer.shared
+    let onOpen: () -> Void
+
+    var body: some View {
+        if timer.state != .idle {
+            Button(action: onOpen) {
+                HStack(spacing: 10) {
+                    Image(systemName: timer.phase.isBreak ? "cup.and.saucer" : "timer")
+                        .foregroundStyle(Anchor.Theme.accent)
+                    Text(timer.state == .waiting ? "\(timer.phase.title) is next" : timer.phase.title)
+                        .font(.system(.subheadline, design: .rounded).weight(.medium))
+                    Spacer()
+                    if timer.state == .waiting {
+                        Text("Ready")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        TimelineView(.periodic(from: .now, by: 1)) { context in
+                            Text(clockText(timer.remaining(at: context.date)))
+                                .font(.system(.subheadline, design: .rounded).weight(.medium))
+                                .monospacedDigit()
+                                .foregroundStyle(timer.state == .paused ? .secondary : .primary)
+                        }
+                    }
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 10)
+                .frame(maxWidth: .infinity)
+                .background(.thinMaterial)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Opens the focus timer")
+        }
+    }
+}
+
+struct PomodoroView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    @ObservedObject private var timer = PomodoroTimer.shared
+    @Query(sort: \TaskItem.sortOrder) private var tasks: [TaskItem]
+    @AppStorage(PomodoroSettings.alertsKey) private var alertsOn = false
+    @AppStorage(PomodoroSettings.breaksKey) private var breaksOn = true
+    @AppStorage(PomodoroSettings.roundsKey) private var rounds = 4
+
+    private var task: TaskItem? {
+        guard let id = timer.taskID else { return nil }
+        return tasks.first { $0.id == id }
+    }
+
+    private var choices: [TaskItem] {
+        TaskItem.listOrder(tasks, includeWaiting: false)
+    }
+
+    private var roundText: String {
+        breaksOn ? "Round \(timer.round) of \(max(2, rounds))" : "Round \(timer.round)"
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 24) {
+                    taskPicker
+
+                    VStack(spacing: 8) {
+                        Text(timer.phase.title)
+                            .font(.system(.headline, design: .rounded))
+                            .foregroundStyle(.secondary)
+                        TimelineView(.periodic(from: .now, by: 1)) { context in
+                            VStack(spacing: 14) {
+                                Text(clockText(timer.remaining(at: context.date)))
+                                    .font(.system(size: 64, weight: .semibold, design: .rounded))
+                                    .monospacedDigit()
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.5)
+                                    .accessibilityAddTraits(.updatesFrequently)
+                                ProgressView(value: timer.progress(at: context.date))
+                                    .tint(timer.phase.isBreak ? Anchor.Theme.sage : Anchor.Theme.accent)
+                                    .frame(maxWidth: 260)
+                                    .accessibilityHidden(true)
+                            }
+                        }
+                        Text(timer.state == .waiting ? "Ready when you are" : roundText)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.top, 8)
+
+                    controls
+
+                    if !alertsOn {
+                        HStack(spacing: 4) {
+                            Text("Alerts when a phase ends are off.")
+                            Button("Turn on") { alertsOn = true }
+                        }
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                    }
+                }
+                .padding()
+                .frame(maxWidth: .infinity)
+            }
+            .anchorBackground()
+            .navigationTitle("Focus timer")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    NavigationLink {
+                        PomodoroSettingsView()
+                    } label: {
+                        Image(systemName: "gearshape")
+                    }
+                    .accessibilityLabel("Focus timer settings")
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+            .onAppear {
+                timer.use(modelContext)
+                UIApplication.shared.isIdleTimerDisabled = timer.state == .running
+            }
+            .onDisappear { UIApplication.shared.isIdleTimerDisabled = false }
+            .onChange(of: timer.state) { _, state in
+                UIApplication.shared.isIdleTimerDisabled = state == .running
+            }
+            .onChange(of: alertsOn) { _, isOn in PomodoroSettings.alertsChanged(isOn) }
+        }
+    }
+
+    private var taskPicker: some View {
+        Group {
+            if timer.canChangeTask {
+                Menu {
+                    Button("No particular task") { timer.setTask(nil) }
+                    ForEach(choices) { candidate in
+                        Button(candidate.title.isEmpty ? "Untitled" : candidate.title) {
+                            timer.setTask(candidate)
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Text(task.map { $0.title.isEmpty ? "Untitled" : $0.title } ?? "Choose a task")
+                            .font(.system(.body, design: .rounded))
+                            .multilineTextAlignment(.center)
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.caption)
+                    }
+                    .foregroundStyle(task == nil ? Color.secondary : Color.primary)
+                }
+            } else {
+                Text(task.map { $0.title.isEmpty ? "Untitled" : $0.title } ?? "Focus time")
+                    .font(.system(.body, design: .rounded))
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    @ViewBuilder
+    private var controls: some View {
+        VStack(spacing: 12) {
+            switch timer.state {
+            case .idle:
+                Button("Start focus") { timer.startPhase() }
+                    .buttonStyle(Anchor.PrimaryButtonStyle())
+            case .running:
+                Button("Pause") { timer.pause() }
+                    .buttonStyle(Anchor.PrimaryButtonStyle())
+                secondaryRow
+            case .paused:
+                Button("Resume") { timer.resume() }
+                    .buttonStyle(Anchor.PrimaryButtonStyle())
+                secondaryRow
+            case .waiting:
+                Button("Start \(timer.phase.title.lowercased())") { timer.startPhase() }
+                    .buttonStyle(Anchor.PrimaryButtonStyle())
+                secondaryRow
+            }
+        }
+        .frame(maxWidth: 360)
+    }
+
+    private var secondaryRow: some View {
+        HStack(spacing: 12) {
+            if timer.phase.isBreak {
+                Button("Skip break") { timer.skipBreak() }
+                    .buttonStyle(Anchor.SecondaryButtonStyle())
+            }
+            Button("Stop") { timer.stop() }
+                .buttonStyle(Anchor.SecondaryButtonStyle(tint: .gray))
+        }
+    }
+}
+
+struct PomodoroSettingsView: View {
+    @AppStorage(PomodoroSettings.focusKey) private var focus = 25
+    @AppStorage(PomodoroSettings.shortBreakKey) private var shortBreak = 5
+    @AppStorage(PomodoroSettings.longBreakKey) private var longBreak = 15
+    @AppStorage(PomodoroSettings.roundsKey) private var rounds = 4
+    @AppStorage(PomodoroSettings.breaksKey) private var breaksOn = true
+    @AppStorage(PomodoroSettings.autoStartKey) private var autoStart = false
+    @AppStorage(PomodoroSettings.hapticKey) private var haptic = true
+    @AppStorage(PomodoroSettings.alertsKey) private var alertsOn = false
+    @AppStorage(PomodoroSettings.soundKey) private var sound = false
+
+    var body: some View {
+        Form {
+            Anchor.SettingsSection(title: "Lengths") {
+                Stepper("Focus: \(focus) minutes", value: $focus, in: 5...90, step: 5)
+                    .font(.system(.subheadline, design: .rounded))
+                if breaksOn {
+                    Stepper("Short break: \(shortBreak) minutes", value: $shortBreak, in: 1...30)
+                        .font(.system(.subheadline, design: .rounded))
+                    Stepper("Long break: \(longBreak) minutes", value: $longBreak, in: 5...60, step: 5)
+                        .font(.system(.subheadline, design: .rounded))
+                    Stepper("Focus rounds before a long break: \(rounds)", value: $rounds, in: 2...8)
+                        .font(.system(.subheadline, design: .rounded))
+                }
+            }
+            Anchor.SettingsSection(title: "How it runs") {
+                Anchor.SettingsToggle(title: "Breaks", isOn: $breaksOn)
+                Anchor.SettingsToggle(title: "Start the next one by itself", isOn: $autoStart)
+                Anchor.SettingsToggle(title: "Haptic when one ends", isOn: $haptic)
+            }
+            Anchor.SettingsSection(title: "Alerts") {
+                Anchor.SettingsToggle(title: "Alert when one ends in the background", isOn: $alertsOn)
+                if alertsOn {
+                    Anchor.SettingsToggle(title: "Sound with the alert", isOn: $sound)
+                }
+            }
+        }
+        .anchorSettingsStyle()
+        .navigationTitle("Timer settings")
+        .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: alertsOn) { _, isOn in PomodoroSettings.alertsChanged(isOn) }
     }
 }

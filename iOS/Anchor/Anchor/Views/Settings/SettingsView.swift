@@ -43,6 +43,8 @@ struct SettingsView: View {
     @AppStorage(DailyCheckInSettings.hourKey) private var dailyCheckInHour = 20
     @AppStorage(DailyCheckInSettings.minuteKey) private var dailyCheckInMinute = 0
 
+    @AppStorage(PomodoroSettings.alertsKey) private var focusAlertsEnabled = false
+
     @AppStorage(RecoverySettings.pledgeEnabled) private var pledgeEnabled = false
     @AppStorage(RecoverySettings.pledgeHour) private var pledgeHour = 8
     @AppStorage(RecoverySettings.pledgeMinute) private var pledgeMinute = 0
@@ -72,12 +74,13 @@ struct SettingsView: View {
 
                 Anchor.SettingsSection(
                     title: "Reminders",
-                    footer: "A gentle, optional nudge once a day. Totally fine to skip when it comes."
+                    footer: "Gentle and optional. Totally fine to skip when one comes."
                 ) {
                     Anchor.SettingsToggle(title: "Daily check-in", isOn: $dailyCheckInEnabled)
                     if dailyCheckInEnabled {
                         Anchor.SettingsTimeRow(time: timeBinding($dailyCheckInHour, $dailyCheckInMinute))
                     }
+                    Anchor.SettingsToggle(title: "Focus timer alerts", isOn: $focusAlertsEnabled)
                 }
 
                 if showsRecovery {
@@ -151,6 +154,7 @@ struct SettingsView: View {
             }
             .onChange(of: faceIDEnabled) { _, isOn in appLock.isEnabled = isOn }
             .onChange(of: dailyCheckInEnabled) { _, _ in applyDailyCheckIn() }
+            .onChange(of: focusAlertsEnabled) { _, isOn in PomodoroSettings.alertsChanged(isOn) }
             .onChange(of: dailyCheckInHour) { _, _ in applyDailyCheckIn() }
             .onChange(of: dailyCheckInMinute) { _, _ in applyDailyCheckIn() }
             .onChange(of: pledgeEnabled) { _, isOn in recoveryRemindersChanged(isOn) }

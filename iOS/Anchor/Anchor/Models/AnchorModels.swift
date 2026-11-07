@@ -633,6 +633,11 @@ final class TaskItem {
     /// The smallest way to begin, in a few words. Separate from steps so it
     /// can be a single line.
     var firstStep: String = ""
+    /// How many focus sessions have run to the end on this task, and the
+    /// minutes they added up to. A plain record: nothing is scored, compared
+    /// or shown against a goal.
+    var focusSessions: Int = 0
+    var focusMinutes: Int = 0
 
     init(
         id: UUID = UUID(),
@@ -650,7 +655,9 @@ final class TaskItem {
         blockedByIDs: [UUID] = [],
         status: TaskStatus = .notStarted,
         energy: TaskEnergy = .unset,
-        firstStep: String = ""
+        firstStep: String = "",
+        focusSessions: Int = 0,
+        focusMinutes: Int = 0
     ) {
         self.id = id
         self.title = title
@@ -668,6 +675,8 @@ final class TaskItem {
         self.status = status
         self.energy = energy
         self.firstStep = firstStep
+        self.focusSessions = focusSessions
+        self.focusMinutes = focusMinutes
     }
 
     /// Ticks the task off or back on, keeping `completedAt` in step.
@@ -785,6 +794,16 @@ enum TaskBucket: Int, CaseIterable, Identifiable {
         case .waiting: return "Waiting on something else"
         case .setAside: return "Set aside for now"
         }
+    }
+}
+
+extension TaskItem {
+    /// "2 focus sessions, 50 minutes", or nil before the first one.
+    var focusSummary: String? {
+        guard focusSessions > 0 else { return nil }
+        let sessions = focusSessions == 1 ? "1 focus session" : "\(focusSessions) focus sessions"
+        let minutes = focusMinutes == 1 ? "1 minute" : "\(focusMinutes) minutes"
+        return "\(sessions), \(minutes)"
     }
 }
 

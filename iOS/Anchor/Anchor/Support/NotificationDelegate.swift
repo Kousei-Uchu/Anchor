@@ -36,7 +36,11 @@ final class NotificationDelegate: NSObject, ObservableObject, UNUserNotification
     /// app is in the foreground, so it still shows as a banner.
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                  willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
-        [.banner, .sound]
+        // The focus timer's alert only makes a sound if that is switched on.
+        if notification.request.identifier == PomodoroTimer.alertIdentifier {
+            return PomodoroSettings.soundOn ? [.banner, .sound] : [.banner]
+        }
+        return [.banner, .sound]
     }
 
     func userNotificationCenter(_ center: UNUserNotificationCenter,
