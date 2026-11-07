@@ -42,14 +42,43 @@ struct CheckInSliderView: View {
 
     private enum Stage { case sliders, prompts }
 
-    /// Fixed, reviewed set — deliberately short so answering all of them
-    /// never feels tedious. Every one is skippable.
-    private static let prompts = [
-        "What's currently on your mind?",
-        "What's your biggest emotion right now?",
-        "Is there anything coming up that's on your mind?",
-        "Would you say today's closer to a good day, a bad day, or somewhere in between?",
-        "What's something you're looking forward to?"
+    /// One optional question: the question itself, a line of reassurance
+    /// under it, and a few ways to begin the answer.
+    private struct CheckInPrompt {
+        let text: String
+        let detail: String
+        let starters: [String]
+    }
+
+    /// Fixed, reviewed set, deliberately short so answering all of them
+    /// never feels tedious. Every one is skippable. Answers are keyed by
+    /// `text`, so changing the wording of a question starts a fresh answer.
+    private static let prompts: [CheckInPrompt] = [
+        CheckInPrompt(
+            text: "What's currently on your mind?",
+            detail: "Anything at all is fine, big or small. It doesn't need to make sense yet.",
+            starters: ["Right now I'm thinking about\u{2026}", "I keep coming back to\u{2026}", "What's taking up space is\u{2026}"]
+        ),
+        CheckInPrompt(
+            text: "What's your biggest emotion right now?",
+            detail: "Naming a feeling, even roughly, can make it a little less heavy.",
+            starters: ["Right now I feel\u{2026}", "Mostly I'm feeling\u{2026}", "It's hard to name, but it's something like\u{2026}"]
+        ),
+        CheckInPrompt(
+            text: "Is there anything coming up that's on your mind?",
+            detail: "A date, a conversation, a task, or anything else that's waiting for you.",
+            starters: ["Coming up, I'm thinking about\u{2026}", "I'm a bit unsure about\u{2026}", "Nothing big, but\u{2026}"]
+        ),
+        CheckInPrompt(
+            text: "Would you say today's closer to a good day, a bad day, or somewhere in between?",
+            detail: "There's no right answer. \"In between\" is a very normal one.",
+            starters: ["Today feels like\u{2026}", "It's been a good day because\u{2026}", "It's been a harder day because\u{2026}", "Somewhere in between, since\u{2026}"]
+        ),
+        CheckInPrompt(
+            text: "What's something you're looking forward to?",
+            detail: "It can be tiny, like a meal or a quiet evening.",
+            starters: ["I'm looking forward to\u{2026}", "One small thing I'm hoping for is\u{2026}"]
+        )
     ]
 
     var body: some View {
@@ -125,55 +154,93 @@ struct CheckInSliderView: View {
     }
 
     private var promptStage: some View {
-        VStack(spacing: 24) {
-            ProgressView(value: Double(promptIndex + 1), total: Double(Self.prompts.count))
-                .tint(Anchor.Theme.accent)
-                .padding(.horizontal)
+        let current = Self.prompts[promptIndex]
+        return ScrollView {
+            VStack(spacing: 16) {
+                ProgressView(value: Double(promptIndex + 1), total: Double(Self.prompts.count))
+                    .tint(Anchor.Theme.accent)
+                    .padding(.horizontal)
 
-            Text("Question \(promptIndex + 1) of \(Self.prompts.count), skip any of these")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                Text("Question \(promptIndex + 1) of \(Self.prompts.count), skip any of these")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
 
-            Text(Self.prompts[promptIndex])
-                .font(.system(.title3, design: .rounded))
-                .multilineTextAlignment(.center)
+                Text(current.text)
+                    .font(.system(.title3, design: .rounded))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+
+                Text(current.detail)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+
+                TextField("Optional", text: Binding(
+                    get: { promptAnswers[current.text] ?? "" },
+                    set: { promptAnswers[current.text] = $0 }
+                ), axis: .vertical)
+                .textFieldStyle(.roundedBorder)
                 .padding(.horizontal, 24)
+                .lineLimit(3...6)
 
-            TextField("Optional", text: Binding(
-                get: { promptAnswers[Self.prompts[promptIndex]] ?? "" },
-                set: { promptAnswers[Self.prompts[promptIndex]] = $0 }
-            ), axis: .vertical)
-            .textFieldStyle(.roundedBorder)
-            .padding(.horizontal, 24)
-            .lineLimit(3...6)
-
-            Spacer()
-
-            HStack(spacing: 12) {
-                if promptIndex > 0 {
-                    Button("Back") { withAnimation { promptIndex -= 1 } }
-                        .buttonStyle(Anchor.SecondaryButtonStyle())
-                }
-                Button(promptIndex == Self.prompts.count - 1 ? "Finish" : "Next") {
-                    if promptIndex == Self.prompts.count - 1 {
-                        finishWithPrompts()
-                    } else {
-                        withAnimation { promptIndex += 1 }
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Need a start?")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(current.starters, id: \.self) { starter in
+                                Button(starter) { insertStarter(starter, for: current) }
+                                    .font(.footnote)
+                                    .buttonStyle(.bordered)
+                                    .buttonBorderShape(.capsule)
+                            }
+                        }
                     }
                 }
-                .buttonStyle(Anchor.PrimaryButtonStyle())
+                .padding(.horizontal, 24)
+            }
+            .padding(.top, 12)
+            .padding(.bottom, 16)
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            VStack(spacing: 10) {
+                HStack(spacing: 12) {
+                    if promptIndex > 0 {
+                        Button("Back") { withAnimation { promptIndex -= 1 } }
+                            .buttonStyle(Anchor.SecondaryButtonStyle())
+                    }
+                    Button(promptIndex == Self.prompts.count - 1 ? "Finish" : "Next") {
+                        if promptIndex == Self.prompts.count - 1 {
+                            finishWithPrompts()
+                        } else {
+                            withAnimation { promptIndex += 1 }
+                        }
+                    }
+                    .buttonStyle(Anchor.PrimaryButtonStyle())
+                }
+
+                Button("Finish now, skip the rest") {
+                    finishWithPrompts()
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
             .padding(.horizontal)
-            .padding(.bottom, 12)
-
-            Button("Finish now, skip the rest") {
-                finishWithPrompts()
-            }
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .padding(.bottom, 12)
+            .padding(.top, 10)
+            .padding(.bottom, 8)
+            .frame(maxWidth: .infinity)
+            .background(.bar)
         }
-        .padding(.top, 12)
+    }
+
+    /// Adds a sentence starter to the end of the current answer.
+    private func insertStarter(_ starter: String, for prompt: CheckInPrompt) {
+        let existing = promptAnswers[prompt.text] ?? ""
+        let needsSpace = !existing.isEmpty && !existing.hasSuffix(" ") && !existing.hasSuffix("\n")
+        promptAnswers[prompt.text] = existing + (needsSpace ? " " : "") + starter + " "
     }
 
     private func sliderRow(_ label: String, value: Binding<Double>) -> some View {
@@ -205,9 +272,9 @@ struct CheckInSliderView: View {
     private func finishWithPrompts() {
         let checkIn = save()
         let answered = Self.prompts.compactMap { prompt -> String? in
-            guard let answer = promptAnswers[prompt]?.trimmingCharacters(in: .whitespacesAndNewlines),
+            guard let answer = promptAnswers[prompt.text]?.trimmingCharacters(in: .whitespacesAndNewlines),
                   !answer.isEmpty else { return nil }
-            return "\(prompt)\n\(answer)"
+            return "\(prompt.text)\n\(answer)"
         }
         if !answered.isEmpty {
             let entry = JournalEntry(text: answered.joined(separator: "\n\n"), linkedContext: .checkInSlider)
