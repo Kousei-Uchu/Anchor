@@ -290,3 +290,62 @@ extension NotificationScheduler {
         }
     }
 }
+
+
+// MARK: - Routine reminders
+
+/// An optional reminder for a routine, set by the person, off unless they
+/// switch it on. The words on the lock screen are fixed and never name the
+/// routine or any of its steps. Like the recovery reminders, every call
+/// clears the routine notifications and adds the current set again, so what is
+/// scheduled always matches what is saved.
+enum RoutineReminders {
+    static let prefix = "routine-"
+    static let body = "Your routine is ready when you are."
+
+    /// A plain value describing one notification, so no SwiftData objects are
+    /// captured by the notification centre's background callbacks.
+    struct Planned {
+        let id: String
+        let components: DateComponents
+    }
+
+    static func refresh(using context: ModelContext) {
+        let routines = (try? context.fetch(FetchDescriptor<Routine>())) ?? []
+        refresh(routines: routines)
+    }
+
+    static func refresh(routines: [Routine]) {
+        guard !DemoMode.isOn else { return }
+        apply(plan(routines: routines))
+    }
+
+    /// One repeating weekly notification per chosen day. A routine with no
+    /// written steps, a reminder that is off, or no days chosen schedules nothing.
+    static func plan(routines: [Routine]) -> [Planned] {
+        var planned: [Planned] = []
+        for routine in routines where routine.reminderEnabled && !routine.writtenSteps.isEmpty {
+            for weekday in Set(routine.reminderDays).filter({ (1...7).contains($0) }).sorted() {
+                planned.append(Planned(
+                    id: prefix + routine.id.uuidString + "-\(weekday)",
+                    components: DateComponents(hour: routine.reminderHour, minute: routine.reminderMinute, weekday: weekday)))
+            }
+        }
+        return planned
+    }
+
+    private static func apply(_ planned: [Planned]) {
+        let center = UNUserNotificationCenter.current()
+        center.getPendingNotificationRequests { pending in
+            let old = pending.map(\.identifier).filter { $0.hasPrefix(prefix) }
+            center.removePendingNotificationRequests(withIdentifiers: old)
+            for item in planned {
+                let content = UNMutableNotificationContent()
+                content.title = "Anchor"
+                content.body = body
+                let trigger = UNCalendarNotificationTrigger(dateMatching: item.components, repeats: true)
+                center.add(UNNotificationRequest(identifier: item.id, content: content, trigger: trigger))
+            }
+        }
+    }
+}

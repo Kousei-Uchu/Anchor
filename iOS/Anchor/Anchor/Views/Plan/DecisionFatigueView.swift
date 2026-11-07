@@ -445,6 +445,8 @@ struct RoutinesView: View {
         for routine in routines where routine !== deleting && routine.isBlank {
             modelContext.delete(routine)
         }
+        // Reminders follow what was just saved, left out for anything removed.
+        RoutineReminders.refresh(routines: routines.filter { $0 !== deleting && !$0.isBlank })
     }
 }
 
@@ -466,6 +468,12 @@ private struct RoutineCard: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.leading)
+                        if let reminder = routine.reminderSummary {
+                            Label(reminder, systemImage: "bell")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.leading)
+                        }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .contentShape(Rectangle())
@@ -555,6 +563,8 @@ private struct RoutineEditor: View {
                     if let summary = routine.summaryText { Text(summary) }
                 }
 
+                RoutineReminderSection(routine: routine)
+
                 if !routine.writtenSteps.isEmpty {
                     Section {
                         Button { showRunner = true } label: {
@@ -577,6 +587,80 @@ private struct RoutineEditor: View {
         let room = max(0, Routine.maxSteps - routine.steps.count)
         routine.steps.append(contentsOf: added.prefix(room))
         newStepText = ""
+    }
+}
+
+/// The optional reminder for a routine: off by default, the days it repeats
+/// on and a time. The permission question is asked only when it is first
+/// switched on. The same switch and time are listed in Settings, Reminders.
+private struct RoutineReminderSection: View {
+    @Bindable var routine: Routine
+
+    private var timeBinding: Binding<Date> {
+        Binding(
+            get: {
+                Calendar.current.date(bySettingHour: routine.reminderHour, minute: routine.reminderMinute,
+                                      second: 0, of: .now) ?? .now
+            },
+            set: { newValue in
+                let parts = Calendar.current.dateComponents([.hour, .minute], from: newValue)
+                routine.reminderHour = parts.hour ?? routine.reminderHour
+                routine.reminderMinute = parts.minute ?? routine.reminderMinute
+            }
+        )
+    }
+
+    var body: some View {
+        Section {
+            Toggle("Remind me", isOn: $routine.reminderEnabled)
+                .tint(Anchor.Theme.accent)
+                .onChange(of: routine.reminderEnabled) { _, isOn in
+                    guard isOn else { return }
+                    if routine.reminderDays.isEmpty { routine.reminderDays = Array(1...7) }
+                    NotificationScheduler.askForPermissionIfNeeded()
+                }
+            if routine.reminderEnabled {
+                RoutineWeekdayRow(days: $routine.reminderDays)
+                DatePicker("Time", selection: timeBinding, displayedComponents: .hourAndMinute)
+            }
+        } header: {
+            Text("Reminder")
+        } footer: {
+            if routine.reminderEnabled {
+                Text(routine.reminderDays.isEmpty
+                     ? "Pick at least one day."
+                     : "Your lock screen never shows the routine's name.")
+            }
+        }
+    }
+}
+
+/// Seven day buttons, starting from the week's first day in the person's calendar.
+struct RoutineWeekdayRow: View {
+    @Binding var days: [Int]
+
+    private var order: [Int] {
+        (0..<7).map { (Calendar.current.firstWeekday - 1 + $0) % 7 + 1 }
+    }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(order, id: \.self) { weekday in
+                let isOn = days.contains(weekday)
+                Button {
+                    if isOn { days.removeAll { $0 == weekday } } else { days.append(weekday) }
+                } label: {
+                    Text(Calendar.current.veryShortWeekdaySymbols[weekday - 1])
+                        .font(.system(.footnote, design: .rounded).weight(.semibold))
+                        .foregroundStyle(isOn ? Color.white : Color.primary)
+                        .frame(maxWidth: .infinity, minHeight: 36)
+                        .background(isOn ? Anchor.Theme.accent : Color.secondary.opacity(0.15), in: Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Calendar.current.weekdaySymbols[weekday - 1])
+                .accessibilityAddTraits(isOn ? .isSelected : [])
+            }
+        }
     }
 }
 

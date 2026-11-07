@@ -1190,12 +1190,24 @@ final class Routine {
     var name: String
     var createdAt: Date = Date.now
     var steps: [RoutineStep] = []
+    /// An optional reminder you set yourself. Off unless you switch it on.
+    var reminderEnabled: Bool = false
+    /// Calendar weekdays the reminder repeats on, 1 = Sunday to 7 = Saturday.
+    var reminderDays: [Int] = []
+    var reminderHour: Int = 8
+    var reminderMinute: Int = 0
 
-    init(id: UUID = UUID(), name: String, createdAt: Date = .now, steps: [RoutineStep] = []) {
+    init(id: UUID = UUID(), name: String, createdAt: Date = .now, steps: [RoutineStep] = [],
+         reminderEnabled: Bool = false, reminderDays: [Int] = [],
+         reminderHour: Int = 8, reminderMinute: Int = 0) {
         self.id = id
         self.name = name
         self.createdAt = createdAt
         self.steps = steps
+        self.reminderEnabled = reminderEnabled
+        self.reminderDays = reminderDays
+        self.reminderHour = reminderHour
+        self.reminderMinute = reminderMinute
     }
 }
 
@@ -1230,6 +1242,21 @@ extension Routine {
         let missing = stepsWithoutEstimate
         if missing > 0 { text += " plus \(missing) with no estimate" }
         return text
+    }
+
+    /// "Mon, Wed, Fri at 7:30 AM", "Every day at 8:00 AM", or nil while the
+    /// reminder is off or has no days.
+    var reminderSummary: String? {
+        guard reminderEnabled else { return nil }
+        let days = Set(reminderDays.filter { (1...7).contains($0) })
+        guard !days.isEmpty else { return nil }
+        let calendar = Calendar.current
+        var parts = DateComponents(); parts.hour = reminderHour; parts.minute = reminderMinute
+        let time = calendar.date(from: parts)?.formatted(date: .omitted, time: .shortened) ?? ""
+        if days.count == 7 { return "Every day at \(time)" }
+        let names = calendar.shortWeekdaySymbols
+        let ordered = (0..<7).map { (calendar.firstWeekday - 1 + $0) % 7 + 1 }.filter { days.contains($0) }
+        return ordered.map { names[$0 - 1] }.joined(separator: ", ") + " at " + time
     }
 
     /// True for a routine added and then left with no name and no steps.

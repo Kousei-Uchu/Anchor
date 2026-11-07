@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 24b: a routine can have a reminder on the days and time you pick: it is off until you switch it on, in the routine or in Settings under Routine reminders, and the lock screen only says your routine is ready, never which one.
 - Patch 24: Presets has a Routines side next to Decisions: a routine is a named list of steps, each with an optional rough time, that you run one step at a time; routines you have made also show on the Decision presets widget.
 - Patch 23: a Quick list (in the Tasks menu) is a one-off checklist: type or paste one item per line, tick them off, add more as you go, and it moves to an Archive by itself when the last one is ticked; you can also move what is left into your tasks, start a list again, or delete it.
 - Patch 21b: the focus timer can show on the lock screen and in the Dynamic Island, with the phase and a live countdown but never the task; it is off until you switch it on in the timer's settings or in Settings.

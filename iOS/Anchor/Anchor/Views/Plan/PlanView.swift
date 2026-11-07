@@ -52,6 +52,7 @@ struct PlanView: View {
                 // No permission prompt here: Anchor asks the first time the user turns on
                 // something that needs notifications (see NotificationScheduler.askForPermissionIfNeeded).
                 RecoveryNotifications.refresh(using: modelContext)
+                RoutineReminders.refresh(using: modelContext)
                 let scheduler = NotificationScheduler(context: modelContext)
                 refreshWidgetSnapshot()
                 rescheduleTriggerWindowNotifications(using: scheduler)
