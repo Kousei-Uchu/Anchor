@@ -1023,6 +1023,151 @@ enum TaskMigration {
     }
 }
 
+// MARK: - Quick lists
+//
+// A one-off checklist: type or paste one item per line, tick things off, and
+// the list moves to the Archive by itself when the last one is ticked. The
+// items sit inside the list as a small array of values (the way a contact
+// keeps its message templates), so a quick list is one record and one entry
+// in an export. It is separate from tasks on purpose: no dates, steps,
+// waiting or energy, and ticking the last item ends the list instead of
+// leaving a finished task behind.
+
+struct QuickListItem: Codable, Identifiable, Hashable {
+    var id: UUID = UUID()
+    var text: String
+    var isDone: Bool = false
+}
+
+@Model
+final class QuickList {
+    @Attribute(.unique) var id: UUID
+    var title: String
+    var createdAt: Date = Date.now
+    var items: [QuickListItem] = []
+    /// Set when the last open item is ticked, and cleared again when one is
+    /// unticked or a new item is added. nil while the list is still in use.
+    var archivedAt: Date? = nil
+
+    init(id: UUID = UUID(), title: String, createdAt: Date = .now,
+         items: [QuickListItem] = [], archivedAt: Date? = nil) {
+        self.id = id
+        self.title = title
+        self.createdAt = createdAt
+        self.items = items
+        self.archivedAt = archivedAt
+    }
+}
+
+extension QuickList {
+    /// The most items a list can hold. Far more than a quick list needs; it
+    /// only stops a huge paste from making the screen slow.
+    static let maxItems = 200
+
+    var isArchived: Bool { archivedAt != nil }
+    var doneCount: Int { items.filter(\.isDone).count }
+    var openCount: Int { items.count - doneCount }
+
+    var displayTitle: String {
+        title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Quick list" : title
+    }
+
+    /// The name a list gets when you leave the name blank, so two lists made
+    /// on different days can be told apart.
+    static func defaultTitle(now: Date = .now) -> String {
+        "Quick list, " + now.formatted(.dateTime.day().month(.abbreviated))
+    }
+
+    /// "5 items", "2 of 5 ticked", or "Finished 7 Nov, 5 items" once archived.
+    var summaryText: String {
+        let count = items.count == 1 ? "1 item" : "\(items.count) items"
+        if let archivedAt {
+            return "Finished \(archivedAt.formatted(.dateTime.day().month(.abbreviated))), \(count)"
+        }
+        return doneCount == 0 ? count : "\(doneCount) of \(items.count) ticked"
+    }
+
+    /// Items from typed or pasted text, one per line. Blank lines are skipped,
+    /// and a bullet, number or tick box at the start of a line is dropped, so a
+    /// list copied from Notes or a message pastes cleanly.
+    static func parsedItems(from text: String) -> [QuickListItem] {
+        var found: [QuickListItem] = []
+        for line in text.split(whereSeparator: { $0.isNewline }) {
+            let cleaned = cleanedLine(String(line))
+            if !cleaned.isEmpty { found.append(QuickListItem(text: cleaned)) }
+        }
+        return found
+    }
+
+    /// One line without its list marker. A marker needs a space after it, so
+    /// "-5 degrees" and "2024 taxes" keep their first characters.
+    static func cleanedLine(_ raw: String) -> String {
+        var line = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        // A bullet or dash: "- ", "* " or a round bullet.
+        if let first = line.first, "-*\u{2022}".contains(first), line.dropFirst().first == " " {
+            line = String(line.dropFirst()).trimmingCharacters(in: .whitespaces)
+        }
+        // A number: "1. " or "2) ".
+        let digits = line.prefix(while: { $0.isASCII && $0.isNumber })
+        if !digits.isEmpty, digits.count <= 3 {
+            let rest = line.dropFirst(digits.count)
+            if let mark = rest.first, mark == "." || mark == ")", rest.dropFirst().first == " " {
+                line = String(rest.dropFirst()).trimmingCharacters(in: .whitespaces)
+            }
+        }
+        // A tick box: "[ ]" or "[x]".
+        for box in ["[ ]", "[x]", "[X]"] where line.hasPrefix(box) {
+            line = String(line.dropFirst(box.count)).trimmingCharacters(in: .whitespaces)
+            break
+        }
+        return line
+    }
+
+    /// Keeps the archive in step with the ticks: archived while every item is
+    /// ticked, back in use the moment one is not. A list with no items is
+    /// never archived; it is removed when its screen closes.
+    func syncArchive(now: Date = .now) {
+        let finished = !items.isEmpty && items.allSatisfy { $0.isDone }
+        if finished {
+            if archivedAt == nil { archivedAt = now }
+        } else if archivedAt != nil {
+            archivedAt = nil
+        }
+    }
+
+    func setItem(_ id: UUID, done: Bool, now: Date = .now) {
+        guard let index = items.firstIndex(where: { $0.id == id }) else { return }
+        items[index].isDone = done
+        syncArchive(now: now)
+    }
+
+    func addItems(_ new: [QuickListItem]) {
+        items.append(contentsOf: new.prefix(max(0, QuickList.maxItems - items.count)))
+        syncArchive()
+    }
+
+    func removeItem(_ id: UUID) {
+        items.removeAll { $0.id == id }
+        syncArchive()
+    }
+
+    /// Unticks everything, so the same list can be used again.
+    func startAgain() {
+        for index in items.indices { items[index].isDone = false }
+        syncArchive()
+    }
+}
+
+extension ModelContext {
+    /// Run once a quick list's screen has closed, so the screen never reads a
+    /// list that is already gone: removes the list you chose to delete, and any
+    /// list left with no items (one that was emptied, or moved into Tasks).
+    func finishQuickLists(deleting list: QuickList?, among lists: [QuickList]) {
+        if let list { delete(list) }
+        for other in lists where other !== list && other.items.isEmpty { delete(other) }
+    }
+}
+
 // MARK: - Mascot (pre-written lines only — never generative at runtime)
 
 enum MascotMood: String, Codable {
@@ -1067,7 +1212,8 @@ enum AnchorSchema {
             ThreadMessage.self, SupportCalendarEntry.self, FutureNote.self, UnsentDraft.self,
             MascotLine.self, DecisionPresetCategory.self, DecisionPresetChoice.self,
             DeEscalationScript.self, NextHourItem.self, TaskItem.self, Affirmation.self,
-            RecoveryCounter.self, RecoveryMotivation.self, RecoveryDayEntry.self, RecoveryUrge.self
+            RecoveryCounter.self, RecoveryMotivation.self, RecoveryDayEntry.self, RecoveryUrge.self,
+            QuickList.self
         ]
     }
 

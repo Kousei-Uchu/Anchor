@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 23: a Quick list (in the Tasks menu) is a one-off checklist: type or paste one item per line, tick them off, add more as you go, and it moves to an Archive by itself when the last one is ticked; you can also move what is left into your tasks, start a list again, or delete it.
 - Patch 21b: the focus timer can show on the lock screen and in the Dynamic Island, with the phase and a live countdown but never the task; it is off until you switch it on in the timer's settings or in Settings.
 - Patch 22: a task can have a rough time estimate, and Plan my day (in the Tasks menu) lets you say how much time you have, pick tasks and steps, put them in order and go through them one at a time, with Focus on this, Done and Not now on each.
 - Patch 21: a task or step can be worked on with a focus timer: hold it and choose Focus on this, or open Focus timer from the Tasks menu; set the lengths, breaks and rounds with the gear; a bar on the Tasks screen shows it while it runs; alerts when a phase ends are off until you turn them on, and a task keeps a plain count of the sessions that ran to the end.

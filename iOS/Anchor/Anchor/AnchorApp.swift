@@ -104,6 +104,18 @@ enum DemoMode {
         context.insert(TaskItem(title: "Step outside for five minutes", isDone: true, completedAt: ago(0, hour: 2), sortOrder: 2))
         context.insert(TaskItem(title: "Sort out the old paperwork", sortOrder: 5, status: .setAside, energy: .lots))
 
+        context.insert(QuickList(title: "Before I leave the house", createdAt: ago(0, hour: 4), items: [
+            QuickListItem(text: "Keys", isDone: true),
+            QuickListItem(text: "Phone and charger", isDone: true),
+            QuickListItem(text: "Water bottle"),
+            QuickListItem(text: "Wallet")
+        ]))
+        context.insert(QuickList(title: "Shopping", createdAt: ago(2), items: [
+            QuickListItem(text: "Bread", isDone: true),
+            QuickListItem(text: "Milk", isDone: true),
+            QuickListItem(text: "Bananas", isDone: true)
+        ], archivedAt: ago(1)))
+
         context.insert(Affirmation(text: "I got through today. That counts.", sortOrder: 0))
         context.insert(Affirmation(text: "Small steps still move me forward.", sortOrder: 1))
 

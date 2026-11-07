@@ -204,8 +204,12 @@ struct TasksNowCard: View {
 struct TasksView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \TaskItem.sortOrder) private var tasks: [TaskItem]
+    @Query(sort: \QuickList.createdAt, order: .reverse) private var quickLists: [QuickList]
     @State private var editing: TaskItem?
     @State private var toDelete: TaskItem?
+    @State private var quickRoute: QuickRoute?
+    @State private var quickToDelete: QuickList?
+    @State private var showArchive = false
     @State private var newTitle = ""
     @State private var importable: [ImportableReminder] = []
     @State private var showImporter = false
@@ -219,18 +223,24 @@ struct TasksView: View {
     private var done: [TaskItem] {
         TaskItem.topLevel(tasks).filter(\.isDone).sorted { ($0.completedAt ?? .distantPast) > ($1.completedAt ?? .distantPast) }
     }
+    private var activeQuickLists: [QuickList] { quickLists.filter { !$0.isArchived && !$0.items.isEmpty } }
+    private var archivedQuickLists: [QuickList] { quickLists.filter(\.isArchived) }
 
     var body: some View {
         Group {
-            if tasks.isEmpty {
+            if tasks.isEmpty && quickLists.isEmpty {
                 ScrollView {
-                    Anchor.EmptyState(
-                        icon: "checkmark.circle.fill",
-                        title: "Nothing to do yet",
-                        message: "Add something small. A few words is enough.",
-                        actionTitle: "Add a task",
-                        tint: Anchor.Theme.accent
-                    ) { startNew() }
+                    VStack(spacing: 16) {
+                        Anchor.EmptyState(
+                            icon: "checkmark.circle.fill",
+                            title: "Nothing to do yet",
+                            message: "Add something small. A few words is enough.",
+                            actionTitle: "Add a task",
+                            tint: Anchor.Theme.accent
+                        ) { startNew() }
+                        Button("Make a quick list") { quickRoute = .new }
+                            .buttonStyle(Anchor.SecondaryButtonStyle())
+                    }
                     .padding()
                 }
             } else {
@@ -245,6 +255,27 @@ struct TasksView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .anchorCardRow()
+                    }
+
+                    if !activeQuickLists.isEmpty {
+                        HStack {
+                            Text("Quick lists")
+                                .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Button("New") { quickRoute = .new }
+                                .font(.subheadline)
+                        }
+                        .anchorCardRow()
+
+                        ForEach(activeQuickLists) { list in
+                            Button { quickRoute = .open(list) } label: {
+                                QuickListCard(list: list)
+                            }
+                            .buttonStyle(.plain)
+                            .anchorDeletable { modelContext.delete(list) }
+                            .anchorCardRow()
+                        }
                     }
 
                     ForEach(TaskBucket.allCases) { bucket in
@@ -288,6 +319,30 @@ struct TasksView: View {
                                 .anchorCardRow()
                         }
                     }
+
+                    if !archivedQuickLists.isEmpty {
+                        Button { showArchive = true } label: {
+                            Anchor.Card {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "archivebox")
+                                        .font(.title3)
+                                        .foregroundStyle(.secondary)
+                                    Text("Archive")
+                                        .font(.system(.body, design: .rounded))
+                                    Spacer()
+                                    Text("\(archivedQuickLists.count)")
+                                        .font(.system(.subheadline, design: .rounded))
+                                        .foregroundStyle(.secondary)
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.tertiary)
+                                }
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Archive, \(archivedQuickLists.count) quick \(archivedQuickLists.count == 1 ? "list" : "lists")")
+                        .anchorCardRow()
+                    }
                 }
                 .listStyle(.plain)
             }
@@ -313,6 +368,9 @@ struct TasksView: View {
                         }
                         .pickerStyle(.inline)
                     }
+                    Button { quickRoute = .new } label: {
+                        Label("Quick list", systemImage: "list.bullet.clipboard")
+                    }
                     Button { showDayPlan = true } label: {
                         Label("Plan my day", systemImage: "sun.max")
                     }
@@ -337,6 +395,19 @@ struct TasksView: View {
         }
         .sheet(isPresented: $showDayPlan) {
             PlanMyDayView()
+        }
+        .sheet(item: $quickRoute, onDismiss: finishQuickLists) { route in
+            switch route {
+            case .new:
+                QuickListNewSheet(onDelete: { quickToDelete = $0 })
+            case .open(let list):
+                NavigationStack {
+                    QuickListView(list: list, onDelete: { quickToDelete = $0 })
+                }
+            }
+        }
+        .navigationDestination(isPresented: $showArchive) {
+            QuickListArchiveView()
         }
         .confirmationDialog("Import which reminders?", isPresented: $showImporter, titleVisibility: .visible) {
             ForEach(importable) { reminder in
@@ -430,6 +501,14 @@ struct TasksView: View {
             && TaskItem.steps(of: task, in: tasks).isEmpty {
             modelContext.delete(task)
         }
+    }
+
+    /// Runs once a quick list's screen has closed: removes a list you chose to
+    /// delete, and any list left empty.
+    private func finishQuickLists() {
+        let deleting = quickToDelete
+        quickToDelete = nil
+        modelContext.finishQuickLists(deleting: deleting, among: quickLists)
     }
 
     private func importFromReminders() {
@@ -1670,5 +1749,307 @@ private struct DayWalkthroughView: View {
         .sheet(isPresented: $showFocus) {
             PomodoroView()
         }
+    }
+}
+
+// MARK: - Quick lists
+
+/// What the quick list sheet on the Tasks screen is showing: the form for a
+/// new list, or one list that already exists.
+private enum QuickRoute: Identifiable {
+    case new
+    case open(QuickList)
+
+    var id: String {
+        switch self {
+        case .new: return "new"
+        case .open(let list): return list.id.uuidString
+        }
+    }
+}
+
+/// One list in the Tasks screen's Quick lists section and in the Archive.
+private struct QuickListCard: View {
+    let list: QuickList
+
+    var body: some View {
+        Anchor.Card {
+            HStack(spacing: 12) {
+                Image(systemName: "list.bullet.clipboard")
+                    .font(.title3)
+                    .foregroundStyle(list.isArchived ? Color.secondary : Anchor.Theme.accent)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(list.displayTitle)
+                        .font(.system(.body, design: .rounded))
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(list.summaryText)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+        }
+    }
+}
+
+/// Type or paste one item per line, then Start opens the list right here as
+/// one focused checklist. Nothing is saved until Start.
+private struct QuickListNewSheet: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+    let onDelete: (QuickList) -> Void
+    @State private var title = ""
+    @State private var text = ""
+    @State private var created: QuickList?
+
+    private var parsed: [QuickListItem] { QuickList.parsedItems(from: text) }
+
+    private var countText: String {
+        let count = parsed.count
+        if count == 0 { return "" }
+        if count > QuickList.maxItems { return "\(count) lines. The first \(QuickList.maxItems) will be used." }
+        return count == 1 ? "1 item" : "\(count) items"
+    }
+
+    var body: some View {
+        NavigationStack {
+            if let created {
+                QuickListView(list: created, onDelete: onDelete)
+            } else {
+                Form {
+                    Section {
+                        TextField("Name (optional)", text: $title)
+                    }
+                    Section {
+                        ZStack(alignment: .topLeading) {
+                            if text.isEmpty {
+                                Text("One item per line. You can paste a list.")
+                                    .foregroundStyle(.tertiary)
+                                    .padding(.top, 8)
+                                    .padding(.leading, 5)
+                                    .allowsHitTesting(false)
+                            }
+                            TextEditor(text: $text)
+                                .scrollContentBackground(.hidden)
+                                .frame(minHeight: 180)
+                        }
+                    } footer: {
+                        Text(countText)
+                    }
+                }
+                .anchorSettingsStyle()
+                .navigationTitle("Quick list")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { dismiss() }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Start", action: start)
+                            .disabled(parsed.isEmpty)
+                    }
+                }
+            }
+        }
+    }
+
+    private func start() {
+        let items = Array(parsed.prefix(QuickList.maxItems))
+        guard !items.isEmpty else { return }
+        let name = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let list = QuickList(title: name.isEmpty ? QuickList.defaultTitle() : name, items: items)
+        modelContext.insert(list)
+        created = list
+    }
+}
+
+/// One list as a single focused checklist: tap an item to tick it, swipe to
+/// remove it, add more at the bottom. Ticking the last item moves the list to
+/// the Archive; unticking one brings it back. Nothing is counted against you.
+private struct QuickListView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+    @Query(sort: \TaskItem.sortOrder) private var tasks: [TaskItem]
+    @Bindable var list: QuickList
+    /// Asks whoever opened this screen to delete the list once it has closed,
+    /// so this screen never reads a list that is already gone.
+    let onDelete: (QuickList) -> Void
+    @State private var newItem = ""
+    @State private var confirmingDelete = false
+
+    var body: some View {
+        List {
+            if list.isArchived {
+                Text("All ticked off. This list is in the Archive.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .listRowBackground(Color.clear)
+            }
+            ForEach(list.items) { item in
+                row(item)
+                    .listRowBackground(Color.clear)
+            }
+        }
+        .listStyle(.plain)
+        .anchorBackground()
+        .safeAreaInset(edge: .bottom) { addBar }
+        .navigationTitle(list.displayTitle)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("Close") { dismiss() }
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    Button(action: moveToTasks) {
+                        Label("Move open items to Tasks", systemImage: "arrow.right.circle")
+                    }
+                    .disabled(list.openCount == 0)
+                    if list.doneCount > 0 {
+                        Button {
+                            withAnimation(.snappy) { list.startAgain() }
+                        } label: {
+                            Label("Start again", systemImage: "arrow.counterclockwise")
+                        }
+                    }
+                    Button(role: .destructive) {
+                        confirmingDelete = true
+                    } label: {
+                        Label("Delete list", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+                .accessibilityLabel("More")
+            }
+        }
+        .confirmationDialog("Delete this list?", isPresented: $confirmingDelete, titleVisibility: .visible) {
+            Button("Delete list", role: .destructive) {
+                onDelete(list)
+                dismiss()
+            }
+            Button("Keep it", role: .cancel) {}
+        }
+    }
+
+    private func row(_ item: QuickListItem) -> some View {
+        Button {
+            withAnimation(.snappy) { list.setItem(item.id, done: !item.isDone) }
+        } label: {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: item.isDone ? "checkmark.circle.fill" : "circle")
+                    .font(.title2)
+                    .foregroundStyle(item.isDone ? Anchor.Theme.sage : Anchor.Theme.accent)
+                Text(item.text)
+                    .font(.system(.title3, design: .rounded))
+                    .strikethrough(item.isDone)
+                    .foregroundStyle(item.isDone ? .secondary : .primary)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.vertical, 6)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(item.text)
+        .accessibilityValue(item.isDone ? "Ticked" : "Not ticked")
+        .anchorDeletable {
+            withAnimation(.snappy) { list.removeItem(item.id) }
+        }
+    }
+
+    private var addBar: some View {
+        HStack(spacing: 8) {
+            TextField("Add an item", text: $newItem)
+                .textFieldStyle(.roundedBorder)
+                .onSubmit(addItem)
+            Button("Add", action: addItem)
+                .buttonStyle(Anchor.SecondaryButtonStyle())
+                .disabled(newItem.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        }
+        .padding()
+        .background(.thinMaterial)
+    }
+
+    private func addItem() {
+        let new = QuickList.parsedItems(from: newItem)
+        guard !new.isEmpty else { return }
+        newItem = ""
+        withAnimation(.snappy) { list.addItems(new) }
+    }
+
+    /// Copies what is still open into Tasks, and takes those items off the
+    /// list, so nothing shows twice. What was ticked stays on the list. A list
+    /// left with nothing is removed when this screen closes.
+    private func moveToTasks() {
+        let open = list.items.filter { !$0.isDone }
+        guard !open.isEmpty else { return }
+        var order = (tasks.map(\.sortOrder).max() ?? -1) + 1
+        for item in open {
+            modelContext.insert(TaskItem(title: item.text, sortOrder: order))
+            order += 1
+        }
+        list.items.removeAll { !$0.isDone }
+        list.syncArchive()
+        dismiss()
+    }
+}
+
+/// Lists that were ticked off to the end. Tap one to look at it, or untick an
+/// item (or use Start again) to use it again.
+private struct QuickListArchiveView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \QuickList.createdAt, order: .reverse) private var lists: [QuickList]
+    @State private var opened: QuickList?
+    @State private var toDelete: QuickList?
+
+    private var archived: [QuickList] {
+        lists.filter(\.isArchived).sorted { ($0.archivedAt ?? .distantPast) > ($1.archivedAt ?? .distantPast) }
+    }
+
+    var body: some View {
+        Group {
+            if archived.isEmpty {
+                ScrollView {
+                    Anchor.EmptyState(
+                        icon: "archivebox",
+                        title: "Nothing in the Archive",
+                        message: "A quick list moves here by itself when you tick off the last item.",
+                        tint: Anchor.Theme.sage
+                    )
+                    .padding()
+                }
+            } else {
+                List {
+                    ForEach(archived) { list in
+                        Button { opened = list } label: {
+                            QuickListCard(list: list)
+                        }
+                        .buttonStyle(.plain)
+                        .anchorDeletable { modelContext.delete(list) }
+                        .anchorCardRow()
+                    }
+                }
+                .listStyle(.plain)
+            }
+        }
+        .anchorBackground()
+        .navigationTitle("Archive")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $opened, onDismiss: finish) { list in
+            NavigationStack {
+                QuickListView(list: list, onDelete: { toDelete = $0 })
+            }
+        }
+    }
+
+    private func finish() {
+        let deleting = toDelete
+        toDelete = nil
+        modelContext.finishQuickLists(deleting: deleting, among: lists)
     }
 }
