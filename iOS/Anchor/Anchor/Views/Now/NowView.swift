@@ -62,7 +62,7 @@ struct NowView: View {
                     }
 
                     Anchor.Card {
-                        NextHourChecklistView()
+                        TasksNowCard()
                     }
 
                     Anchor.Card(accentColor: Anchor.Theme.sage) {

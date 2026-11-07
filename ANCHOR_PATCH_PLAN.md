@@ -1,6 +1,6 @@
 # Anchor — Patch Plan (v2-recovery)
 
-*Living document. Last updated: 7 Nov 2026, after Patch 13b was written (Patches 1 to 13a are pushed; none confirmed building; Patch 13b awaits your paste).*
+*Living document. Last updated: 7 Nov 2026, after Patch 15 was written (Patches 1 to 13a are pushed; none confirmed building; Patches 13b and 15 await your paste, in that order).*
 
 > ## READ THIS FIRST: THIS FILE IS THE PROMPT
 >
@@ -45,10 +45,13 @@ The source code repository is at <https://github.com/Kousei-Uchu/Anchor/tree/v2-
 | 12d: Plan screens, part 4: Appointments | 🟡 Pushed by you; build not yet confirmed |
 | 13a: Edit pattern on Now and Recovery: Affirmations, De-escalation scripts, Who I'm doing this for, Before tracking | 🟡 Pushed by you; build not yet confirmed |
 | 13b: Edit pattern on Bridge and the Journal entry preview; old Edit components removed | 🟡 Written (`patch-13b.sh`); awaiting your paste and build |
-| 14 onward | Not started |
+| 14: Message log rework | ⏸ Waiting on D8 (your answer on the message log's main function) |
+| 15: Tasks: `TaskItem`, carry-over from Next hour only, basic list, Plan widget, export and import, demo data | 🟡 Written (`patch-15.sh`); awaiting your paste and build (paste after Patch 13b) |
+| 16 onward | Not started |
 
 ## Change log of this plan
 
+- **7 Nov 2026 (23):** Patch 15 written; Patch 14 is skipped for now because it needs your answer to D8. **Tasks:** a new `TaskItem` model (title, notes, done, created and completed dates, order, an optional Reminders link). Every field after the title has a default, so Patches 16 to 19 can add due dates, subtasks, dependencies and status without a store migration. **No migration plan was added:** adding a model to an existing SwiftData store is an automatic lightweight change, and a versioned plan is only worth writing once a field changes shape. If you would rather have one first, say so. **Carry-over:** the first launch after this copies any "Next hour only" rows into tasks, saves them, marks itself done and removes the old rows; if the saved store could not open it does nothing. `NextHourItem` stays in the schema, unused, until a later release removes it. **Screens:** Plan gains a Tasks widget (after Appointments in the default order; saved layouts get it at the end) and a classic-layout tile; the Tasks screen has tap to edit, the plus, a quick add bar, a labelled Reorder, swipe or long-press delete, a Done section with Clear done, and Import from Reminders. Now's "Next hour only" card is now a Tasks card showing the first four open tasks, with quick add and the header opening the list. **Dropped:** the old bell on the add row that also created a Reminders item; Reminders is import and tick-off only, per D2's recommendation. The Reminders permission text and Privacy page say so. Export, import, clear all and the data counts include tasks (the export key is optional, so older files still import). Demo data seeds three tasks. The new views live in `NextHourChecklistView.swift` so the project file needs no change; a rename can wait for a tidy-up patch. The web demo (`DemoApp.tsx`) still says "Next hour only" and is left alone while the web demo is deferred. Not compiled here.
 - **7 Nov 2026 (22):** Patch 13b written: the last screens on the old pattern, and the old pattern is gone. **Bridge draft:** tap an item to reword it, the plus adds, Delete is in the sheet and the swipe and long-press menu; ticking off stays on the card; the small compose sheet and the manage list are removed, and an "Already brought up" switch is in the item sheet. **Session prep:** tap the notes card to write in it. **Post-session notes:** tap a past session to write its notes in one sheet (the read page is removed, so it is one tap, not two); a session whose notes were opened and left blank no longer says "Has notes". **Feedback-loop diagrams:** the plus adds a diagram and opens it, swipe or long-press deletes, the manage list is removed. A diagram keeps a plain **Edit** button on its own page, on purpose: dragging nodes cannot share a screen with just looking at it, and the rebuild in Patches 26 to 28 will revisit it. **Journal entry preview:** tapping the entry opens the editor, and a pencil replaces the Edit text button. `EditToolbarButton` and `EditorSheet` are deleted from `ContentView.swift`; nothing references them. **Open:** the prep notes screen still creates an empty entry every time it opens, which is older behaviour I left alone. Not compiled here.
 - **7 Nov 2026 (21):** Patch 13a written: the screens left on the old pattern in Now and Recovery. **Affirmations** and **De-escalation scripts** are lists of cards: tap one to rewrite it, the plus adds, Delete is in the sheet and the long-press menu, and a labelled Reorder shows with two or more because the order is the order Now steps through. Browse suggestions is a button under the affirmations (and under the empty state). **Who I'm doing this for** has a card per line under its two headings; the plus is a small menu (someone, or a reason) and each heading has its own add button; no Reorder, because order means nothing there. **Before tracking** (Streaks) is tap to change. `AffirmationsEditorView`, `DeEscalationScriptsEditorView` and `RecoveryMotivationsEditorView` are removed. History was rewritten afterwards to drop Claude co-author trailers; hashes quoted earlier in this file are from before that. **Still left for 13b:** Bridge (Appointment prep, Post-session notes, Bridge draft list, Feedback loop diagrams) and the Edit button on the Journal entry preview, then removing `EditToolbarButton` and `EditorSheet`. Not compiled here.
 - **7 Nov 2026 (20):** Patch 12d written: Appointments, the last of the Plan screens. One screen and no Edit button. Tap an empty calendar day to schedule a session, tap a day with a session (or its row in the list) to move or cancel it, and the plus schedules any date; the schedule sheet now has a date picker so the plus and the calendar share it. Cancelling is inside the session sheet and in the row's long-press menu. The typical cadence is a stepper on the screen, and Remove all (with its question) stays in the All sessions card. `AppointmentEditorView` is removed. **Moved to Patch 13:** De-escalation scripts and Affirmations are reached from Plan but their files live in `Views/Now`, so they go with Now; Patch 13 also removes `EditToolbarButton` and `EditorSheet` when the last screen has moved. Patch 12 is complete once 12a to 12d are pasted. Not compiled here.
@@ -117,7 +120,7 @@ The branch did not build because `iOS/Anchor/Anchor/Views/Widgets/` was untracke
 | # | Decision | Affects | My recommendation | Status |
 | --- | --- | --- | --- | --- |
 | D1 | Where is the missing widget-layout file? | Patch 0 | — | ✅ Closed |
-| D2 | Keep the Reminders (EventKit) import from the old "Next Hour" list? | Patch 15 | Keep as an optional import on the task list | Open |
+| D2 | Keep the Reminders (EventKit) import from the old "Next Hour" list? | Patch 15 | Keep as an optional import on the task list | ✅ Assumed, 7 Nov 2026: Patch 15 follows the recommendation (import only). Say if you want it changed. |
 | D3 | Demo strategy (point 25): shared-data rebuild with parity checks, or cross-platform rewrite? | Patches 49–50, 54 | Decide with D4 | Open |
 | D4 | Android: real goal or "nice to know"? | Point 28, D3, encryption (Patches 33–35) | Finish iOS first, decide *before* Patch 49 | Open |
 | D5 | Encryption approach (point 20) | Patches 33–35 | Field-level encryption, Keychain key, encrypted exports | Open |
@@ -359,7 +362,7 @@ First add an explicit SwiftData migration plan: a store that fails to open shows
 
 | Patch | Contents | Points | Size | Status |
 | --- | --- | --- | --- | --- |
-| **15** | `TaskItem` model, migration from `NextHourItem`, basic list; new `WidgetID` entry; DTO, data-viewer row, seed data | 7 | M | ⬜ |
+| **15** | `TaskItem` model, migration from `NextHourItem`, basic list; new `WidgetID` entry; DTO, data-viewer row, seed data | 7 | M | 🟡 |
 | **16** | Due dates incl. fuzzy values, time-bucket grouping | 7 | S | ⬜ |
 | **17** | Subtasks with collapse/expand and derived progress | 7 | M | ⬜ |
 | **18** | Dependencies: greyed blocked tasks, "Waiting on…", auto-unlock | 7 | M | ⬜ |
@@ -507,4 +510,4 @@ A reminder you set yourself, per person, **off by default**. Lock-screen text is
 
 ## Appendix B: Suggested next session
 
-Patch **14** (Message log review and rework; needs your answer to D8), once Patches 1 to 13b build. D8 is still open, so if you would rather not answer it yet, Patch 20 (widget drag and drop) is independent and can go next. D9 is closed, so Journal polish carries on in Swift.
+Patch **16** (due dates and the time-bucket grouping on tasks), once Patches 1 to 15 build. Patch 14 still needs your answer to D8; Patch 20 (widget drag and drop) is independent of both. D9 is closed, so Journal polish carries on in Swift.

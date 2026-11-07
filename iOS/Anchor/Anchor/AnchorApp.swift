@@ -13,6 +13,9 @@ struct AnchorApp: App {
 
     init() {
         UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
+        if !DemoMode.isOn {
+            TaskMigration.migrateNextHourItemsIfNeeded(container: container)
+        }
     }
 
     var body: some Scene {
@@ -83,8 +86,9 @@ enum DemoMode {
             typicalTime: DateComponents(hour: 10, minute: 30), typicalCadenceDays: 14,
             occurrences: [AppointmentOccurrence(scheduledDate: tuesday)]))
 
-        context.insert(NextHourItem(text: "Drink some water"))
-        context.insert(NextHourItem(text: "Step outside for five minutes", isDone: true))
+        context.insert(TaskItem(title: "Drink some water", sortOrder: 0))
+        context.insert(TaskItem(title: "Reply to one message", notes: "Just the easy one.", sortOrder: 1))
+        context.insert(TaskItem(title: "Step outside for five minutes", isDone: true, completedAt: ago(0, hour: 2), sortOrder: 2))
 
         context.insert(Affirmation(text: "I got through today. That counts.", sortOrder: 0))
         context.insert(Affirmation(text: "Small steps still move me forward.", sortOrder: 1))

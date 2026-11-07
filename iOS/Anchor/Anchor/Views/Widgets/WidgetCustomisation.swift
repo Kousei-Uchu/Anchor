@@ -32,7 +32,7 @@ enum WidgetTab: String, CaseIterable, Identifiable {
     var defaultOrder: [WidgetID] {
         switch self {
         case .plan:
-            return [.safetyPlan, .triggerWindows, .appointments, .contacts, .deEscalation,
+            return [.safetyPlan, .triggerWindows, .appointments, .tasks, .contacts, .deEscalation,
                     .grounding, .decisionPresets, .affirmations, .recovery, .motivations]
         case .bridge:
             var ids: [WidgetID] = [.thingsToRaise, .nextSession, .reframing, .feedbackLoops]

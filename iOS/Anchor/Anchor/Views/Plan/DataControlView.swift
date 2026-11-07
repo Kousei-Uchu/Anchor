@@ -9,8 +9,7 @@
 //  range), import a previous Anchor export back in, and clear everything
 //  outright. Internal-only data (the mascot's pre-written line pool) is
 //  deliberately excluded from export/import/counts — it isn't the user's
-//  data, it's app content. Next Hour items are excluded too since they're
-//  designed to self-clear and were never meant to be a durable record.
+//  data, it's app content. Tasks are included.
 //
 
 import SwiftUI
@@ -36,6 +35,7 @@ struct DataControlView: View {
     @Query private var decisionCategories: [DecisionPresetCategory]
     @Query private var deEscalationScripts: [DeEscalationScript]
     @Query private var affirmations: [Affirmation]
+    @Query private var tasks: [TaskItem]
     @Query private var recoveryCounters: [RecoveryCounter]
     @Query private var recoveryMotivations: [RecoveryMotivation]
     @Query private var recoveryDayEntries: [RecoveryDayEntry]
@@ -79,6 +79,7 @@ struct DataControlView: View {
                 countRow("Decision-preset categories", decisionCategories.count, icon: "checklist")
                 countRow("De-escalation scripts", deEscalationScripts.count, icon: "wind")
                 countRow("Affirmations", affirmations.count, icon: "sparkles")
+                countRow("Tasks", tasks.count, icon: "checkmark.circle.fill")
                 countRow("Recovery counters", recoveryCounters.count, icon: "calendar.badge.checkmark")
                 countRow("Urges logged", recoveryUrges.count, icon: "wind")
             }
@@ -193,7 +194,8 @@ struct DataControlView: View {
             recoveryCounters: recoveryCounters.map(RecoveryCounterDTO.init),
             recoveryMotivations: recoveryMotivations.map(RecoveryMotivationDTO.init),
             recoveryDayEntries: recoveryDayEntries.map(RecoveryDayEntryDTO.init),
-            recoveryUrges: recoveryUrges.map(RecoveryUrgeDTO.init)
+            recoveryUrges: recoveryUrges.map(RecoveryUrgeDTO.init),
+            tasks: tasks.map(TaskItemDTO.init)
         )
         guard let data = try? JSONEncoder.anchorExport.encode(export) else { return }
         writeAndShare(data: data, filename: "anchor-export-\(fileTimestamp()).json")
@@ -230,6 +232,7 @@ struct DataControlView: View {
         let existingCategoryIDs = Set(decisionCategories.map(\.id))
         let existingScriptIDs = Set(deEscalationScripts.map(\.id))
         let existingAffirmationIDs = Set(affirmations.map(\.id))
+        let existingTaskIDs = Set(tasks.map(\.id))
 
         var importedCount = 0
         for dto in export.journalEntries where !existingJournalIDs.contains(dto.id) {
@@ -278,6 +281,9 @@ struct DataControlView: View {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
         for dto in export.affirmations where !existingAffirmationIDs.contains(dto.id) {
+            modelContext.insert(dto.toModel()); importedCount += 1
+        }
+        for dto in export.tasks ?? [] where !existingTaskIDs.contains(dto.id) {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
         // Recovery data is optional in the file, so exports from earlier versions still import.
@@ -425,6 +431,7 @@ struct DataControlView: View {
         for item in decisionCategories { modelContext.delete(item) }
         for item in deEscalationScripts { modelContext.delete(item) }
         for item in affirmations { modelContext.delete(item) }
+        for item in tasks { modelContext.delete(item) }
         for item in recoveryCounters { modelContext.delete(item) }
         for item in recoveryMotivations { modelContext.delete(item) }
         for item in recoveryDayEntries { modelContext.delete(item) }
@@ -515,8 +522,8 @@ struct ShareSheet: UIViewControllerRepresentable {
 // SwiftData @Model classes aren't directly Codable, so each exportable
 // type gets a small Codable mirror plus a way back to a live model.
 // Deliberately excludes MascotLine (internal app content, not user data)
-// and NextHourItem (designed to self-clear, not meant to be a durable
-// record) — see the file header.
+// and the retired NextHourItem (its rows become tasks on first launch) —
+// see the file header.
 
 private extension JSONEncoder {
     static var anchorExport: JSONEncoder {
@@ -585,6 +592,7 @@ struct AnchorDataExport: Codable {
     var recoveryMotivations: [RecoveryMotivationDTO]? = nil
     var recoveryDayEntries: [RecoveryDayEntryDTO]? = nil
     var recoveryUrges: [RecoveryUrgeDTO]? = nil
+    var tasks: [TaskItemDTO]? = nil
 }
 
 /// Every section is optional in the file: an export from any earlier version,
@@ -595,7 +603,7 @@ extension AnchorDataExport {
         "journalEntries", "checkIns", "contacts", "groundingTools", "safetyPlans", "triggerWindows",
         "bridgeDraftItems", "diagrams", "threadMessages", "supportCalendarEntries", "futureNotes",
         "unsentDrafts", "decisionCategories", "deEscalationScripts", "affirmations",
-        "recoveryCounters", "recoveryMotivations", "recoveryDayEntries", "recoveryUrges"
+        "recoveryCounters", "recoveryMotivations", "recoveryDayEntries", "recoveryUrges", "tasks"
     ]
 
     init(from decoder: Decoder) throws {
@@ -619,6 +627,7 @@ extension AnchorDataExport {
         recoveryMotivations = c.lossyArray(RecoveryMotivationDTO.self, forKey: .recoveryMotivations)
         recoveryDayEntries = c.lossyArray(RecoveryDayEntryDTO.self, forKey: .recoveryDayEntries)
         recoveryUrges = c.lossyArray(RecoveryUrgeDTO.self, forKey: .recoveryUrges)
+        tasks = c.lossyArray(TaskItemDTO.self, forKey: .tasks)
     }
 }
 
@@ -793,6 +802,19 @@ struct DeEscalationScriptDTO: Codable {
     var id: UUID; var text: String; var sortOrder: Int
     init(_ m: DeEscalationScript) { id = m.id; text = m.text; sortOrder = m.sortOrder }
     func toModel() -> DeEscalationScript { DeEscalationScript(id: id, text: text, sortOrder: sortOrder) }
+}
+
+struct TaskItemDTO: Codable {
+    var id: UUID; var title: String; var notes: String; var isDone: Bool
+    var completedAt: Date?; var createdAt: Date; var sortOrder: Int
+    init(_ m: TaskItem) {
+        id = m.id; title = m.title; notes = m.notes; isDone = m.isDone
+        completedAt = m.completedAt; createdAt = m.createdAt; sortOrder = m.sortOrder
+    }
+    func toModel() -> TaskItem {
+        TaskItem(id: id, title: title, notes: notes, isDone: isDone,
+                 completedAt: completedAt, createdAt: createdAt, sortOrder: sortOrder)
+    }
 }
 
 struct AffirmationDTO: Codable {
