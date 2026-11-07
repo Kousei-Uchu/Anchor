@@ -448,7 +448,7 @@ struct MotivationsWidget: View {
 struct TasksWidget: View {
     @Query(sort: \TaskItem.sortOrder) private var tasks: [TaskItem]
 
-    private var open: [TaskItem] { tasks.filter { !$0.isDone } }
+    private var open: [TaskItem] { TaskItem.listOrder(tasks) }
 
     var body: some View {
         Anchor.Widget(icon: "checkmark.circle.fill", title: "Tasks", fillsHeight: true) {
