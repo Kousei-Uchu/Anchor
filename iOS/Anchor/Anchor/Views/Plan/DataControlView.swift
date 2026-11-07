@@ -24,6 +24,7 @@ struct DataControlView: View {
     @Query private var contacts: [TrustedContact]
     @Query private var groundingTools: [GroundingTool]
     @Query private var safetyPlans: [SafetyPlan]
+    @Query private var planSections: [SafetyPlanSection]
     @Query private var triggerWindows: [TriggerWindow]
     @Query private var appointmentSeries: [AppointmentSeries]
     @Query private var bridgeDraftItems: [BridgeDraftItem]
@@ -70,7 +71,7 @@ struct DataControlView: View {
                 countRow("Check-ins", checkIns.count, icon: "circle.hexagongrid.fill")
                 countRow("Trusted contacts", contacts.count, icon: "person.2.fill")
                 countRow("Grounding tools", groundingTools.count, icon: "leaf.fill")
-                countRow("Safety plans", safetyPlans.count, icon: "shield.fill")
+                countRow("Safety plan sections", planSections.count, icon: "shield.fill")
                 countRow("Trigger windows", triggerWindows.count, icon: "clock.fill")
                 countRow("Appointment series", appointmentSeries.count, icon: "calendar")
                 countRow("Bridge draft items", bridgeDraftItems.count, icon: "doc.text.fill")
@@ -187,6 +188,7 @@ struct DataControlView: View {
             contacts: contacts.map(TrustedContactDTO.init),
             groundingTools: groundingTools.map(GroundingToolDTO.init),
             safetyPlans: safetyPlans.map(SafetyPlanDTO.init),
+            safetySections: planSections.map(SafetyPlanSectionDTO.init),
             triggerWindows: triggerWindows.map(TriggerWindowDTO.init),
             bridgeDraftItems: bridgeDraftItems.map(BridgeDraftItemDTO.init),
             diagrams: diagrams.map(FeedbackLoopDiagramDTO.init),
@@ -231,6 +233,7 @@ struct DataControlView: View {
         let existingContactIDs = Set(contacts.map(\.id))
         let existingToolIDs = Set(groundingTools.map(\.id))
         let existingSafetyPlanIDs = Set(safetyPlans.map(\.id))
+        let existingSectionIDs = Set(planSections.map(\.id))
         let existingWindowIDs = Set(triggerWindows.map(\.id))
         let existingBridgeIDs = Set(bridgeDraftItems.map(\.id))
         let existingDiagramIDs = Set(diagrams.map(\.id))
@@ -261,6 +264,24 @@ struct DataControlView: View {
         }
         for dto in export.safetyPlans where !existingSafetyPlanIDs.contains(dto.id) {
             modelContext.insert(dto.toModel()); importedCount += 1
+        }
+        for dto in export.safetySections ?? [] where !existingSectionIDs.contains(dto.id) {
+            modelContext.insert(dto.toModel()); importedCount += 1
+        }
+        // A file made before sections existed carries only the four text
+        // fields. If there are no sections here yet, copy them across once.
+        if export.safetySections == nil, planSections.isEmpty,
+           let old = export.safetyPlans.first(where: { dto in
+               [dto.warningSignsText, dto.copingStrategiesText, dto.reasonsToKeepGoingText, dto.environmentSafetyStepsText]
+                   .contains { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+           }) {
+            for section in SafetyPlanSections.makeSections(
+                warningSigns: old.warningSignsText, copingStrategies: old.copingStrategiesText,
+                reasons: old.reasonsToKeepGoingText, environment: old.environmentSafetyStepsText,
+                edited: old.lastEditedAt
+            ) {
+                modelContext.insert(section); importedCount += 1
+            }
         }
         for dto in export.triggerWindows where !existingWindowIDs.contains(dto.id) {
             modelContext.insert(dto.toModel()); importedCount += 1
@@ -442,6 +463,7 @@ struct DataControlView: View {
         for item in contacts { modelContext.delete(item) }
         for item in groundingTools { modelContext.delete(item) }
         for item in safetyPlans { modelContext.delete(item) }
+        for item in planSections { modelContext.delete(item) }
         for item in triggerWindows { modelContext.delete(item) }
         for item in appointmentSeries { modelContext.delete(item) }
         for item in bridgeDraftItems { modelContext.delete(item) }
@@ -604,6 +626,8 @@ struct AnchorDataExport: Codable {
     var contacts: [TrustedContactDTO] = []
     var groundingTools: [GroundingToolDTO] = []
     var safetyPlans: [SafetyPlanDTO] = []
+    /// Optional so exports made before safety plan sections existed still import.
+    var safetySections: [SafetyPlanSectionDTO]? = nil
     var triggerWindows: [TriggerWindowDTO] = []
     var bridgeDraftItems: [BridgeDraftItemDTO] = []
     var diagrams: [FeedbackLoopDiagramDTO] = []
@@ -637,7 +661,7 @@ extension AnchorDataExport {
         "bridgeDraftItems", "diagrams", "threadMessages", "supportCalendarEntries", "futureNotes",
         "unsentDrafts", "decisionCategories", "deEscalationScripts", "affirmations",
         "recoveryCounters", "recoveryMotivations", "recoveryDayEntries", "recoveryUrges", "tasks",
-        "quickLists", "routines", "itemLists"
+        "quickLists", "routines", "itemLists", "safetySections"
     ]
 
     init(from decoder: Decoder) throws {
@@ -647,6 +671,7 @@ extension AnchorDataExport {
         contacts = c.lossyArray(TrustedContactDTO.self, forKey: .contacts) ?? []
         groundingTools = c.lossyArray(GroundingToolDTO.self, forKey: .groundingTools) ?? []
         safetyPlans = c.lossyArray(SafetyPlanDTO.self, forKey: .safetyPlans) ?? []
+        safetySections = c.lossyArray(SafetyPlanSectionDTO.self, forKey: .safetySections)
         triggerWindows = c.lossyArray(TriggerWindowDTO.self, forKey: .triggerWindows) ?? []
         bridgeDraftItems = c.lossyArray(BridgeDraftItemDTO.self, forKey: .bridgeDraftItems) ?? []
         diagrams = c.lossyArray(FeedbackLoopDiagramDTO.self, forKey: .diagrams) ?? []
@@ -753,6 +778,20 @@ struct SafetyPlanDTO: Codable {
         SafetyPlan(id: id, lastEditedAt: lastEditedAt, warningSignsText: warningSignsText,
                    copingStrategiesText: copingStrategiesText, reasonsToKeepGoingText: reasonsToKeepGoingText,
                    environmentSafetyStepsText: environmentSafetyStepsText)
+    }
+}
+
+struct SafetyPlanSectionDTO: Codable {
+    var id: UUID; var title: String; var text: String
+    var iconName: String; var tintName: String
+    var sortOrder: Int; var isHidden: Bool; var role: String; var lastEditedAt: Date
+    init(_ m: SafetyPlanSection) {
+        id = m.id; title = m.title; text = m.text; iconName = m.iconName; tintName = m.tintName
+        sortOrder = m.sortOrder; isHidden = m.isHidden; role = m.role; lastEditedAt = m.lastEditedAt
+    }
+    func toModel() -> SafetyPlanSection {
+        SafetyPlanSection(id: id, title: title, text: text, iconName: iconName, tintName: tintName,
+                          sortOrder: sortOrder, isHidden: isHidden, role: role, lastEditedAt: lastEditedAt)
     }
 }
 

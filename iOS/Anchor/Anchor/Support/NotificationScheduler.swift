@@ -275,11 +275,8 @@ extension NotificationScheduler {
         let scheduler = NotificationScheduler(context: context)
         let windows = (try? context.fetch(FetchDescriptor<TriggerWindow>())) ?? []
         let contacts = (try? context.fetch(FetchDescriptor<TrustedContact>(sortBy: [SortDescriptor(\.sortOrder)]))) ?? []
-        let plan = (try? context.fetch(FetchDescriptor<SafetyPlan>()))?.first
-        let reasons = (plan?.reasonsToKeepGoingText ?? "")
-            .split(separator: "\n")
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .filter { !$0.isEmpty }
+        let sections = (try? context.fetch(FetchDescriptor<SafetyPlanSection>())) ?? []
+        let reasons = SafetyPlanSections.reasonLines(from: sections)
         let escalationContacts = contacts.filter { $0.escalationEnabled }
 
         for window in windows {
