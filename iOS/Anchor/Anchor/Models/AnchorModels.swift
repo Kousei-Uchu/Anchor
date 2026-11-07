@@ -690,15 +690,37 @@ final class BridgeDraftItem {
     /// What was said in answer, written by the person after the session.
     /// Only used when the item is a question.
     var answer: String = ""
+    /// The provider (an `AppointmentSeries` id) this is for. Nil means it is
+    /// for anyone. Kept as a plain id rather than a relationship, so removing
+    /// a provider can never remove an item.
+    var providerID: UUID? = nil
 
     init(id: UUID = UUID(), createdAt: Date = .now, text: String, isResolved: Bool = false,
-         isQuestion: Bool = false, answer: String = "") {
+         isQuestion: Bool = false, answer: String = "", providerID: UUID? = nil) {
         self.id = id
         self.createdAt = createdAt
         self.text = text
         self.isResolved = isResolved
         self.isQuestion = isQuestion
         self.answer = answer
+        self.providerID = providerID
+    }
+}
+
+extension BridgeDraftItem {
+    /// The provider this item is for, or nil when it is for anyone. An item
+    /// whose provider has since gone counts as being for anyone, so nothing
+    /// is ever hidden by a missing person.
+    func provider(in providers: [AppointmentSeries]) -> AppointmentSeries? {
+        guard let providerID else { return nil }
+        return providers.first { $0.id == providerID }
+    }
+
+    /// True when this belongs on a page or an export for the given provider:
+    /// it is for them, or for anyone.
+    func isFor(_ providerID: UUID, in providers: [AppointmentSeries]) -> Bool {
+        guard let own = provider(in: providers) else { return true }
+        return own.id == providerID
     }
 }
 

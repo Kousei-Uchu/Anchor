@@ -856,14 +856,18 @@ struct BridgeDraftItemDTO: Codable {
     /// Optional so exports made before questions existed still import.
     var isQuestion: Bool? = nil
     var answer: String? = nil
+    /// The provider (an appointmentSeries id) the item is for. Missing means
+    /// anyone, so exports made before providers had their own items still import.
+    var providerID: UUID? = nil
     init(_ m: BridgeDraftItem) {
         id = m.id; createdAt = m.createdAt; text = m.text; isResolved = m.isResolved
         isQuestion = m.isQuestion ? true : nil
         answer = m.answer.isEmpty ? nil : m.answer
+        providerID = m.providerID
     }
     func toModel() -> BridgeDraftItem {
         BridgeDraftItem(id: id, createdAt: createdAt, text: text, isResolved: isResolved,
-                        isQuestion: isQuestion ?? false, answer: answer ?? "")
+                        isQuestion: isQuestion ?? false, answer: answer ?? "", providerID: providerID)
     }
 }
 

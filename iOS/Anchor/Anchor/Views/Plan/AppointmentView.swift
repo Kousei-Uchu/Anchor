@@ -542,9 +542,25 @@ struct ProviderPageHost: View {
     private func finishEditing() {
         let deleting = toDelete
         toDelete = nil
-        if let deleting { modelContext.delete(deleting) }
+        var removedIDs: [UUID] = []
+        if let deleting {
+            removedIDs.append(deleting.id)
+            modelContext.delete(deleting)
+        }
         for provider in providers where provider !== deleting && provider.isBlankProvider {
+            removedIDs.append(provider.id)
             modelContext.delete(provider)
+        }
+        releaseItems(for: removedIDs)
+    }
+
+    /// Things to raise that were for a provider who has been removed become
+    /// for anyone. They are never deleted along with the provider.
+    private func releaseItems(for removedIDs: [UUID]) {
+        guard !removedIDs.isEmpty,
+              let items = try? modelContext.fetch(FetchDescriptor<BridgeDraftItem>()) else { return }
+        for item in items {
+            if let id = item.providerID, removedIDs.contains(id) { item.providerID = nil }
         }
     }
 }

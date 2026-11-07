@@ -93,13 +93,15 @@ enum DemoMode {
 
         let tuesday = Calendar.current.nextDate(after: now, matching: DateComponents(hour: 10, minute: 30, weekday: 3),
                                                 matchingPolicy: .nextTime) ?? now.addingTimeInterval(3 * 86_400)
-        context.insert(AppointmentSeries(clinicianLabel: "Dr Lee", typicalDayOfWeek: 3,
+        let lee = AppointmentSeries(clinicianLabel: "Dr Lee", typicalDayOfWeek: 3,
             typicalTime: DateComponents(hour: 10, minute: 30), typicalCadenceDays: 14,
             occurrences: [AppointmentOccurrence(scheduledDate: tuesday)],
-            role: "Psychologist", sortOrder: 0))
-        context.insert(AppointmentSeries(clinicianLabel: "Dr Patel", typicalCadenceDays: 60,
+            role: "Psychologist", sortOrder: 0)
+        context.insert(lee)
+        let patel = AppointmentSeries(clinicianLabel: "Dr Patel", typicalCadenceDays: 60,
             occurrences: [AppointmentOccurrence(scheduledDate: now.addingTimeInterval(12 * 86_400))],
-            role: "GP", exportLabel: "My GP", notes: "Ask for the longer appointment.", sortOrder: 1))
+            role: "GP", exportLabel: "My GP", notes: "Ask for the longer appointment.", sortOrder: 1)
+        context.insert(patel)
 
         let water = TaskItem(title: "Drink some water", sortOrder: 0, energy: .little, estimateMinutes: 5)
         water.setDue(.today)
@@ -171,8 +173,8 @@ enum DemoMode {
                                mentalLoad: 0.45, physicalEnergy: 0.5, socialEnergy: 0.35))
 
         context.insert(BridgeDraftItem(text: "Sleep has been off"))
-        context.insert(BridgeDraftItem(text: "Medication question"))
-        context.insert(BridgeDraftItem(text: "Ask about next steps", isQuestion: true))
+        context.insert(BridgeDraftItem(text: "Medication question", providerID: patel.id))
+        context.insert(BridgeDraftItem(text: "Ask about next steps", isQuestion: true, providerID: lee.id))
         context.insert(BridgeDraftItem(createdAt: ago(9), text: "Is it worth trying a different time of day?", isResolved: true,
                                        isQuestion: true, answer: "Worth a try for two weeks, then we look again."))
 

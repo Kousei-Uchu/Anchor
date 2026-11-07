@@ -24,6 +24,20 @@ struct BridgeExportView: View {
         providers.first { $0.id == forProviderID }?.exportName
     }
 
+    /// With someone chosen, what is for them and for anyone. Items for a
+    /// different person are left out. With no one chosen, everything goes.
+    private var exportItems: [BridgeDraftItem] {
+        guard let id = forProviderID, chosenName != nil else { return items }
+        return items.filter { $0.isFor(id, in: providers) }
+    }
+
+    /// With no one chosen, an item for a particular person says so on the
+    /// page, using that person's name for exports.
+    private var exportLabels: [UUID: String] {
+        guard chosenName == nil else { return [:] }
+        return Dictionary(providers.map { ($0.id, $0.exportName) }, uniquingKeysWith: { first, _ in first })
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 16) {
@@ -54,14 +68,16 @@ struct BridgeExportView: View {
             }
             .task(id: forProviderID) {
                 pdfURL = nil
-                pdfURL = BridgeExporter.makePDF(items: items, forName: chosenName)
+                pdfURL = BridgeExporter.makePDF(items: exportItems, forName: chosenName, labels: exportLabels)
             }
         }
     }
 }
 
 enum BridgeExporter {
-    static func makePDF(items: [BridgeDraftItem], forName: String? = nil) -> URL? {
+    /// `labels` maps a provider's id to the name printed under an item that is
+    /// for that person. Leave it empty to print no names.
+    static func makePDF(items: [BridgeDraftItem], forName: String? = nil, labels: [UUID: String] = [:]) -> URL? {
         let pageWidth: CGFloat = 612
         let pageHeight: CGFloat = 792
         let margin: CGFloat = 48
@@ -115,8 +131,9 @@ enum BridgeExporter {
                         text.draw(in: rect, withAttributes: bodyAttributes)
                         y += boundingRect.height + 4
                     }
-                    item.createdAt.formatted(date: .abbreviated, time: .omitted)
-                        .draw(at: CGPoint(x: margin, y: y), withAttributes: subAttributes)
+                    let date = item.createdAt.formatted(date: .abbreviated, time: .omitted)
+                    let footnote = item.providerID.flatMap { labels[$0] }.map { "For \($0) · \(date)" } ?? date
+                    footnote.draw(at: CGPoint(x: margin, y: y), withAttributes: subAttributes)
                     y += 20
                 }
             }

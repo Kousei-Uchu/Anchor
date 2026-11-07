@@ -17,9 +17,24 @@ import SwiftData
 struct BridgeDraftListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \BridgeDraftItem.createdAt, order: .reverse) private var items: [BridgeDraftItem]
+    @Query(sort: \AppointmentSeries.sortOrder) private var providers: [AppointmentSeries]
     @State private var editing: BridgeDraftItem?
     @State private var toDelete: BridgeDraftItem?
     @State private var showingExport = false
+    /// Whose things are shown. Nil shows everything. Not remembered.
+    @State private var filterID: UUID?
+
+    /// The provider being filtered on, if they still exist.
+    private var filterProvider: AppointmentSeries? {
+        providers.first { $0.id == filterID }
+    }
+
+    /// With a provider chosen, what is for them and for anyone: the same
+    /// set their export would hold.
+    private var shown: [BridgeDraftItem] {
+        guard let filterProvider else { return items }
+        return items.filter { $0.isFor(filterProvider.id, in: providers) }
+    }
 
     var body: some View {
         Group {
@@ -36,8 +51,15 @@ struct BridgeDraftListView: View {
                 }
             } else {
                 List {
-                    ForEach(items) { item in
-                        BridgeDraftItemCard(item: item) { editing = item }
+                    if shown.isEmpty, let filterProvider {
+                        Text("Nothing here for \(filterProvider.displayName) yet.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                    }
+                    ForEach(shown) { item in
+                        BridgeDraftItemCard(item: item, providerName: item.provider(in: providers)?.displayName) { editing = item }
                             .anchorDeletable { modelContext.delete(item) }
                             .anchorCardRow()
                     }
@@ -45,11 +67,42 @@ struct BridgeDraftListView: View {
                 .listStyle(.plain)
             }
         }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if let filterProvider {
+                HStack(alignment: .firstTextBaseline) {
+                    Label("Showing what is for \(filterProvider.displayName) and for anyone", systemImage: "person.fill")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer()
+                    Button("Show all") { filterID = nil }
+                        .font(.footnote.weight(.semibold))
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+                .background(.thinMaterial)
+            }
+        }
         .anchorBackground()
         .navigationTitle("Bridge draft")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
+                if providers.count > 1 {
+                    Menu {
+                        Picker("Show", selection: $filterID) {
+                            Text("Everything").tag(UUID?.none)
+                            ForEach(providers) { provider in
+                                Text(provider.displayName).tag(UUID?.some(provider.id))
+                            }
+                        }
+                    } label: {
+                        Image(systemName: filterProvider == nil
+                              ? "line.3.horizontal.decrease.circle"
+                              : "line.3.horizontal.decrease.circle.fill")
+                    }
+                    .accessibilityLabel("Show things for one person")
+                }
                 Button {
                     showingExport = true
                 } label: {
@@ -68,7 +121,7 @@ struct BridgeDraftListView: View {
     }
 
     private func startNew() {
-        let new = BridgeDraftItem(text: "")
+        let new = BridgeDraftItem(text: "", providerID: filterProvider?.id)
         modelContext.insert(new)
         editing = new
     }
@@ -88,7 +141,15 @@ struct BridgeDraftListView: View {
 
 private struct BridgeDraftItemCard: View {
     @Bindable var item: BridgeDraftItem
+    /// Who it is for, when it is for one person. Nil for anyone.
+    let providerName: String?
     let onEdit: () -> Void
+
+    private var footnote: String {
+        let date = item.createdAt.formatted(date: .abbreviated, time: .omitted)
+        guard let providerName else { return date }
+        return "For \(providerName) · \(date)"
+    }
 
     var body: some View {
         Anchor.Card {
@@ -120,7 +181,7 @@ private struct BridgeDraftItemCard: View {
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
-                        Text(item.createdAt.formatted(date: .abbreviated, time: .omitted))
+                        Text(footnote)
                             .font(.caption)
                             .foregroundStyle(.tertiary)
                     }
@@ -137,6 +198,21 @@ private struct BridgeDraftItemCard: View {
 private struct BridgeDraftItemEditorSheet: View {
     @Bindable var item: BridgeDraftItem
     let onDelete: () -> Void
+    @Query(sort: \AppointmentSeries.sortOrder) private var providers: [AppointmentSeries]
+
+    /// Shown with two or more providers, or when the item is already for
+    /// one, so a person with a single provider is never asked.
+    private var showsWho: Bool {
+        providers.count > 1 || item.provider(in: providers) != nil
+    }
+
+    /// An item whose provider was removed reads as for anyone.
+    private var whoBinding: Binding<UUID?> {
+        Binding(
+            get: { item.provider(in: providers)?.id },
+            set: { item.providerID = $0 }
+        )
+    }
 
     var body: some View {
         Anchor.ItemEditorSheet(
@@ -148,6 +224,16 @@ private struct BridgeDraftItemEditorSheet: View {
                 Section {
                     TextField("Something to bring up next session", text: $item.text, axis: .vertical)
                         .lineLimit(3...8)
+                }
+                if showsWho {
+                    Section {
+                        Picker("Who it is for", selection: whoBinding) {
+                            Text("Anyone").tag(UUID?.none)
+                            ForEach(providers) { provider in
+                                Text(provider.displayName).tag(UUID?.some(provider.id))
+                            }
+                        }
+                    }
                 }
                 Section {
                     Toggle("It is a question to ask", isOn: $item.isQuestion)
