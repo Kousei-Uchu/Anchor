@@ -93,24 +93,34 @@ struct CheckInSliderView: View {
                 Text("More = better, across all five. Just for you, nothing here is scored, averaged, or shown as a streak.")
             }
 
-            Section {
+        }
+        // Both actions live in a bar pinned to the bottom, so neither can be
+        // pushed below the fold on a small screen and "A few optional
+        // questions" can't be missed.
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            VStack(spacing: 8) {
+                Button("A few optional questions") {
+                    stage = .prompts
+                }
+                .buttonStyle(Anchor.SecondaryButtonStyle())
+
                 Button("Finish") {
                     _ = save()
                     dismiss()
                 }
                 .buttonStyle(Anchor.PrimaryButtonStyle())
-                .listRowInsets(EdgeInsets())
-                .padding(6)
 
-                Button("A few optional questions") {
-                    stage = .prompts
-                }
-                .buttonStyle(Anchor.SecondaryButtonStyle())
-                .listRowInsets(EdgeInsets())
-                .padding(6)
-            } footer: {
                 Text("Finishing here is complete. The questions are extra, not required.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+            .padding(.horizontal)
+            .padding(.top, 10)
+            .padding(.bottom, 8)
+            .frame(maxWidth: .infinity)
+            .background(.bar)
         }
     }
 
