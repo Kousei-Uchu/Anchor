@@ -815,6 +815,8 @@ struct TaskItemDTO: Codable {
     var blockedByIDs: [UUID]?
     /// Optional so exports made before tasks had a status, energy or first step still import.
     var status: String?; var energy: String?; var firstStep: String?
+    /// Optional so exports made before the focus timer still import.
+    var focusSessions: Int?; var focusMinutes: Int?
     init(_ m: TaskItem) {
         id = m.id; title = m.title; notes = m.notes; isDone = m.isDone
         completedAt = m.completedAt; createdAt = m.createdAt; sortOrder = m.sortOrder
@@ -822,6 +824,7 @@ struct TaskItemDTO: Codable {
         parentID = m.parentID; subtasksCollapsed = m.subtasksCollapsed
         blockedByIDs = m.blockedByIDs
         status = m.status.rawValue; energy = m.energy.rawValue; firstStep = m.firstStep
+        focusSessions = m.focusSessions; focusMinutes = m.focusMinutes
     }
     func toModel() -> TaskItem {
         TaskItem(id: id, title: title, notes: notes, isDone: isDone,
@@ -831,7 +834,8 @@ struct TaskItemDTO: Codable {
                  blockedByIDs: blockedByIDs ?? [],
                  status: TaskStatus(rawValue: status ?? "") ?? .notStarted,
                  energy: TaskEnergy(rawValue: energy ?? "") ?? .unset,
-                 firstStep: firstStep ?? "")
+                 firstStep: firstStep ?? "",
+                 focusSessions: focusSessions ?? 0, focusMinutes: focusMinutes ?? 0)
     }
 }
 

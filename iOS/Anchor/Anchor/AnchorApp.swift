@@ -90,7 +90,8 @@ enum DemoMode {
         let water = TaskItem(title: "Drink some water", sortOrder: 0, energy: .little)
         water.setDue(.today)
         context.insert(water)
-        let reply = TaskItem(title: "Reply to one message", notes: "Just the easy one.", sortOrder: 1, energy: .some)
+        let reply = TaskItem(title: "Reply to one message", notes: "Just the easy one.", sortOrder: 1, energy: .some,
+                             focusSessions: 2, focusMinutes: 50)
         reply.setDue(.thisWeek)
         context.insert(reply)
         context.insert(TaskItem(title: "Pick the easy one", isDone: true, completedAt: ago(0, hour: 1), sortOrder: 0, parentID: reply.id))
