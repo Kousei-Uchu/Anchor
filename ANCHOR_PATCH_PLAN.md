@@ -1,6 +1,6 @@
 # Anchor — Patch Plan (v2-recovery)
 
-*Living document. Last updated: 7 Nov 2026, after Patch 6 was written (Patches 1 to 5 are pushed; Patch 6 awaits your paste; none confirmed building).*
+*Living document. Last updated: 7 Nov 2026, after Patch 7 was written (Patches 1 to 5 are pushed; Patches 6 and 7 await your paste; none confirmed building).*
 
 > ## READ THIS FIRST: THIS FILE IS THE PROMPT
 >
@@ -34,10 +34,12 @@ The source code repository is at <https://github.com/Kousei-Uchu/Anchor/tree/v2-
 | 4: Check-in question sub-text and sentence starters | 🟡 Pushed by you; build not yet confirmed |
 | 5: Check-in visual refresh | 🟡 Pushed by you (`1a95f15`); build not yet confirmed |
 | 6: Journal newest first, jump to today | 🟡 Written (`patch-06.sh`); awaiting your paste and build |
-| 7 onward | Not started |
+| 7: Journal editor declutter, labelled Add sheet, discoverable Suggestions | 🟡 Written (`patch-07.sh`); awaiting your paste and build (paste after Patch 6) |
+| 8 onward | Not started |
 
 ## Change log of this plan
 
+- **7 Nov 2026 (12):** D9 answered: option 1, keep polishing in Swift for now, so Patches 7 to 9 go ahead. Patch 7 written: the editor has one calm writing surface. The inline prompt card and the six-icon toolbar are gone. A single Add button under the text opens a labelled sheet (Journaling Suggestions, Photo, Drawing, Prompt for me, Formatting); Preview moved into a menu in the top bar; the Suggestions screen is now titled Journaling Suggestions; a one-time "Got it" hint points at Add. **Deviation from the plan:** no Cancel button, because entries save as you type and a Cancel would not undo that. Done stays on the right. Also fixed: "Use this" on a prompt used to replace the whole entry text; it now appends. Not compiled here.
 - **7 Nov 2026 (11):** Patch 6 written: the Journal timeline is newest day first and newest entry first within a day, and a "Jump to today" action in the toolbar menu scrolls back to the top, which is where today sits. Patches 2 to 5 confirmed pushed (HEAD was `1a95f15`); their build is still unconfirmed. Not compiled here.
 - **7 Nov 2026 (10):** Patch 5 written: the check-in `Form` is now a scrolling stack of `Anchor.Card`s, each slider with an icon and gentle end labels ("running on empty" to "fully charged" and so on); the mascot's mood follows the sliders (quiet day, gentle, encouraging; picture only, nothing stored, scored or compared) and its line is re-picked from the reviewed pool when the mood changes; each optional question has its own mascot mood. **Not done:** the calm "done" moment with a mascot line, because it needs a new reviewed line pool and trigger (the mascot never gets generated dialogue). Added as an open item for Patch 5b.
 - **7 Nov 2026 (9):** Patch 4 written: `CheckInPrompt` struct (question, detail, starters), a "Need a start?" chip row that appends a starter to the answer, and a scrolling question screen with pinned buttons so it fits an SE-size screen. The same prompt data can later feed the Journal editor and the guide.
@@ -102,7 +104,7 @@ The branch did not build because `iOS/Anchor/Anchor/Views/Widgets/` was untracke
 | D6 | Feedback loops: loops only, or loops plus free systems maps? | Patches 26–28 | Both, loops by default | Open |
 | D7 | Point 27: unlisted page named `/demo-preview`, hidden from nav/sitemap, `noindex`? (`/demo` already exists) | Patch 51 | Yes | Open |
 | D8 | Message log: what was its "main function" for you — voice notes, quick sending, or per-person history? | Patch 14 | — | Open |
-| D9 | How long to keep investing in Swift UI polish before migrating to React Native? Polish-only patches (5, 7, 8–9) would be rewritten. | Phases B–D | Do bug fixes and behaviour first (1–4, 6, 10–14). Pause polish-only patches once a migration date exists. | Open |
+| D9 | How long to keep investing in Swift UI polish before migrating to React Native? Polish-only patches (5, 7, 8–9) would be rewritten. | Phases B–D | Do bug fixes and behaviour first (1–4, 6, 10–14). Pause polish-only patches once a migration date exists. | ✅ Closed 7 Nov 2026: keep polishing in Swift for now. Revisit when a migration date exists. |
 
 **Update, 7 Nov 2026:** D3 and D4 answered in a comment. Android is wanted eventually, via a move from Swift to React Native, with demo and Android builds updating automatically. Both are parked as "eventually planned": Patches 49–50 and 54 are deferred. D5 should be revisited once the migration is decided (see point 28).
 
@@ -310,7 +312,7 @@ Order: unblock → visible quick wins → one shared pattern later screens inher
 | **4** | Check-in questions: sub-text and sentence starters | 3 | S | 🟡 |
 | **5** | Check-in visual refresh: themed cards, reacting mascot, mascot on questions | 2 | M | 🟡 |
 | **6** | Journal order fix (newest first, jump to today) | 5 | S | 🟡 |
-| **7** | Journal editor declutter; labelled "+" sheet; discoverable Suggestions | 4 | M | ⬜ |
+| **7** | Journal editor declutter; labelled "+" sheet; discoverable Suggestions | 4 | M | 🟡 |
 | **8** | Journal month-calendar zoom | 5 | M | ⬜ |
 | **9** | Journal year overview (+ optional lenses) | 5 | M | ⬜ |
 
@@ -480,4 +482,4 @@ A reminder you set yourself, per person, **off by default**. Lock-screen text is
 
 ## Appendix B: Suggested next session
 
-Patch **7** (Journal editor declutter and a discoverable Suggestions entry), once Patches 1 to 6 build. Patches 7 to 9 are Journal polish, so check D9 before spending effort there.
+Patch **8** (Journal month calendar zoom), once Patches 1 to 7 build. D9 is closed, so Journal polish carries on in Swift.

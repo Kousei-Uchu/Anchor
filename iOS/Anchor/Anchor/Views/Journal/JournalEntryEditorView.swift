@@ -40,6 +40,10 @@ struct JournalEntryEditorView: View {
     @State private var photoPickerItem: PhotosPickerItem?
     @State private var showDrawingCanvas = false
     @State private var showContextSuggestions = false
+    @State private var showAddSheet = false
+    @State private var pendingAdd: JournalAddAction?
+    @State private var showFormatting = false
+    @AppStorage("anchor.journal.addHintDismissed") private var addHintDismissed = false
     @Query(sort: \RecoveryCounter.sortOrder) private var recoveryCounters: [RecoveryCounter]
 
     var body: some View {
@@ -48,48 +52,40 @@ struct JournalEntryEditorView: View {
                 RecoveryDayChips(date: entry.createdAt, counters: recoveryCounters, topPadding: 6)
                     .padding(.horizontal)
 
-                if entry.text.isEmpty && !isPreviewing {
-                    MascotPresenceView(line: promptLine, mood: .gentle)
-                        .padding(.horizontal)
-                        .padding(.top, 8)
-
-                    HStack {
-                        Button("Give me something to write about") {
-                            offerPrompt()
-                        }
-                        .buttonStyle(Anchor.SecondaryButtonStyle())
-                        if promptLine != nil {
-                            Button("Use this") {
-                                if let text = promptLine?.text {
-                                    entry.text = text + "\n\n"
-                                }
-                            }
-                            .buttonStyle(Anchor.PrimaryButtonStyle())
-                        }
-                    }
-                    .padding(.horizontal)
-                    .padding(.top, 8)
+                if promptLine != nil && !isPreviewing {
+                    promptCard
                 }
 
                 if isPreviewing {
                     MarkdownPreviewView(markdown: entry.text)
                 } else {
-                    MarkdownToolbar(
-                        pendingCommand: $pendingCommand,
-                        onInsertImage: { showPhotoPicker = true },
-                        onInsertDrawing: { showDrawingCanvas = true },
-                        onAddContext: { showContextSuggestions = true }
-                    )
+                    if showFormatting {
+                        MarkdownToolbar(pendingCommand: $pendingCommand)
+                    }
                     MarkdownTextView(text: $entry.text, pendingCommand: $pendingCommand)
                         .padding(.horizontal, 4)
                 }
             }
+            .safeAreaInset(edge: .bottom) {
+                if !isPreviewing {
+                    addBar
+                }
+            }
             .navigationTitle(entry.createdAt.formatted(date: .abbreviated, time: .shortened))
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button(isPreviewing ? "Edit" : "Preview") {
-                        isPreviewing.toggle()
+                    Menu {
+                        Button {
+                            isPreviewing.toggle()
+                        } label: {
+                            Label(isPreviewing ? "Back to writing" : "Preview",
+                                  systemImage: isPreviewing ? "pencil" : "eye")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
                     }
+                    .accessibilityLabel("More")
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
@@ -119,11 +115,82 @@ struct JournalEntryEditorView: View {
                     insertImageAttachment(data: imageData)
                 }
             }
+            .sheet(isPresented: $showAddSheet, onDismiss: runPendingAdd) {
+                JournalAddSheet(formattingOn: showFormatting) { action in
+                    pendingAdd = action
+                    showAddSheet = false
+                }
+            }
             .sheet(isPresented: $showContextSuggestions) {
                 JournalContextSuggestionsView(day: entry.createdAt) { insertion in
                     entry.text += (entry.text.isEmpty ? "" : "\n") + insertion + "\n"
                 }
             }
+        }
+    }
+
+    private var promptCard: some View {
+        VStack(spacing: 8) {
+            MascotPresenceView(line: promptLine, mood: .gentle)
+            HStack {
+                Button("Another one") {
+                    offerPrompt()
+                }
+                .buttonStyle(Anchor.SecondaryButtonStyle())
+                Button("Use this") {
+                    if let text = promptLine?.text {
+                        entry.text += (entry.text.isEmpty ? "" : "\n\n") + text + "\n\n"
+                    }
+                    promptLine = nil
+                }
+                .buttonStyle(Anchor.PrimaryButtonStyle())
+            }
+        }
+        .padding(.horizontal)
+        .padding(.top, 8)
+    }
+
+    /// One quiet bar under the writing area. Everything that is not typing
+    /// lives behind the single Add button.
+    private var addBar: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if !addHintDismissed {
+                HStack(spacing: 10) {
+                    Text("Tap Add for Journaling Suggestions, photos and more.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    Spacer(minLength: 0)
+                    Button("Got it") { addHintDismissed = true }
+                        .font(.footnote.weight(.semibold))
+                }
+            }
+            HStack {
+                Button {
+                    addHintDismissed = true
+                    showAddSheet = true
+                } label: {
+                    Label("Add", systemImage: "plus")
+                }
+                .buttonStyle(Anchor.SecondaryButtonStyle())
+                Spacer(minLength: 0)
+            }
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 10)
+        .background(.thinMaterial)
+    }
+
+    /// Runs after the Add sheet has finished closing, so the next sheet or
+    /// picker is not presented on top of one that is still dismissing.
+    private func runPendingAdd() {
+        guard let action = pendingAdd else { return }
+        pendingAdd = nil
+        switch action {
+        case .suggestions: showContextSuggestions = true
+        case .photo: showPhotoPicker = true
+        case .drawing: showDrawingCanvas = true
+        case .prompt: offerPrompt()
+        case .formatting: withAnimation { showFormatting.toggle() }
         }
     }
 
@@ -170,6 +237,56 @@ enum JournalAttachmentStore {
     }
 }
 
+// MARK: - Add sheet
+
+enum JournalAddAction {
+    case suggestions, photo, drawing, prompt, formatting
+}
+
+struct JournalAddSheet: View {
+    let formattingOn: Bool
+    let onPick: (JournalAddAction) -> Void
+
+    var body: some View {
+        NavigationStack {
+            List {
+                row("Journaling Suggestions",
+                    "Calendar events, photos and music from your day.",
+                    "sparkles", .suggestions)
+                row("Photo", "Add a picture from your library.", "photo", .photo)
+                row("Drawing", "Sketch something and add it to the entry.", "pencil.tip.crop.circle", .drawing)
+                row("Prompt for me", "Get something to write about.", "lightbulb", .prompt)
+                row(formattingOn ? "Hide formatting" : "Formatting",
+                    "Bold, lists, headings and links.",
+                    "textformat", .formatting)
+            }
+            .navigationTitle("Add to this entry")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    private func row(_ title: String, _ detail: String, _ icon: String, _ action: JournalAddAction) -> some View {
+        Button {
+            onPick(action)
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: icon)
+                    .font(.title3)
+                    .foregroundStyle(Anchor.Theme.accent)
+                    .frame(width: 40, height: 40)
+                    .background(Anchor.Theme.accentSoft, in: Circle())
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(.headline).foregroundStyle(.primary)
+                    Text(detail).font(.subheadline).foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.vertical, 4)
+        }
+    }
+}
+
 // MARK: - Markdown formatting toolbar
 
 enum MarkdownFormatCommand: Equatable {
@@ -179,9 +296,6 @@ enum MarkdownFormatCommand: Equatable {
 
 struct MarkdownToolbar: View {
     @Binding var pendingCommand: MarkdownFormatCommand?
-    var onInsertImage: () -> Void
-    var onInsertDrawing: () -> Void
-    var onAddContext: () -> Void
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -193,10 +307,6 @@ struct MarkdownToolbar: View {
                 button("list.number", .numberedList)
                 button("checklist", .checklist)
                 button("link", .link)
-                Divider().frame(height: 18)
-                Button(action: onInsertImage) { Image(systemName: "photo") }
-                Button(action: onInsertDrawing) { Image(systemName: "pencil.tip.crop.circle") }
-                Button(action: onAddContext) { Image(systemName: "calendar.badge.plus") }
             }
             .font(.system(size: 16, weight: .medium))
             .foregroundStyle(Anchor.Theme.accent)

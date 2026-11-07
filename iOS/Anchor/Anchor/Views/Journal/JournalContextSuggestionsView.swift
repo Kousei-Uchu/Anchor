@@ -126,7 +126,7 @@ struct JournalContextSuggestionsView: View {
                     Text("Needs the MusicKit capability enabled in Xcode (Signing & Capabilities → + Capability → MusicKit) before this can authorize on a real device.")
                 }
             }
-            .navigationTitle("Add context")
+            .navigationTitle("Journaling Suggestions")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
