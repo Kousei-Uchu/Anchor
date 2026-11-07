@@ -98,7 +98,7 @@ struct PlanView: View {
         case .contacts: Anchor.MoreTile(id: id) { ContactsView() }
         case .deEscalation: Anchor.MoreTile(id: id) { DeEscalationScriptsView() }
         case .grounding: Anchor.MoreTile(id: id) { GroundingToolsListView() }
-        case .decisionPresets: Anchor.MoreTile(id: id) { DecisionFatigueView() }
+        case .decisionPresets: Anchor.MoreTile(id: id) { PresetsView() }
         case .affirmations: Anchor.MoreTile(id: id) { AffirmationsView() }
         case .recovery: Anchor.MoreTile(id: id) { RecoveryHomeView() }
         case .motivations: Anchor.MoreTile(id: id) { RecoveryMotivationsView() }
@@ -132,8 +132,8 @@ struct PlanView: View {
                         NavigationLink { TasksView() } label: {
                             Anchor.TileButtonLabel(icon: "checkmark.circle.fill", title: "Tasks", tint: Anchor.Theme.accent)
                         }
-                        NavigationLink { DecisionFatigueView() } label: {
-                            Anchor.TileButtonLabel(icon: "checklist", title: "Decision presets", tint: Anchor.Theme.accent)
+                        NavigationLink { PresetsView() } label: {
+                            Anchor.TileButtonLabel(icon: "checklist", title: "Presets", tint: Anchor.Theme.accent)
                         }
                         NavigationLink { DeEscalationScriptsView() } label: {
                             Anchor.TileButtonLabel(icon: "wind", title: "De-escalation", tint: Anchor.Theme.sage)

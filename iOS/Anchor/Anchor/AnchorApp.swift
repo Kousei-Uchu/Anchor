@@ -116,6 +116,14 @@ enum DemoMode {
             QuickListItem(text: "Bananas", isDone: true)
         ], archivedAt: ago(1)))
 
+        context.insert(Routine(name: "School mornings", createdAt: ago(5), steps: [
+            RoutineStep(text: "Drink a glass of water", minutes: 2),
+            RoutineStep(text: "Get dressed", minutes: 10),
+            RoutineStep(text: "Eat something, even something small", minutes: 15),
+            RoutineStep(text: "Pack the bag and check for keys and phone", minutes: 5),
+            RoutineStep(text: "Head out")
+        ]))
+
         context.insert(Affirmation(text: "I got through today. That counts.", sortOrder: 0))
         context.insert(Affirmation(text: "Small steps still move me forward.", sortOrder: 1))
 

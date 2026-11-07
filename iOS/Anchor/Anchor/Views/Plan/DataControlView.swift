@@ -37,6 +37,7 @@ struct DataControlView: View {
     @Query private var affirmations: [Affirmation]
     @Query private var tasks: [TaskItem]
     @Query private var quickLists: [QuickList]
+    @Query private var routines: [Routine]
     @Query private var recoveryCounters: [RecoveryCounter]
     @Query private var recoveryMotivations: [RecoveryMotivation]
     @Query private var recoveryDayEntries: [RecoveryDayEntry]
@@ -82,6 +83,7 @@ struct DataControlView: View {
                 countRow("Affirmations", affirmations.count, icon: "sparkles")
                 countRow("Tasks", tasks.count, icon: "checkmark.circle.fill")
                 countRow("Quick lists", quickLists.count, icon: "list.bullet.clipboard")
+                countRow("Routines", routines.count, icon: "list.number")
                 countRow("Recovery counters", recoveryCounters.count, icon: "calendar.badge.checkmark")
                 countRow("Urges logged", recoveryUrges.count, icon: "wind")
             }
@@ -198,7 +200,8 @@ struct DataControlView: View {
             recoveryDayEntries: recoveryDayEntries.map(RecoveryDayEntryDTO.init),
             recoveryUrges: recoveryUrges.map(RecoveryUrgeDTO.init),
             tasks: tasks.map(TaskItemDTO.init),
-            quickLists: quickLists.map(QuickListDTO.init)
+            quickLists: quickLists.map(QuickListDTO.init),
+            routines: routines.map(RoutineDTO.init)
         )
         guard let data = try? JSONEncoder.anchorExport.encode(export) else { return }
         writeAndShare(data: data, filename: "anchor-export-\(fileTimestamp()).json")
@@ -237,6 +240,7 @@ struct DataControlView: View {
         let existingAffirmationIDs = Set(affirmations.map(\.id))
         let existingTaskIDs = Set(tasks.map(\.id))
         let existingQuickListIDs = Set(quickLists.map(\.id))
+        let existingRoutineIDs = Set(routines.map(\.id))
 
         var importedCount = 0
         for dto in export.journalEntries where !existingJournalIDs.contains(dto.id) {
@@ -291,6 +295,9 @@ struct DataControlView: View {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
         for dto in export.quickLists ?? [] where !existingQuickListIDs.contains(dto.id) {
+            modelContext.insert(dto.toModel()); importedCount += 1
+        }
+        for dto in export.routines ?? [] where !existingRoutineIDs.contains(dto.id) {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
         // Recovery data is optional in the file, so exports from earlier versions still import.
@@ -440,6 +447,7 @@ struct DataControlView: View {
         for item in affirmations { modelContext.delete(item) }
         for item in tasks { modelContext.delete(item) }
         for item in quickLists { modelContext.delete(item) }
+        for item in routines { modelContext.delete(item) }
         UserDefaults.standard.removeObject(forKey: DayPlan.key)
         for item in recoveryCounters { modelContext.delete(item) }
         for item in recoveryMotivations { modelContext.delete(item) }
@@ -604,6 +612,8 @@ struct AnchorDataExport: Codable {
     var tasks: [TaskItemDTO]? = nil
     /// Optional so exports made before quick lists existed still import.
     var quickLists: [QuickListDTO]? = nil
+    /// Optional so exports made before routines existed still import.
+    var routines: [RoutineDTO]? = nil
 }
 
 /// Every section is optional in the file: an export from any earlier version,
@@ -615,7 +625,7 @@ extension AnchorDataExport {
         "bridgeDraftItems", "diagrams", "threadMessages", "supportCalendarEntries", "futureNotes",
         "unsentDrafts", "decisionCategories", "deEscalationScripts", "affirmations",
         "recoveryCounters", "recoveryMotivations", "recoveryDayEntries", "recoveryUrges", "tasks",
-        "quickLists"
+        "quickLists", "routines"
     ]
 
     init(from decoder: Decoder) throws {
@@ -641,6 +651,7 @@ extension AnchorDataExport {
         recoveryUrges = c.lossyArray(RecoveryUrgeDTO.self, forKey: .recoveryUrges)
         tasks = c.lossyArray(TaskItemDTO.self, forKey: .tasks)
         quickLists = c.lossyArray(QuickListDTO.self, forKey: .quickLists)
+        routines = c.lossyArray(RoutineDTO.self, forKey: .routines)
     }
 }
 
@@ -865,6 +876,17 @@ struct QuickListDTO: Codable {
     }
     func toModel() -> QuickList {
         QuickList(id: id, title: title, createdAt: createdAt, items: items, archivedAt: archivedAt)
+    }
+}
+
+struct RoutineDTO: Codable {
+    var id: UUID; var name: String; var createdAt: Date
+    var steps: [RoutineStep]
+    init(_ m: Routine) {
+        id = m.id; name = m.name; createdAt = m.createdAt; steps = m.steps
+    }
+    func toModel() -> Routine {
+        Routine(id: id, name: name, createdAt: createdAt, steps: steps)
     }
 }
 
