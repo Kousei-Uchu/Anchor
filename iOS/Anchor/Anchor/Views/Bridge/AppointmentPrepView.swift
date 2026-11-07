@@ -218,13 +218,17 @@ struct JournalSessionSummaryCard: View {
 
     private let listLimit = 12
 
+    /// Bookmarked entries first, then the rest, newest first in each group.
     private var entries: [JournalEntry] {
-        allEntries.filter {
+        let inRange = allEntries.filter {
             $0.createdAt >= since
                 && !excluding.contains($0.id)
                 && !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         }
+        return inRange.filter { $0.isBookmarked } + inRange.filter { !$0.isBookmarked }
     }
+
+    private var bookmarkedCount: Int { entries.filter { $0.isBookmarked }.count }
 
     private var checkInCount: Int {
         allCheckIns.filter { $0.timestamp >= since }.count
@@ -236,13 +240,17 @@ struct JournalSessionSummaryCard: View {
 
     private var countsLine: String {
         var parts: [String] = []
-        if !entries.isEmpty { parts.append(plural(entries.count, "journal entry", "journal entries")) }
+        if !entries.isEmpty {
+            var entryPart = plural(entries.count, "journal entry", "journal entries")
+            if bookmarkedCount > 0 { entryPart += " (\(bookmarkedCount) bookmarked)" }
+            parts.append(entryPart)
+        }
         if checkInCount > 0 { parts.append(plural(checkInCount, "check-in", "check-ins")) }
         return parts.joined(separator: " and ")
     }
 
     private func line(for entry: JournalEntry) -> String {
-        let first = SafetyPlanSections.firstLine(entry.text) ?? ""
+        let first = JournalBlocks.previewLine(entry.text) ?? ""
         return first.count > 140 ? String(first.prefix(140)) + "..." : first
     }
 
@@ -296,9 +304,17 @@ struct JournalSessionSummaryCard: View {
                                             Image(systemName: chosen.contains(entry.id) ? "checkmark.circle.fill" : "circle")
                                                 .foregroundStyle(chosen.contains(entry.id) ? Anchor.Theme.accent : .secondary)
                                             VStack(alignment: .leading, spacing: 2) {
-                                                Text(dayText(entry.createdAt))
-                                                    .font(.caption)
-                                                    .foregroundStyle(.secondary)
+                                                HStack(spacing: 4) {
+                                                    Text(dayText(entry.createdAt))
+                                                        .font(.caption)
+                                                        .foregroundStyle(.secondary)
+                                                    if entry.isBookmarked {
+                                                        Image(systemName: "bookmark.fill")
+                                                            .font(.caption2)
+                                                            .foregroundStyle(Anchor.Theme.accent)
+                                                            .accessibilityLabel("Bookmarked")
+                                                    }
+                                                }
                                                 Text(line(for: entry))
                                                     .font(.subheadline)
                                                     .multilineTextAlignment(.leading)

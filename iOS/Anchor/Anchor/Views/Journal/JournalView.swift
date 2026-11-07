@@ -42,6 +42,8 @@ struct JournalView: View {
     @State private var entryToRead: JournalEntry?
     @State private var checkInToView: CheckIn?
     @State private var addedToBridge = false
+    /// Not remembered between launches, so nothing stays hidden by accident.
+    @State private var bookmarksOnly = false
     @AppStorage("anchor.journal.layout") private var layout: JournalLayout = .days
     @State private var displayedMonth = Date()
     @State private var pendingScrollDay: Date?
@@ -74,8 +76,9 @@ struct JournalView: View {
     }
 
     private var filteredEntries: [JournalEntry] {
-        guard !searchText.isEmpty else { return entries }
-        return entries.filter { $0.text.localizedCaseInsensitiveContains(searchText) }
+        let base = bookmarksOnly ? entries.filter { $0.isBookmarked } : entries
+        guard !searchText.isEmpty else { return base }
+        return base.filter { $0.text.localizedCaseInsensitiveContains(searchText) }
     }
 
     /// Check-ins don't have searchable text, so while the user is
@@ -84,7 +87,7 @@ struct JournalView: View {
     /// check-ins happened that day.
     private var timelineItems: [TimelineItem] {
         let entryItems = filteredEntries.map(TimelineItem.entry)
-        let checkInItems = searchText.isEmpty ? checkIns.map(TimelineItem.checkIn) : []
+        let checkInItems = (searchText.isEmpty && !bookmarksOnly) ? checkIns.map(TimelineItem.checkIn) : []
         return (entryItems + checkInItems).sorted { $0.timestamp > $1.timestamp }
     }
 
@@ -153,6 +156,17 @@ struct JournalView: View {
                             }
                         )
                     }
+                    if bookmarksOnly {
+                        HStack {
+                            Label("Showing bookmarked entries", systemImage: "bookmark.fill")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Button("Show all") { bookmarksOnly = false }
+                                .font(.footnote.weight(.semibold))
+                        }
+                        .padding(.vertical, 8)
+                    }
                     if groupedByDay.isEmpty {
                         emptyState
                     }
@@ -206,6 +220,14 @@ struct JournalView: View {
                     }
                     .disabled(groupedByDay.isEmpty)
                 }
+                ToolbarItem(placement: .secondaryAction) {
+                    Button {
+                        bookmarksOnly.toggle()
+                    } label: {
+                        Label(bookmarksOnly ? "Show all entries" : "Bookmarked only",
+                              systemImage: bookmarksOnly ? "bookmark.slash" : "bookmark")
+                    }
+                }
                 ToolbarItem(placement: .primaryAction) {
                     Button {
                         let entry = JournalEntry(text: "", linkedContext: .manualOpen)
@@ -258,15 +280,30 @@ struct JournalView: View {
             Button {
                 entryToRead = entry
             } label: {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(entry.createdAt.formatted(date: .omitted, time: .shortened))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text(entry.createdAt.formatted(date: .omitted, time: .shortened))
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        Spacer(minLength: 0)
+                        if entry.isBookmarked {
+                            Image(systemName: "bookmark.fill")
+                                .font(.caption2)
+                                .foregroundStyle(Anchor.Theme.accent)
+                                .accessibilityLabel("Bookmarked")
+                        }
+                    }
 
-                    Text(entry.text.isEmpty ? "Empty entry" : firstLine(entry.text))
+                    let preview = JournalBlocks.previewLine(entry.text)
+                    Text(preview ?? "Empty entry")
                         .font(.system(.subheadline, design: .rounded))
                         .lineLimit(2)
-                        .foregroundStyle(entry.text.isEmpty ? .secondary : .primary)
+                        .foregroundStyle(preview == nil ? .secondary : .primary)
+
+                    let pictures = JournalBlocks.imageNames(in: entry.text)
+                    if !pictures.isEmpty {
+                        JournalThumbnailStrip(filenames: pictures)
+                    }
 
                     RecoveryDayChips(date: entry.createdAt, counters: recoveryCounters, topPadding: 4)
                 }
@@ -281,6 +318,12 @@ struct JournalView: View {
             .padding(.bottom, 12)
         }
         .contextMenu {
+            Button {
+                entry.isBookmarked.toggle()
+            } label: {
+                Label(entry.isBookmarked ? "Remove bookmark" : "Bookmark",
+                      systemImage: entry.isBookmarked ? "bookmark.slash" : "bookmark")
+            }
             Button {
                 if let item = BridgeDraftItem.raising(fromJournal: entry.text) {
                     modelContext.insert(item)
@@ -389,8 +432,10 @@ struct JournalView: View {
         }
     }
 
-    private func firstLine(_ text: String) -> String {
-        text.components(separatedBy: .newlines).first(where: { !$0.trimmingCharacters(in: .whitespaces).isEmpty }) ?? text
+    private var emptyMessage: String {
+        if !searchText.isEmpty { return "No entries match \"\(searchText)\"." }
+        if bookmarksOnly { return "No bookmarked entries yet. Press and hold an entry to bookmark it." }
+        return "Nothing here yet. Tap the pencil to write."
     }
 
     private var emptyState: some View {
@@ -398,7 +443,7 @@ struct JournalView: View {
             Image(systemName: "pencil.and.outline")
                 .font(.largeTitle)
                 .foregroundStyle(Anchor.Theme.accent.opacity(0.5))
-            Text(searchText.isEmpty ? "Nothing here yet. Tap the pencil to write." : "No entries match \"\(searchText)\".")
+            Text(emptyMessage)
                 .foregroundStyle(.secondary)
                 .font(.system(.subheadline, design: .rounded))
         }
@@ -785,22 +830,28 @@ private struct JournalEntryReadSheet: View {
             JournalEntryEditorView(entry: entry, onFinish: { isEditing = false })
         } else {
             NavigationStack {
-                VStack(spacing: 0) {
-                    RecoveryDayChips(date: entry.createdAt, counters: recoveryCounters, topPadding: 6)
-                        .padding(.horizontal)
-                    MarkdownPreviewView(markdown: entry.text)
-                        .contentShape(Rectangle())
-                        .onTapGesture { isEditing = true }
-                        .accessibilityAddTraits(.isButton)
-                        .accessibilityHint("Opens the editor")
+                MarkdownPreviewView(markdown: entry.text) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        JournalPageHeader(date: entry.createdAt, bookmarked: entry.isBookmarked)
+                        RecoveryDayChips(date: entry.createdAt, counters: recoveryCounters, topPadding: 0)
+                    }
                 }
+                .contentShape(Rectangle())
+                .onTapGesture { isEditing = true }
+                .accessibilityAddTraits(.isButton)
+                .accessibilityHint("Opens the editor")
                 .anchorBackground()
-                .navigationTitle(entry.createdAt.formatted(date: .abbreviated, time: .shortened))
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .navigationBarLeading) {
                         Button { isEditing = true } label: { Image(systemName: "pencil") }
                             .accessibilityLabel("Edit entry")
+                    }
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button { entry.isBookmarked.toggle() } label: {
+                            Image(systemName: entry.isBookmarked ? "bookmark.fill" : "bookmark")
+                        }
+                        .accessibilityLabel(entry.isBookmarked ? "Remove bookmark" : "Bookmark")
                     }
                     ToolbarItem(placement: .navigationBarLeading) {
                         Button {

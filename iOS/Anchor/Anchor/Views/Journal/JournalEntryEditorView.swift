@@ -2,27 +2,361 @@
 //  JournalEntryEditorView.swift
 //  Anchor
 //
-//  Rebuilt as a real Markdown editor per feedback ("full rich text like
-//  Apple Notes, GitHub MD syntax, with UI buttons for anyone who doesn't
-//  know markdown"). The entry's `text` field stays the single source of
-//  truth (it's just Markdown source now, still a plain String — no
-//  SwiftData schema change needed), rendered live via a Write/Preview
-//  toggle. Images and drawings insert as standard `![](filename)` Markdown
-//  image syntax, with the actual files kept in a local attachments folder
-//  and referenced by name — the same "store a filename, not a blob"
-//  pattern already used for voice memos elsewhere in this model.
-//
-//  Formatting uses a UITextView wrapper (MarkdownTextView, below) rather
-//  than SwiftUI's plain TextEditor, specifically so toolbar buttons can
-//  read and replace the actual selected range (UITextView.selectedRange
-//  is well-established, reliable API) instead of only being able to
-//  append to the end of the text.
+//  The journal page, laid out like Apple's Journal: a date heading, then the
+//  entry as a stack of blocks (paragraphs you type into, photos, and cards for
+//  events, songs, places and suggestions), with one slim row of tools at the
+//  bottom. The entry's `text` is still the single source of truth and is still
+//  plain Markdown, so there is no schema change and older entries open as they
+//  were:
+//    - a line that is only `![](file)` is a photo block;
+//    - a line that is only `[Title](anchorcard://kind?t=..&d=..&x=..)` is a card
+//      block. An older build, or any Markdown reader, shows it as a link with
+//      the card's title, so nothing is lost;
+//    - everything else is text, kept exactly as typed.
+//  Images stay as files in a local attachments folder, referenced by name.
 //
 
 import SwiftUI
 import SwiftData
 import PhotosUI
 import PencilKit
+
+// MARK: - Blocks
+
+/// A card for something pulled in from the day: a calendar event, a song, a
+/// place, or one of Apple's journaling suggestions.
+struct JournalCard: Equatable {
+    enum Kind: String {
+        case event, song, place, suggestion
+
+        var icon: String {
+            switch self {
+            case .event: return "calendar"
+            case .song: return "music.note"
+            case .place: return "mappin.and.ellipse"
+            case .suggestion: return "sparkles"
+            }
+        }
+
+        var caption: String {
+            switch self {
+            case .event: return "Event"
+            case .song: return "Song"
+            case .place: return "Place"
+            case .suggestion: return "Suggestion"
+            }
+        }
+
+        var tint: Color {
+            switch self {
+            case .event: return Anchor.Theme.accent
+            case .song: return Color(red: 0.55, green: 0.46, blue: 0.72)
+            case .place: return Anchor.Theme.sage
+            case .suggestion: return Anchor.Theme.accent
+            }
+        }
+    }
+
+    var kind: Kind
+    var title: String
+    var detail: String = ""
+    var extra: String = ""
+}
+
+extension JournalCard {
+    private static let unreserved: CharacterSet = {
+        var set = CharacterSet.alphanumerics
+        set.insert(charactersIn: "-._~")
+        return set
+    }()
+
+    private static func encode(_ string: String) -> String {
+        string.addingPercentEncoding(withAllowedCharacters: unreserved) ?? ""
+    }
+
+    /// The single Markdown line this card is stored as.
+    var markdownLine: String {
+        let label = title
+            .replacingOccurrences(of: "\n", with: " ")
+            .replacingOccurrences(of: "[", with: "(")
+            .replacingOccurrences(of: "]", with: ")")
+        let query = "t=\(Self.encode(title))&d=\(Self.encode(detail))&x=\(Self.encode(extra))"
+        return "[\(label)](anchorcard://\(kind.rawValue)?\(query))"
+    }
+
+    /// Reads a card back from a line, or nil when the line is anything else.
+    init?(line: String) {
+        let trimmed = line.trimmingCharacters(in: .whitespaces)
+        guard trimmed.hasPrefix("["), trimmed.hasSuffix(")"),
+              let marker = trimmed.range(of: "](anchorcard://") else { return nil }
+        let rest = trimmed[marker.upperBound...].dropLast()
+        let parts = rest.split(separator: "?", maxSplits: 1, omittingEmptySubsequences: false)
+        guard parts.count == 2, let kind = Kind(rawValue: String(parts[0])) else { return nil }
+        var values: [String: String] = [:]
+        for pair in parts[1].split(separator: "&") {
+            let keyValue = pair.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
+            guard keyValue.count == 2 else { continue }
+            values[String(keyValue[0])] = String(keyValue[1]).removingPercentEncoding ?? ""
+        }
+        self.init(kind: kind, title: values["t"] ?? "", detail: values["d"] ?? "", extra: values["x"] ?? "")
+    }
+}
+
+struct JournalBlock: Identifiable, Equatable {
+    enum Kind: Equatable {
+        case text(String)
+        case image(String)
+        case card(JournalCard)
+    }
+
+    let id: UUID
+    var kind: Kind
+
+    init(_ kind: Kind, id: UUID = UUID()) {
+        self.id = id
+        self.kind = kind
+    }
+
+    var isText: Bool {
+        if case .text = kind { return true }
+        return false
+    }
+
+    var text: String {
+        get {
+            if case .text(let string) = kind { return string }
+            return ""
+        }
+        set { kind = .text(newValue) }
+    }
+}
+
+enum JournalBlocks {
+    /// Splits Markdown into blocks without losing anything: text between photo
+    /// and card lines is kept exactly, so `serialize(parse(x)) == x`.
+    static func parse(_ text: String) -> [JournalBlock] {
+        var blocks: [JournalBlock] = []
+        var pending: [String] = []
+        var hasPending = false
+
+        func flush() {
+            if hasPending {
+                blocks.append(JournalBlock(.text(pending.joined(separator: "\n"))))
+                pending = []
+                hasPending = false
+            }
+        }
+
+        for line in text.components(separatedBy: "\n") {
+            if let name = imageName(in: line) {
+                flush()
+                blocks.append(JournalBlock(.image(name)))
+            } else if let card = JournalCard(line: line) {
+                flush()
+                blocks.append(JournalBlock(.card(card)))
+            } else {
+                pending.append(line)
+                hasPending = true
+            }
+        }
+        flush()
+        return blocks
+    }
+
+    static func serialize(_ blocks: [JournalBlock]) -> String {
+        blocks.map { block -> String in
+            switch block.kind {
+            case .text(let string): return string
+            case .image(let name): return "![](\(name))"
+            case .card(let card): return card.markdownLine
+            }
+        }
+        .joined(separator: "\n")
+    }
+
+    /// The blocks the editor shows: always at least one paragraph, and always
+    /// a paragraph at the end so there is somewhere to keep writing.
+    static func editable(_ text: String) -> [JournalBlock] {
+        var blocks = parse(text)
+        if blocks.isEmpty || !(blocks.last?.isText ?? false) {
+            blocks.append(JournalBlock(.text("")))
+        }
+        return blocks
+    }
+
+    /// Joins paragraphs that end up side by side after a block is removed or moved.
+    static func merged(_ blocks: [JournalBlock]) -> [JournalBlock] {
+        var output: [JournalBlock] = []
+        for block in blocks {
+            if case .text(let next) = block.kind,
+               let last = output.last, case .text(let previous) = last.kind {
+                output[output.count - 1].kind = .text(previous + "\n" + next)
+            } else {
+                output.append(block)
+            }
+        }
+        return output
+    }
+
+    static func imageName(in line: String) -> String? {
+        let trimmed = line.trimmingCharacters(in: .whitespaces)
+        guard trimmed.hasPrefix("!["), trimmed.hasSuffix(")"),
+              let marker = trimmed.range(of: "](") else { return nil }
+        let name = trimmed[marker.upperBound...].dropLast()
+        guard !name.isEmpty, !name.contains(" "), !name.contains("("), !name.contains(")") else { return nil }
+        return String(name)
+    }
+
+    /// One line to stand for an entry in a list: its first words, else the title
+    /// of its first card, else a note that it has a photo.
+    static func previewLine(_ text: String) -> String? {
+        let blocks = parse(text)
+        for block in blocks {
+            switch block.kind {
+            case .text(let string):
+                let marks = CharacterSet(charactersIn: "#>*-").union(.whitespaces)
+                if let line = string.components(separatedBy: "\n")
+                    .map({ $0.trimmingCharacters(in: marks) })
+                    .first(where: { !$0.isEmpty }) {
+                    return line
+                }
+            case .card(let card):
+                if !card.title.isEmpty { return card.title }
+            case .image:
+                break
+            }
+        }
+        let hasImage = blocks.contains { block in
+            if case .image = block.kind { return true }
+            return false
+        }
+        return hasImage ? "Photo" : nil
+    }
+
+    static func imageNames(in text: String) -> [String] {
+        parse(text).compactMap { block in
+            if case .image(let name) = block.kind { return name }
+            return nil
+        }
+    }
+}
+
+// MARK: - Page header and blocks on screen
+
+struct JournalPageHeader: View {
+    let date: Date
+    var bookmarked: Bool = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(date.formatted(.dateTime.weekday(.wide).day().month(.wide)))
+                    .font(.system(.title2, design: .rounded).weight(.bold))
+                Spacer(minLength: 0)
+                if bookmarked {
+                    Image(systemName: "bookmark.fill")
+                        .foregroundStyle(Anchor.Theme.accent)
+                        .accessibilityLabel("Bookmarked")
+                }
+            }
+            Text("\(date.formatted(.dateTime.year())), \(date.formatted(date: .omitted, time: .shortened))")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
+/// A widget-style block for an event, song, place or suggestion.
+struct JournalCardView: View {
+    let card: JournalCard
+    /// Room on the right for the block's menu button while editing.
+    var reserveMenuSpace: Bool = false
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: card.kind.icon)
+                .font(.title3)
+                .foregroundStyle(card.kind.tint)
+                .frame(width: 44, height: 44)
+                .background(card.kind.tint.opacity(0.16), in: RoundedRectangle(cornerRadius: 12))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(card.kind.caption.uppercased())
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(card.kind.tint)
+                Text(card.title.isEmpty ? card.kind.caption : card.title)
+                    .font(.system(.headline, design: .rounded))
+                    .fixedSize(horizontal: false, vertical: true)
+                if !card.detail.isEmpty {
+                    Text(card.detail)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                if !card.extra.isEmpty {
+                    Text(card.extra)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .padding(.trailing, reserveMenuSpace ? 26 : 0)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Anchor.Theme.cardBackground(colorScheme), in: RoundedRectangle(cornerRadius: 18))
+        .overlay(RoundedRectangle(cornerRadius: 18).stroke(card.kind.tint.opacity(0.25), lineWidth: 1))
+        .accessibilityElement(children: .combine)
+    }
+}
+
+struct JournalImageView: View {
+    let filename: String
+
+    var body: some View {
+        if let image = JournalAttachmentStore.image(named: filename) {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: .infinity)
+                .clipShape(RoundedRectangle(cornerRadius: 18))
+                .accessibilityLabel("Photo")
+        } else {
+            RoundedRectangle(cornerRadius: 18)
+                .fill(Color.secondary.opacity(0.12))
+                .frame(height: 120)
+                .overlay(Text("Photo not on this device").font(.footnote).foregroundStyle(.secondary))
+        }
+    }
+}
+
+/// A few small pictures from an entry, for lists.
+struct JournalThumbnailStrip: View {
+    let filenames: [String]
+    private let shown = 3
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(Array(filenames.prefix(shown).enumerated()), id: \.offset) { _, name in
+                if let image = JournalAttachmentStore.image(named: name) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 52, height: 52)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .accessibilityHidden(true)
+                }
+            }
+            if filenames.count > shown {
+                Text("+\(filenames.count - shown)")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+// MARK: - Editor
 
 struct JournalEntryEditorView: View {
     @Bindable var entry: JournalEntry
@@ -33,55 +367,82 @@ struct JournalEntryEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
 
-    @State private var promptLine: MascotLine?
+    @State private var blocks: [JournalBlock]
+    @State private var activeID: UUID?
+    @State private var focusRequest: UUID?
     @State private var pendingCommand: MarkdownFormatCommand?
-    @State private var isPreviewing = false
+    @State private var showFormatting = false
+    @State private var promptLine: MascotLine?
     @State private var showPhotoPicker = false
-    @State private var photoPickerItem: PhotosPickerItem?
+    @State private var photoPickerItems: [PhotosPickerItem] = []
     @State private var showDrawingCanvas = false
     @State private var showContextSuggestions = false
-    @State private var showAddSheet = false
-    @State private var pendingAdd: JournalAddAction?
-    @State private var showFormatting = false
-    @AppStorage("anchor.journal.addHintDismissed") private var addHintDismissed = false
+    @State private var addedToBridge = false
     @Query(sort: \RecoveryCounter.sortOrder) private var recoveryCounters: [RecoveryCounter]
+
+    init(entry: JournalEntry, onFinish: (() -> Void)? = nil) {
+        self.entry = entry
+        self.onFinish = onFinish
+        _blocks = State(initialValue: JournalBlocks.editable(entry.text))
+    }
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                RecoveryDayChips(date: entry.createdAt, counters: recoveryCounters, topPadding: 6)
-                    .padding(.horizontal)
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 14) {
+                        JournalPageHeader(date: entry.createdAt, bookmarked: entry.isBookmarked)
 
-                if promptLine != nil && !isPreviewing {
-                    promptCard
-                }
+                        RecoveryDayChips(date: entry.createdAt, counters: recoveryCounters, topPadding: 0)
 
-                if isPreviewing {
-                    MarkdownPreviewView(markdown: entry.text)
-                } else {
-                    if showFormatting {
-                        MarkdownToolbar(pendingCommand: $pendingCommand)
+                        if let promptLine {
+                            promptBlock(promptLine)
+                        }
+
+                        ForEach($blocks) { $block in
+                            blockView($block)
+                                .id(block.id)
+                        }
+
+                        // Tapping the empty space below the page carries on writing.
+                        Color.clear
+                            .frame(maxWidth: .infinity, minHeight: 160)
+                            .contentShape(Rectangle())
+                            .onTapGesture { focusLastParagraph() }
+                            .accessibilityHidden(true)
                     }
-                    MarkdownTextView(text: $entry.text, pendingCommand: $pendingCommand)
-                        .padding(.horizontal, 4)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
+                }
+                .scrollDismissesKeyboard(.interactively)
+                .onChange(of: blocks.count) { oldCount, newCount in
+                    // A block added at the end (photo, card) scrolls into view.
+                    if newCount > oldCount, let last = blocks.last {
+                        withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
+                    }
                 }
             }
-            .safeAreaInset(edge: .bottom) {
-                if !isPreviewing {
-                    addBar
-                }
-            }
-            .navigationTitle(entry.createdAt.formatted(date: .abbreviated, time: .shortened))
+            .anchorBackground()
+            .safeAreaInset(edge: .bottom, spacing: 0) { bottomBar }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Menu {
                         Button {
-                            isPreviewing.toggle()
+                            entry.isBookmarked.toggle()
                         } label: {
-                            Label(isPreviewing ? "Back to writing" : "Preview",
-                                  systemImage: isPreviewing ? "pencil" : "eye")
+                            Label(entry.isBookmarked ? "Remove bookmark" : "Bookmark",
+                                  systemImage: entry.isBookmarked ? "bookmark.slash" : "bookmark")
                         }
+                        Button {
+                            if let item = BridgeDraftItem.raising(fromJournal: entry.text) {
+                                modelContext.insert(item)
+                                addedToBridge = true
+                            }
+                        } label: {
+                            Label("Add to things to raise", systemImage: "doc.text")
+                        }
+                        .disabled(BridgeDraftItem.raising(fromJournal: entry.text) == nil)
                     } label: {
                         Image(systemName: "ellipsis.circle")
                     }
@@ -100,98 +461,182 @@ struct JournalEntryEditorView: View {
                     }
                 }
             }
-            .photosPicker(isPresented: $showPhotoPicker, selection: $photoPickerItem, matching: .images)
-            .onChange(of: photoPickerItem) { _, newItem in
-                guard let newItem else { return }
+            .onChange(of: blocks) { _, newBlocks in
+                let serialized = JournalBlocks.serialize(newBlocks)
+                if entry.text != serialized { entry.text = serialized }
+            }
+            .photosPicker(isPresented: $showPhotoPicker, selection: $photoPickerItems,
+                          maxSelectionCount: 10, matching: .images)
+            .onChange(of: photoPickerItems) { _, items in
+                guard !items.isEmpty else { return }
                 Task {
-                    if let data = try? await newItem.loadTransferable(type: Data.self) {
-                        insertImageAttachment(data: data)
+                    var names: [String] = []
+                    for item in items {
+                        if let data = try? await item.loadTransferable(type: Data.self),
+                           let name = JournalAttachmentStore.save(imageData: data) {
+                            names.append(name)
+                        }
                     }
-                    photoPickerItem = nil
+                    await MainActor.run {
+                        insert(names.map { .image($0) })
+                        photoPickerItems = []
+                    }
                 }
             }
             .sheet(isPresented: $showDrawingCanvas) {
                 DrawingCanvasSheet { imageData in
-                    insertImageAttachment(data: imageData)
-                }
-            }
-            .sheet(isPresented: $showAddSheet, onDismiss: runPendingAdd) {
-                JournalAddSheet(formattingOn: showFormatting) { action in
-                    pendingAdd = action
-                    showAddSheet = false
+                    if let name = JournalAttachmentStore.save(imageData: imageData) {
+                        insert([.image(name)])
+                    }
                 }
             }
             .sheet(isPresented: $showContextSuggestions) {
-                JournalContextSuggestionsView(day: entry.createdAt) { insertion in
-                    entry.text += (entry.text.isEmpty ? "" : "\n") + insertion + "\n"
+                JournalContextSuggestionsView(day: entry.createdAt) { kinds in
+                    insert(kinds)
                 }
+            }
+            .alert("Added to Things to raise", isPresented: $addedToBridge) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("You can reword it in Bridge. The journal entry is unchanged.")
             }
         }
     }
 
-    private var promptCard: some View {
-        VStack(spacing: 8) {
-            MascotPresenceView(line: promptLine, mood: .gentle)
-            HStack {
-                Button("Another one") {
-                    offerPrompt()
-                }
-                .buttonStyle(Anchor.SecondaryButtonStyle())
-                Button("Use this") {
-                    if let text = promptLine?.text {
-                        entry.text += (entry.text.isEmpty ? "" : "\n\n") + text + "\n\n"
-                    }
-                    promptLine = nil
-                }
-                .buttonStyle(Anchor.PrimaryButtonStyle())
-            }
+    // MARK: Blocks
+
+    @ViewBuilder
+    private func blockView(_ block: Binding<JournalBlock>) -> some View {
+        let value = block.wrappedValue
+        switch value.kind {
+        case .text:
+            AutoGrowTextView(
+                text: block.text,
+                blockID: value.id,
+                activeID: $activeID,
+                focusRequest: $focusRequest,
+                pendingCommand: $pendingCommand,
+                placeholder: blocks.count == 1 ? "Start writing" : ""
+            )
+        case .image(let name):
+            JournalImageView(filename: name)
+                .overlay(alignment: .topTrailing) { menuButton(for: value.id) }
+                .contextMenu { blockActions(for: value.id) }
+        case .card(let card):
+            JournalCardView(card: card, reserveMenuSpace: true)
+                .overlay(alignment: .topTrailing) { menuButton(for: value.id) }
+                .contextMenu { blockActions(for: value.id) }
         }
-        .padding(.horizontal)
-        .padding(.top, 8)
     }
 
-    /// One quiet bar under the writing area. Everything that is not typing
-    /// lives behind the single Add button.
-    private var addBar: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if !addHintDismissed {
-                HStack(spacing: 10) {
-                    Text("Tap Add for Journaling Suggestions, photos and more.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                    Spacer(minLength: 0)
-                    Button("Got it") { addHintDismissed = true }
-                        .font(.footnote.weight(.semibold))
-                }
-            }
-            HStack {
-                Button {
-                    addHintDismissed = true
-                    showAddSheet = true
-                } label: {
-                    Label("Add", systemImage: "plus")
-                }
-                .buttonStyle(Anchor.SecondaryButtonStyle())
+    private func menuButton(for id: UUID) -> some View {
+        Menu {
+            blockActions(for: id)
+        } label: {
+            Image(systemName: "ellipsis.circle.fill")
+                .font(.title3)
+                .symbolRenderingMode(.palette)
+                .foregroundStyle(.white, Color.black.opacity(0.45))
+                .padding(8)
+        }
+        .accessibilityLabel("Options for this block")
+    }
+
+    @ViewBuilder
+    private func blockActions(for id: UUID) -> some View {
+        Button { move(id, by: -1) } label: { Label("Move up", systemImage: "arrow.up") }
+        Button { move(id, by: 1) } label: { Label("Move down", systemImage: "arrow.down") }
+        Button(role: .destructive) { remove(id) } label: { Label("Remove", systemImage: "trash") }
+    }
+
+    /// Adds blocks after the paragraph being written in (or at the end), and
+    /// makes sure a paragraph follows them.
+    private func insert(_ kinds: [JournalBlock.Kind]) {
+        guard !kinds.isEmpty else { return }
+        var index = blocks.count
+        if let id = activeID, let found = blocks.firstIndex(where: { $0.id == id }) {
+            index = found + 1
+        }
+        let added = kinds.map { JournalBlock($0) }
+        blocks.insert(contentsOf: added, at: index)
+        let after = index + added.count
+        if after >= blocks.count || !blocks[after].isText {
+            blocks.insert(JournalBlock(.text("")), at: after)
+        }
+    }
+
+    private func remove(_ id: UUID) {
+        guard let index = blocks.firstIndex(where: { $0.id == id }) else { return }
+        withAnimation {
+            blocks.remove(at: index)
+            blocks = tidy(JournalBlocks.merged(blocks))
+        }
+    }
+
+    private func move(_ id: UUID, by offset: Int) {
+        guard let index = blocks.firstIndex(where: { $0.id == id }) else { return }
+        let target = index + offset
+        guard blocks.indices.contains(target) else { return }
+        withAnimation {
+            blocks.swapAt(index, target)
+            blocks = tidy(JournalBlocks.merged(blocks))
+        }
+    }
+
+    /// Keeps a paragraph at the end of the page.
+    private func tidy(_ list: [JournalBlock]) -> [JournalBlock] {
+        var result = list
+        if result.isEmpty || !(result.last?.isText ?? false) {
+            result.append(JournalBlock(.text("")))
+        }
+        return result
+    }
+
+    private func focusLastParagraph() {
+        if let last = blocks.last(where: { $0.isText }) {
+            focusRequest = last.id
+        }
+    }
+
+    // MARK: Prompt
+
+    private func promptBlock(_ line: MascotLine) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "lightbulb.fill")
+                    .foregroundStyle(Anchor.Theme.accent)
+                Text(line.text)
+                    .font(.system(.body, design: .rounded))
+                    .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
+                Button {
+                    promptLine = nil
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .accessibilityLabel("Dismiss prompt")
+            }
+            HStack(spacing: 12) {
+                Button("Use this") { usePrompt(line.text) }
+                    .font(.subheadline.weight(.semibold))
+                Button("Another one") { offerPrompt() }
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
             }
         }
-        .padding(.horizontal)
-        .padding(.vertical, 10)
-        .background(.thinMaterial)
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Anchor.Theme.accentSoft, in: RoundedRectangle(cornerRadius: 18))
     }
 
-    /// Runs after the Add sheet has finished closing, so the next sheet or
-    /// picker is not presented on top of one that is still dismissing.
-    private func runPendingAdd() {
-        guard let action = pendingAdd else { return }
-        pendingAdd = nil
-        switch action {
-        case .suggestions: showContextSuggestions = true
-        case .photo: showPhotoPicker = true
-        case .drawing: showDrawingCanvas = true
-        case .prompt: offerPrompt()
-        case .formatting: withAnimation { showFormatting.toggle() }
+    private func usePrompt(_ text: String) {
+        if let index = blocks.lastIndex(where: { $0.isText }) {
+            let existing = blocks[index].text
+            blocks[index].text = (existing.isEmpty ? "" : existing + "\n\n") + text + "\n\n"
+            focusRequest = blocks[index].id
         }
+        promptLine = nil
     }
 
     private func offerPrompt() {
@@ -199,10 +644,39 @@ struct JournalEntryEditorView: View {
         promptLine = engine.line(for: .journalPrompt, mood: .neutral)
     }
 
-    private func insertImageAttachment(data: Data) {
-        guard let filename = JournalAttachmentStore.save(imageData: data) else { return }
-        let insertion = "\n![](\(filename))\n"
-        entry.text += insertion
+    // MARK: Tools
+
+    /// The only chrome on the page: one slim row of tools above the keyboard.
+    private var bottomBar: some View {
+        VStack(spacing: 0) {
+            if showFormatting {
+                MarkdownToolbar(pendingCommand: $pendingCommand)
+            }
+            HStack(spacing: 0) {
+                toolButton("sparkles", "Journaling Suggestions") { showContextSuggestions = true }
+                toolButton("photo.on.rectangle", "Photos") { showPhotoPicker = true }
+                toolButton("pencil.tip.crop.circle", "Drawing") { showDrawingCanvas = true }
+                toolButton("lightbulb", "Writing prompt") { offerPrompt() }
+                toolButton("textformat", "Formatting", highlighted: showFormatting) {
+                    withAnimation { showFormatting.toggle() }
+                }
+            }
+            .padding(.horizontal, 8)
+        }
+        .background(.bar)
+    }
+
+    private func toolButton(_ icon: String, _ label: String, highlighted: Bool = false,
+                            action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 20))
+                .foregroundStyle(highlighted ? Color.white : Anchor.Theme.accent)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .background(highlighted ? Anchor.Theme.accent : Color.clear, in: RoundedRectangle(cornerRadius: 10))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
     }
 }
 
@@ -211,6 +685,8 @@ struct JournalEntryEditorView: View {
 /// referenced from entry text by filename only, same pattern as
 /// JournalEntry.audioFileName elsewhere in the model.
 enum JournalAttachmentStore {
+    private static let cache = NSCache<NSString, UIImage>()
+
     static var folderURL: URL {
         let folder = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("JournalAttachments", isDirectory: true)
@@ -233,57 +709,10 @@ enum JournalAttachmentStore {
     }
 
     static func image(named filename: String) -> UIImage? {
-        UIImage(contentsOfFile: folderURL.appendingPathComponent(filename).path)
-    }
-}
-
-// MARK: - Add sheet
-
-enum JournalAddAction {
-    case suggestions, photo, drawing, prompt, formatting
-}
-
-struct JournalAddSheet: View {
-    let formattingOn: Bool
-    let onPick: (JournalAddAction) -> Void
-
-    var body: some View {
-        NavigationStack {
-            List {
-                row("Journaling Suggestions",
-                    "Calendar events, photos and music from your day.",
-                    "sparkles", .suggestions)
-                row("Photo", "Add a picture from your library.", "photo", .photo)
-                row("Drawing", "Sketch something and add it to the entry.", "pencil.tip.crop.circle", .drawing)
-                row("Prompt for me", "Get something to write about.", "lightbulb", .prompt)
-                row(formattingOn ? "Hide formatting" : "Formatting",
-                    "Bold, lists, headings and links.",
-                    "textformat", .formatting)
-            }
-            .navigationTitle("Add to this entry")
-            .navigationBarTitleDisplayMode(.inline)
-        }
-        .presentationDetents([.medium, .large])
-    }
-
-    private func row(_ title: String, _ detail: String, _ icon: String, _ action: JournalAddAction) -> some View {
-        Button {
-            onPick(action)
-        } label: {
-            HStack(spacing: 14) {
-                Image(systemName: icon)
-                    .font(.title3)
-                    .foregroundStyle(Anchor.Theme.accent)
-                    .frame(width: 40, height: 40)
-                    .background(Anchor.Theme.accentSoft, in: Circle())
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title).font(.headline).foregroundStyle(.primary)
-                    Text(detail).font(.subheadline).foregroundStyle(.secondary)
-                }
-                Spacer(minLength: 0)
-            }
-            .padding(.vertical, 4)
-        }
+        if let cached = cache.object(forKey: filename as NSString) { return cached }
+        guard let image = UIImage(contentsOfFile: folderURL.appendingPathComponent(filename).path) else { return nil }
+        cache.setObject(image, forKey: filename as NSString)
+        return image
     }
 }
 
@@ -298,174 +727,444 @@ struct MarkdownToolbar: View {
     @Binding var pendingCommand: MarkdownFormatCommand?
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 18) {
-                button("bold", .bold)
-                button("italic", .italic)
-                button("textformat.size", .heading)
-                button("list.bullet", .bulletList)
-                button("list.number", .numberedList)
-                button("checklist", .checklist)
-                button("link", .link)
+        VStack(spacing: 0) {
+            Divider()
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 22) {
+                    button("bold", "Bold", .bold)
+                    button("italic", "Italic", .italic)
+                    button("textformat.size", "Heading", .heading)
+                    button("list.bullet", "Bulleted list", .bulletList)
+                    button("list.number", "Numbered list", .numberedList)
+                    button("checklist", "Checklist", .checklist)
+                    button("link", "Link", .link)
+                }
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(Anchor.Theme.accent)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 10)
             }
-            .font(.system(size: 16, weight: .medium))
-            .foregroundStyle(Anchor.Theme.accent)
-            .padding(.horizontal)
-            .padding(.vertical, 10)
         }
-        .background(.thinMaterial)
     }
 
-    private func button(_ icon: String, _ command: MarkdownFormatCommand) -> some View {
+    private func button(_ icon: String, _ label: String, _ command: MarkdownFormatCommand) -> some View {
         Button {
             pendingCommand = command
         } label: {
             Image(systemName: icon)
         }
+        .accessibilityLabel(label)
     }
 }
 
-// MARK: - UITextView wrapper (selection-aware formatting)
+// MARK: - Paragraph editor (grows with its text, selection-aware formatting)
 
-struct MarkdownTextView: UIViewRepresentable {
+/// Light styling for Markdown as it is typed: headings larger, bold and italic
+/// shown, the marks themselves dimmed. The text stays plain Markdown.
+enum MarkdownStyler {
+    static func apply(to textView: UITextView) {
+        guard textView.markedTextRange == nil else { return }
+        let storage = textView.textStorage
+        let full = NSRange(location: 0, length: storage.length)
+        let base = UIFont.preferredFont(forTextStyle: .body)
+
+        storage.beginEditing()
+        storage.setAttributes([.font: base, .foregroundColor: UIColor.label], range: full)
+        let string = storage.string as NSString
+
+        string.enumerateSubstrings(in: full, options: [.byLines, .substringNotRequired]) { _, lineRange, _, _ in
+            let line = string.substring(with: lineRange)
+            var level = 0
+            for character in line {
+                if character == "#" { level += 1 } else { break }
+            }
+            guard (1...3).contains(level), line.count > level,
+                  line.dropFirst(level).first == " " else { return }
+            let style: UIFont.TextStyle = level == 1 ? .title2 : .title3
+            storage.addAttribute(.font, value: withTrait(UIFont.preferredFont(forTextStyle: style), .traitBold), range: lineRange)
+            storage.addAttribute(.foregroundColor, value: UIColor.tertiaryLabel,
+                                 range: NSRange(location: lineRange.location, length: level + 1))
+        }
+
+        style(storage, pattern: "\\*\\*(?=\\S)(.+?)(?<=\\S)\\*\\*", markerLength: 2, trait: .traitBold, base: base)
+        style(storage, pattern: "(?<![\\w_])_(?=\\S)(.+?)(?<=\\S)_(?![\\w_])", markerLength: 1, trait: .traitItalic, base: base)
+        storage.endEditing()
+
+        textView.typingAttributes = [.font: base, .foregroundColor: UIColor.label]
+    }
+
+    private static func style(_ storage: NSTextStorage, pattern: String, markerLength: Int,
+                              trait: UIFontDescriptor.SymbolicTraits, base: UIFont) {
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return }
+        let full = NSRange(location: 0, length: storage.length)
+        for match in regex.matches(in: storage.string, range: full) {
+            let inner = match.range(at: 1)
+            guard inner.length > 0 else { continue }
+            let current = storage.attribute(.font, at: inner.location, effectiveRange: nil) as? UIFont ?? base
+            storage.addAttribute(.font, value: withTrait(current, trait), range: inner)
+            let marker = UIColor.tertiaryLabel
+            storage.addAttribute(.foregroundColor, value: marker,
+                                 range: NSRange(location: match.range.location, length: markerLength))
+            storage.addAttribute(.foregroundColor, value: marker,
+                                 range: NSRange(location: match.range.location + match.range.length - markerLength, length: markerLength))
+        }
+    }
+
+    private static func withTrait(_ font: UIFont, _ trait: UIFontDescriptor.SymbolicTraits) -> UIFont {
+        let traits = font.fontDescriptor.symbolicTraits.union(trait)
+        guard let descriptor = font.fontDescriptor.withSymbolicTraits(traits) else { return font }
+        return UIFont(descriptor: descriptor, size: font.pointSize)
+    }
+}
+
+struct AutoGrowTextView: View {
     @Binding var text: String
+    let blockID: UUID
+    @Binding var activeID: UUID?
+    @Binding var focusRequest: UUID?
+    @Binding var pendingCommand: MarkdownFormatCommand?
+    var placeholder: String = ""
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            if text.isEmpty && !placeholder.isEmpty {
+                Text(placeholder)
+                    .foregroundStyle(.tertiary)
+                    .padding(.top, 4)
+                    .allowsHitTesting(false)
+            }
+            ParagraphTextView(text: $text, blockID: blockID, activeID: $activeID,
+                              focusRequest: $focusRequest, pendingCommand: $pendingCommand)
+        }
+    }
+}
+
+struct ParagraphTextView: UIViewRepresentable {
+    @Binding var text: String
+    let blockID: UUID
+    @Binding var activeID: UUID?
+    @Binding var focusRequest: UUID?
     @Binding var pendingCommand: MarkdownFormatCommand?
 
     func makeUIView(context: Context) -> UITextView {
         let textView = UITextView()
         textView.delegate = context.coordinator
-        textView.font = .preferredFont(forTextStyle: .body)
         textView.backgroundColor = .clear
-        textView.isScrollEnabled = true
-        textView.textContainerInset = UIEdgeInsets(top: 12, left: 8, bottom: 12, right: 8)
+        textView.isScrollEnabled = false
+        textView.textContainerInset = UIEdgeInsets(top: 4, left: 0, bottom: 4, right: 0)
+        textView.textContainer.lineFragmentPadding = 0
+        textView.adjustsFontForContentSizeCategory = true
         textView.text = text
+        MarkdownStyler.apply(to: textView)
         return textView
     }
 
     func updateUIView(_ uiView: UITextView, context: Context) {
+        let coordinator = context.coordinator
+        coordinator.parent = self
+
         if uiView.text != text {
             uiView.text = text
+            MarkdownStyler.apply(to: uiView)
         }
-        if let command = pendingCommand {
-            apply(command, to: uiView)
-            DispatchQueue.main.async { pendingCommand = nil }
+
+        if focusRequest == blockID {
+            DispatchQueue.main.async {
+                uiView.becomeFirstResponder()
+                uiView.selectedRange = NSRange(location: (uiView.text as NSString).length, length: 0)
+                focusRequest = nil
+            }
+        }
+
+        if let command = pendingCommand, activeID == blockID, !coordinator.applying {
+            coordinator.applying = true
+            coordinator.apply(command, to: uiView)
+            DispatchQueue.main.async {
+                pendingCommand = nil
+                coordinator.applying = false
+            }
         }
     }
 
-    func makeCoordinator() -> Coordinator { Coordinator(text: $text) }
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
+        let width = proposal.width ?? UIScreen.main.bounds.width
+        let size = uiView.sizeThatFits(CGSize(width: width, height: CGFloat.greatestFiniteMagnitude))
+        return CGSize(width: width, height: max(size.height, 30))
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
 
     final class Coordinator: NSObject, UITextViewDelegate {
-        var text: Binding<String>
-        init(text: Binding<String>) { self.text = text }
+        var parent: ParagraphTextView
+        var applying = false
+
+        init(_ parent: ParagraphTextView) { self.parent = parent }
+
+        func textViewDidBeginEditing(_ textView: UITextView) {
+            parent.activeID = parent.blockID
+        }
+
         func textViewDidChange(_ textView: UITextView) {
-            text.wrappedValue = textView.text
-        }
-    }
-
-    private func apply(_ command: MarkdownFormatCommand, to textView: UITextView) {
-        let selectedRange = textView.selectedRange
-        let nsText = textView.text as NSString
-
-        func wrap(_ prefix: String, _ suffix: String, placeholder: String) {
-            let selectedText = nsText.substring(with: selectedRange)
-            let content = selectedText.isEmpty ? placeholder : selectedText
-            let replacement = "\(prefix)\(content)\(suffix)"
-            let newText = nsText.replacingCharacters(in: selectedRange, with: replacement)
-            textView.text = newText
-            $text.wrappedValue = newText
-            let newCursor = selectedRange.location + (replacement as NSString).length
-            textView.selectedRange = NSRange(location: newCursor, length: 0)
+            sync(textView)
         }
 
-        func prefixLines(_ linePrefix: String) {
-            let lineRange = nsText.lineRange(for: selectedRange)
-            let lineText = nsText.substring(with: lineRange)
-            let lines = lineText.components(separatedBy: "\n")
-            let prefixed = lines.enumerated().map { index, line -> String in
-                if index == lines.count - 1 && line.isEmpty { return line }
-                return "\(linePrefix)\(line)"
-            }.joined(separator: "\n")
-            let newText = nsText.replacingCharacters(in: lineRange, with: prefixed)
-            textView.text = newText
-            $text.wrappedValue = newText
-            let delta = (prefixed as NSString).length - (lineText as NSString).length
-            textView.selectedRange = NSRange(location: selectedRange.location + delta, length: 0)
+        func sync(_ textView: UITextView) {
+            parent.text = textView.text
+            MarkdownStyler.apply(to: textView)
         }
 
-        switch command {
-        case .bold: wrap("**", "**", placeholder: "bold text")
-        case .italic: wrap("_", "_", placeholder: "italic text")
-        case .heading: prefixLines("## ")
-        case .bulletList: prefixLines("- ")
-        case .numberedList: prefixLines("1. ")
-        case .checklist: prefixLines("- [ ] ")
-        case .link: wrap("[", "](https://)", placeholder: "link text")
-        case .insertText(let string):
-            let newText = nsText.replacingCharacters(in: selectedRange, with: string)
-            textView.text = newText
-            $text.wrappedValue = newText
-            let newCursor = selectedRange.location + (string as NSString).length
-            textView.selectedRange = NSRange(location: newCursor, length: 0)
+        /// Return carries a list on: a new bullet, number or checkbox, and an
+        /// empty one ends the list, the way Notes and Journal do.
+        func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText replacement: String) -> Bool {
+            guard replacement == "\n", textView.markedTextRange == nil else { return true }
+            let string = textView.text as NSString
+            let lineRange = string.lineRange(for: NSRange(location: range.location, length: 0))
+            let line = string.substring(with: lineRange).trimmingCharacters(in: .newlines)
+            guard let (prefix, next) = Self.listPrefix(of: line) else { return true }
+
+            if line == prefix.trimmingCharacters(in: .whitespaces) || line == prefix {
+                let itemRange = NSRange(location: lineRange.location, length: (line as NSString).length)
+                textView.textStorage.replaceCharacters(in: itemRange, with: "")
+                textView.selectedRange = NSRange(location: lineRange.location, length: 0)
+            } else {
+                let insertion = "\n" + next
+                textView.textStorage.replaceCharacters(in: range, with: insertion)
+                textView.selectedRange = NSRange(location: range.location + (insertion as NSString).length, length: 0)
+            }
+            sync(textView)
+            return false
+        }
+
+        static func listPrefix(of line: String) -> (String, String)? {
+            for checklist in ["- [ ] ", "- [x] ", "- [X] "] where line.hasPrefix(checklist) {
+                return (checklist, "- [ ] ")
+            }
+            for bullet in ["- ", "* "] where line.hasPrefix(bullet) {
+                return (bullet, bullet)
+            }
+            if let dot = line.firstIndex(of: "."),
+               let number = Int(line[line.startIndex..<dot]),
+               line[line.index(after: dot)...].hasPrefix(" ") {
+                return ("\(number). ", "\(number + 1). ")
+            }
+            return nil
+        }
+
+        func apply(_ command: MarkdownFormatCommand, to textView: UITextView) {
+            let selectedRange = textView.selectedRange
+            let nsText = textView.text as NSString
+
+            func replace(_ range: NSRange, with string: String, cursor: Int) {
+                textView.textStorage.replaceCharacters(in: range, with: string)
+                textView.selectedRange = NSRange(location: cursor, length: 0)
+                sync(textView)
+            }
+
+            func wrap(_ prefix: String, _ suffix: String, placeholder: String) {
+                let selectedText = nsText.substring(with: selectedRange)
+                let content = selectedText.isEmpty ? placeholder : selectedText
+                let replacement = "\(prefix)\(content)\(suffix)"
+                replace(selectedRange, with: replacement,
+                        cursor: selectedRange.location + (replacement as NSString).length)
+            }
+
+            func prefixLines(_ linePrefix: String) {
+                let lineRange = nsText.lineRange(for: selectedRange)
+                let lineText = nsText.substring(with: lineRange)
+                let lines = lineText.components(separatedBy: "\n")
+                let prefixed = lines.enumerated().map { index, line -> String in
+                    if index == lines.count - 1 && line.isEmpty { return line }
+                    return "\(linePrefix)\(line)"
+                }.joined(separator: "\n")
+                let delta = (prefixed as NSString).length - (lineText as NSString).length
+                replace(lineRange, with: prefixed, cursor: selectedRange.location + delta)
+            }
+
+            switch command {
+            case .bold: wrap("**", "**", placeholder: "bold text")
+            case .italic: wrap("_", "_", placeholder: "italic text")
+            case .heading: prefixLines("## ")
+            case .bulletList: prefixLines("- ")
+            case .numberedList: prefixLines("1. ")
+            case .checklist: prefixLines("- [ ] ")
+            case .link: wrap("[", "](https://)", placeholder: "link text")
+            case .insertText(let string):
+                replace(selectedRange, with: string,
+                        cursor: selectedRange.location + (string as NSString).length)
+            }
         }
     }
 }
 
-// MARK: - Preview (read-only rendered Markdown + inline images)
+// MARK: - Reading view (rendered blocks)
 
-struct MarkdownPreviewView: View {
+/// An entry shown as the page it is: formatted paragraphs, photos in a grid
+/// when there are several, and cards. The header, if given, scrolls with it.
+struct MarkdownPreviewView<Header: View>: View {
     let markdown: String
+    let header: Header
 
-    private enum Block { case text(String), image(String) }
+    init(markdown: String, @ViewBuilder header: () -> Header) {
+        self.markdown = markdown
+        self.header = header()
+    }
 
-    private var blocks: [Block] {
-        guard let pattern = try? NSRegularExpression(pattern: "!\\[[^\\]]*\\]\\(([^)]+)\\)") else {
-            return [.text(markdown)]
+    private enum Item {
+        case text(String)
+        case images([String])
+        case card(JournalCard)
+    }
+
+    private var items: [Item] {
+        var result: [Item] = []
+        var images: [String] = []
+
+        func flushImages() {
+            if !images.isEmpty {
+                result.append(.images(images))
+                images = []
+            }
         }
-        var result: [Block] = []
-        let full = markdown as NSString
-        var lastEnd = 0
-        let matches = pattern.matches(in: markdown, range: NSRange(location: 0, length: full.length))
-        for match in matches {
-            let before = full.substring(with: NSRange(location: lastEnd, length: match.range.location - lastEnd))
-            if !before.isEmpty { result.append(.text(before)) }
-            let filename = full.substring(with: match.range(at: 1))
-            result.append(.image(filename))
-            lastEnd = match.range.location + match.range.length
+
+        for block in JournalBlocks.parse(markdown) {
+            switch block.kind {
+            case .text(let string):
+                flushImages()
+                if !string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    result.append(.text(string))
+                }
+            case .image(let name):
+                images.append(name)
+            case .card(let card):
+                flushImages()
+                result.append(.card(card))
+            }
         }
-        let remainder = full.substring(from: lastEnd)
-        if !remainder.isEmpty { result.append(.text(remainder)) }
-        if result.isEmpty { result.append(.text(markdown)) }
+        flushImages()
         return result
     }
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
-                    switch block {
+            VStack(alignment: .leading, spacing: 14) {
+                header
+                ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                    switch item {
                     case .text(let string):
-                        if let attributed = try? AttributedString(markdown: string, options: .init(interpretedSyntax: .full)) {
-                            Text(attributed)
-                                .fixedSize(horizontal: false, vertical: true)
+                        MarkdownLinesView(text: string)
+                    case .images(let names):
+                        if names.count == 1, let name = names.first {
+                            JournalImageView(filename: name)
                         } else {
-                            Text(string)
+                            LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                                ForEach(Array(names.enumerated()), id: \.offset) { _, name in
+                                    if let image = JournalAttachmentStore.image(named: name) {
+                                        Color.clear
+                                            .aspectRatio(1, contentMode: .fit)
+                                            .overlay(
+                                                Image(uiImage: image)
+                                                    .resizable()
+                                                    .scaledToFill()
+                                            )
+                                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                                            .accessibilityLabel("Photo")
+                                    }
+                                }
+                            }
                         }
-                    case .image(let filename):
-                        if let uiImage = JournalAttachmentStore.image(named: filename) {
-                            Image(uiImage: uiImage)
-                                .resizable()
-                                .scaledToFit()
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                        }
+                    case .card(let card):
+                        JournalCardView(card: card)
                     }
                 }
-                if markdown.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Text("Nothing to preview yet.").foregroundStyle(.secondary)
+                if items.isEmpty {
+                    Text("Nothing written yet.").foregroundStyle(.secondary)
                 }
             }
-            .padding()
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+}
+
+extension MarkdownPreviewView where Header == EmptyView {
+    init(markdown: String) {
+        self.init(markdown: markdown) { EmptyView() }
+    }
+}
+
+/// Renders a paragraph's Markdown line by line: headings, lists, checklists,
+/// quotes, and bold, italic and links inside a line.
+struct MarkdownLinesView: View {
+    let text: String
+
+    private func inline(_ string: String) -> AttributedString {
+        let options = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+        return (try? AttributedString(markdown: string, options: options)) ?? AttributedString(string)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            ForEach(Array(text.components(separatedBy: "\n").enumerated()), id: \.offset) { _, line in
+                lineView(line)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private func lineView(_ line: String) -> some View {
+        let trimmed = line.trimmingCharacters(in: .whitespaces)
+        if trimmed.isEmpty {
+            Color.clear.frame(height: 8)
+        } else if let heading = heading(in: trimmed) {
+            Text(inline(heading.text))
+                .font(.system(heading.level == 1 ? .title2 : .title3, design: .rounded).weight(.bold))
+                .fixedSize(horizontal: false, vertical: true)
+        } else if trimmed.hasPrefix("- [ ] ") || trimmed.lowercased().hasPrefix("- [x] ") {
+            let done = !trimmed.hasPrefix("- [ ] ")
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Image(systemName: done ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(done ? Anchor.Theme.accent : .secondary)
+                Text(inline(String(trimmed.dropFirst(6))))
+            }
+        } else if trimmed.hasPrefix("- ") || trimmed.hasPrefix("* ") {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("\u{2022}")
+                Text(inline(String(trimmed.dropFirst(2))))
+            }
+        } else if let numbered = numbered(in: trimmed) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("\(numbered.number).")
+                Text(inline(numbered.text))
+            }
+        } else if trimmed.hasPrefix("> ") {
+            HStack(spacing: 10) {
+                Rectangle().fill(Anchor.Theme.accent.opacity(0.5)).frame(width: 3)
+                Text(inline(String(trimmed.dropFirst(2)))).foregroundStyle(.secondary)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+        } else {
+            Text(inline(line))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func heading(in line: String) -> (level: Int, text: String)? {
+        var level = 0
+        for character in line {
+            if character == "#" { level += 1 } else { break }
+        }
+        guard (1...3).contains(level), line.dropFirst(level).first == " " else { return nil }
+        return (level, String(line.dropFirst(level + 1)))
+    }
+
+    private func numbered(in line: String) -> (number: Int, text: String)? {
+        guard let dot = line.firstIndex(of: "."),
+              let number = Int(line[line.startIndex..<dot]) else { return nil }
+        let rest = line[line.index(after: dot)...]
+        guard rest.hasPrefix(" ") else { return nil }
+        return (number, String(rest.dropFirst()))
     }
 }
 
