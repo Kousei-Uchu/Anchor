@@ -189,6 +189,7 @@ enum DemoMode {
             graphJSON: DiagramGraph.demoMap().encoded()))
 
         context.insert(FutureNote(unlockDate: now.addingTimeInterval(14 * 86_400), text: "You got through last time too."))
+        context.insert(FutureNote(unlockDate: now, text: "Be gentle with yourself tonight. Some water, something small to eat, and one message to someone.", openWhen: "it is a hard night"))
         context.insert(ThreadMessage(timestamp: ago(2), text: "Thanks for checking in on me.", withContactID: demoSam.id))
 
         try? context.save()
