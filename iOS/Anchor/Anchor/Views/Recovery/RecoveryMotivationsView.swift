@@ -9,102 +9,140 @@
 import SwiftUI
 import SwiftData
 
-/// Motivations as something to read: who you're doing this for, and why it
-/// matters. Writing and deleting live behind Edit
-/// (`RecoveryMotivationsEditorView`).
+/// Motivations: who you're doing this for, and why it matters. Tap a card to
+/// rewrite it, the plus (or the button under each heading) adds one, and
+/// Delete is in the editor and in the card's long-press menu. There is no
+/// Reorder because the order of these doesn't mean anything.
 struct RecoveryMotivationsView: View {
+    @Environment(\.modelContext) private var modelContext
     @Query(sort: \RecoveryMotivation.sortOrder) private var motivations: [RecoveryMotivation]
-    @State private var showingEditor = false
+    @State private var editing: RecoveryMotivation?
+    @State private var toDelete: RecoveryMotivation?
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: Anchor.Theme.spacing) {
-                if motivations.isEmpty {
+        Group {
+            if motivations.isEmpty {
+                ScrollView {
                     Anchor.EmptyState(
                         icon: "heart.fill",
                         title: "Who are you doing this for?",
                         message: "Add the people, pets or future you that matter. They're only for you, and they show up when you take today's pledge and when you're riding out an urge.",
-                        actionTitle: "Add some",
+                        actionTitle: "Add someone",
                         tint: Anchor.Theme.accent
-                    ) { showingEditor = true }
-                } else {
-                    card(for: .person, icon: "heart.fill", tint: Anchor.Theme.accent)
-                    card(for: .reason, icon: "sparkles", tint: Anchor.Theme.sage)
+                    ) { startNew(.person) }
+                    .padding()
                 }
+            } else {
+                List {
+                    ForEach(MotivationKind.allCases) { kind in
+                        Anchor.SectionHeader(icon: icon(for: kind), title: kind.sectionTitle, tint: tint(for: kind))
+                            .anchorCardRow()
+
+                        ForEach(items(kind)) { item in
+                            Anchor.Card(accentColor: tint(for: kind)) {
+                                Button { editing = item } label: {
+                                    Text(item.text.isEmpty ? "Untitled" : item.text)
+                                        .font(.system(.body, design: .rounded))
+                                        .fixedSize(horizontal: false, vertical: true)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityHint("Opens the editor")
+                            }
+                            .anchorDeletable { modelContext.delete(item) }
+                            .anchorCardRow()
+                        }
+
+                        HStack {
+                            Button { startNew(kind) } label: {
+                                Label(addTitle(for: kind), systemImage: "plus")
+                            }
+                            .buttonStyle(Anchor.SecondaryButtonStyle(tint: tint(for: kind)))
+                            Spacer()
+                        }
+                        .anchorCardRow()
+                    }
+                }
+                .listStyle(.plain)
             }
-            .padding()
         }
         .anchorBackground()
         .navigationTitle("Who I'm doing this for")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Anchor.EditToolbarButton { showingEditor = true }
+                Menu {
+                    Button { startNew(.person) } label: {
+                        Label("Someone I'm doing this for", systemImage: "heart.fill")
+                    }
+                    Button { startNew(.reason) } label: {
+                        Label("Why it matters to me", systemImage: "sparkles")
+                    }
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .accessibilityLabel("Add")
             }
         }
-        .sheet(isPresented: $showingEditor) {
-            Anchor.EditorSheet(title: "Edit") {
-                RecoveryMotivationsEditorView()
-            }
+        .sheet(item: $editing, onDismiss: finishEditing) { item in
+            MotivationEditorSheet(motivation: item) { toDelete = item }
         }
-    }
-
-    private func card(for kind: MotivationKind, icon: String, tint: Color) -> some View {
-        let lines = motivations.filter { $0.kind == kind }.map(\.text)
-        return Anchor.TextCard(
-            icon: icon,
-            title: kind.sectionTitle,
-            text: lines.joined(separator: "\n\n"),
-            tint: tint
-        )
-    }
-}
-
-/// The motivations editor. Presented from `RecoveryMotivationsView` via
-/// Edit, never browsed to directly.
-struct RecoveryMotivationsEditorView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query(sort: \RecoveryMotivation.sortOrder) private var motivations: [RecoveryMotivation]
-    @State private var newPerson = ""
-    @State private var newReason = ""
-
-    var body: some View {
-        List {
-            Section {
-                Text("These are only for you. They show up when you take today's pledge, and when you're riding out an urge.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .listRowBackground(Color.clear)
-
-            section(for: .person, text: $newPerson, placeholder: "A person, a pet, a future you")
-            section(for: .reason, text: $newReason, placeholder: "Something that matters to you")
-        }
-        .toolbar { EditButton() }
     }
 
     private func items(_ kind: MotivationKind) -> [RecoveryMotivation] {
         motivations.filter { $0.kind == kind }
     }
 
-    @ViewBuilder
-    private func section(for kind: MotivationKind, text: Binding<String>, placeholder: String) -> some View {
-        Section(kind.sectionTitle) {
-            ForEach(items(kind)) { item in
-                TextField("", text: Binding(get: { item.text }, set: { item.text = $0 }), axis: .vertical)
-            }
-            .onDelete { offsets in
-                let current = items(kind)
-                for index in offsets { modelContext.delete(current[index]) }
-            }
+    private func icon(for kind: MotivationKind) -> String {
+        kind == .person ? "heart.fill" : "sparkles"
+    }
 
-            HStack {
-                TextField(placeholder, text: text, axis: .vertical)
-                Button("Add") {
-                    let trimmed = text.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard !trimmed.isEmpty else { return }
-                    modelContext.insert(RecoveryMotivation(kind: kind, text: trimmed, sortOrder: motivations.count))
-                    text.wrappedValue = ""
+    private func tint(for kind: MotivationKind) -> Color {
+        kind == .person ? Anchor.Theme.accent : Anchor.Theme.sage
+    }
+
+    private func addTitle(for kind: MotivationKind) -> String {
+        kind == .person ? "Add someone" : "Add a reason"
+    }
+
+    private func startNew(_ kind: MotivationKind) {
+        let new = RecoveryMotivation(kind: kind, text: "", sortOrder: motivations.count)
+        modelContext.insert(new)
+        editing = new
+    }
+
+    /// Runs once the editor has closed, so the editor never reads an item that
+    /// is already gone. One added and left blank is dropped.
+    private func finishEditing() {
+        let deleting = toDelete
+        toDelete = nil
+        if let deleting { modelContext.delete(deleting) }
+        for item in motivations where item !== deleting
+            && item.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            modelContext.delete(item)
+        }
+    }
+}
+
+private struct MotivationEditorSheet: View {
+    @Bindable var motivation: RecoveryMotivation
+    let onDelete: () -> Void
+
+    var body: some View {
+        Anchor.ItemEditorSheet(
+            title: motivation.kind == .person ? "Who I'm doing this for" : "Why it matters",
+            onDelete: onDelete,
+            deleteQuestion: "Delete this?"
+        ) {
+            Form {
+                Section {
+                    TextField(
+                        motivation.kind == .person ? "A person, a pet, a future you" : "Something that matters to you",
+                        text: $motivation.text,
+                        axis: .vertical
+                    )
+                    .lineLimit(2...8)
                 }
             }
         }

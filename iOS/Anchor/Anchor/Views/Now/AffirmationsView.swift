@@ -46,109 +46,132 @@ struct AffirmationsCardView: View {
     }
 }
 
-/// The affirmation rotation as something to read: one calm card per line.
-/// Writing, reordering, deleting and browsing suggestions live behind Edit
-/// (`AffirmationsEditorView`).
+/// The affirmation rotation. Tap a card to rewrite it, the plus adds one, and
+/// Delete is in the editor and in the card's long-press menu. Order is the
+/// order "Another" steps through on Now, so there is a labelled Reorder.
 struct AffirmationsView: View {
+    @Environment(\.modelContext) private var modelContext
     @Query(sort: \Affirmation.sortOrder) private var affirmations: [Affirmation]
-    @State private var showingEditor = false
+    @State private var editing: Affirmation?
+    @State private var toDelete: Affirmation?
+    @State private var showSuggestions = false
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: Anchor.Theme.spacing) {
-                if affirmations.isEmpty {
-                    Anchor.EmptyState(
-                        icon: "sparkles",
-                        title: "Nothing here yet",
-                        message: "Write your own, or browse a pool of suggestions and keep whichever ones land. Nothing here is fixed.",
-                        actionTitle: "Add some",
-                        tint: Anchor.Theme.accent
-                    ) { showingEditor = true }
-                } else {
+        Group {
+            if affirmations.isEmpty {
+                ScrollView {
+                    VStack(spacing: Anchor.Theme.spacing) {
+                        Anchor.EmptyState(
+                            icon: "sparkles",
+                            title: "Nothing here yet",
+                            message: "Write your own, or browse a pool of suggestions and keep whichever ones land. Nothing here is fixed.",
+                            actionTitle: "Write one",
+                            tint: Anchor.Theme.accent
+                        ) { startNew() }
+                        suggestionsButton
+                    }
+                    .padding()
+                }
+            } else {
+                List {
                     ForEach(affirmations) { affirmation in
                         Anchor.Card {
-                            Text(affirmation.text)
-                                .font(.system(.title3, design: .rounded))
-                                .italic()
-                                .fixedSize(horizontal: false, vertical: true)
+                            Button { editing = affirmation } label: {
+                                Text(affirmation.text.isEmpty ? "Untitled" : affirmation.text)
+                                    .font(.system(.title3, design: .rounded))
+                                    .italic()
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityHint("Opens the editor")
                         }
+                        .anchorDeletable { modelContext.delete(affirmation) }
+                        .anchorCardRow()
                     }
+                    .onMove(perform: move)
+
+                    suggestionsButton
+                        .anchorCardRow()
                 }
+                .listStyle(.plain)
             }
-            .padding()
         }
         .anchorBackground()
         .navigationTitle("Affirmations")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Anchor.EditToolbarButton { showingEditor = true }
+            ToolbarItemGroup(placement: .primaryAction) {
+                if affirmations.count > 1 {
+                    Anchor.ReorderToolbarButton()
+                }
+                Anchor.AddToolbarButton(label: "Write an affirmation") { startNew() }
             }
         }
-        .sheet(isPresented: $showingEditor) {
-            Anchor.EditorSheet(title: "Edit affirmations") {
-                AffirmationsEditorView()
+        .sheet(item: $editing, onDismiss: finishEditing) { affirmation in
+            AffirmationEditorSheet(affirmation: affirmation) { toDelete = affirmation }
+        }
+        .sheet(isPresented: $showSuggestions) {
+            AffirmationSuggestionsView(alreadyAdded: Set(affirmations.map(\.text))) { text in
+                modelContext.insert(Affirmation(text: text, sortOrder: affirmations.count))
             }
+        }
+    }
+
+    private var suggestionsButton: some View {
+        HStack {
+            Spacer()
+            Button {
+                showSuggestions = true
+            } label: {
+                Label("Browse suggestions", systemImage: "text.book.closed.fill")
+            }
+            .buttonStyle(Anchor.SecondaryButtonStyle())
+            Spacer()
+        }
+    }
+
+    private func startNew() {
+        let new = Affirmation(text: "", sortOrder: affirmations.count)
+        modelContext.insert(new)
+        editing = new
+    }
+
+    private func move(from offsets: IndexSet, to destination: Int) {
+        var reordered = affirmations
+        reordered.move(fromOffsets: offsets, toOffset: destination)
+        for (index, item) in reordered.enumerated() { item.sortOrder = index }
+    }
+
+    /// Runs once the editor has closed, so the editor never reads an item that
+    /// is already gone. One added and left blank is dropped.
+    private func finishEditing() {
+        let deleting = toDelete
+        toDelete = nil
+        if let deleting { modelContext.delete(deleting) }
+        for item in affirmations where item !== deleting
+            && item.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            modelContext.delete(item)
         }
     }
 }
 
-/// The affirmations editor. Presented from `AffirmationsView` via Edit,
-/// never browsed to directly.
-struct AffirmationsEditorView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query(sort: \Affirmation.sortOrder) private var affirmations: [Affirmation]
-    @State private var newText = ""
-    @State private var showSuggestions = false
+private struct AffirmationEditorSheet: View {
+    @Bindable var affirmation: Affirmation
+    let onDelete: () -> Void
 
     var body: some View {
-        List {
-            Section {
-                Text("Your own rotation. Write something, or browse suggestions below.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .listRowBackground(Color.clear)
-
-            Section {
-                ForEach(affirmations) { affirmation in
-                    TextField("Affirmation", text: Binding(
-                        get: { affirmation.text },
-                        set: { affirmation.text = $0 }
-                    ), axis: .vertical)
+        Anchor.ItemEditorSheet(
+            title: affirmation.text.isEmpty ? "New affirmation" : "Affirmation",
+            onDelete: onDelete,
+            deleteQuestion: "Delete this affirmation?"
+        ) {
+            Form {
+                Section {
+                    TextField("Something to hold onto", text: $affirmation.text, axis: .vertical)
+                        .lineLimit(3...8)
                 }
-                .onDelete { offsets in
-                    for index in offsets { modelContext.delete(affirmations[index]) }
-                }
-                .onMove { source, destination in
-                    var reordered = affirmations
-                    reordered.move(fromOffsets: source, toOffset: destination)
-                    for (index, item) in reordered.enumerated() { item.sortOrder = index }
-                }
-
-                HStack {
-                    TextField("Write your own", text: $newText, axis: .vertical)
-                    Button("Add") {
-                        let trimmed = newText.trimmingCharacters(in: .whitespacesAndNewlines)
-                        guard !trimmed.isEmpty else { return }
-                        modelContext.insert(Affirmation(text: trimmed, sortOrder: affirmations.count))
-                        newText = ""
-                    }
-                }
-            }
-
-            Section {
-                Button {
-                    showSuggestions = true
-                } label: {
-                    Label("Browse suggestions", systemImage: "text.book.closed.fill")
-                }
-            }
-        }
-        .toolbar { EditButton() }
-        .sheet(isPresented: $showSuggestions) {
-            AffirmationSuggestionsView(alreadyAdded: Set(affirmations.map(\.text))) { text in
-                modelContext.insert(Affirmation(text: text, sortOrder: affirmations.count))
             }
         }
     }

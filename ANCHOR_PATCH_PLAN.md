@@ -1,6 +1,6 @@
 # Anchor — Patch Plan (v2-recovery)
 
-*Living document. Last updated: 7 Nov 2026, after Patch 12d was written (Patches 1 to 11 are pushed; Patches 12a to 12d await your paste; none confirmed building).*
+*Living document. Last updated: 7 Nov 2026, after Patch 13a was written (Patches 1 to 12d are pushed; none confirmed building; Patch 13a awaits your paste).*
 
 > ## READ THIS FIRST: THIS FILE IS THE PROMPT
 >
@@ -39,14 +39,16 @@ The source code repository is at <https://github.com/Kousei-Uchu/Anchor/tree/v2-
 | 9: Journal year overview | 🟡 Pushed by you (`041c874`); build not yet confirmed |
 | 10: Tap-to-edit building blocks | 🟡 Pushed by you; build not yet confirmed |
 | 11: Edit pattern on the Thread screens | 🟡 Pushed by you (`320930d`); build not yet confirmed |
-| 12a: Edit pattern on the Plan screens, part 1: Safety plan and Trigger windows | 🟡 Written (`patch-12a.sh`); awaiting your paste and build (paste after Patch 11) |
-| 12b: Plan screens, part 2: Contacts and Grounding tools, with Reorder | 🟡 Written (`patch-12b.sh`); awaiting your paste and build (paste after Patch 12a) |
-| 12c: Plan screens, part 3: Decision presets | 🟡 Written (`patch-12c.sh`); awaiting your paste and build (paste after Patch 12b) |
-| 12d: Plan screens, part 4: Appointments | 🟡 Written (`patch-12d.sh`); awaiting your paste and build (paste after Patch 12c) |
-| 13 onward | Not started |
+| 12a: Edit pattern on the Plan screens, part 1: Safety plan and Trigger windows | 🟡 Pushed by you; build not yet confirmed |
+| 12b: Plan screens, part 2: Contacts and Grounding tools, with Reorder | 🟡 Pushed by you; build not yet confirmed |
+| 12c: Plan screens, part 3: Decision presets | 🟡 Pushed by you; build not yet confirmed |
+| 12d: Plan screens, part 4: Appointments | 🟡 Pushed by you; build not yet confirmed |
+| 13a: Edit pattern on Now and Recovery: Affirmations, De-escalation scripts, Who I'm doing this for, Before tracking | 🟡 Written (`patch-13a.sh`); awaiting your paste and build (paste after pushing the rewritten history) |
+| 13b onward | Not started |
 
 ## Change log of this plan
 
+- **7 Nov 2026 (21):** Patch 13a written: the screens left on the old pattern in Now and Recovery. **Affirmations** and **De-escalation scripts** are lists of cards: tap one to rewrite it, the plus adds, Delete is in the sheet and the long-press menu, and a labelled Reorder shows with two or more because the order is the order Now steps through. Browse suggestions is a button under the affirmations (and under the empty state). **Who I'm doing this for** has a card per line under its two headings; the plus is a small menu (someone, or a reason) and each heading has its own add button; no Reorder, because order means nothing there. **Before tracking** (Streaks) is tap to change. `AffirmationsEditorView`, `DeEscalationScriptsEditorView` and `RecoveryMotivationsEditorView` are removed. History rewritten to drop Claude co-author trailers (your `filter-branch`). **Still left for 13b:** Bridge (Appointment prep, Post-session notes, Bridge draft list, Feedback loop diagrams) and the Edit button on the Journal entry preview, then removing `EditToolbarButton` and `EditorSheet`. Not compiled here.
 - **7 Nov 2026 (20):** Patch 12d written: Appointments, the last of the Plan screens. One screen and no Edit button. Tap an empty calendar day to schedule a session, tap a day with a session (or its row in the list) to move or cancel it, and the plus schedules any date; the schedule sheet now has a date picker so the plus and the calendar share it. Cancelling is inside the session sheet and in the row's long-press menu. The typical cadence is a stepper on the screen, and Remove all (with its question) stays in the All sessions card. `AppointmentEditorView` is removed. **Moved to Patch 13:** De-escalation scripts and Affirmations are reached from Plan but their files live in `Views/Now`, so they go with Now; Patch 13 also removes `EditToolbarButton` and `EditorSheet` when the last screen has moved. Patch 12 is complete once 12a to 12d are pasted. Not compiled here.
 - **7 Nov 2026 (19):** Patch 12c written: Decision-fatigue presets. Tap an option to edit it, tap a category's name to rename it, the plus in the bar adds a category, and an "Add an option" button inside each card adds an option. Delete is inside each sheet, and an option's long-press menu has it too. A small play button on an option with steps runs it. Steps inside an option have a labelled Reorder in the section header, and the red minus buttons are hidden while you reorder. Blank categories and options left behind are removed. The manage list and the second `EditButton` are gone. Categories and options themselves still cannot be reordered, same as before. Not compiled here.
 - **7 Nov 2026 (18):** Patch 12b written: Contacts and Grounding tools. Both are now a List of cards so dragging to reorder works; a new `anchorCardRow()` helper in `ContentView.swift` strips the row chrome so they still look like cards. Tap a card to edit it, the plus adds (on Contacts the plus is a small menu: pick from Contacts, or add manually), and Delete is inside the sheet and in the long-press menu. **Reorder** is a labelled button that shows when there are two or more, because order matters on both screens: the top two contacts are the quick buttons on Now, and the tools show in this order on Now. A tool with written steps keeps a small play button on its card, because running it is using it, not editing it. Someone picked from the system Contacts app opens in the editor once the picker has closed. A contact or tool added and left blank is removed. "Who's awake right now" stays at the top of Contacts, outside the rows you can reorder. `ContactsEditorView` and `GroundingToolsEditorView` (the manage lists) are removed. Not compiled here.
@@ -342,7 +344,9 @@ Order: unblock → visible quick wins → one shared pattern later screens inher
 | **12b** | Plan screens: Contacts, Grounding tools (List of cards, Reorder) | 13 | M | 🟡 |
 | **12c** | Plan screens: Decision presets | 13 | M | 🟡 |
 | **12d** | Plan screens: Appointments | 13 | M | 🟡 |
-| **13** | Apply to Bridge, Now (including De-escalation scripts and Affirmations, reached from Plan) and Recovery screens; then remove `EditToolbarButton` and `EditorSheet` | 13 | M, may split | ⬜ |
+| **13a** | Apply to Now and Recovery (Affirmations, De-escalation scripts, motivations, Before tracking) | 13 | M | 🟡 |
+| **13b** | Apply to Bridge and the Journal entry preview; then remove `EditToolbarButton` and `EditorSheet` | 13 | M | ⬜ |
+| ~~13~~ | ~~Apply to Bridge, Now (including De-escalation scripts and Affirmations, reached from Plan) and Recovery screens; then remove `EditToolbarButton` and `EditorSheet`~~ (split into 13a and 13b) | 13 | | |
 | **14** | Message log review and rework (needs D8); includes the widget caption and a write action | 10 | M | ⬜ |
 
 Widget drag-and-drop (Patch 20) is independent of the planner and can be pulled forward any time.
@@ -501,4 +505,4 @@ A reminder you set yourself, per person, **off by default**. Lock-screen text is
 
 ## Appendix B: Suggested next session
 
-Patch **13** (apply the edit pattern to Bridge, Now and Recovery, and remove the old Edit button and editor sheet), once Patches 1 to 12d build. It touches about a dozen files, so it will probably be split into 13a (Now and Recovery) and 13b (Bridge). D9 is closed, so Journal polish carries on in Swift.
+Patch **13b** (apply the edit pattern to Bridge and the Journal entry preview, and remove the old Edit button and editor sheet), once Patches 1 to 13a build. D9 is closed, so Journal polish carries on in Swift.
