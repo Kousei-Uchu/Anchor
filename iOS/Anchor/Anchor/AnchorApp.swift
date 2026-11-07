@@ -149,6 +149,21 @@ enum DemoMode {
         context.insert(BridgeDraftItem(text: "Medication question"))
         context.insert(BridgeDraftItem(text: "Ask about next steps"))
 
+        context.insert(FeedbackLoopDiagram(
+            title: "Waking in the night",
+            graphJSON: DiagramGraph.loop([
+                ("I wake up and check the time", .same),
+                ("I start thinking about tomorrow", .same),
+                ("I feel tense and wide awake", .same)
+            ]).encoded()))
+        context.insert(FeedbackLoopDiagram(
+            title: "Taking on too much",
+            graphJSON: DiagramGraph.loop([
+                ("I take on more", .same),
+                ("I feel stretched thin", .same),
+                ("I say no to something", .opposite)
+            ]).encoded()))
+
         context.insert(FutureNote(unlockDate: now.addingTimeInterval(14 * 86_400), text: "You got through last time too."))
         context.insert(ThreadMessage(timestamp: ago(2), text: "Thanks for checking in on me.", withContactID: demoSam.id))
 
