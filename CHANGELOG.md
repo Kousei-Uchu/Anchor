@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 8: the Journal has a Days and Month switch; the month calendar shows a dot for each entry and a square for a check-in, and tapping a day opens it in the timeline.
 - Patch 7: the Journal editor is one calm writing surface with a single Add button for Journaling Suggestions, photos, drawings, prompts and formatting; Preview moved into a menu; a prompt now adds to your entry instead of replacing it.
 - Patch 6: the Journal timeline shows the newest day and the newest entry first, and a "Jump to today" action takes you back to the top.
 - Patch 5: the check-in sliders are soft cards with an icon and end labels, the mascot's mood follows the sliders and changes per question, and nothing about this is scored or stored.

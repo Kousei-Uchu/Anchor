@@ -17,6 +17,20 @@ import SwiftUI
 import SwiftData
 import Charts
 
+/// How the Journal tab is laid out. Days is the timeline; Month is a
+/// calendar you can tap a day in.
+enum JournalLayout: String, CaseIterable, Identifiable {
+    case days = "Days"
+    case month = "Month"
+    var id: String { rawValue }
+}
+
+/// What happened on one day, as plain counts. Nothing here is a score.
+struct JournalDayCount {
+    var entries = 0
+    var checkIns = 0
+}
+
 struct JournalView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \JournalEntry.createdAt) private var entries: [JournalEntry]
@@ -26,6 +40,9 @@ struct JournalView: View {
     @State private var entryToEdit: JournalEntry?
     @State private var entryToRead: JournalEntry?
     @State private var checkInToView: CheckIn?
+    @AppStorage("anchor.journal.layout") private var layout: JournalLayout = .days
+    @State private var displayedMonth = Date()
+    @State private var pendingScrollDay: Date?
 
     // MARK: - Unified timeline item
 
@@ -81,15 +98,52 @@ struct JournalView: View {
 
     private let topAnchorID = "journal-top"
 
+    private var dayCounts: [Date: JournalDayCount] {
+        let calendar = Calendar.current
+        var result: [Date: JournalDayCount] = [:]
+        for item in timelineItems {
+            let day = calendar.startOfDay(for: item.timestamp)
+            var count = result[day] ?? JournalDayCount()
+            switch item {
+            case .entry: count.entries += 1
+            case .checkIn: count.checkIns += 1
+            }
+            result[day] = count
+        }
+        return result
+    }
+
     var body: some View {
         NavigationStack {
             ScrollViewReader { proxy in
+            VStack(spacing: 0) {
+            Picker("Layout", selection: $layout) {
+                ForEach(JournalLayout.allCases) { option in
+                    Text(option.rawValue).tag(option)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     Color.clear.frame(height: 0).id(topAnchorID)
+                    if layout == .month {
+                        JournalMonthView(
+                            counts: dayCounts,
+                            earliest: timelineItems.last?.timestamp ?? Date(),
+                            month: $displayedMonth,
+                            onPickDay: { day in
+                                pendingScrollDay = day
+                                layout = .days
+                            }
+                        )
+                    }
                     if groupedByDay.isEmpty {
                         emptyState
                     }
+                    if layout == .days {
                     ForEach(groupedByDay, id: \.day) { group in
                         VStack(alignment: .leading, spacing: 0) {
                             dayMarker(group.day)
@@ -103,12 +157,23 @@ struct JournalView: View {
                                 }
                             }
                         }
+                        .id(group.day)
+                    }
                     }
                 }
                 .padding(.horizontal)
                 .padding(.bottom, 24)
             }
+            }
             .anchorBackground()
+            .onChange(of: layout) { _, newLayout in
+                if newLayout == .days, let day = pendingScrollDay {
+                    DispatchQueue.main.async {
+                        proxy.scrollTo(day, anchor: .top)
+                        pendingScrollDay = nil
+                    }
+                }
+            }
             .searchable(text: $searchText, prompt: "Search your journal")
             .navigationTitle("Journal")
             .toolbar {
@@ -117,7 +182,12 @@ struct JournalView: View {
                 }
                 ToolbarItem(placement: .secondaryAction) {
                     Button {
-                        withAnimation { proxy.scrollTo(topAnchorID, anchor: .top) }
+                        switch layout {
+                        case .days:
+                            withAnimation { proxy.scrollTo(topAnchorID, anchor: .top) }
+                        case .month:
+                            displayedMonth = Date()
+                        }
                     } label: {
                         Label("Jump to today", systemImage: "arrow.up.to.line")
                     }
@@ -307,6 +377,151 @@ struct JournalView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)
+    }
+}
+
+// MARK: - Month view
+
+/// A month grid. Each day that has something on it shows a small dot per
+/// entry (up to three) and a small square if there was a check-in. Days
+/// with nothing are plain numbers. Tapping a day with something on it
+/// opens that day in the timeline.
+struct JournalMonthView: View {
+    let counts: [Date: JournalDayCount]
+    let earliest: Date
+    @Binding var month: Date
+    let onPickDay: (Date) -> Void
+
+    private var calendar: Calendar { Calendar.current }
+
+    private var monthStart: Date {
+        calendar.dateInterval(of: .month, for: month)?.start ?? month
+    }
+
+    private var canGoBack: Bool {
+        guard let first = calendar.dateInterval(of: .month, for: earliest)?.start else { return false }
+        return monthStart > first
+    }
+
+    private var canGoForward: Bool {
+        guard let current = calendar.dateInterval(of: .month, for: Date())?.start else { return false }
+        return monthStart < current
+    }
+
+    private var weekdayHeaders: [String] {
+        let symbols = calendar.veryShortStandaloneWeekdaySymbols
+        let shift = calendar.firstWeekday - 1
+        return Array(symbols[shift...] + symbols[..<shift])
+    }
+
+    private var cells: [Date?] {
+        guard let range = calendar.range(of: .day, in: .month, for: monthStart) else { return [] }
+        let firstWeekday = calendar.component(.weekday, from: monthStart)
+        let lead = (firstWeekday - calendar.firstWeekday + 7) % 7
+        var result: [Date?] = Array(repeating: nil, count: lead)
+        for offset in 0..<range.count {
+            result.append(calendar.date(byAdding: .day, value: offset, to: monthStart))
+        }
+        return result
+    }
+
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 7)
+
+    var body: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Button { shift(-1) } label: { Image(systemName: "chevron.left") }
+                    .disabled(!canGoBack)
+                    .accessibilityLabel("Previous month")
+                Spacer()
+                Text(monthStart.formatted(.dateTime.month(.wide).year()))
+                    .font(.system(.headline, design: .rounded))
+                Spacer()
+                Button { shift(1) } label: { Image(systemName: "chevron.right") }
+                    .disabled(!canGoForward)
+                    .accessibilityLabel("Next month")
+            }
+            .foregroundStyle(Anchor.Theme.accent)
+
+            LazyVGrid(columns: columns, spacing: 4) {
+                ForEach(Array(weekdayHeaders.enumerated()), id: \.offset) { _, symbol in
+                    Text(symbol)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+                ForEach(Array(cells.enumerated()), id: \.offset) { _, day in
+                    if let day {
+                        cell(for: day)
+                    } else {
+                        Color.clear.frame(minHeight: 48)
+                    }
+                }
+            }
+
+            HStack(spacing: 16) {
+                legend(shape: AnyView(Circle().fill(Anchor.Theme.accent)), label: "Entry")
+                legend(shape: AnyView(RoundedRectangle(cornerRadius: 1).fill(Anchor.Theme.sage)), label: "Check-in")
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 8)
+    }
+
+    private func shift(_ months: Int) {
+        if let next = calendar.date(byAdding: .month, value: months, to: monthStart) {
+            month = next
+        }
+    }
+
+    private func legend(shape: AnyView, label: String) -> some View {
+        HStack(spacing: 5) {
+            shape.frame(width: 7, height: 7)
+            Text(label)
+        }
+    }
+
+    @ViewBuilder
+    private func cell(for day: Date) -> some View {
+        let count = counts[calendar.startOfDay(for: day)]
+        let hasItems = (count?.entries ?? 0) + (count?.checkIns ?? 0) > 0
+        let isToday = calendar.isDateInToday(day)
+
+        let content = VStack(spacing: 3) {
+            Text("\(calendar.component(.day, from: day))")
+                .font(.system(.subheadline, design: .rounded).weight(isToday ? .bold : .regular))
+                .foregroundStyle(hasItems || isToday ? Color.primary : Color.secondary)
+            HStack(spacing: 3) {
+                ForEach(0..<min(count?.entries ?? 0, 3), id: \.self) { _ in
+                    Circle().fill(Anchor.Theme.accent).frame(width: 6, height: 6)
+                }
+                if (count?.checkIns ?? 0) > 0 {
+                    RoundedRectangle(cornerRadius: 1).fill(Anchor.Theme.sage).frame(width: 6, height: 6)
+                }
+            }
+            .frame(height: 6)
+        }
+        .frame(maxWidth: .infinity, minHeight: 48)
+        .background(
+            isToday ? Anchor.Theme.accentSoft : Color.clear,
+            in: RoundedRectangle(cornerRadius: 10)
+        )
+
+        if hasItems {
+            Button { onPickDay(day) } label: { content }
+                .buttonStyle(.plain)
+                .accessibilityLabel(accessibilityLabel(for: day, count: count))
+        } else {
+            content
+                .accessibilityLabel(day.formatted(.dateTime.day().month(.wide)))
+        }
+    }
+
+    private func accessibilityLabel(for day: Date, count: JournalDayCount?) -> String {
+        var parts = [day.formatted(.dateTime.day().month(.wide))]
+        if let n = count?.entries, n > 0 { parts.append(n == 1 ? "1 entry" : "\(n) entries") }
+        if let c = count?.checkIns, c > 0 { parts.append(c == 1 ? "1 check-in" : "\(c) check-ins") }
+        return parts.joined(separator: ", ")
     }
 }
 
