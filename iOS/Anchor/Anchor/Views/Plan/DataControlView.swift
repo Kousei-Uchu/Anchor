@@ -863,8 +863,15 @@ struct SupportCalendarEntryDTO: Codable {
 
 struct FutureNoteDTO: Codable {
     var id: UUID; var writtenAt: Date; var unlockDate: Date; var text: String
-    init(_ m: FutureNote) { id = m.id; writtenAt = m.writtenAt; unlockDate = m.unlockDate; text = m.text }
-    func toModel() -> FutureNote { FutureNote(id: id, writtenAt: writtenAt, unlockDate: unlockDate, text: text) }
+    /// Optional so exports made before "Open when" letters existed still import.
+    var openWhen: String? = nil
+    init(_ m: FutureNote) {
+        id = m.id; writtenAt = m.writtenAt; unlockDate = m.unlockDate; text = m.text
+        openWhen = m.openWhen.isEmpty ? nil : m.openWhen
+    }
+    func toModel() -> FutureNote {
+        FutureNote(id: id, writtenAt: writtenAt, unlockDate: unlockDate, text: text, openWhen: openWhen ?? "")
+    }
 }
 
 struct UnsentDraftDTO: Codable {

@@ -660,13 +660,22 @@ final class FutureNote {
     var unlockDate: Date
     var text: String
     var isUnlocked: Bool   // derived at read-time from unlockDate, cached here for widget/UI convenience
+    /// What the person wrote after "Open when", for a letter they open when
+    /// they choose. Empty for a note sealed until a date. A letter has no
+    /// date to wait for, and nothing opens it, counts it or reminds them of it.
+    var openWhen: String = ""
 
-    init(id: UUID = UUID(), writtenAt: Date = .now, unlockDate: Date, text: String) {
+    init(id: UUID = UUID(), writtenAt: Date = .now, unlockDate: Date, text: String, openWhen: String = "") {
         self.id = id
         self.writtenAt = writtenAt
         self.unlockDate = unlockDate
         self.text = text
         self.isUnlocked = false
+        self.openWhen = openWhen
+    }
+
+    var isOpenWhenLetter: Bool {
+        !openWhen.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 }
 

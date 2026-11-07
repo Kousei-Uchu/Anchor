@@ -665,8 +665,10 @@ struct FutureNotesWidget: View {
     @Query(sort: \FutureNote.unlockDate) private var notes: [FutureNote]
 
     var body: some View {
-        let ready = notes.filter { $0.unlockDate <= .now }.count
-        let upcoming = notes.first { $0.unlockDate > .now }
+        let dated = notes.filter { !$0.isOpenWhenLetter }
+        let ready = dated.filter { $0.unlockDate <= .now }.count
+        let upcoming = dated.first { $0.unlockDate > .now }
+        let letters = notes.count - dated.count
         Anchor.Widget(icon: "envelope.open.badge.clock", title: "To future me", tint: Anchor.Theme.sage, fillsHeight: true) {
             FutureNoteListView()
         } content: {
@@ -678,6 +680,8 @@ struct FutureNotesWidget: View {
             } else if let upcoming {
                 let days = Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: .now), to: Calendar.current.startOfDay(for: upcoming.unlockDate)).day ?? 0
                 Anchor.WidgetCaption(text: "Next unlocks in \(max(days, 1)) \(max(days, 1) == 1 ? "day" : "days")")
+            } else if letters > 0 {
+                Anchor.WidgetCaption(text: letters == 1 ? "1 letter to open when you choose." : "\(letters) letters to open when you choose.")
             } else {
                 Anchor.WidgetCaption(text: "Write something for a later day.")
             }
