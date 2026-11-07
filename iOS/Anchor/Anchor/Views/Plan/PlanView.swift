@@ -682,3 +682,103 @@ private struct SleepWordsSheet: View {
         }
     }
 }
+
+// MARK: - Sleep on Now
+
+/// The sleep journal's own switches. Everything here is off until the person
+/// turns it on.
+enum SleepSettings {
+    /// Show a small "Last night" card on Now in the morning.
+    static let nowCardKey = "anchor.sleep.nowCard"
+    /// The day, as year-month-day text, that the card was put away with Not now.
+    static let nowDismissedKey = "anchor.sleep.nowDismissedDay"
+
+    static func dayKey(_ date: Date = .now) -> String {
+        date.formatted(.iso8601.year().month().day())
+    }
+}
+
+/// Opens last night's entry in its sheet, finding today's if it is there and
+/// making one if not. One left with nothing in it is dropped again, so
+/// opening it and closing it leaves nothing behind.
+struct SleepLogSheetHost: View {
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \SleepEntry.nightDate, order: .reverse) private var entries: [SleepEntry]
+    @AppStorage(SleepFeelWords.storageKey) private var wordsRaw = ""
+    @State private var entry: SleepEntry?
+    @State private var deleting = false
+
+    init() {}
+
+    var body: some View {
+        Group {
+            if let entry {
+                SleepEntrySheet(entry: entry, words: SleepFeelWords.words(from: wordsRaw)) { deleting = true }
+            }
+        }
+        .onAppear {
+            guard entry == nil else { return }
+            let today = Calendar.current.startOfDay(for: .now)
+            if let existing = entries.first(where: { Calendar.current.startOfDay(for: $0.nightDate) == today }) {
+                entry = existing
+            } else {
+                let new = SleepEntry(nightDate: today)
+                modelContext.insert(new)
+                entry = new
+            }
+        }
+        .onDisappear {
+            guard let entry else { return }
+            if deleting || entry.isBlank {
+                modelContext.delete(entry)
+            } else {
+                entry.lastEditedAt = .now
+            }
+        }
+    }
+}
+
+/// A morning card on Now: "Last night". Only with the switch on in Settings,
+/// only before midday, and gone once last night has something written down
+/// or Not now is tapped. Not now is remembered for the day and nothing else.
+struct SleepMorningCard: View {
+    @AppStorage(SleepSettings.nowCardKey) private var enabled = false
+    @AppStorage(SleepSettings.nowDismissedKey) private var dismissedDay = ""
+    @Query(sort: \SleepEntry.nightDate, order: .reverse) private var entries: [SleepEntry]
+    @State private var logging = false
+
+    init() {}
+
+    private var loggedToday: Bool {
+        let today = Calendar.current.startOfDay(for: .now)
+        return entries.contains { Calendar.current.startOfDay(for: $0.nightDate) == today && !$0.isBlank }
+    }
+
+    private var isMorning: Bool { Calendar.current.component(.hour, from: .now) < 12 }
+
+    var body: some View {
+        if enabled && isMorning && !loggedToday && dismissedDay != SleepSettings.dayKey() {
+            Anchor.Card(accentColor: Anchor.Theme.accent) {
+                VStack(alignment: .leading, spacing: 10) {
+                    Anchor.SectionHeader(icon: "moon.zzz.fill", title: "Last night")
+                    Text("Jot down how you slept, if you would like to.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    HStack(spacing: 10) {
+                        Button { logging = true } label: {
+                            Text("Log it").lineLimit(1).frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(Anchor.PrimaryButtonStyle())
+                        Button { dismissedDay = SleepSettings.dayKey() } label: {
+                            Text("Not now").lineLimit(1).frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(Anchor.SecondaryButtonStyle(tint: Anchor.Theme.accent))
+                    }
+                }
+            }
+            .sheet(isPresented: $logging) {
+                SleepLogSheetHost()
+            }
+        }
+    }
+}

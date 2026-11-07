@@ -54,12 +54,22 @@ struct SettingsView: View {
     @AppStorage(RecoverySettings.reviewHour) private var reviewHour = 20
     @AppStorage(RecoverySettings.reviewMinute) private var reviewMinute = 30
     @AppStorage(RecoverySettings.milestonesEnabled) private var milestonesEnabled = false
+    @AppStorage(SleepSettings.nowCardKey) private var sleepNowCard = false
+    @AppStorage(WidgetTab.plan.hiddenKey) private var planHiddenRaw = WidgetTab.plan.defaultHiddenRaw
+    @Query private var sleepEntries: [SleepEntry]
 
     /// Recovery is optional and discreet: its settings only appear once the
     /// user has a counter (or already has a recovery reminder switched on, so
     /// it can always be turned back off).
     private var showsRecovery: Bool {
         allCounters.contains { !$0.isArchived } || pledgeEnabled || reviewEnabled || milestonesEnabled
+    }
+
+    /// Sleep is invisible until it is used: its setting only appears once the
+    /// Sleep widget has been turned on or a night has been written down (or
+    /// the card is already on, so it can always be turned back off).
+    private var showsSleep: Bool {
+        !sleepEntries.isEmpty || sleepNowCard || !WidgetLayoutStore.decode(planHiddenRaw).contains(.sleep)
     }
 
     var body: some View {
@@ -111,6 +121,15 @@ struct SettingsView: View {
                             Anchor.SettingsTimeRow(time: timeBinding($reviewHour, $reviewMinute))
                         }
                         Anchor.SettingsToggle(title: "Milestones", isOn: $milestonesEnabled)
+                    }
+                }
+
+                if showsSleep {
+                    Anchor.SettingsSection(
+                        title: "Sleep",
+                        footer: "Off until you switch it on. A small card on Now in the morning, until you write down last night or tap Not now."
+                    ) {
+                        Anchor.SettingsToggle(title: "Show Last night on Now", isOn: $sleepNowCard)
                     }
                 }
 

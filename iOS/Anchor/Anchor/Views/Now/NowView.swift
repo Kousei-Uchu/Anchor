@@ -53,6 +53,9 @@ struct NowView: View {
 
                     NextAppointmentCardView()
 
+                    // Only with the switch on in Settings, and only in the morning.
+                    SleepMorningCard()
+
                     SafetyPlanShortcutView()
 
                     DecisionPresetsQuickView()
