@@ -15,6 +15,7 @@ struct AnchorApp: App {
         UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
         if !DemoMode.isOn {
             TaskMigration.migrateNextHourItemsIfNeeded(container: container)
+            SafetyPlanMigration.migrateIfNeeded(container: container)
         }
     }
 
@@ -72,6 +73,15 @@ enum DemoMode {
         context.insert(demoSam)
         context.insert(TrustedContact(name: "Alex", phoneNumber: "0400 000 002", sortOrder: 1))
         context.insert(TrustedContact(name: "Jordan", phoneNumber: "0400 000 003", sortOrder: 2))
+
+        for section in SafetyPlanSections.makeSections(
+            warningSigns: "Skipping meals\nStaying up very late\nNot answering messages",
+            copingStrategies: "Cold water on my wrists\nA short walk\nPut on a familiar playlist",
+            reasons: "My sister's wedding next year\nMy dog needs me\nI want to finish my course",
+            environment: "Keep my phone charged\nLet Sam know when I have a rough night"
+        ) {
+            context.insert(section)
+        }
 
         context.insert(GroundingTool(title: "5-4-3-2-1", kind: .physicalAction,
             steps: "Name 5 things you can see.\nName 4 things you can touch.\nName 3 things you can hear.\nName 2 things you can smell.\nTake 1 slow breath.",

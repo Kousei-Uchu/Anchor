@@ -252,6 +252,127 @@ final class SafetyPlan {
     }
 }
 
+/// One section of the safety plan: a title, the person's own words, and how
+/// it looks. Sections can be renamed, reordered, added, hidden and removed.
+/// The four text fields on `SafetyPlan` are the older form: they are copied
+/// into sections once, never changed afterwards, and no longer read.
+@Model
+final class SafetyPlanSection {
+    @Attribute(.unique) var id: UUID
+    var title: String
+    var text: String
+    var iconName: String
+    var tintName: String
+    var sortOrder: Int
+    var isHidden: Bool
+    /// Empty for an ordinary section. `reasonsRole` marks the one section that
+    /// reminder quotes are taken from.
+    var role: String
+    var lastEditedAt: Date
+
+    static let reasonsRole = "reasons"
+
+    init(id: UUID = UUID(), title: String = "", text: String = "",
+         iconName: String = "doc.text.fill", tintName: String = "sage",
+         sortOrder: Int = 0, isHidden: Bool = false, role: String = "",
+         lastEditedAt: Date = .now) {
+        self.id = id
+        self.title = title
+        self.text = text
+        self.iconName = iconName
+        self.tintName = tintName
+        self.sortOrder = sortOrder
+        self.isHidden = isHidden
+        self.role = role
+        self.lastEditedAt = lastEditedAt
+    }
+}
+
+enum SafetyPlanSections {
+    /// The four sections the plan always had, in their old order, holding the
+    /// given text. Used for the one-time copy and for a plan started fresh.
+    static func makeSections(warningSigns: String = "", copingStrategies: String = "",
+                             reasons: String = "", environment: String = "",
+                             edited: Date = .now) -> [SafetyPlanSection] {
+        [
+            SafetyPlanSection(title: "Warning signs", text: warningSigns,
+                              iconName: "exclamationmark.triangle.fill", tintName: "accent",
+                              sortOrder: 0, lastEditedAt: edited),
+            SafetyPlanSection(title: "Coping strategies", text: copingStrategies,
+                              iconName: "leaf.fill", tintName: "sage",
+                              sortOrder: 1, lastEditedAt: edited),
+            SafetyPlanSection(title: "Reasons to keep going", text: reasons,
+                              iconName: "heart.fill", tintName: "accent",
+                              sortOrder: 2, role: SafetyPlanSection.reasonsRole, lastEditedAt: edited),
+            SafetyPlanSection(title: "Making the environment safer", text: environment,
+                              iconName: "house.fill", tintName: "sage",
+                              sortOrder: 3, lastEditedAt: edited)
+        ]
+    }
+
+    static func firstLine(_ text: String) -> String? {
+        text.split(separator: "\n")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .first { !$0.isEmpty }
+    }
+
+    /// The lines reminder quotes may use: the lines of the shown section
+    /// marked for it. With no such section there is nothing to quote, so
+    /// reminders carry their plain wording.
+    static func reasonLines(from sections: [SafetyPlanSection]) -> [String] {
+        guard let source = sections.first(where: { $0.role == SafetyPlanSection.reasonsRole && !$0.isHidden }) else { return [] }
+        return source.text
+            .split(separator: "\n")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+    }
+
+    /// Whether any section, shown or not, has something written in it.
+    static func hasContent(_ sections: [SafetyPlanSection]) -> Bool {
+        sections.contains { !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    }
+
+    static func hasText(_ plan: SafetyPlan) -> Bool {
+        [plan.warningSignsText, plan.copingStrategiesText, plan.reasonsToKeepGoingText, plan.environmentSafetyStepsText]
+            .contains { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    }
+}
+
+enum SafetyPlanMigration {
+    private static let flagKey = "anchor.safetyPlanSectionsMade"
+
+    /// One time: copies the four old text fields into sections, so nothing is
+    /// lost, and leaves the old fields exactly as they were. It does nothing
+    /// when the saved store could not be opened, never copies twice, and only
+    /// marks itself done once the sections are saved.
+    @MainActor
+    static func migrateIfNeeded(container: ModelContainer) {
+        guard AnchorSchema.openedPersistentStore,
+              !UserDefaults.standard.bool(forKey: flagKey) else { return }
+        let context = container.mainContext
+        let existing = (try? context.fetchCount(FetchDescriptor<SafetyPlanSection>())) ?? 0
+        if existing == 0,
+           let plans = try? context.fetch(FetchDescriptor<SafetyPlan>()),
+           let plan = plans.first(where: SafetyPlanSections.hasText) {
+            let made = SafetyPlanSections.makeSections(
+                warningSigns: plan.warningSignsText,
+                copingStrategies: plan.copingStrategiesText,
+                reasons: plan.reasonsToKeepGoingText,
+                environment: plan.environmentSafetyStepsText,
+                edited: plan.lastEditedAt
+            )
+            for section in made { context.insert(section) }
+            do {
+                try context.save()
+            } catch {
+                // Nothing was kept. The next launch starts again.
+                return
+            }
+        }
+        UserDefaults.standard.set(true, forKey: flagKey)
+    }
+}
+
 /// A user-defined risk window, e.g. "school mornings," "afternoons,"
 /// "missing my friend at the station." Time/routine-based only — never
 /// a location trigger.
@@ -1472,7 +1593,7 @@ enum AnchorSchema {
     static var models: [any PersistentModel.Type] {
         [
             JournalEntry.self, CheckIn.self, TrustedContact.self, GroundingTool.self,
-            SafetyPlan.self, TriggerWindow.self, AppointmentSeries.self, AppointmentOccurrence.self,
+            SafetyPlan.self, SafetyPlanSection.self, TriggerWindow.self, AppointmentSeries.self, AppointmentOccurrence.self,
             BridgeDraftItem.self, FeedbackLoopDiagram.self,
             ThreadMessage.self, SupportCalendarEntry.self, FutureNote.self, UnsentDraft.self,
             MascotLine.self, DecisionPresetCategory.self, DecisionPresetChoice.self,

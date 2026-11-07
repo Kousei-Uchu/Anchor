@@ -10,19 +10,9 @@ import SwiftUI
 import SwiftData
 
 struct SafetyPlanShortcutView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var plans: [SafetyPlan]
-
-    private var currentPlan: SafetyPlan {
-        if let existing = plans.first { return existing }
-        let new = SafetyPlan()
-        modelContext.insert(new)
-        return new
-    }
-
     var body: some View {
         NavigationLink {
-            SafetyPlanView(plan: currentPlan)
+            SafetyPlanView()
         } label: {
             Anchor.Card {
                 HStack(spacing: 12) {

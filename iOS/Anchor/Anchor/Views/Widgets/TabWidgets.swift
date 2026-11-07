@@ -230,40 +230,37 @@ extension Anchor.Widget where Footer == EmptyView {
 // MARK: - Plan widgets
 
 struct SafetyPlanWidget: View {
-    let plan: SafetyPlan
+    @Query(sort: \SafetyPlanSection.sortOrder) private var sections: [SafetyPlanSection]
 
-    private func firstLine(_ text: String) -> String? {
-        text.split(separator: "\n")
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .first { !$0.isEmpty }
+    /// The first two shown sections that have something written in them, each
+    /// with its first line.
+    private var glance: [(title: String, line: String)] {
+        let found = sections.filter { !$0.isHidden }.compactMap { section -> (title: String, line: String)? in
+            guard let line = SafetyPlanSections.firstLine(section.text) else { return nil }
+            return (section.title.isEmpty ? "Untitled" : section.title, line)
+        }
+        return Array(found.prefix(2))
     }
 
     var body: some View {
-        let warning = firstLine(plan.warningSignsText)
-        let coping = firstLine(plan.copingStrategiesText)
+        let lines = glance
         Anchor.Widget(icon: "shield.fill", title: "Safety plan") {
-            SafetyPlanView(plan: plan)
+            SafetyPlanView()
         } content: {
-            if warning == nil && coping == nil {
+            if lines.isEmpty {
                 Anchor.WidgetCaption(text: "Not filled in yet. Tap to write yours.")
             } else {
                 VStack(alignment: .leading, spacing: 6) {
-                    if let warning {
+                    ForEach(Array(lines.enumerated()), id: \.offset) { _, item in
                         VStack(alignment: .leading, spacing: 1) {
-                            Text("Warning signs").font(.caption2).foregroundStyle(.secondary)
-                            Text(warning).font(.system(.subheadline, design: .rounded)).lineLimit(2)
-                        }
-                    }
-                    if let coping {
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text("Try first").font(.caption2).foregroundStyle(.secondary)
-                            Text(coping).font(.system(.subheadline, design: .rounded)).lineLimit(2)
+                            Text(item.title).font(.caption2).foregroundStyle(.secondary)
+                            Text(item.line).font(.system(.subheadline, design: .rounded)).lineLimit(2)
                         }
                     }
                 }
             }
         } footer: {
-            NavigationLink { SafetyPlanView(plan: plan) } label: {
+            NavigationLink { SafetyPlanView() } label: {
                 Label("Open plan", systemImage: "shield")
             }
             .buttonStyle(Anchor.SecondaryButtonStyle())

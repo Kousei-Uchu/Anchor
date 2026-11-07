@@ -8,7 +8,7 @@ import SwiftData
 
 struct PlanView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var plans: [SafetyPlan]
+    @Query(sort: \SafetyPlanSection.sortOrder) private var planSections: [SafetyPlanSection]
     @Query private var appointmentSeries: [AppointmentSeries]
     @Query(sort: \TrustedContact.sortOrder) private var contacts: [TrustedContact]
     @Query private var triggerWindows: [TriggerWindow]
@@ -75,7 +75,7 @@ struct PlanView: View {
 
     @ViewBuilder private func planWidget(_ id: WidgetID) -> some View {
         switch id {
-        case .safetyPlan: SafetyPlanWidget(plan: currentPlan)
+        case .safetyPlan: SafetyPlanWidget()
         case .triggerWindows: TriggerWindowsWidget()
         case .appointments: AppointmentsWidget(fallbackSeries: currentAppointmentSeries)
         case .contacts: ContactsWidget(contacts: contacts)
@@ -93,7 +93,7 @@ struct PlanView: View {
     /// Where a hidden widget still lives, in the "More" row.
     @ViewBuilder private func planMoreTile(_ id: WidgetID) -> some View {
         switch id {
-        case .safetyPlan: Anchor.MoreTile(id: id) { SafetyPlanView(plan: currentPlan) }
+        case .safetyPlan: Anchor.MoreTile(id: id) { SafetyPlanView() }
         case .triggerWindows: Anchor.MoreTile(id: id) { TriggerWindowListView() }
         case .appointments: Anchor.MoreTile(id: id) { AppointmentView(series: currentAppointmentSeries) }
         case .contacts: Anchor.MoreTile(id: id) { ContactsView() }
@@ -115,7 +115,7 @@ struct PlanView: View {
                         NavigationLink { ContactsView() } label: {
                             Anchor.TileButtonLabel(icon: "person.2.fill", title: "Contacts", tint: Anchor.Theme.accent)
                         }
-                        NavigationLink { SafetyPlanView(plan: currentPlan) } label: {
+                        NavigationLink { SafetyPlanView() } label: {
                             Anchor.TileButtonLabel(icon: "shield.fill", title: "Safety plan", tint: Anchor.Theme.accent)
                         }
                         NavigationLink { TriggerWindowListView() } label: {
@@ -163,10 +163,7 @@ struct PlanView: View {
     /// re-add" rather than diffing — cheap enough at this scale, and
     /// guarantees the schedule always matches what's currently in Plan.
     private func rescheduleTriggerWindowNotifications(using scheduler: NotificationScheduler) {
-        let reasons = currentPlan.reasonsToKeepGoingText
-            .split(separator: "\n")
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .filter { !$0.isEmpty }
+        let reasons = SafetyPlanSections.reasonLines(from: planSections)
         let escalationContacts = contacts.filter { $0.escalationEnabled }
 
         for window in triggerWindows {
@@ -183,7 +180,7 @@ struct PlanView: View {
     private func refreshWidgetSnapshot() {
         WidgetDataStore.refresh(
             contacts: contacts,
-            hasSafetyPlan: !plans.isEmpty,
+            hasSafetyPlan: SafetyPlanSections.hasContent(planSections),
             deEscalationScriptLine: deEscalationScripts.first?.text ?? "I need 10 minutes, then we can talk.",
             nextTriggerWindowLabel: nextTriggerWindowLabel,
             currentAffirmation: affirmations.first?.text
@@ -200,13 +197,6 @@ struct PlanView: View {
         let timeLabel = formatter.string(from: soonest.date)
         let name = soonest.window.label.isEmpty ? "Trigger window" : soonest.window.label
         return "\(name) · \(timeLabel)"
-    }
-
-    private var currentPlan: SafetyPlan {
-        if let existing = plans.first { return existing }
-        let new = SafetyPlan()
-        modelContext.insert(new)
-        return new
     }
 
     private var currentAppointmentSeries: AppointmentSeries {
