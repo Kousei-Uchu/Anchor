@@ -31,6 +31,12 @@ struct AppointmentPrepView: View {
             ?? .now
     }
 
+    /// Journal entries that are this series' own prep and post-session notes,
+    /// which are not offered back as things written since the last session.
+    private var ownNoteIDs: Set<UUID> {
+        Set(series.occurrences.flatMap { [$0.prepNoteEntryID, $0.postSessionNoteEntryID] }.compactMap { $0 })
+    }
+
     private func appendToNotes(_ text: String) {
         guard let entry else { return }
         let existing = entry.text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -54,6 +60,15 @@ struct AppointmentPrepView: View {
                     RecoverySessionSummaryCard(
                         since: summaryStart,
                         sinceIsLastSession: lastSessionDate != nil,
+                        onAddToNotes: appendToNotes
+                    )
+
+                    // Journal entries and check-ins since then. Counts only, no values;
+                    // the person picks which entries to bring.
+                    JournalSessionSummaryCard(
+                        since: summaryStart,
+                        sinceIsLastSession: lastSessionDate != nil,
+                        excluding: ownNoteIDs,
                         onAddToNotes: appendToNotes
                     )
 
@@ -179,6 +194,148 @@ struct RecoverySessionSummaryCard: View {
                     .disabled(added)
                 }
             }
+        }
+    }
+}
+
+// MARK: - Journal and check-ins for session prep
+
+/// "Since your last session", drawn from the journal and check-ins. It shows how
+/// many of each there are and lets the person pick journal entries to bring. A
+/// check-in is only ever counted, never read out: no values, no averages. Nothing
+/// goes into the prep notes unless the person taps the button.
+struct JournalSessionSummaryCard: View {
+    let since: Date
+    let sinceIsLastSession: Bool
+    let excluding: Set<UUID>
+    let onAddToNotes: (String) -> Void
+
+    @Query(sort: \JournalEntry.createdAt, order: .reverse) private var allEntries: [JournalEntry]
+    @Query private var allCheckIns: [CheckIn]
+    @State private var showingList = false
+    @State private var chosen: Set<UUID> = []
+    @State private var added = false
+
+    private let listLimit = 12
+
+    private var entries: [JournalEntry] {
+        allEntries.filter {
+            $0.createdAt >= since
+                && !excluding.contains($0.id)
+                && !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+    }
+
+    private var checkInCount: Int {
+        allCheckIns.filter { $0.timestamp >= since }.count
+    }
+
+    private func plural(_ n: Int, _ one: String, _ many: String) -> String {
+        n == 1 ? "1 \(one)" : "\(n) \(many)"
+    }
+
+    private var countsLine: String {
+        var parts: [String] = []
+        if !entries.isEmpty { parts.append(plural(entries.count, "journal entry", "journal entries")) }
+        if checkInCount > 0 { parts.append(plural(checkInCount, "check-in", "check-ins")) }
+        return parts.joined(separator: " and ")
+    }
+
+    private func line(for entry: JournalEntry) -> String {
+        let first = SafetyPlanSections.firstLine(entry.text) ?? ""
+        return first.count > 140 ? String(first.prefix(140)) + "..." : first
+    }
+
+    private func dayText(_ date: Date) -> String {
+        date.formatted(date: .abbreviated, time: .omitted)
+    }
+
+    private var summaryText: String {
+        var parts = ["Since \(dayText(since)): \(countsLine)."]
+        let picked = entries.filter { chosen.contains($0.id) }
+        if !picked.isEmpty {
+            parts.append("From my journal:")
+            parts.append(contentsOf: picked.reversed().map { "- \(dayText($0.createdAt)): \(line(for: $0))" })
+        }
+        return parts.joined(separator: "\n")
+    }
+
+    var body: some View {
+        if !entries.isEmpty || checkInCount > 0 {
+            Anchor.Card {
+                VStack(alignment: .leading, spacing: 10) {
+                    Anchor.SectionHeader(icon: "book.closed.fill",
+                                         title: sinceIsLastSession ? "Journal since your last session" : "Journal lately")
+
+                    Text("\(countsLine) since \(dayText(since)).")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+
+                    if !entries.isEmpty {
+                        Button {
+                            withAnimation { showingList.toggle() }
+                        } label: {
+                            HStack {
+                                Text(showingList ? "Hide entries" : "Choose entries to bring")
+                                Spacer()
+                                Image(systemName: showingList ? "chevron.up" : "chevron.down")
+                                    .font(.caption)
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityHint(showingList ? "Hides the list" : "Shows your entries so you can pick some")
+
+                        if showingList {
+                            VStack(alignment: .leading, spacing: 8) {
+                                ForEach(entries.prefix(listLimit)) { entry in
+                                    Button {
+                                        if chosen.contains(entry.id) { chosen.remove(entry.id) } else { chosen.insert(entry.id) }
+                                    } label: {
+                                        HStack(alignment: .top, spacing: 10) {
+                                            Image(systemName: chosen.contains(entry.id) ? "checkmark.circle.fill" : "circle")
+                                                .foregroundStyle(chosen.contains(entry.id) ? Anchor.Theme.accent : .secondary)
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text(dayText(entry.createdAt))
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
+                                                Text(line(for: entry))
+                                                    .font(.subheadline)
+                                                    .multilineTextAlignment(.leading)
+                                                    .lineLimit(3)
+                                            }
+                                            Spacer(minLength: 0)
+                                        }
+                                        .contentShape(Rectangle())
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityAddTraits(chosen.contains(entry.id) ? .isSelected : [])
+                                }
+                                if entries.count > listLimit {
+                                    Text("Showing the \(listLimit) most recent.")
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    }
+
+                    Text("Only shown here. Nothing goes into your notes unless you add it. Check-ins are only counted.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+
+                    Button {
+                        onAddToNotes(summaryText)
+                        added = true
+                    } label: {
+                        Label(added ? "Added to prep notes" : "Add to prep notes",
+                              systemImage: added ? "checkmark" : "plus")
+                    }
+                    .buttonStyle(Anchor.SecondaryButtonStyle(tint: Anchor.Theme.accent))
+                    .disabled(added)
+                }
+            }
+            .onChange(of: chosen) { _, _ in added = false }
         }
     }
 }

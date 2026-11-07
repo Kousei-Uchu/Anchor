@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 30h: Session prep has a Journal since your last session card: how many journal entries and check-ins there are since then (check-ins are only counted), and a list to pick entries from, which are added to your prep notes only when you tap the button.
 - Patch 30g: press and hold a journal entry, or use the page button when one is open, to copy its first line into Things to raise for your next session; the entry itself is left as it was.
 - Patch 30f: Bridge has Personal goals: goals of your own in your own words, each with short dated notes along the way, and a place for ones you have reached or set aside; nothing is scored.
 - Patch 30e: an item in Things to raise can be marked as a question to ask, with room to write the answer after your session; the answer shows on the card and in the PDF export.
