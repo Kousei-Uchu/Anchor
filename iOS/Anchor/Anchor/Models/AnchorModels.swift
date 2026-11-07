@@ -288,6 +288,63 @@ final class SafetyPlanSection {
     }
 }
 
+/// One section of the Boundaries list: things the person would like others to
+/// know, what helps, what does not. The same shape as a safety plan section
+/// plus a flag saying whether it may be shared when they choose to share the
+/// list. Nothing is shared unless they do it themselves.
+@Model
+final class BoundarySection {
+    @Attribute(.unique) var id: UUID
+    var title: String
+    var text: String
+    var iconName: String
+    var tintName: String
+    var sortOrder: Int
+    var isHidden: Bool
+    var isShareable: Bool
+    var lastEditedAt: Date
+
+    init(id: UUID = UUID(), title: String = "", text: String = "",
+         iconName: String = "hand.raised.fill", tintName: String = "sage",
+         sortOrder: Int = 0, isHidden: Bool = false, isShareable: Bool = false,
+         lastEditedAt: Date = .now) {
+        self.id = id
+        self.title = title
+        self.text = text
+        self.iconName = iconName
+        self.tintName = tintName
+        self.sortOrder = sortOrder
+        self.isHidden = isHidden
+        self.isShareable = isShareable
+        self.lastEditedAt = lastEditedAt
+    }
+
+    /// The three headings suggested for a new list, all blank, none shareable.
+    /// They are made only when the person asks for them.
+    static func startingSections() -> [BoundarySection] {
+        [
+            BoundarySection(title: "Things I'd like people to know", iconName: "person.2.fill", tintName: "sage", sortOrder: 0),
+            BoundarySection(title: "Things that help", iconName: "heart.fill", tintName: "accent", sortOrder: 1),
+            BoundarySection(title: "Things that don't", iconName: "hand.raised.fill", tintName: "sage", sortOrder: 2)
+        ]
+    }
+
+    /// Plain text of the shown sections marked shareable that have words in
+    /// them, each under its title. Empty when there is nothing to share.
+    static func shareText(from sections: [BoundarySection]) -> String {
+        sections
+            .filter { $0.isShareable && !$0.isHidden }
+            .sorted { $0.sortOrder < $1.sortOrder }
+            .compactMap { section -> String? in
+                let words = section.text.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !words.isEmpty else { return nil }
+                let name = section.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                return name.isEmpty ? words : "\(name)\n\(words)"
+            }
+            .joined(separator: "\n\n")
+    }
+}
+
 enum SafetyPlanSections {
     /// The four sections the plan always had, in their old order, holding the
     /// given text. Used for the one-time copy and for a plan started fresh.
@@ -1593,7 +1650,7 @@ enum AnchorSchema {
     static var models: [any PersistentModel.Type] {
         [
             JournalEntry.self, CheckIn.self, TrustedContact.self, GroundingTool.self,
-            SafetyPlan.self, SafetyPlanSection.self, TriggerWindow.self, AppointmentSeries.self, AppointmentOccurrence.self,
+            SafetyPlan.self, SafetyPlanSection.self, BoundarySection.self, TriggerWindow.self, AppointmentSeries.self, AppointmentOccurrence.self,
             BridgeDraftItem.self, FeedbackLoopDiagram.self,
             ThreadMessage.self, SupportCalendarEntry.self, FutureNote.self, UnsentDraft.self,
             MascotLine.self, DecisionPresetCategory.self, DecisionPresetChoice.self,

@@ -134,6 +134,14 @@ enum DemoMode {
             RoutineStep(text: "Head out")
         ]))
 
+        let boundaryHeadings = BoundarySection.startingSections()
+        boundaryHeadings[0].text = "I go quiet when I am overwhelmed. It is not about you.\nI need a bit of notice before plans change."
+        boundaryHeadings[0].isShareable = true
+        boundaryHeadings[1].text = "A short text asking how I am\nSitting nearby without needing to talk"
+        boundaryHeadings[1].isShareable = true
+        boundaryHeadings[2].text = "Being asked to explain myself in the moment"
+        for section in boundaryHeadings { context.insert(section) }
+
         let days = ListVariable(name: "Day", value: 3)
         let weekend = ItemList(name: "Weekend away", createdAt: ago(4), variables: [days], items: [
             ListItem(name: "Phone charger", category: "Things", isDone: true),
