@@ -560,6 +560,18 @@ extension View {
 }
 
 extension View {
+    /// Lets a card sit in a List row without the row chrome: no separator, no
+    /// row background, and the same side margins as a card in a ScrollView.
+    /// Use it where a card screen needs List behaviour (drag to reorder).
+    func anchorCardRow() -> some View {
+        self
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+    }
+}
+
+extension View {
     /// Styles a `Form`/`List` as a configure surface: the quieter settings
     /// background and sage-leaning accent, instead of the warm card canvas.
     func anchorSettingsStyle() -> some View {

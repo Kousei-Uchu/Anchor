@@ -13,31 +13,45 @@
 //  resolve a DM from just a username); and optional timezone/availability
 //  so "Who's awake" can tell you who's actually reachable right now.
 //
+//  Editing follows the app-wide pattern: tap a person to edit them, the plus
+//  adds someone, and Delete is in the editor and in the long-press menu.
+//  Order matters here (the top two are the quick buttons on Now), so there is
+//  a labelled Reorder button.
+//
 
 import SwiftUI
 import SwiftData
 import ContactsUI
 
-/// Contacts as something to browse: a card per person, no handles or
-/// fields. Adding, reordering, deleting and changing details all live behind
-/// Edit (`ContactsEditorView`).
+/// Contacts as cards. Tap one to change it, use the plus to add someone, and
+/// use Reorder to change who is on Now.
 struct ContactsView: View {
+    @Environment(\.modelContext) private var modelContext
     @Query(sort: \TrustedContact.sortOrder) private var contacts: [TrustedContact]
-    @State private var showingEditor = false
+    @State private var editingContact: TrustedContact?
+    @State private var contactToDelete: TrustedContact?
+    @State private var showContactPicker = false
+    @State private var pickedContact: (name: String, phone: String)?
+    @State private var showingAvailability = false
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: Anchor.Theme.spacing) {
-                if contacts.isEmpty {
+        Group {
+            if contacts.isEmpty {
+                ScrollView {
                     Anchor.EmptyState(
                         icon: "person.2.fill",
                         title: "No one here yet",
                         message: "Add the people you'd want to reach in a hard moment. The first two show up as quick buttons on Now.",
                         actionTitle: "Add someone",
                         tint: Anchor.Theme.accent
-                    ) { showingEditor = true }
-                } else {
-                    NavigationLink { ContactAvailabilityView(contacts: contacts) } label: {
+                    ) { addManually() }
+                    .padding()
+                }
+            } else {
+                List {
+                    Button {
+                        showingAvailability = true
+                    } label: {
                         Anchor.Card(accentColor: Anchor.Theme.sage) {
                             HStack {
                                 Anchor.MenuRow(icon: "sun.horizon.fill", title: "Who's awake right now",
@@ -51,27 +65,99 @@ struct ContactsView: View {
                         }
                     }
                     .buttonStyle(.plain)
+                    .anchorCardRow()
 
                     ForEach(Array(contacts.enumerated()), id: \.element.id) { index, contact in
-                        ContactCard(contact: contact, isQuickContact: index < 2)
+                        Button {
+                            editingContact = contact
+                        } label: {
+                            ContactCard(contact: contact, isQuickContact: index < 2)
+                        }
+                        .buttonStyle(.plain)
+                        .anchorDeletable { modelContext.delete(contact) }
+                        .anchorCardRow()
                     }
+                    .onMove(perform: move)
                 }
+                .listStyle(.plain)
             }
-            .padding()
         }
         .anchorBackground()
         .navigationTitle("Contacts")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(isPresented: $showingAvailability) {
+            ContactAvailabilityView(contacts: contacts)
+        }
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Anchor.EditToolbarButton { showingEditor = true }
+            ToolbarItemGroup(placement: .primaryAction) {
+                if contacts.count > 1 {
+                    Anchor.ReorderToolbarButton()
+                }
+                Menu {
+                    Button {
+                        showContactPicker = true
+                    } label: {
+                        Label("Pick from Contacts", systemImage: "person.crop.circle.badge.plus")
+                    }
+                    Button {
+                        addManually()
+                    } label: {
+                        Label("Add manually", systemImage: "square.and.pencil")
+                    }
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .accessibilityLabel("Add someone")
             }
         }
-        .sheet(isPresented: $showingEditor) {
-            Anchor.EditorSheet(title: "Edit contacts") {
-                ContactsEditorView()
+        .sheet(item: $editingContact, onDismiss: finishEditing) { contact in
+            ContactEditorSheet(contact: contact) { contactToDelete = contact }
+        }
+        .sheet(isPresented: $showContactPicker, onDismiss: openPickedContact) {
+            ContactPickerView { name, phoneNumber in
+                pickedContact = (name, phoneNumber)
             }
         }
+    }
+
+    private func addManually() {
+        let new = TrustedContact(name: "", phoneNumber: "", sortOrder: contacts.count)
+        modelContext.insert(new)
+        editingContact = new
+    }
+
+    /// Runs when the system picker has closed, so the editor never opens on
+    /// top of a picker that is still leaving.
+    private func openPickedContact() {
+        guard let picked = pickedContact else { return }
+        pickedContact = nil
+        let new = TrustedContact(name: picked.name, phoneNumber: picked.phone, sortOrder: contacts.count)
+        modelContext.insert(new)
+        editingContact = new
+    }
+
+    private func move(from offsets: IndexSet, to destination: Int) {
+        var reordered = contacts
+        reordered.move(fromOffsets: offsets, toOffset: destination)
+        for (index, contact) in reordered.enumerated() { contact.sortOrder = index }
+    }
+
+    /// Runs once the editor has closed. Deleting here, not while the editor
+    /// is still on screen, keeps the editor from reading a contact that is
+    /// already gone. Someone added and then left completely blank is dropped.
+    private func finishEditing() {
+        let deleting = contactToDelete
+        contactToDelete = nil
+        if let deleting { modelContext.delete(deleting) }
+        for contact in contacts where contact !== deleting && isBlank(contact) {
+            modelContext.delete(contact)
+        }
+    }
+
+    private func isBlank(_ contact: TrustedContact) -> Bool {
+        contact.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && contact.phoneNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && (contact.discordUserID ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 }
 
@@ -91,6 +177,9 @@ private struct ContactCard: View {
                             .font(.caption)
                             .foregroundStyle(Anchor.Theme.sage)
                     }
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tertiary)
                 }
                 Text(contact.contactMethod == .discord ? "Discord" : contact.phoneNumber)
                     .font(.subheadline)
@@ -105,74 +194,6 @@ private struct ContactCard: View {
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                 }
-            }
-        }
-    }
-}
-
-/// The contacts editor: reorder, delete, add and open a contact's details.
-/// Presented from `ContactsView` via Edit, never browsed to directly.
-struct ContactsEditorView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query(sort: \TrustedContact.sortOrder) private var contacts: [TrustedContact]
-    @State private var editingContact: TrustedContact?
-    @State private var showContactPicker = false
-
-    var body: some View {
-        List {
-            Section {
-                Text("Top 2 are shown as quick-contact buttons on Now. Reorder by dragging.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .listRowBackground(Color.clear)
-
-            ForEach(contacts) { contact in
-                Button {
-                    editingContact = contact
-                } label: {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(contact.name).font(.headline)
-                        Text(contact.contactMethod == .discord ? "Discord" : contact.phoneNumber)
-                            .font(.caption).foregroundStyle(.secondary)
-                        if contact.escalationEnabled, let minutes = contact.escalationWindowMinutes {
-                            Text("Escalation: \(minutes) min").font(.caption2).foregroundStyle(.orange)
-                        }
-                    }
-                }
-                .buttonStyle(.plain)
-            }
-            .onMove { offsets, destination in
-                var reordered = contacts
-                reordered.move(fromOffsets: offsets, toOffset: destination)
-                for (index, contact) in reordered.enumerated() { contact.sortOrder = index }
-            }
-            .onDelete { offsets in
-                for index in offsets { modelContext.delete(contacts[index]) }
-            }
-
-            Section {
-                Button {
-                    showContactPicker = true
-                } label: {
-                    Label("Pick from Contacts", systemImage: "person.crop.circle.badge.plus")
-                }
-                Button("Add manually") {
-                    let new = TrustedContact(name: "", phoneNumber: "", sortOrder: contacts.count)
-                    modelContext.insert(new)
-                    editingContact = new
-                }
-            }
-        }
-        .toolbar { EditButton() }
-        .sheet(item: $editingContact) { contact in
-            ContactEditorSheet(contact: contact)
-        }
-        .sheet(isPresented: $showContactPicker) {
-            ContactPickerView { name, phoneNumber in
-                let new = TrustedContact(name: name, phoneNumber: phoneNumber, sortOrder: contacts.count)
-                modelContext.insert(new)
-                editingContact = new
             }
         }
     }
@@ -207,7 +228,7 @@ struct ContactPickerView: UIViewControllerRepresentable {
 
 private struct ContactEditorSheet: View {
     @Bindable var contact: TrustedContact
-    @Environment(\.dismiss) private var dismiss
+    let onDelete: () -> Void
     @State private var newTemplateLabel = ""
     @State private var newTemplateBody = ""
 
@@ -222,7 +243,11 @@ private struct ContactEditorSheet: View {
     ]
 
     var body: some View {
-        NavigationStack {
+        Anchor.ItemEditorSheet(
+            title: contact.name.isEmpty ? "New contact" : contact.name,
+            onDelete: onDelete,
+            deleteQuestion: "Delete this contact?"
+        ) {
             Form {
                 Section {
                     TextField("Name", text: $contact.name)
@@ -321,14 +346,6 @@ private struct ContactEditorSheet: View {
                     Text("Timezone & availability")
                 } footer: {
                     Text("Optional. Powers \"Who's awake right now\" so you're not guessing across timezones.")
-                }
-            }
-            .anchorSettingsStyle()
-            .navigationTitle(contact.name.isEmpty ? "New contact" : contact.name)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
                 }
             }
         }
