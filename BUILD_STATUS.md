@@ -1,6 +1,6 @@
 # Anchor — build status
 
-> **Status note (November 2026).** This file is a running build log and some older entries are out of date. There is no Electron companion app in this repository. The privacy and support pages now live in `website/` (a Vite app). Escalation is a local reminder to the user, never an automatic message. Session reminders (the evening before and a couple of hours before) are optional, off by default and scheduled by `AppointmentReminders` in `NotificationScheduler.swift`. The NSW mental health law screen is compiled only with the `PERSONAL_BUILD` flag and is not part of the public build.
+> **Status note (November 2026).** This file is a running build log and some older entries are out of date. There is no Electron companion app in this repository. The privacy and support pages now live in `website/` (a Vite app). Escalation is a local reminder to the user, never an automatic message. Session reminders (the evening before and a couple of hours before) are optional, off by default and scheduled by `AppointmentReminders` in `NotificationScheduler.swift`. The reminder for an unanswered trigger window check-in is a fixed line that names nobody. Journaling Suggestions asks for calendar, photos and music only when each button is tapped. The NSW mental health law screen is compiled only with the `PERSONAL_BUILD` flag and is not part of the public build.
 
 ## Done
 - Repo/project directory structure matching a standard Xcode App-template layout

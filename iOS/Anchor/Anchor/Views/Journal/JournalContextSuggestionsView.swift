@@ -6,7 +6,8 @@
 //  JournalingSuggestions framework (now also offered at the top of this
 //  list, using the Journaling Suggestions entitlement), by talking to
 //  EventKit, PhotoKit, and MusicKit directly. Calendar and Photos need only their standard
-//  usage-description prompts (already in Info.plist) and work as-is.
+//  usage-description prompts (already in Info.plist) and work as-is. Each of the three asks
+//  for access only when its own button is tapped; one that is already allowed just loads.
 //  Music needs one manual step the code alone can't safely do: enabling
 //  the "MusicKit" capability in Xcode (Signing & Capabilities → +
 //  Capability), since that's a project-signing change, not something to
@@ -32,13 +33,16 @@ struct JournalContextSuggestionsView: View {
 
     @State private var events: [EKEvent] = []
     @State private var calendarAuthDenied = false
+    @State private var calendarReady = false
 
     @State private var photoAssets: [PHAsset] = []
     @State private var photoThumbnails: [UIImage] = []
     @State private var photosAuthDenied = false
+    @State private var photosReady = false
 
     @State private var recentSongs: [(title: String, artist: String)] = []
     @State private var musicAuthDenied = false
+    @State private var musicReady = false
     @State private var musicUnavailableMessage: String?
 
     var body: some View {
@@ -78,6 +82,8 @@ struct JournalContextSuggestionsView: View {
                     if calendarAuthDenied {
                         Text("Calendar access is off. Enable it in Settings → Anchor.")
                             .font(.caption).foregroundStyle(.secondary)
+                    } else if !calendarReady {
+                        Button("Show events from this day") { Task { await loadCalendarEvents() } }
                     } else if events.isEmpty {
                         Text("Nothing found for this day.")
                             .font(.caption).foregroundStyle(.secondary)
@@ -99,6 +105,8 @@ struct JournalContextSuggestionsView: View {
                     if photosAuthDenied {
                         Text("Photos access is off. Enable it in Settings → Anchor.")
                             .font(.caption).foregroundStyle(.secondary)
+                    } else if !photosReady {
+                        Button("Show photos from this day") { Task { await loadPhotos() } }
                     } else if photoAssets.isEmpty {
                         Text("No photos found for this day.")
                             .font(.caption).foregroundStyle(.secondary)
@@ -128,6 +136,8 @@ struct JournalContextSuggestionsView: View {
                     } else if musicAuthDenied {
                         Text("Music access is off. Enable it in Settings → Anchor.")
                             .font(.caption).foregroundStyle(.secondary)
+                    } else if !musicReady {
+                        Button("Show songs played recently") { Task { await loadRecentMusic() } }
                     } else if recentSongs.isEmpty {
                         Text("Nothing recent found.").font(.caption).foregroundStyle(.secondary)
                     }
@@ -144,8 +154,6 @@ struct JournalContextSuggestionsView: View {
                     }
                 } header: {
                     Text("Recently played")
-                } footer: {
-                    Text("Needs the MusicKit capability enabled in Xcode (Signing & Capabilities → + Capability → MusicKit) before this can authorize on a real device.")
                 }
             }
             .navigationTitle("Journaling Suggestions")
@@ -157,9 +165,7 @@ struct JournalContextSuggestionsView: View {
                 }
             }
             .task {
-                await loadCalendarEvents()
-                await loadPhotos()
-                await loadRecentMusic()
+                await loadWhatIsAlreadyAllowed()
             }
         }
     }
@@ -177,6 +183,32 @@ struct JournalContextSuggestionsView: View {
                            extra: event.location ?? "")
     }
 
+    /// Opening the screen never shows a permission question. A source that is already allowed
+    /// loads straight away, one that was refused shows how to change that, and one that has not
+    /// been asked waits for its own button.
+    private func loadWhatIsAlreadyAllowed() async {
+        let calendarStatus = EKEventStore.authorizationStatus(for: .event)
+        if calendarStatus == .fullAccess {
+            await loadCalendarEvents()
+        } else if calendarStatus == .denied || calendarStatus == .restricted {
+            calendarAuthDenied = true
+        }
+
+        let photoStatus = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        if photoStatus == .authorized || photoStatus == .limited {
+            await loadPhotos()
+        } else if photoStatus == .denied || photoStatus == .restricted {
+            photosAuthDenied = true
+        }
+
+        let musicStatus = MusicAuthorization.currentStatus
+        if musicStatus == .authorized {
+            await loadRecentMusic()
+        } else if musicStatus == .denied || musicStatus == .restricted {
+            musicAuthDenied = true
+        }
+    }
+
     private func loadCalendarEvents() async {
         let store = EKEventStore()
         let granted = (try? await store.requestFullAccessToEvents()) ?? false
@@ -187,6 +219,7 @@ struct JournalContextSuggestionsView: View {
         guard let end = calendar.date(byAdding: .day, value: 1, to: start) else { return }
         let predicate = store.predicateForEvents(withStart: start, end: end, calendars: nil)
         events = store.events(matching: predicate)
+        calendarReady = true
     }
 
     private func loadPhotos() async {
@@ -231,6 +264,7 @@ struct JournalContextSuggestionsView: View {
         }
         photoAssets = Array(assets.prefix(thumbnails.count))
         photoThumbnails = thumbnails
+        photosReady = true
     }
 
     private func insertPhoto(_ asset: PHAsset) {
@@ -257,8 +291,9 @@ struct JournalContextSuggestionsView: View {
             request.limit = 10
             let response = try await request.response()
             recentSongs = response.items.map { ($0.title, $0.artistName) }
+            musicReady = true
         } catch {
-            musicUnavailableMessage = "Couldn't load recent music. Check that the MusicKit capability is enabled in Xcode."
+            musicUnavailableMessage = "Recent songs could not be loaded just now."
         }
     }
 }

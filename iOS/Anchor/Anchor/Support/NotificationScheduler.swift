@@ -112,7 +112,7 @@ struct NotificationScheduler {
 
             for contact in escalationContacts {
                 guard let minutes = contact.escalationWindowMinutes else { continue }
-                scheduleEscalation(windowLabel: window.label, weekday: weekday, hour: startHour, minute: startMinute,
+                scheduleEscalation(weekday: weekday, hour: startHour, minute: startMinute,
                                     minutesAfter: minutes, windowID: window.id, contact: contact)
             }
         }
@@ -121,18 +121,28 @@ struct NotificationScheduler {
     /// The escalation reminder itself — fires `minutesAfter` past the
     /// trigger window's start, only if not cancelled by an "I'm okay"/open
     /// response to the original notification.
-    private func scheduleEscalation(windowLabel: String, weekday: Int, hour: Int, minute: Int,
+    ///
+    /// A window that starts late in the evening can have its escalation fall after
+    /// midnight, which is the next weekday, so the weekday moves on with the clock.
+    /// The identifier keeps the window's own weekday, because that is what the
+    /// trigger-window notification lists for cancelling.
+    ///
+    /// The words on the lock screen are the same fixed line for everyone. They do not
+    /// name the window or the person, and they do not say the check-in was missed. Who the
+    /// reminder is about is only shown once the app is open.
+    private func scheduleEscalation(weekday: Int, hour: Int, minute: Int,
                                      minutesAfter: Int, windowID: UUID, contact: TrustedContact) {
-        var dateComponents = DateComponents()
-        dateComponents.weekday = weekday
-
         let totalMinutes = hour * 60 + minute + minutesAfter
+        let daysLater = totalMinutes / (24 * 60)
+
+        var dateComponents = DateComponents()
+        dateComponents.weekday = (weekday - 1 + daysLater) % 7 + 1
         dateComponents.hour = (totalMinutes / 60) % 24
         dateComponents.minute = totalMinutes % 60
 
         let content = UNMutableNotificationContent()
-        content.title = "Still there?"
-        content.body = "You didn't respond to the \(windowLabel) check-in. Want to let \(contact.name) know you're okay?"
+        content.title = "Anchor"
+        content.body = "Would you like to let someone know you're okay?"
         content.categoryIdentifier = NotificationCategory.escalationCheckIn.rawValue
         content.sound = .default
         content.userInfo = ["contactName": contact.name, "contactPhone": contact.phoneNumber]

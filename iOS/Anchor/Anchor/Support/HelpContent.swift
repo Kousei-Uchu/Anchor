@@ -134,7 +134,7 @@ extension Guide {
             whatItIs: "The people you would want to reach in a hard moment.",
             howToUse: "The plus adds someone, either from your phone's Contacts or by typing them in. Tap a card to open it and choose how to reach them (phone or Discord), write message templates for that person, and set an optional reminder. The first two people in the list are the quick buttons on Now, so use Reorder to put the two you would reach for first. A card can also hold a timezone and the hours someone is usually awake, which Who's awake right now uses so you are not guessing across timezones.",
             tips: [
-                "Escalate if I don't respond is off until you turn it on. If you then miss a trigger window check-in, a reminder to message that person shows up after the number of minutes you chose. It is only a reminder to you. Anchor never messages anyone by itself.",
+                "Escalate if I don't respond is off until you turn it on. If you then miss a trigger window check-in, a reminder to message that person shows up after the number of minutes you chose. It is only a reminder to you. Anchor never messages anyone by itself, and the words on the lock screen do not name anyone.",
                 "For Discord you need the person's numeric user ID, not their username.",
                 "Deleting a contact also deletes their page in Thread."
             ]
@@ -434,7 +434,7 @@ extension Guide {
         GuideEntry(
             id: "journal.suggestions", tab: .journal, title: "Journaling Suggestions", icon: "sparkles",
             whatItIs: "Things from the day of the entry that you can add to the page: Apple's own suggestions, calendar events, photos and songs you played recently.",
-            howToUse: "Browse suggestions opens Apple's picker, where you choose what to share with Anchor. Below it are the events and photos from that day and your recently played songs. Tap one to add it to the page as a block, and this screen closes. Anchor asks for access to your calendar, photos and music when the screen opens. If you say no, that part stays empty and the rest still works.",
+            howToUse: "Browse suggestions opens Apple's picker, where you choose what to share with Anchor. Below it are the events and photos from that day and your recently played songs. Tap one to add it to the page as a block, and this screen closes. Each of those three has its own button, and Anchor asks for that access only when you tap it. If it was allowed before, it just shows. If you say no, that part stays empty and the rest still works.",
             tips: [
                 "Nothing is added until you tap it, and nothing leaves your phone.",
                 "A photo you add is copied into Anchor and kept with the entry.",
