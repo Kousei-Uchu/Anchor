@@ -60,4 +60,4 @@ echo "Using ${NAME//_/ }"
 xcodebuild build -project "$PROJECT" -scheme Anchor -configuration Debug \
   -destination "id=$UDID" -derivedDataPath "$OUT" -allowProvisioningUpdates -quiet
 xcrun devicectl device install app --device "$CORE" "$OUT/Build/Products/Debug-iphoneos/Anchor.app"
-xcrun devicectl device process launch --device "$CORE" --terminate-existing "$BUNDLE" "${ARGS[@]}"
+xcrun devicectl device process launch --device "$CORE" --terminate-existing "$BUNDLE" -- "${ARGS[@]}"
