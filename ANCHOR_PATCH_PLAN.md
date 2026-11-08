@@ -1,6 +1,6 @@
 # Anchor — Patch Plan (v2-recovery)
 
-*Living document. Last updated: 9 Nov 2026 (Patch RV7 written, stacked on the pushed RV8 (`38c10ae`); Patches RV3, RV9 and RV8 confirmed pushed (`3b01ded`, `2e929c1`, `38c10ae`); earlier note, same day: Patch RV8 written, stacked on RV9; Patch RV9 written, stacked on RV3; Patch RV3 written, stacked on the pushed RV6 (`bb2f83e`); Patches RV5 and RV6 confirmed pushed (`3fddb73`, `bb2f83e`); earlier note, same day: Patch RV6 written, stacked on RV5; Patch RV5 written, stacked on the pushed RV4 (`7b7b4eb`); Patches 45b, 45c, 46a, R1, R1a, R2, RV10, RV1, RV2 and RV4 confirmed pushed; earlier note, same day: Patch 46a written, stacked on Patch 45c; Patch 45c written, stacked on Patch 45b; Patch 45b written, stacked on the pushed Patch 44b (`0afba6e`); earlier note, same day: Patch 44b written, stacked on the pushed Patch 45a (`237e998`); Patches 44a and 45a confirmed pushed (`3fb8d68`, `237e998`); Patch 45a written, stacked on Patch 44a; Patch 44a written, stacked on the pushed Patch 43b (`8b6b5cc`); earlier note, same day: Patch 43b written, stacked on the pushed Patch 43a (`24a312c`); Patches 42 and 43a confirmed pushed (`ca6c25c`, `24a312c`); earlier note, 8 Nov 2026: Patch 43a written, stacked on Patch 42; Patch 42 written, stacked on the pushed Patch 41a (`0e2d92b`); Patch 41a confirmed pushed; earlier note, same day: Patch 41a written, stacked on the pushed Patch 41 (`e14e177`); Patch 41 confirmed pushed; earlier note, same day: Patch 41 written, stacked on the pushed Patch 30m (`765d75e`); Patch 30m confirmed pushed; earlier note, same day: Patch 30m written, stacked on the pushed Patch 40b (`43773e3`); Patch 40b confirmed pushed; earlier note, same day: Patch 40b written, stacked on the pushed Patch 40a (`d51686c`); Patch 40a confirmed pushed; earlier note, same day: Patch 40a written, stacked on the pushed Patch 39 (`1b52ffd`); Patches 35a and 39 confirmed pushed (`668e5bb`, `1b52ffd`); Patch 39 written, stacked on Patch 35a; Patch 35a written, stacked on the pushed Patch 34 (`0e5664b`); Patch 34 written, stacked on the pushed Patch 33 (`edd644d`); Patch 33 written, stacked on the pushed Patch 32 (`70426d9`); Patch 32 written, stacked on the pushed Patch SL5 (`07cd4f4`); Patch SL5 confirmed pushed; earlier note, same day: Patch SL5 written, stacked on the pushed Patch 38a (`532f9ce`); Patch 38a confirmed pushed; Patches 31, 36, 37 and SL4 confirmed pushed; Patch 37 written, stacked on 36; Patch 36 written, stacked on 31; Patch 31 written, stacked on SL4; Patch SL4 written, stacked on SL3; Patch SL3 written, stacked on the pushed SL2d (`c3bf8b7`); Patch SL2d written, stacked on SL2c; Patch SL2c written, stacked on SL2b; Patch SL2b written, stacked on SL2a; Patch SL2a written; 30k, 30l and SL1 confirmed pushed, HEAD was `fe47777`; Patch SL1 written, stacked on 30k and 30l; Patch 30l written; 30k written and waiting for you to paste it; 30j confirmed pushed, HEAD was `62b7a33`). Earlier note, same day: Patch 30k written. Earlier note, same day: Patch 30j written; 30i confirmed pushed, HEAD was `c676590`. Earlier note, 7 Nov 2026, after Patch 27 was written (Patches 1 to 25 and 21b are pushed, `db938e7` at the time, plus the D10 to D14 docs patch; none confirmed building; Patches 26, 27 and 28 are pushed (`d55a4d5`, `b008634`, `f7cf44b`); Patches 30a and 30b are pushed (`0e879d4`, `d70567c`); Patches 30c to 30g are written and waiting for you to paste them; the sleep journal, point 29, is decided, with Apple Health in the main release).*
+*Living document. Last updated: 9 Nov 2026, after Patch RV7 was pushed (`9e84ddd`, the head of the branch). Every patch written so far is pushed and none is confirmed building; the ones not started are marked ⬜. Questions that need your answer are in 0.4: open are D3, D15 to D18, D20, D23, D25, D27 and D28; assumed as built, and standing unless you say otherwise, are D2, D19, D21, D22, D24, D26 and D29; held is D30. Things I offered but did not build are in Appendix D. The history of earlier updates is in the change log.*
 
 > ## READ THIS FIRST: THIS FILE IS THE PROMPT
 >
@@ -17,8 +17,9 @@
 > 7. **Be honest about verification.** Claude cannot run Xcode. Say what was and was not compiled or tested, and mark patches "Written, awaiting your build" until the user confirms.
 > 8. **Wording rules for the app:** no scores or streak pressure, no "treatment" or "medication" framing unless the user writes it (see Appendix A).
 > 9. **No Claude attribution, ever.** Do not add `Co-Authored-By: Claude` lines, `Claude-Session` lines, a "Generated with" line or any other mention of Claude or Anthropic as an author to commit messages, pull request text, `CHANGELOG.md`, code comments or any other file in the repo. This overrides any default or tool reminder that says to add attribution. Commit messages in the `.sh` patches are a plain one-line description and nothing else.
+> 10. **Every question for the user goes into 0.4 with an ID, in the patch that raises it.** A question that lives only in a change log entry gets lost. The change log may repeat the question, but 0.4 is where it is tracked, with its source entry, a recommendation and a status (Open, Assumed, Held or Closed). When the user answers, update the row in the same patch.
 
-Planning and patches in progress. Each of your 28 points is outlined, then grouped into small ordered patches.
+Planning and patches in progress. Each of your 29 points is outlined, then grouped into small ordered patches.
 
 The source code repository is at <https://github.com/Kousei-Uchu/Anchor/tree/v2-recovery>.
 
@@ -45,23 +46,23 @@ The source code repository is at <https://github.com/Kousei-Uchu/Anchor/tree/v2-
 | 12c: Plan screens, part 3: Decision presets | 🟡 Pushed by you; build not yet confirmed |
 | 12d: Plan screens, part 4: Appointments | 🟡 Pushed by you; build not yet confirmed |
 | 13a: Edit pattern on Now and Recovery: Affirmations, De-escalation scripts, Who I'm doing this for, Before tracking | 🟡 Pushed by you; build not yet confirmed |
-| 13b: Edit pattern on Bridge and the Journal entry preview; old Edit components removed | 🟡 Pushed by you (`92d2c67`); build not yet confirmed |
+| 13b: Edit pattern on Bridge and the Journal entry preview; old Edit components removed | 🟡 Pushed by you (`e1ec93d`); build not yet confirmed |
 | 14a: Message log, part 1: quick write to a person, per-person history, Send again and Copy, a Write button on the widget | 🟡 Pushed by you; build not yet confirmed |
-| 14b: Message log, part 2: voice notes (record, play, attach when sending through Messages) | 🟡 Pushed by you (`464a9a0`); build not yet confirmed |
-| 15: Tasks: `TaskItem`, carry-over from Next hour only, basic list, Plan widget, export and import, demo data | 🟡 Pushed by you (`698b6c0`); build not yet confirmed |
-| 16: Task due dates, fuzzy values, grouping by time | 🟡 Pushed by you (`15e1daf`); build not yet confirmed |
-| 17: Subtasks with collapse and derived progress | 🟡 Pushed by you (`484caca`); build not yet confirmed |
-| 18: Task dependencies: greyed blocked tasks, "Waiting on…", auto-unlock | 🟡 Pushed by you (`03b920d`); build not yet confirmed |
-| 19: Task status, energy tag, tiny first step, snooze to tomorrow | 🟡 Pushed by you (`0592258`); build not yet confirmed |
-| 20: Widget editing on the tab: drag to rearrange, hide and add back, half or full width | 🟡 Pushed by you (`9d3ef0c`); build not yet confirmed |
-| 21: Focus timer (Pomodoro): settings, alert when a phase ends, session count per task | 🟡 Pushed by you (`e36e11a`); build not yet confirmed |
-| 22: Plan my day: pick tasks and steps, time estimates, order, time available, walk through them | 🟡 Pushed by you (`113ab11`); build not yet confirmed |
-| 21b: Focus timer on the lock screen and Dynamic Island (Live Activity) | 🟡 Pushed by you (`1eb098e`); build not yet confirmed |
-| 23: Quick list: one-off checklists with an Archive | 🟡 Pushed by you (`523b7bb`); build not yet confirmed |
-| 24: Routines beside Decision presets, with Run it | 🟡 Pushed by you (`827d8e7`); build not yet confirmed |
-| 24b: Routine schedule and reminder (off by default) | 🟡 Pushed by you (`e99c872`); build not yet confirmed |
-| 25: Item lists with quantity rules, Reset ticks and Make a copy | 🟡 Pushed by you (`c19aa94`); build not yet confirmed |
-| SL1: Sleep journal basics (point 29) | 🟡 Pushed by you (`fe47777`); build not yet confirmed |
+| 14b: Message log, part 2: voice notes (record, play, attach when sending through Messages) | 🟡 Pushed by you (`823305a`); build not yet confirmed |
+| 15: Tasks: `TaskItem`, carry-over from Next hour only, basic list, Plan widget, export and import, demo data | 🟡 Pushed by you (`20cf745`); build not yet confirmed |
+| 16: Task due dates, fuzzy values, grouping by time | 🟡 Pushed by you (`8904af2`); build not yet confirmed |
+| 17: Subtasks with collapse and derived progress | 🟡 Pushed by you (`9859ffa`); build not yet confirmed |
+| 18: Task dependencies: greyed blocked tasks, "Waiting on…", auto-unlock | 🟡 Pushed by you (`33bad98`); build not yet confirmed |
+| 19: Task status, energy tag, tiny first step, snooze to tomorrow | 🟡 Pushed by you (`fd8dda5`); build not yet confirmed |
+| 20: Widget editing on the tab: drag to rearrange, hide and add back, half or full width | 🟡 Pushed by you (`2122d0d`); build not yet confirmed |
+| 21: Focus timer (Pomodoro): settings, alert when a phase ends, session count per task | 🟡 Pushed by you (`5572bb7`); build not yet confirmed |
+| 22: Plan my day: pick tasks and steps, time estimates, order, time available, walk through them | 🟡 Pushed by you (`d34d102`); build not yet confirmed |
+| 21b: Focus timer on the lock screen and Dynamic Island (Live Activity) | 🟡 Pushed by you (`271d9a1`); build not yet confirmed |
+| 23: Quick list: one-off checklists with an Archive | 🟡 Pushed by you (`ff9d994`); build not yet confirmed |
+| 24: Routines beside Decision presets, with Run it | 🟡 Pushed by you (`78236c6`); build not yet confirmed |
+| 24b: Routine schedule and reminder (off by default) | 🟡 Pushed by you (`934918c`); build not yet confirmed |
+| 25: Item lists with quantity rules, Reset ticks and Make a copy | 🟡 Pushed by you (`9500f0f`); build not yet confirmed |
+| SL1: Sleep journal basics (point 29) | 🟡 Pushed by you (`d462ac0`); build not yet confirmed |
 | SL2a: Sleep on Now (point 29): the Last night card and its Settings switch | 🟡 Pushed by you (`343870e`); build not yet confirmed |
 | SL2b: Sleep in the Journal (point 29): a row per night, a month mark, the note to journal | 🟡 Pushed by you (`0ad61fc`); build not yet confirmed |
 | SL2c: Sleep in the check-in (point 29): the optional How did you sleep? question | 🟡 Pushed by you (`128c155`); build not yet confirmed |
@@ -81,23 +82,23 @@ The source code repository is at <https://github.com/Kousei-Uchu/Anchor/tree/v2-
 | 36: Export for someone (point 19, items 1 and 2): who it is for, a note, picker by kind, range and item, live count and preview, PDF named for the recipient | 🟡 Pushed by you (`0864157`); build not yet confirmed |
 | 37: Export for someone, the web page (point 19, items 3 and 4 without Word): one self-contained file with search, a timeline, check-in charts, print and CSV, no network, optional password | 🟡 Pushed by you (`e844675`); build not yet confirmed |
 | 38a: Export for someone, Word (point 19, item 4): a Download Word file button in the web page, made in the page with no library | 🟡 Pushed by you (`532f9ce`); build not yet confirmed |
-| 38b: Website viewer (point 19, item 5, optional) | ⬜ Not started; see the Patch 38a change log entry for what it needs from you |
-| 26: Feedback loops 1: loop builder | 🟡 Pushed by you (`d55a4d5`); build not yet confirmed |
-| 27: Feedback loops 2: map mode | 🟡 Pushed by you (`b008634`); build not yet confirmed |
-| 28: Feedback loops 3: templates, share as picture or PDF | 🟡 Pushed by you (`f7cf44b`); build not yet confirmed |
-| 30a: Reusable custom sections; Safety plan sections with a copy-across migration | 🟡 Pushed by you (`0e879d4`); build not yet confirmed |
-| 30b: Boundaries list (T6) on the shared sections editor | 🟡 Pushed by you (`d70567c`); build not yet confirmed |
-| 30c: Message starters (T2): your own short lines for starting a message | 🟡 Pushed by you (`808caa0`); build not yet confirmed |
-| 30d: Letters you open when you choose (T5, part 1) on To future me | 🟡 Pushed by you (`f710cbf`); build not yet confirmed |
-| 30e: Questions to ask, with the answer written after the session (B3) on Things to raise | 🟡 Pushed by you (`9e4916e`); build not yet confirmed |
-| 30f: Personal goals (the reframed B7): goals in your words with dated notes, a Bridge widget | 🟡 Pushed by you (`5e9953f`); build not yet confirmed |
-| 30g: Add a journal entry to Things to raise in one tap (B2, journal part) | 🟡 Pushed by you (`73a0167`); build not yet confirmed |
-| 30g1: Fix a crash loading photo suggestions (photo request called back twice) | 🟡 Pushed by you (`72d9aca`); build not yet confirmed |
-| 30h: Session prep, Journal since your last session (B1, journal and check-in part) | 🟡 Pushed by you (`6d151ef`); build not yet confirmed |
-| 30i: Journal page rebuilt as blocks like Apple's Journal, cards for events, songs and suggestions, bookmarks | 🟡 Pushed by you (`c676590`); build not yet confirmed |
-| 30j: Providers (B8, part 1): several providers, each with sessions, notes and an export name; appointments added to the JSON export | 🟡 Pushed by you (`62b7a33`); build not yet confirmed |
-| 30k: Things to raise per provider (B8, part 2): an item is for anyone or for one provider, a filter on the list, the export follows it | 🟡 Pushed by you (`5eabfbf`); build not yet confirmed |
-| 30l: Person pages (T1): a page for each contact with sections of your own, their recent messages and the calendar days shared with them | 🟡 Pushed by you (`9742f37`); build not yet confirmed |
+| 38b: Website viewer (point 19, item 5, optional) | ⬜ Not started; waits on D27 |
+| 26: Feedback loops 1: loop builder | 🟡 Pushed by you (`df435e5`); build not yet confirmed |
+| 27: Feedback loops 2: map mode | 🟡 Pushed by you (`d75b74d`); build not yet confirmed |
+| 28: Feedback loops 3: templates, share as picture or PDF | 🟡 Pushed by you (`9babae1`); build not yet confirmed |
+| 30a: Reusable custom sections; Safety plan sections with a copy-across migration | 🟡 Pushed by you (`5ebdccf`); build not yet confirmed |
+| 30b: Boundaries list (T6) on the shared sections editor | 🟡 Pushed by you (`94714ee`); build not yet confirmed |
+| 30c: Message starters (T2): your own short lines for starting a message | 🟡 Pushed by you (`ddf6fe7`); build not yet confirmed |
+| 30d: Letters you open when you choose (T5, part 1) on To future me | 🟡 Pushed by you (`e328b9c`); build not yet confirmed |
+| 30e: Questions to ask, with the answer written after the session (B3) on Things to raise | 🟡 Pushed by you (`450e1e2`); build not yet confirmed |
+| 30f: Personal goals (the reframed B7): goals in your words with dated notes, a Bridge widget | 🟡 Pushed by you (`00a2e22`); build not yet confirmed |
+| 30g: Add a journal entry to Things to raise in one tap (B2, journal part) | 🟡 Pushed by you (`3cd71a2`); build not yet confirmed |
+| 30g1: Fix a crash loading photo suggestions (photo request called back twice) | 🟡 Pushed by you (`46664ec`); build not yet confirmed |
+| 30h: Session prep, Journal since your last session (B1, journal and check-in part) | 🟡 Pushed by you (`90ebd52`); build not yet confirmed |
+| 30i: Journal page rebuilt as blocks like Apple's Journal, cards for events, songs and suggestions, bookmarks | 🟡 Pushed by you (`455b765`); build not yet confirmed |
+| 30j: Providers (B8, part 1): several providers, each with sessions, notes and an export name; appointments added to the JSON export | 🟡 Pushed by you (`de14649`); build not yet confirmed |
+| 30k: Things to raise per provider (B8, part 2): an item is for anyone or for one provider, a filter on the list, the export follows it | 🟡 Pushed by you (`887134d`); build not yet confirmed |
+| 30l: Person pages (T1): a page for each contact with sections of your own, their recent messages and the calendar days shared with them | 🟡 Pushed by you (`355d546`); build not yet confirmed |
 | 30m: Session prep, the rest of B1: a Waiting to be raised card from Things to raise (for that provider and for anyone) and a To bring checklist for each session | 🟡 Pushed by you (`765d75e`); build not yet confirmed |
 | 41: Guide (point 16, part 1): one guide registry, the tour rebuilt on it with pages that scroll, and a ? button on the pushed feature screens that opens that screen's entry or its tab's | 🟡 Pushed by you (`e14e177`); build not yet confirmed |
 | 41a: Fix a build error in the app lock (a check for Face ID or a passcode was asked from outside the main actor) | 🟡 Pushed by you (`0e2d92b`); build not yet confirmed |
@@ -117,15 +118,20 @@ The source code repository is at <https://github.com/Kousei-Uchu/Anchor/tree/v2-
 | RV4: Goals: an optional SMART frame, a switch inside a goal, off by default, every part optional, no dates | 🟡 Pushed by you (`7b7b4eb`); build not yet confirmed |
 | RV5: Check-ins in the Journal: show each day's own values without opening it, never inferred or summed up (revisits 45c) | 🟡 Pushed by you (`3fddb73`); build not yet confirmed |
 | RV6: Privacy page: links to the other policies it mentions, and a section on Reject Convenience's Privacy Policy Visualiser | 🟡 Pushed by you (`bb2f83e`); build not yet confirmed (the website builds and prerenders `/privacy`) |
-| RV7: Showcase mode: an audit that every feature has plenty of made-up content, and a script that keeps it so | 🟠 Written, awaiting your paste and build (stacks on the pushed RV8) |
+| RV7: Showcase mode: an audit that every feature has plenty of made-up content, and a script that keeps it so | 🟡 Pushed by you (`9e84ddd`); build not yet confirmed |
 | RV8: The ? guides: far less crowded, ideas kept apart, plainer wording, the four main tabs first | 🟡 Pushed by you (`38c10ae`); build not yet confirmed |
 | RV9: Apple Health sleep section: tidy the toggles | 🟡 Pushed by you (`2e929c1`); build not yet confirmed |
 | RV10: Check-in mascot no longer follows the sliders (one switch, `mascotFollowsSliders`, brings it back) | 🟡 Pushed by you (`4c66161`); build not yet confirmed |
 | 45a: Audit 2, part 1: session reminders, optional and off by default, with generic lock-screen wording; the unused reminder code that named the provider is removed | 🟡 Pushed by you (`237e998`); build not yet confirmed |
-| 30n onward | Not started (the rest of T5, unlocking a letter after an appointment, waits on your say; T2 is 30c, B3 is 30e, Personal goals is 30f and T7 was done in 14b) |
+| 30n: Relationship reminders (T3, approved in Appendix C1): the first three types, regular hello, their dates and follow-up, off by default, generic lock-screen wording, one a day at most | ⬜ Not started; approved, not blocked |
+| 30o onward | Not started (the rest of T5, unlocking a letter after an appointment, waits on D25; the last two T3 types come after 30n; T2 is 30c, B3 is 30e, Personal goals is 30f and T7 was done in 14b) |
+| 45d: Escalation and trigger-window reminders (change log 83) | ⬜ Not started; waits on D16 and D17 |
+| RV5a: Export check-in labels taken from the right sliders (change log 90) | ⬜ Not started; waits on D18 |
+| 46b: `STATUS.md` in place of `BUILD_STATUS.md`, one terminology list, an in-app copy edit (point 23) | ⬜ Not started; the `STATUS.md` part waits on D20 |
 
 ## Change log of this plan
 
+- **9 Nov 2026 (96):** Plan housekeeping, done before going on with the patches. You asked whether every decision that needs pinning down is listed and whether this file is current and correct. **It was not.** 0.4 held D1 to D15 only. Fifteen more groups of questions I had raised lived only inside change log entries (the two escalation questions in 83, the export label mix-up in 90, the About screen's three in 67, the showcase passcode questions in 71 to 73, the encryption key questions in 69 and 70, and so on), so a decision could not be found without reading 95 entries. **In 0.4 now:** D16 to D30, each with its source entry, what it affects, my recommendation and a status. Open (they need your answer): D3, D15 to D18, D20, D23, D25, D27 and D28. Assumed as built, and standing unless you say otherwise: D2, D19, D21, D22, D24, D26 and D29. Held: D30. Instruction 10 now says every question for you goes into 0.4 in the patch that raises it, so this does not drift again. **Appendix D is new:** every "not done" and "say if you want it" from the change log, one line per feature with its entry number, so none is lost; nothing in it is queued. **A real gap found:** T3, relationship reminders, was approved in Appendix C1 and had no patch row anywhere, so it could never come up as "next". It is now Patch 30n, approved and not blocked. **Stale things fixed:** RV7 is pushed (`9e84ddd`), so it is no longer awaiting your paste; the Progress table's hashes for 13b to 30l and SL1 (32 rows) no longer matched the repo, where those commits exist under other hashes, so they were refreshed from `git log` by patch name (older change log entries still show the hashes of their day); Phase G rows 43 to 46 still said written and are pushed; Phase E2 said SL4 and SL5 were unpushed; Patch 29 was still shown as not done; the intro said 28 points where point 29 exists; Appendix B was weeks old; the point 17 "Decide" line had been answered long ago; the R and RV patches had no phase table in section 2, so Phase R was added; and Appendix C still mentioned Quiet Room, which was removed. **Not touched:** `BUILD_STATUS.md` (D20). **How I checked:** every hash in the Progress table against `git log`; every sentence in the change log with "say if", "worth your decision", "questions for you" or "your call" against 0.4. **Not checked:** that the rows marked Assumed are what you want. That is for you to read. **Size:** docs only, no Swift, no `CHANGELOG.md` line (nothing changes in the app).
 - **9 Nov 2026 (95):** RV7 written, stacked on the pushed RV8 (HEAD was `38c10ae`); RV3, RV9 and RV8 are confirmed pushed from the repo itself and the table says so. This was the last RV patch. The plan held one line for it (an audit that every feature has plenty of made-up content), so I did it as an audit of the code rather than a click-through: I compared every model in `AnchorSchema.models` (34) with what `DemoMode.makeContainer` creates. **What was empty:** trigger windows, unsent drafts, the de-escalation scripts, all four Recovery models (a counter, motivations, day entries and urges), and the decision presets, which had their three categories but no options in them, so the Decision presets screen and its card on Now were bare. **What was thin:** only Sam had a page of notes; Alex and Jordan had none and no messages; the appointments had only upcoming sessions, so Earlier sessions, and the notes written around a session, never showed; three journal days and three check-ins, so the Journal's month and year views were nearly blank; one week of sleep; one routine; three grounding tools and two affirmations. **What is there now:** all of that filled in, in the same plain made-up voice as before (Sam, Alex and Jordan; Dr Lee and Dr Patel). The one new thing worth a look is Recovery: one counter, Energy drinks, picked on purpose to be ordinary, since showcase mode is for showing the app to someone else. It has a run that ended and a fresh one, so the streaks, calendar and list of times show something, plus savings, four motivations, four days of entries and four urges. It sorts after the two short counters the review run adds, so a review still opens on the same one. **A script keeps it true:** `scripts/check-demo-coverage.mjs` reads the model list and fails if a model has no made-up content and is not on a short list of three exceptions with reasons (the older safety plan form, the older Next hour list, and the mascot lines, which the app seeds itself). I ran it against the old seed to check it can fail: it named exactly the nine models above. It checks that content exists, not how much; that part is for you to look at. **Left out, said plainly:** voice notes and photos (they are files, so the screens that list them show their empty state), and a grounding tool that opens another app (the link would open a real app). **Things to know:** the App Store screenshots and the demo video will look different when remade (Now has a counter and more grounding tools, Journal and Plan have more rows); nothing asserts on counts, so the screenshot tests still run. A showcase now has a Recovery counter, so the Recovery counter widget on Now shows it (the lock screen widget stays empty, as 40a does). **Review:** one new stop, RV7, and the stop for Patch 1 now says to open Started today, since there are three counters in a review run. **Model:** none, no export change, no new fields. **Size:** about 175 changed lines in 2 Swift files, plus the script and docs. **Needs a real check:** a review run and a showcase run, looking through the screens named in the RV7 stop for anything that reads as empty or odd; Journal Month and Year; Earlier sessions on Appointments with notes opening; the Recovery calendar showing one slip day; the Decisions card on Now with options; and that Now still looks right with the counter. Checked with a Swift syntax parser (tree-sitter), not compiled. The calls I would look at first if the build complains are passing `{ ago($0, hour: $1) }` into `addRecoveryContent`, and `counter.runs = ...` set before the counter is inserted.
 - **9 Nov 2026 (94):** RV8 written, stacked on RV9 (paste RV3, then RV9, then this). I had only your four short notes for this patch (far less crowded, ideas kept apart, plainer wording, the four main tabs first), so here is how I read each; say if I read one wrong. **Far less crowded and ideas kept apart:** every guide page used to put its whole text in one centred block. It is now split into its separate ideas, one to a line, left aligned. Text written as paragraphs keeps them; text that is not is split into sentences. The first four ideas show, and Show more opens the rest. On a longer guide the Good to know list waits behind the same button, and on a short one it shows as before. 19 of the 36 guides are long enough to fold today. **Plainer wording:** the five tab guides were the worst, up to 3,700 characters each (Plan's ran through sleep, Apple Health, backups, the focus timer and customising in one sentence chain). Each is now an overview in four to six short paragraphs. Nothing was lost: I checked that every screen has its own guide, and the one thing the Bridge guide held that no screen had, Export for someone, now has an entry of its own with a ? on that screen (left out of the tour, so the tour stays the same length). The Appointments guide I wrote for RV3 was the longest entry, at over 1,000 characters, so I cut it and moved the reminder and gap details into Good to know. I did not rewrite the other 33 screen guides; they were already plain and short, and the fold handles their length. **The four main tabs first:** the app has five tabs (Now, Plan, Journal, Bridge, Thread), not four, so I read this as the tour meeting every tab before any detail. The tour now opens with the five tab pages, then each tab's screens in the same order, then Settings. If you meant four particular tabs, or wanted the screens dropped from the tour, that is a one-line change. **Model:** none, no export change. **Size:** about 140 changed lines in 5 files. **Needs a real check:** the ? on each tab (the text reads as separate short paragraphs and nothing is cut off); a long entry such as Tasks or Sleep showing four ideas, then Show more opening the rest and the extras; the tour's first five pages; the page at large text sizes and at the smallest phone width, where the Show more button must not sit under anything; Export for someone with its ? at the top right. Checked only with a Swift syntax parser, not compiled; I also ran the sentence splitter in a script over every guide text and the only short idea it found was a real sentence (Start typing.). The calls I am least sure of are `ForEach(Array(shownIdeas.enumerated()), id: \.offset)` and the tour page height when a page is expanded, since each page is its own scroll view.
 - **9 Nov 2026 (93):** RV9 written, stacked on RV3 (paste RV3 first). The plan held only the line "tidy the toggles" for your note on the Health section, so I worked from the card itself and say below what I changed; if you meant something else, tell me. **What was untidy, checked in the code:** the reading half and the writing half were built differently. Reading had a Connect Apple Health button that turned into a switch called Bring in new nights once connected, and that switch could only be turned off (turning it on did nothing, because getting back on was the button's job, which reappeared). Writing was a plain switch. Both halves had a paragraph of explanation inside the card. And a switch turned on while Health's own question was open snapped back off until you answered, because it only read the saved setting. **What it is now:** two sections of the same shape. Bring in nights from Apple Health is a switch, on to ask Health and bring in the last 30 days, off to stop; under it one short line (Reads sleep only, and keeps a copy on this phone), then Last checked and Check now while it is on, and Remove imported sleep with its count whenever some exist. Save nights I type to Apple Health is a switch with one short line (Only nights with a bed time and a wake time), then Save the last 30 nights I typed and its message while it is on, and Remove what Anchor saved. Both switches show as on while Health's question is open, and are held still until it is answered. The two long paragraphs are in the Sleep guide (three tips now), including how to stop Anchor asking at all in the Health app, under Sharing. `docs/SLEEP.md` names the switch. **Not changed:** what each control does, the dialogs, the privacy page (it already says connect and turn on saving, which still reads correctly), and Health being hidden where it is not available. The Sleep guide now has three tips, which RV8 will look at when it makes the guides less crowded. **Model:** none, no export change. **Size:** about 100 changed lines in 5 files. **Needs a real check, on a real device with a normal build (a review run never touches Health, so the switches go back to off there):** switch Bring in on with nothing allowed yet and watch it stay on under Health's question; deny, and check it goes back to off; allow, and check nights appear; switch it off and on; the same for Save nights I type; both sections at large text sizes. Checked only with a Swift syntax parser, not compiled; the call I am least sure of is the `private extension` on a private view reaching its private properties, which Swift allows within one file.
@@ -272,7 +278,7 @@ The branch did not build because `iOS/Anchor/Anchor/Views/Widgets/` was untracke
 | --- | --- | --- | --- | --- |
 | D1 | Where is the missing widget-layout file? | Patch 0 | — | ✅ Closed |
 | D2 | Keep the Reminders (EventKit) import from the old "Next Hour" list? | Patch 15 | Keep as an optional import on the task list | ✅ Assumed, 7 Nov 2026: Patch 15 follows the recommendation (import only). Say if you want it changed. |
-| D3 | Demo strategy (point 25): shared-data rebuild with parity checks, or cross-platform rewrite? | Patches 49–50, 54 | Decide with D4 | Open |
+| D3 | Demo strategy (point 25): shared-data rebuild with parity checks, or cross-platform rewrite? | Patches 49–50, 54 | Decide with D4 | Open, parked: D4 puts Android far off, so nothing waits on it yet |
 | D4 | Android: real goal or "nice to know"? | Point 28, D3, encryption (Patches 33–35) | Finish iOS first, decide *before* Patch 49 | ✅ Closed 7 Nov 2026: planned, but far in the future. Treat it as if it does not exist for now; nothing in the Swift patches waits on it. |
 | D5 | Encryption approach (point 20) | Patches 33–35 | Field-level encryption, Keychain key, encrypted exports | ✅ Closed 7 Nov 2026: option b (field-level encryption, Keychain key, encrypted exports). The earlier idea of revisiting this for React Native is dropped, since D4 is parked. Voice note files (Patch 14b) are not covered by field-level encryption of text fields; Patches 34 and 35 must decide how to protect them. |
 | D6 | Feedback loops: loops only, or loops plus free systems maps? | Patches 26–28 | Both, loops by default | ✅ Closed 7 Nov 2026: both, loops by default. |
@@ -285,12 +291,29 @@ The branch did not build because `iOS/Anchor/Anchor/Views/Widgets/` was untracke
 | D14 | What does the app show about sleep? | SL1 to SL5 | Times, time asleep, an optional feel (Restful, Okay, Rough, your word for it) and a note. No sleep score, no goal hours, no "sleep debt", no stages in the first version, and no correlation views. | ✅ Closed 7 Nov 2026: recommendation accepted. |
 | D9 | How long to keep investing in Swift UI polish before migrating to React Native? Polish-only patches (5, 7, 8–9) would be rewritten. | Phases B–D | Do bug fixes and behaviour first (1–4, 6, 10–14). Pause polish-only patches once a migration date exists. | ✅ Closed 7 Nov 2026: keep polishing in Swift for now. Revisit when a migration date exists. |
 | D15 | How should locked text be held in the SwiftData store (point 20, Patch 35b)? | 35b | See the change log entry for Patch 35a. In short: lock a few fields at a time, starting with the Journal text, by giving each stored field a new name with `@Attribute(originalName:)` and keeping the old name as a property that locks and opens, so no screen changes; try the first model on a device, with a copy of your data, before widening it. | Open |
+| D16 | When a trigger-window escalation is cancelled (you tap I'm okay, or open the app from the check-in), should the following weeks keep their reminders? Today cancelling removes the repeating reminder, so later weeks are lost until Plan is opened or a window is saved, because iOS cannot skip one occurrence of a repeating reminder. The fix is to schedule the next few weeks as separate dated reminders with a list of skipped ones. | 45d | Leave it for now. The fix uses more of the 64 waiting reminders iOS allows the whole app, and the reminders stop if the app is not opened for those weeks. Revisit if testers use escalation. | Open (change log 83) |
+| D17 | Lock-screen wording of a trigger-window reminder. Today the title is your window's label and the body is a line from your safety plan. Change to a plain Anchor title and a line that names nothing? | 45d, Appendix C2 | Yes, to match every other reminder, which already uses generic lock-screen wording. | Open (83) |
+| D18 | Export for someone labels check-in values from the wrong sliders: the Moving slider is called Energy and the real Physical energy slider is left out; the PDF, the web page chart and the Word file carry that. The older CSV and PDF under Your data have the same label and write that value twice. The fix labels Energy, Clarity, Room in head and Social energy from the right sliders, adds Moving, and draws five lines in the web page chart. | RV5a | Yes. It changes what a clinician reads, but the present labels are mistakes, not a design choice. | Open (90) |
+| D19 | Hold Recovery back until v1 is approved? Patch 46a removed that line from `docs/RECOVERY_V2.md`, because the privacy page now covers Recovery and the branch has moved well past it. | docs, release | No hold. | Assumed (85) |
+| D20 | Replace `BUILD_STATUS.md` (673 lines, partly out of date by its own note) with a short `STATUS.md`? Deleting a file is your call, so I have not touched it. | 46b | Yes. This file and `CHANGELOG.md` already hold the current state. | Open (85) |
+| D21 | Showcase mode choices I built without an answer: (a) the Showcase mode row stays visible in Settings while it is on, since the way out is behind the passcode; (b) the showcase passcode is any text of four characters or more, not a four to six digit pad; (c) widgets are empty in showcase mode instead of showing made-up content; (d) share and export are left out, so the export screens cannot be shown; (e) a plain screen covers the app switcher; (f) the phone's own Face ID or passcode always gets you out, with or without a showcase passcode, and the mode survives closing the app. | 39, 40a, 40b, RV7 | As built. | Assumed (71 to 73) |
+| D22 | Encryption choices I built without an answer: (a) the data key is kept as `AfterFirstUnlockThisDeviceOnly`, so background launches work and the key never leaves the device or travels in a backup (a stricter class would need the phone unlocked for background actions); (b) the recovery key is 28 characters, shown once; (c) it is not offered as a printable page or a file to save in Files, because a saved file next to the phone defeats the point; (d) the widget summary key is a key file kept out of backups, not a Keychain item (the Keychain version replaces two functions). | 34, 35a, 35b | As built. | Assumed (69, 70) |
+| D23 | About screen: (1) About the creator: your words, or leave it out. (2) Should the repository have a `LICENSE` file, and which? The About screen says nothing about it until you decide. (3) Should What's new keep naming the larger features, or name versions once there is a release? The three principles, the Licences line and the eight What's new entries are my wording and need your read. | 32 | Creator: your words. LICENSE: your decision; I would not pick one for you. What's new: keep the feature list until a release exists. | Open (67) |
+| D24 | Recovery wording left alone on purpose: the Streaks history page draws each past run as a bar scaled to the longest, the My streak page keeps its title, and the milestone marks are unchanged. Your longest run and the personal best bar are already opt-in (44b). | Recovery | Leave them: they are pages you chose to open, about your own counters. | Assumed (82) |
+| D25 | T5, letters you open: unlock after an appointment. It needs a rule for which appointment. After a hard day is not built, because the app would be judging a day from what you log, against the wording rules. | 30o | Unlock the day after the next scheduled session. | Open (46, 74) |
+| D26 | Appointment reminders (45a): (a) name the provider inside the app, with the lock screen still generic; (b) a choice of evening time; (c) a tap that opens Session prep. As built: no to (a), no to (b) (the evening-before reminder is at 6 pm), and a tap just opens Anchor. | 45a | As built. | Assumed (81) |
+| D27 | Website viewer for Export for someone (38b): build it at all? It only helps someone who would rather not open an HTML attachment, and the PDF already covers that. If yes, the viewer script is a Swift string today, so it would have to move to one file that both the app and the website read (change log 65 has my suggestion). | 38b | Do not build it for now. | Open (65) |
+| D28 | Privacy page, a read before release: the new Recovery, reminder, focus timer and Reading this policy sections are promises to the people using the app; the page now recommends the Privacy Visualiser, and you can soften that or also link the accessible version by rodak (`rodak123.github.io/PrivacyVisualizerRedesign`). The Apple, Spotify and Discord policy links and the Visualiser address were not opened from here, so open each once from the built page. | release | Read it once, then open the five links. | Open (85, 91) |
+| D29 | Small rules I chose and will keep unless you say: Apple Health import counts samples under three hours apart as one sleep, keeps the longest per day and so leaves naps out (60); the asleep sample written to Health ends when you got up (61); the Word file is A4, or US Letter when the browser language ends in US, CA, MX or PH (65); the CSV has no sleep columns and the PDF no sleep chart (66); the check-in sheet shows each slider's position as a percentage (90); I read "the four main tabs first" as the tour meeting all five tabs first, and "tidy the toggles" as two matching switches with one short line each (93, 94); SL4 was not held back after reading (39); reordering a loop's steps moves each step's outgoing link with it (40); the wording of the loop templates (42). | various | As built. | Assumed (see each entry) |
+| D30 | B4 (session actions into Tasks), B6 (one-screen summary of how I've been) and B5 (medication notes, on hold until a safe shape exists). | Appendix A | Keep them held. | Held |
+
+**How to read the Status column.** *Open* needs your answer before the patch it names can be written (or, for D28, before release). *Assumed* is already built the way the recommendation says; reply only if you want it changed. *Held* is parked on purpose. *Closed* is answered. The source entry is the change log number, where the full reasoning is.
 
 **Update, 7 Nov 2026:** D3 and D4 answered in a comment. Android is wanted eventually, via a move from Swift to React Native, with demo and Android builds updating automatically. Both are parked as "eventually planned": Patches 49–50 and 54 are deferred. D5 should be revisited once the migration is decided (see point 28).
 
 ---
 
-## 1. Your 28 points, outlined
+## 1. Your points, outlined (1 to 29)
 
 ### Check-in (1, 2, 3)
 
@@ -381,7 +404,7 @@ The branch did not build because `iOS/Anchor/Anchor/Views/Widgets/` was untracke
 - The real store file is **not opened at all** while on.
 - Turning off: showcase passcode (or device authentication), then restore the real container and widget data.
 - The demo fixture must cover *every* feature, so it becomes one seed definition (JSON) shared by showcase mode, UI tests and the website demo. Part of the Definition of Done.
-- *Decide:* forgotten showcase passcode (recommend: device authentication always works) and whether the mode survives a force-quit (recommend yes).
+- *Decided as built (D21):* device authentication always works if the showcase passcode is forgotten, and the mode survives closing the app.
 
 **20. Encryption "as secure as possible".** *Now:* iOS file protection `completeUntilFirstUserAuthentication` (readable any time after first unlock since boot). Exports are plaintext. The widget snapshot (names and numbers) sits in unprotected App Group defaults.
 
@@ -573,7 +596,7 @@ First add an explicit SwiftData migration plan: a store that fails to open shows
 | **26** | Feedback loops 1: loop builder (ring layout, polarity, reinforcing/balancing) | 15 | M | 🟡 |
 | **27** | Feedback loops 2: map mode (pan/zoom, undo, connect handles) | 15 | M | 🟡 |
 | **28** | Feedback loops 3: templates, share as picture or PDF | 15 | S | 🟡 |
-| **29** | Bridge/Thread ideas review: you pick from Appendix A | 18 | S | ⬜ |
+| **29** | Bridge/Thread ideas review: you pick from Appendix A | 18 | S | ✅ Done, 7 Nov 2026 |
 | **30a** | Reusable custom sections component; Safety plan sections with migration | 18, C3 | M+ | 🟡 |
 | **30b** | Boundaries list (T6) | 18 | M | 🟡 |
 | **30c** | Message starters (T2) | 18 | S | 🟡 |
@@ -587,13 +610,14 @@ First add an explicit SwiftData migration plan: a store that fails to open shows
 | **30k** | Things to raise per provider (B8, part 2) | 18 | S | 🟡 |
 | **30l** | Person pages (T1), on the shared sections editor | 18, C3 | M+ | 🟡 |
 | **30m** | Session prep, the rest of B1: Waiting to be raised and a To bring checklist per session | 18 | S | 🟡 |
-| **30n+** | Approved Bridge/Thread ideas, one patch each (next: the rest of T5, which needs your say) | 18 | per idea | ⬜ |
+| **30n** | Relationship reminders (T3, Appendix C1): regular hello, their dates and follow-up, off by default, generic lock-screen wording, one a day at most, listed in Settings, Reminders | 18, C1 | M | ⬜ approved, not blocked |
+| **30o+** | The rest of T5 (unlock after an appointment, D25) and the last two T3 types (hard-time companion, after an appointment), one patch each | 18 | per idea | ⬜ |
 
 **Update, 7 Nov 2026:** Patch 29 (the ideas review) is done. Patch 30+ is now: B1, B2, B3, B8, T1 (light), T2, T5, T6, T7 and a Personal goals feature in place of B7, grouped into small patches of one or two ideas each. B4 and B6 are held; B5 is dropped for now; T4 is covered by Patches 36–38.
 
 ### Phase E2 — Sleep journal (point 29)
 
-Decided (D10 to D14 closed, 7 Nov 2026) and part of the main release, Apple Health included. SL1 to SL4 are written, SL1 to SL3 pushed. SL5 do not depend on anything unbuilt and can be pulled forward any time; SL5 does depend on Patches 31 and 36 to 38.
+Decided (D10 to D14 closed, 7 Nov 2026) and part of the main release, Apple Health included. SL1 to SL5 are all pushed.
 
 | Patch | Contents | Points | Size | Status |
 | --- | --- | --- | --- | --- |
@@ -619,7 +643,7 @@ Decided (D10 to D14 closed, 7 Nov 2026) and part of the main release, Apple Heal
 | **36** | Bridge export: picker and recipient labels | 19 | M | 🟡 |
 | **37** | Bridge export: self-contained HTML viewer, PDF/CSV, password encryption | 19 | M | 🟡 |
 | **38a** | Bridge export: Word file made inside the web page | 19 | S | 🟡 |
-| **38b** | Bridge export: optional website viewer | 19 | S | ⬜ |
+| **38b** | Bridge export: optional website viewer (waits on D27) | 19 | S | ⬜ |
 | **39** | Showcase mode 1: container swap, lock disabled, off with the phone's own authentication; the shared JSON seed deferred (see change log 71) | 17 | M | 🟡 |
 | **40a** | Showcase mode 2a: the sweep (widgets, reminders, share and export, app switcher, fail closed) | 17 | M | 🟡 |
 | **40b** | Showcase mode 2b: passcode of its own, exit flow, the switch for everyone with its own screen and Help | 17 | M | 🟡 |
@@ -630,10 +654,27 @@ Decided (D10 to D14 closed, 7 Nov 2026) and part of the main release, Apple Heal
 | --- | --- | --- | --- | --- |
 | **41** | Guide registry, full tour, "?" on the pushed screens (part 1 of point 16; entries come in 42 and 43) | 16 | M | 🟡 |
 | **42** | Guide content: Now and Plan (incl. Tasks, Routines, Lists). Written for the 14 screens opened from Plan; Now has no screens of its own to explain, and the Recovery screens go in 43 | 16 | M | 🟡 |
-| **43** | Guide content: Journal, Bridge, Thread, Settings, Recovery. Split: 43a is Bridge, Thread and Recovery (pushed), 43b is Journal and Settings (written) | 16 | M | 🟠 |
-| **44** | Audit 1: Now, Plan, Recovery. 44a is a first sweep (written); more of the sweep can follow as 44b if you want it | 12 | M | 🟠 |
-| **45** | Audit 2: Journal, Bridge, Thread, Settings, widgets, notifications (appointment reminders, escalation). 45a is the appointment reminders; 45b is the Journaling Suggestions permissions and the escalation wording and timing; 45c is the Journal check-in rows and the Bridge help; the escalation redesign described in change log 83 is not written and waits on you | 12 | M | 🟠 |
-| **46** | Docs and coherence. 46a is the privacy page and the Recovery, release and App Store docs (written); 46b is `STATUS.md` in place of `BUILD_STATUS.md`, the terminology list and the in-app copy edit, and is not written | 23 | M | 🟠 |
+| **43** | Guide content: Journal, Bridge, Thread, Settings, Recovery. Split: 43a is Bridge, Thread and Recovery, 43b is Journal and Settings; both pushed | 16 | M | 🟡 |
+| **44** | Audit 1: Now, Plan, Recovery. 44a is a first sweep and 44b made the longest run opt-in (your answer); both pushed | 12 | M | 🟡 |
+| **45** | Audit 2: Journal, Bridge, Thread, Settings, widgets, notifications (appointment reminders, escalation). 45a is the appointment reminders; 45b is the Journaling Suggestions permissions and the escalation wording and timing; 45c is the Journal check-in rows and the Bridge help; 45a, 45b and 45c are pushed; the escalation and trigger-window reminder changes in change log 83 are 45d and wait on D16 and D17 | 12 | M | 🟡 |
+| **46** | Docs and coherence. 46a is the privacy page and the Recovery, release and App Store docs (pushed); 46b is `STATUS.md` in place of `BUILD_STATUS.md` (D20), the terminology list and the in-app copy edit, and is not written | 23 | M | 🟡 / ⬜ |
+
+### Phase R: Review fixes (from your review of the 66 stops, 9 Nov 2026)
+
+| Patch | Contents | Points | Size | Status |
+| --- | --- | --- | --- | --- |
+| **R1, R1a** | Review walkthrough for test builds, `scripts/review-on-device.sh`, and the launch-argument fix | 12 | M | 🟡 |
+| **R2** | The review run shows the Last night card and the sleep check-in question | 29 | S | 🟡 |
+| **RV1, RV2** | Tasks: lighter cards, Add several at once; steps inside steps to any depth | 7 | M | 🟡 |
+| **RV3** | Appointments, sessions: Coming up and the calendar, earlier sessions folded away | 13 | M | 🟡 |
+| **RV4** | Goals: optional SMART frame, off by default | 18 | S | 🟡 |
+| **RV5** | Check-ins in the Journal show each day's own values, never inferred | 5 | S | 🟡 |
+| **RV5a** | Export check-in labels from the right sliders (waits on D18) | 19 | S | ⬜ |
+| **RV6** | Privacy page: links to the other policies and the Privacy Visualiser section (read it first, D28) | 20 | S | 🟡 |
+| **RV7** | Showcase mode and the demo have made-up content for every kind of content, and a script keeps it so | 17 | M | 🟡 |
+| **RV8** | The ? guides: ideas one to a line, Show more, short tab overviews, the tour meets the tabs first | 16 | M | 🟡 |
+| **RV9** | Apple Health card: two matching switches, one short line each | 29 | S | 🟡 |
+| **RV10** | Check-in mascot keeps one calm face | 2 | S | 🟡 |
 
 ### Phase H — Website, demo, video
 
@@ -704,7 +745,7 @@ A reminder you set yourself, per person, **off by default**. Lock-screen text is
 | **Hard-time companion** | "Sunday evenings can be heavy. Sam is one option." | "A gentle nudge for this evening." | The start of a trigger window you defined |
 | **After an appointment** | "How did it go? Want to tell someone about it?" | "Something for this evening." | Early evening on the appointment day, or the next morning |
 
-**Rules:** at most one per day across everyone, no repeats or snooze chains, nothing while Quiet Room is on, no "you haven't…" wording, nothing counted or scored, "Not now" is free and logged nowhere. Nothing is inferred from behaviour and the app never suggests removing someone. Tapping opens a message pre-filled from your T2 starters. **Build order:** the first three types first. The last two depend on trigger windows and appointments being set up (and on appointment reminders being wired, point 12).
+**Rules:** at most one per day across everyone, no repeats or snooze chains (Quiet Room was removed from the app, so the old rule about holding reminders back while it is on no longer applies), no "you haven't…" wording, nothing counted or scored, "Not now" is free and logged nowhere. Nothing is inferred from behaviour and the app never suggests removing someone. Tapping opens a message pre-filled from your T2 starters. **Build order:** the first three types first. The last two depend on trigger windows and appointments being set up (and on appointment reminders being wired, point 12).
 
 ### C2. Opt-in everywhere, with gentle discoverability
 
@@ -733,4 +774,36 @@ A reminder you set yourself, per person, **off by default**. Lock-screen text is
 
 ## Appendix B: Suggested next session
 
-Try SL3, SL4, 31, 36, 37, 38a, SL5, 32, 33, 34, 35a, 39, 40a, 40b, 30m, 41, 42, 43a and 43b on a device (for the guide patches, take the tour from Settings and open the ? on a few screens in each tab) (for 40a and 40b, the checklist is at the end of `docs/SHOWCASE.md`) (for 33, open Your data in a debug build and check the self-test does not stop). Then Patch 38b (the optional website viewer, if you want it). Patches 34 and 35 (field encryption) are independent.
+Nothing in the Progress table is confirmed building yet. The quickest way to check a lot at once is the review run: `scripts/review-on-device.sh` puts the app on your connected iPhone or a simulator on made-up content, with a numbered bar that goes through every change (Patch R1, updated by each RV patch). Before a TestFlight build, also do D28 (read the privacy page and open its links) and the Apple Health checklist in `docs/SLEEP.md`. Patches 34 and 35a (keys and sealed widget summaries) are test-build only, and 35b waits on D15.
+
+Answers that would unblock work, in the order they matter: D15 (field encryption), D18 (wrong check-in labels in exports), D16 and D17 (reminder wording and timing), D20 (`STATUS.md`), D23 (About screen), D25 (letters after an appointment), D27 (website viewer).
+
+---
+
+## Appendix D: Offered but not built
+
+Things I listed as not done, or offered with "say if you want it", in one place so none is lost. Nothing here is queued; tell me which you want and it becomes a patch. The number is the change log entry with the reasoning. Items already settled elsewhere are in 0.4 (D25, D26, D30).
+
+| Area | Not built | Entry |
+| --- | --- | --- |
+| Tasks | Recurring tasks; a priority or category field; steps of a blocked task waiting on anything (only whole tasks can); editing a title in place on the card; adding steps by typing on the card | 29, 28, 88 |
+| Plan my day | Planning ahead for another day; keeping yesterday's plan; a focus timer offered automatically after each item; a time-left readout while walking through | 32 |
+| Focus timer | A timer killed by iOS while the app is closed is lost; with auto-start on and the app closed you get one alert, not a chain | 31 |
+| Widgets on a tab | Dragging a card into the Hidden row; moving a widget to another tab; making a full-width widget half width | 30 |
+| Quick list | Renaming a list after it is made; rewording an item; reordering items; a widget or Now card | 34 |
+| Routines | Reordering routines; renaming from the card; per-step notes; a per-step focus timer; a tap on the reminder that starts the routine | 35, 36 |
+| Item lists | Reordering items or headings; renaming a heading for every item; a rule typed as text; a widget or Now card; tying a list to a task or routine; a starter library of templates (written content, which the app does not pre-fill) | 37 |
+| Journal | Swiping between months; the optional lenses (entries only, check-ins only, by origin); changing an entry's date; a camera button; a map on place cards; album art on song cards; dragging blocks; a title field | 13, 14, 51 |
+| Check-in | A calm "done" moment with a mascot line (needs a new reviewed line pool, Patch 5b); a tap on one bar in the Journal row, a month or year view of check-ins and any pattern across days, left out on purpose | 10, 90 |
+| Feedback loops | Multi-select; auto-layout; pan and zoom when only looking; reordering links; loop templates beyond the four; multi-page PDFs for a very large map; a link from a diagram into Export for someone (now unblocked, since 36 to 38 are built) | 41, 42 |
+| Sections and Boundaries | A section's words as a checklist; sharing Boundaries as a PDF or picture; a lock-screen or widget view of boundaries; folding the Safety plan and Boundaries list code into one | 43, 44 |
+| Message starters | Starters per person; moving a starter between a contact's templates and the list; starters on a widget or the lock screen | 45 |
+| Letters | Editing a letter after it is saved; suggested headings (nothing is written for you); a reminder to open one | 46 |
+| Things to raise | A separate Questions list or filter; a prompt asking for the answer after an appointment; the answer also added to a session's notes in one tap; a star on journal entries; pulling a check-in or urge in as a plain note | 47, 49 |
+| Personal goals | Editing a note after it is saved; linking a goal to a task or appointment; goals in Export for someone (now unblocked); a reminder; putting goals on Plan instead of Bridge | 48, 89 |
+| Session prep | Editing a To bring line after it is saved; reordering; carrying a line to the next session | 74 |
+| Providers | Reordering providers; provider notes on the Appointments page | 52, 53 |
+| Recovery | Softening the Streaks history page, the My streak title and the milestone marks (D24) | 82 |
+| Backup | Backing up settings; merging into an existing record (restore skips what is there); encrypting the photo and voice files on the device itself (entry 68 pointed at Patches 34 and 35, and neither did it) | 68 |
+| Guide | Website pages made from the guide registry (Patch 47) | 75 |
+| Sleep export | Separate sleep columns in the CSV; a Sleep chart in the PDF | 66 |
