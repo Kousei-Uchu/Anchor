@@ -1323,7 +1323,8 @@ struct SleepMorningCard: View {
         return entries.contains { Calendar.current.startOfDay(for: $0.nightDate) == today && !$0.isBlank }
     }
 
-    private var isMorning: Bool { Calendar.current.component(.hour, from: .now) < 12 }
+    /// A review run shows it at any hour, so it can be looked at in the afternoon.
+    private var isMorning: Bool { ReviewMode.isOn || Calendar.current.component(.hour, from: .now) < 12 }
 
     var body: some View {
         if enabled && isMorning && !loggedToday && dismissedDay != SleepSettings.dayKey() {

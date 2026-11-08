@@ -392,6 +392,14 @@ enum ReviewSeed {
     /// Content the shared demo store leaves out, added only in a review run: a counter for the Recovery changes.
     static func apply(to container: ModelContainer) {
         let context = ModelContext(container)
+        // The shared demo has a sleep entry for today, which hides the Last night card and the sleep
+        // question in a check-in. Take it out here so both can be seen.
+        let today = Calendar.current.startOfDay(for: .now)
+        if let nights = try? context.fetch(FetchDescriptor<SleepEntry>()) {
+            for night in nights where Calendar.current.startOfDay(for: night.nightDate) == today {
+                context.delete(night)
+            }
+        }
         let start = Date.now.addingTimeInterval(-40 * 86_400)
         context.insert(RecoveryCounter(name: "Example counter", startDate: start))
         context.insert(RecoveryCounter(name: "Started today", startDate: Date.now.addingTimeInterval(-20 * 60), sortOrder: 1))
