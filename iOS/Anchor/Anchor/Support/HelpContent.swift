@@ -91,7 +91,7 @@ struct GuideEntry: Identifiable, Hashable {
 enum Guide {
     /// Entries for individual screens. They are written tab by tab, and each
     /// one is looked up by the id a screen passes to `guideButton`.
-    static let screenEntries: [GuideEntry] = []
+    static let screenEntries: [GuideEntry] = planEntries
 
     /// The entry for a tab itself, built from its topic so the text lives in one place.
     static func tabEntry(_ topic: HelpTopic) -> GuideEntry {
@@ -110,6 +110,146 @@ enum Guide {
             [tabEntry(topic)] + screenEntries.filter { $0.tab == topic }
         }
     }
+}
+
+// MARK: - Guide entries: Plan
+
+// Patch 42. The screens reached from Plan, in the order Plan lists them. Tasks, Quick list,
+// De-escalation scripts and Affirmations keep their original `now.` ids (a screen asks for its
+// entry by id, so the ids do not change) but belong to Plan, because that is where they are
+// opened from. The words are plain and fixed, and nothing here is scored or counted.
+
+extension Guide {
+    static let planEntries: [GuideEntry] = [
+        GuideEntry(
+            id: "plan.contacts", tab: .plan, title: "Contacts", icon: "person.2.fill",
+            whatItIs: "The people you would want to reach in a hard moment.",
+            howToUse: "The plus adds someone, either from your phone's Contacts or by typing them in. Tap a card to open it and choose how to reach them (phone or Discord), write message templates for that person, and set an optional reminder. The first two people in the list are the quick buttons on Now, so use Reorder to put the two you would reach for first. A card can also hold a timezone and the hours someone is usually awake, which Who's awake right now uses so you are not guessing across timezones.",
+            tips: [
+                "Escalate if I don't respond is off until you turn it on. If you then miss a trigger window check-in, a reminder to message that person shows up after the number of minutes you chose. It is only a reminder to you. Anchor never messages anyone by itself.",
+                "For Discord you need the person's numeric user ID, not their username.",
+                "Deleting a contact also deletes their page in Thread."
+            ]
+        ),
+        GuideEntry(
+            id: "plan.safety-plan", tab: .plan, title: "Safety plan", icon: "shield.fill",
+            whatItIs: "A plan you write once, while you are calm, so it is there when you need it.",
+            howToUse: "It is made of sections that belong to you. It starts with four, and every one can be renamed, rewritten, hidden or deleted. Tap a card to open it and change its name, its words, its icon and colour, and whether it shows. The plus adds a section of your own, and Reorder changes the order. Nothing is written for you.",
+            tips: [
+                "One section at a time can be used for reminder quotes. Turn on Use this for reminder quotes inside it, and trigger window reminders can quote a line from it, always in your own words.",
+                "A hidden section stays saved. It just does not show.",
+                "The date it was last changed is shown at the bottom."
+            ]
+        ),
+        GuideEntry(
+            id: "plan.trigger-windows", tab: .plan, title: "Trigger windows", icon: "clock.fill",
+            whatItIs: "The times of day that tend to be hard, so Anchor can check in with you then.",
+            howToUse: "Add a window with a label, the days it applies to, and a start and end time. While a window is active, Anchor sends a reminder on those days at the start time, with your label as its title. The first time you switch one on, iOS asks whether Anchor may send notifications. The wording is a plain fixed line, sometimes with a line from your safety plan. A window is only about the time and the days. It never uses your location.",
+            tips: [
+                "Switch Active off to pause a window without deleting it.",
+                "If a contact has Escalate if I don't respond turned on, a check-in you do not answer can lead to a reminder to message them.",
+                "Reminders stay on this phone."
+            ]
+        ),
+        GuideEntry(
+            id: "plan.appointments", tab: .plan, title: "Appointments", icon: "calendar",
+            whatItIs: "Your sessions with each person you see, on a calendar you can change.",
+            howToUse: "Tap an empty day to schedule a session, or use the plus for any date. Tap a day with a session to move or cancel it. A session you have moved is marked Moved. Switch Repeat on when you schedule to make a run of sessions. Typical cadence is only a starting point for suggesting dates, and the real gap can be shorter or longer. If you see more than one person, add them from the menu at the top. Each one has their own sessions and notes, and a Name on exports, which is the name used on files you make for them.",
+            tips: [
+                "Session prep and Things to raise in Bridge follow the person you pick.",
+                "If you remove someone, their items stay and become for anyone."
+            ]
+        ),
+        GuideEntry(
+            id: "plan.grounding-tools", tab: .plan, title: "Grounding tools", icon: "leaf.fill",
+            whatItIs: "Things that help you settle, written by you and shown on Now.",
+            howToUse: "A tool is either a physical action or a link. For an action, write one step per line and each line becomes its own screen, so you can step through one at a time. For a link, paste a Spotify or Discord link or any other. If the app is not installed, Anchor tries the browser instead. Under When it's relevant you can limit a tool to certain times of day, or leave them all off to show it at any time. Try it step by step shows how it will look.",
+            tips: [
+                "Nothing is built in. Only what you add appears on Now."
+            ]
+        ),
+        GuideEntry(
+            id: "now.tasks", tab: .plan, title: "Tasks", icon: "checkmark.circle.fill",
+            whatItIs: "A task list that can be as small or as detailed as the day allows.",
+            howToUse: "Type in the box and tap Add, or use the plus for the full sheet. Tick the circle to finish a task. Swipe right to move a task to tomorrow or set it aside, and swipe left to delete it. Holding a task shows the same choices. Tasks sit in groups: Today, This week, Later, No date, Waiting on something else, and Set aside for now. In a task's sheet you can add steps, a first tiny step, a task it is waiting on, when it is due (including As soon as I can and Someday), how long it takes, how it is going, how much energy it needs, and notes. The menu at the top has Quick list, Plan my day, the Focus timer and Import from Reminders.",
+            tips: [
+                "On a low day the menu can show only the tasks that need a little energy, or some energy or less. A task with no energy set always shows.",
+                "A task that waits on another is dimmed until the other is done, then it unlocks by itself.",
+                "Plan my day lets you pick a few tasks or steps, put them in order and go through them one at a time.",
+                "The Focus timer has lengths you set yourself. Its alert and its lock screen timer are off until you turn them on, and neither shows the task."
+            ]
+        ),
+        GuideEntry(
+            id: "now.quick-list", tab: .plan, title: "Quick list", icon: "list.bullet.clipboard",
+            whatItIs: "A one-off checklist for something small, like a shopping run or a bag to pack.",
+            howToUse: "Choose Quick list in the Tasks menu, or Make a quick list when there are no tasks yet. Give it a name if you like, then type or paste the items, one per line. Tick them off as you go. When the last one is ticked, the list moves to the Archive by itself, and unticking one brings it back. The menu on a list can move what is left into your tasks, start it again, or delete it.",
+            tips: [
+                "Pasting works well. A bullet, dash, number or tick box at the start of a line is dropped.",
+                "Nothing is counted against you."
+            ]
+        ),
+        GuideEntry(
+            id: "plan.presets", tab: .plan, title: "Decision presets", icon: "checklist",
+            whatItIs: "Choices you make once, ahead of time, so a worn-out day does not have to include deciding.",
+            howToUse: "The Presets screen has three sides at the top: Decisions, Routines and Lists. On Decisions, each category holds options, such as what to eat when you cannot think. Tap an option to change it, tap a category's name to rename it, and use the plus for a new category. Add an option sits inside each card. An option can have steps to click through, and the play button runs them one at a time.",
+            tips: [
+                "Leave the steps empty if an option is just a plain choice.",
+                "These are easiest to set up on a calmer day."
+            ]
+        ),
+        GuideEntry(
+            id: "plan.routines", tab: .plan, title: "Routines", icon: "list.number",
+            whatItIs: "Steps you do in the same order each time, like a school morning.",
+            howToUse: "Add a routine, name it and write its steps. Each step can have a rough time. Run it shows one step at a time and where you are in the list. Remind me is off until you switch it on, and then you pick the days and the time. The first time you switch it on, iOS asks whether Anchor may send notifications.",
+            tips: [
+                "The reminder never shows the routine's name on your lock screen.",
+                "Nothing is counted. There are no streaks."
+            ]
+        ),
+        GuideEntry(
+            id: "plan.lists", tab: .plan, title: "Lists", icon: "list.bullet.rectangle",
+            whatItIs: "Checklists sorted under headings, where an amount can follow a number you set.",
+            howToUse: "A list holds items under headings and ticks them off. Add a number to the list, like Days or People, and an item can follow it: one T-shirt for each day, with some extra for every few days. Change the number and every amount changes with it. A list shows how many are ticked, never a percentage. The menu on a list has Reset ticks to start again, Make a copy, and Delete list.",
+            tips: [
+                "An item that followed a number you remove goes back to a set amount."
+            ]
+        ),
+        GuideEntry(
+            id: "now.de-escalation", tab: .plan, title: "De-escalation scripts", icon: "wind",
+            whatItIs: "Words for getting some space, in a voice that sounds like you.",
+            howToUse: "A script is a short line you can say or send when you need ten minutes. On Now, one shows at a time with a Try another button. Tap a card here to rewrite it, use the plus to add one, and use Reorder to change the order Try another goes through.",
+            tips: [
+                "Write them in the words you would really use."
+            ]
+        ),
+        GuideEntry(
+            id: "now.affirmations", tab: .plan, title: "Affirmations", icon: "sparkles",
+            whatItIs: "Lines you want to hold onto, shown on Now one at a time.",
+            howToUse: "Write your own, or open Browse suggestions and keep the ones that land. On Now, the Something to hold onto card shows one with an Another button. Tap a card here to rewrite it, and use Reorder to change the order Another goes through.",
+            tips: [
+                "The quotes in trigger window reminders come from your safety plan, not from here."
+            ]
+        ),
+        GuideEntry(
+            id: "plan.sleep", tab: .plan, title: "Sleep", icon: "moon.stars.fill",
+            whatItIs: "A quiet record of your nights, only for you to look back over.",
+            howToUse: "Add a night with when you went to bed and when you woke, and the time asleep is worked out. If you do not know the times, type how long you slept instead. Pick how it felt from three words you can rename, and write a note if you want one. The screen shows a dot for each of the last 30 nights and a plain line on the usual range. There is no score, no target and no streak. Settings has switches for a Last night card on Now, a small row for each night in the Journal, one more question in a check-in, and a morning reminder. All of them are off until you turn them on.",
+            tips: [
+                "Sleep starts hidden on Plan. Turn it on under Customise.",
+                "Apple Health is optional and sits at the bottom of this screen. Nothing is asked of Health until you tap Connect, and a night you typed is never replaced.",
+                "Remove imported sleep takes out the nights that came from Health, and leaves Health itself alone."
+            ]
+        ),
+        GuideEntry(
+            id: "plan.your-data", tab: .plan, title: "Your data", icon: "lock.shield.fill",
+            whatItIs: "Everything Anchor stores about you, and what you can do with it.",
+            howToUse: "Look at what's stored asks for your lock again, then lists every kind of thing Anchor holds. It is read only, with a switch to blur what is written. Export everything is plain text without photos or voice notes, so anyone with the file can read it. Make an encrypted backup includes photos and voice notes and is locked with a password you choose. Import opens either kind. The CSV and PDF exports are for your journal and check-ins, over all time or a date range. Clear all data removes everything from this phone and cannot be undone.",
+            tips: [
+                "Anchor does not keep a backup's password and cannot get it back, so keep it somewhere safe.",
+                "To share something with your psych, use the share button on Bridge instead. You choose what goes in."
+            ]
+        )
+    ]
 }
 
 /// The page for one entry, shared by the "?" sheet and the tour.

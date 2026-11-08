@@ -100,7 +100,7 @@ struct AffirmationsView: View {
         }
         .anchorBackground()
         .navigationTitle("Affirmations")
-        .guideButton("now.affirmations", tab: .now)
+        .guideButton("now.affirmations", tab: .plan)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
