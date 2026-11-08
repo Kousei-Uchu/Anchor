@@ -94,7 +94,7 @@ enum ReviewStops {
 
     static let all: [ReviewStop] = make([
         ("1", "Never show 0 days", "A counter's current run steps down to hours or minutes instead of 0 days.",
-         "Open the demo counter. Check the first-day wording, and the counter widget on Now.", 0, .recovery),
+         "Open Started today, the counter begun twenty minutes ago. Check the first-day wording, and the counter widget on Now.", 0, .recovery),
         ("2", "Cut-off labels", "Long widget titles and captions wrap to three lines, then shrink, and go full width.",
          "Look through the widgets on Now. Try a larger text size in Settings, Display.", 0, nil),
         ("3", "Check-in action bar", "Finish and A few optional questions are pinned in a bottom bar.",
@@ -238,7 +238,9 @@ enum ReviewStops {
         ("RV9", "Apple Health sleep, tidier", "Both halves are the same: a switch with one short line under it, and the buttons that belong to it only when it is on. The long paragraphs moved into the Sleep guide, and the Connect button became a switch.",
          "Open Sleep and scroll to Apple Health. Switch Bring in nights from Apple Health on and off, and Save nights I type on and off. In a review run Health is never touched, so the switches go back to off; check them on a normal build.", 1, .sleep),
         ("RV8", "The ? guides, less crowded", "Each guide shows its ideas one to a line, four at first with Show more for the rest, and the extras wait behind Show more on longer ones. The five tab guides are short overviews. The tour now meets all five tabs first, then each tab's screens. Export for someone has its own ? .",
-         "Open the ? on Now, Plan and Bridge, then on Appointments and Sleep and tap Show more. Take the tour from Settings and check the first five pages are the tabs. Open Export for someone from the share button on Bridge and tap its ?.", 2, nil)
+         "Open the ? on Now, Plan and Bridge, then on Appointments and Sleep and tap Show more. Take the tour from Settings and check the first five pages are the tabs. Open Export for someone from the share button on Bridge and tap its ?.", 2, nil),
+        ("RV7", "Showcase content", "Every kind of content the app keeps now has made-up content in the demo, so showcase mode no longer shows empty screens. A script checks that a new kind cannot be left out.",
+         "Open Trigger windows (three, one off), then Decision presets (each category has options, one with steps), Recovery (Energy drinks: Streaks, Calendar, Urges, Motivations), Unsent drafts, Appointments, Earlier sessions with notes, the message log for Alex and Jordan, and the Journal Month and Year views.", 1, .triggerWindows)
     ])
 }
 
@@ -403,7 +405,8 @@ extension View {
 // MARK: - Extra made-up content for the review
 
 enum ReviewSeed {
-    /// Content the shared demo store leaves out, added only in a review run: a counter for the Recovery changes.
+    /// Content the shared demo store leaves out, added only in a review run: two short-lived counters for the
+    /// Recovery changes (the shared demo has its own, Energy drinks, which sorts after these) and a nested task.
     static func apply(to container: ModelContainer) {
         let context = ModelContext(container)
         // The shared demo has a sleep entry for today, which hides the Last night card and the sleep

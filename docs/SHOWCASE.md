@@ -39,9 +39,23 @@ Point 17 of the plan: show someone the app without showing them your own content
 - **Clear all data** also removes the showcase passcode (it is a stored secret). It is switched off while showcase mode is on, so it cannot be used to remove the passcode from inside a showcase.
 - **The privacy page** has a Showcase mode section and a new effective date (8 November 2026).
 
+## What the made-up content covers (RV7)
+
+The demo store is one function, `DemoMode.makeContainer` in `AnchorApp.swift`, with a helper for Recovery under it. Patch RV7 went through every kind of content the app keeps (the 34 models in `AnchorSchema.models`) and filled the ones that were empty, so no screen in a showcase is bare. What was missing before: trigger windows, unsent drafts, the choices inside the decision presets (the three categories were there but empty), the de-escalation scripts, and all of Recovery. Thin ones were widened: two more people with pages of their own, earlier sessions with notes, a message log for each person, twelve journal days across eight weeks with one favourite, six check-ins, two weeks of sleep, and a second routine.
+
+- **Plan and Now:** three people (Sam, Alex and Jordan, each with notes), a four-section safety plan, five grounding tools, three trigger windows (one switched off), three de-escalation scripts, four affirmations, decision presets with options in all three categories (one option of each kind with steps), tasks with steps and a blocked task, a quick list and an archived one, two routines, a packing list.
+- **Journal and Sleep:** twelve journal days across eight weeks (so the month and year views have dots in more than one month), a favourite, notes written around the earlier sessions, six check-ins with different sliders, fourteen nights of sleep, a goal with the SMART frame on and a reached one.
+- **Bridge:** two clinicians, an upcoming session each, earlier sessions with prep and after-session notes (one marked as moved), four things to raise (one answered), three diagrams.
+- **Thread:** messages to each of the three people, three support calendar days (one past), two future notes (one a letter for a hard night), three unsent drafts (one already sent), the boundaries list and two message starters.
+- **Recovery:** one counter, Energy drinks, with a run that ended and a fresh one, so the streaks, the calendar and the list of times all have something to show. It has savings, four motivations, four days of entries (one with a slip, two with a pledge and a review), and four urges. It was picked to be plain and not heavy: showcase mode is for showing the app to someone else. A review run adds two short counters of its own on top (see `ReviewSeed`).
+
+Left out on purpose: the older safety plan form and the older Next hour list (both moved into newer models and no longer shown), and the mascot's lines (seeded by the app itself on the first Now screen). Voice notes and photos are files, not store content, so the demo has none; the screens that list them show their empty state. A grounding tool that opens another app is not made up either, because the link would open a real app on the phone.
+
+**Keeping it complete.** `node scripts/check-demo-coverage.mjs` reads `AnchorSchema.models` and fails if a model has no made-up content and is not on its short list of exceptions. Run it when a model is added. It only checks that content exists, not that there is plenty of it; that part is for a person to look at, with the review stop for RV7.
+
 ## Not done
 
-- A way to put content in the demo that the screenshot tests do not need.
+- Voice notes and photos in the demo (see above).
 - A guide entry for showcase mode. The guide registry (Patches 41 to 43) does not exist yet, so for now the "?" sheet on the screen is the help.
 
 ## Known gaps
