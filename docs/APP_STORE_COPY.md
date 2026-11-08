@@ -50,7 +50,7 @@ On first launch a short tour is shown. The app has its own optional Face ID lock
 
 Crisis numbers on the Now tab are shown for the user's region (changeable from the card). The app makes no diagnosis or treatment claims and states that it is not a medical device or emergency service.
 
-Widgets share only contact names and numbers, whether a safety plan exists, the next trigger window label, and one de-escalation phrase and one affirmation the user wrote, through an App Group. Widgets are optional. Lock screen widgets are visible without unlocking the phone, which the privacy policy explains.
+Widgets share only contact names and numbers, whether a safety plan exists, the next trigger window label, and one de-escalation phrase and one affirmation the user wrote, through an App Group, stored locked with a key that is kept out of backups. Widgets are optional. Lock screen widgets are visible without unlocking the phone, which the privacy policy explains.
 
 ## Support URL
 https://anchor.aspens.page/support

@@ -28,6 +28,7 @@ ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 BLOB_MAGIC = b"ANCHORKY"
 BLOB_VERSION = 1
 FIELD_PREFIX = "anchor.sealed.v1:"
+WIDGET_PREFIX = "anchor.widget.v1:"
 
 
 class KeyError_(Exception):
@@ -163,6 +164,35 @@ def open_field(stored: str, context: str, master: bytes):
         return None
 
 
+
+# ---- Widget summaries ------------------------------------------------------------
+# "anchor.widget.v1:" + base64(nonce(12) | ciphertext | tag(16)). The same AES-256-GCM
+# as sealed text, with its own prefix, and the authenticated data is "WidgetSnapshot" or
+# "CounterItems". The key is 32 random bytes in the App Group container (Keys/widget.key),
+# not backed up, and is a different key from the data key so the widget never holds it.
+
+def seal_widget(data: bytes, context: str, key: bytes, nonce: bytes = None) -> str:
+    nonce = nonce or os.urandom(12)
+    sealed = AESGCM(key).encrypt(nonce, data, context.encode("utf-8"))
+    return WIDGET_PREFIX + base64.b64encode(nonce + sealed).decode("ascii")
+
+
+def open_widget(stored: str, context: str, key: bytes):
+    """The bytes, or None when the value is not a sealed widget value or does not open."""
+    if not stored.startswith(WIDGET_PREFIX):
+        return None
+    try:
+        raw = base64.b64decode(stored[len(WIDGET_PREFIX):], validate=True)
+    except Exception:
+        return None
+    if len(raw) < 28:
+        return None
+    try:
+        return AESGCM(key).decrypt(raw[:12], raw[12:], context.encode("utf-8"))
+    except InvalidTag:
+        return None
+
+
 # ---- Fixed inputs for the vectors ------------------------------------------------
 
 V_MASTER = bytes(range(32))
@@ -172,6 +202,9 @@ V_NONCE = bytes(range(0x30, 0x3C))
 V_FIELD_NONCE = bytes(range(0x40, 0x4C))
 V_CONTEXT = "JournalEntry.text"
 V_TEXT = "Felt tense before the call — it went better than I expected. ✓"
+V_WIDGET_CONTEXT = "WidgetSnapshot"
+V_WIDGET_JSON = ('{"topContacts":[{"name":"Sam","phoneNumber":"0400 000 001"}],'
+                 '"hasSafetyPlan":true,"deEscalationScriptLine":"I need 10 minutes."}')
 
 
 def vectors() -> dict:
@@ -184,6 +217,9 @@ def vectors() -> dict:
         "context": V_CONTEXT,
         "text": V_TEXT,
         "sealed": seal_field(V_TEXT, V_CONTEXT, V_MASTER, V_FIELD_NONCE),
+        "widgetContext": V_WIDGET_CONTEXT,
+        "widgetJSON": V_WIDGET_JSON,
+        "widgetSealed": seal_widget(V_WIDGET_JSON.encode("utf-8"), V_WIDGET_CONTEXT, V_MASTER, V_FIELD_NONCE),
     }
 
 
@@ -270,6 +306,21 @@ def selftest() -> None:
         sealed = seal_field(text, "Field.x", master)
         assert open_field(sealed, "Field.x", master) == text
         assert seal_field(text, "Field.x", master) != sealed
+    # Widget summaries: opens only with the right key, context and prefix, and a changed byte is refused.
+    wkey = os.urandom(32)
+    for context in ("WidgetSnapshot", "CounterItems"):
+        for sample in (b"", b"[]", b'{"a":"caf\xc3\xa9"}', os.urandom(300)):
+            first = seal_widget(sample, context, wkey)
+            assert open_widget(first, context, wkey) == sample
+            assert seal_widget(sample, context, wkey) != first
+            assert open_widget(first, "Other", wkey) is None
+            assert open_widget(first, context, os.urandom(32)) is None
+            assert open_field(first, context, wkey) is None          # not a sealed text value
+            raw = bytearray(base64.b64decode(first[len(WIDGET_PREFIX):]))
+            raw[-1] ^= 1
+            assert open_widget(WIDGET_PREFIX + base64.b64encode(bytes(raw)).decode(), context, wkey) is None
+    assert open_widget(v["widgetSealed"], V_WIDGET_CONTEXT, V_MASTER) == V_WIDGET_JSON.encode("utf-8")
+    assert open_widget(seal_field("x", "WidgetSnapshot", wkey), "WidgetSnapshot", wkey) is None
     print("ok")
 
 

@@ -36,7 +36,9 @@ struct AnchorTimelineProvider: TimelineProvider {
         let entry = AnchorEntry(date: .now, snapshot: WidgetDataStore.read())
         // Refresh periodically; content changes only when the user edits
         // contacts/safety plan in-app and calls WidgetDataStore.refresh.
-        let nextUpdate = Calendar.current.date(byAdding: .hour, value: 4, to: .now) ?? .now
+        // If the summary could not be opened (the phone has not been unlocked
+        // since it started), ask again soon instead of waiting hours.
+        let nextUpdate = Calendar.current.date(byAdding: .minute, value: WidgetDataStore.isWaitingForUnlock ? 15 : 240, to: .now) ?? .now
         completion(Timeline(entries: [entry], policy: .after(nextUpdate)))
     }
 }

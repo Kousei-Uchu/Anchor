@@ -19,7 +19,7 @@ export default function Privacy() {
 
       <h2>Information shared with the home screen and lock screen widgets</h2>
       <p>
-        To let the widgets work, Anchor shares a small summary with its own widget extension through an Apple app group on your device: the names and phone numbers of your top two contacts, whether a safety plan exists, the label of your next trigger window, and one de-escalation phrase and one affirmation that you wrote yourself. None of this leaves your device. Your journal entries, safety plan text and everything else are never shared with the widget.
+        To let the widgets work, Anchor shares a small summary with its own widget extension through an Apple app group on your device: the names and phone numbers of your top two contacts, whether a safety plan exists, the label of your next trigger window, and one de-escalation phrase and one affirmation that you wrote yourself. None of this leaves your device. The summary is stored locked, with a key that stays on your phone and is left out of phone backups. Your journal entries, safety plan text and everything else are never shared with the widget.
       </p>
       <p>
         Widgets on your lock screen can be seen without unlocking your phone, and Anchor&rsquo;s own Face ID lock does not cover them. Only add a widget if you are comfortable with that information being visible.

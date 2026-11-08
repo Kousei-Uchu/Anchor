@@ -17,6 +17,7 @@ import SwiftData
 import UniformTypeIdentifiers
 import CryptoKit
 import CommonCrypto
+import WidgetKit
 
 struct DataControlView: View {
     @Environment(\.modelContext) private var modelContext
@@ -658,6 +659,8 @@ struct DataControlView: View {
         RecoveryNotifications.refresh(counters: [])
         RoutineReminders.refresh(routines: [])
         RecoveryWidgetSync.refresh(counters: [])
+        WidgetSealing.removeEverything()
+        WidgetCenter.shared.reloadAllTimelines()
         clearJournalAttachments()
         showClearedAlert = true
     }

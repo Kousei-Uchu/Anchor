@@ -14,7 +14,11 @@ struct AnchorApp: App {
 
     init() {
         UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
+        #if DEBUG
+        WidgetSealSelfTest.run()
+        #endif
         if !DemoMode.isOn {
+            WidgetSealing.sealLeftovers()
             TaskMigration.migrateNextHourItemsIfNeeded(container: container)
             SafetyPlanMigration.migrateIfNeeded(container: container)
         }

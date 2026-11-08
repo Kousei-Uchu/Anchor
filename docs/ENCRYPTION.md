@@ -1,6 +1,6 @@
 # Locking what Anchor stores
 
-This is the at-rest work of point 20 in the plan. It is in two parts. Patch 34 (this one) makes the keys. Patch 35 uses them to lock the stored text and moves what is already stored. Nothing is locked with this key yet, and the screen for it is only in test builds (Settings, Your data and help, Encryption (test build)).
+This is the at-rest work of point 20 in the plan. It is in two parts. Patch 34 made the keys. Patch 35 is split: 35a (done) seals what the widgets are shown, with a key of its own; 35b will use the data key to lock the stored text and move what is already stored, and waits on a decision (D15 in the plan). Nothing stored in the database is locked with the data key yet, and the screen for it is only in test builds (Settings, Your data and help, Encryption (test build)).
 
 ## The pieces
 
@@ -38,11 +38,26 @@ Setting up makes the key and the recovery file together. If either cannot be sav
     python3 scripts/anchorkey.py vectors
     python3 scripts/anchorkey.py check-file recovery.anchorkey 208H-44RM-2MB1-E60S-38DH-R78Y-3WZG
 
-A debug build checks its Swift against those vectors when the Encryption screen opens, and stops with a message if they disagree.
+A debug build checks its Swift against those vectors when the Encryption screen opens, and stops with a message if they disagree. The widget sealing is checked the same way, when the app starts in a debug build.
 
-## Not done yet (Patch 35)
+## The widget summaries (Patch 35a)
 
-Locking the stored text and moving what is already there, in a way that can be undone and survives being stopped half way; a start-up check for a missing key that stops the store being opened over locked text; the voice note and photo files; the widget snapshot; and a way to turn it off.
+The widgets read two small summaries that the app writes into the App Group's defaults: the contact and plan summary (`AnchorWidgetSnapshot`) and the Recovery counters (`CounterWidgetItem`). A phone backup carries those defaults, so they are now sealed.
+
+- **A separate key.** 32 random bytes in `Keys/widget.key` inside the App Group container, written with file protection `completeUntilFirstUserAuthentication` and marked as excluded from backup (on the file and on its folder). It is not the data key: the widget extension never holds the data key, so a flaw in the widget cannot open anything else.
+- **Who makes it.** Only the app. The widget only reads it. A key file that is there but cannot be read (the phone has not been unlocked since it started) is never replaced, so a locked phone cannot lead to a second key.
+- **Format.** `anchor.widget.v1:` followed by base64 of the nonce (12), the ciphertext and the tag (16), AES-256-GCM. The authenticated data is `WidgetSnapshot` or `CounterItems`, so one cannot be moved into the other. It is the same as sealed text apart from the prefix, and a sealed text value is never read as a widget value or the other way round.
+- **Where it is kept.** `AnchorWidgetSnapshot.sealed` and `AnchorCounterWidgetItems.sealed`, as strings. The old plain copies (`AnchorWidgetSnapshot`, `AnchorCounterWidgetItems`) are sealed and removed the first time the app opens after the update. The widget reads the sealed copy, and only falls back to a plain copy that the app has not moved yet.
+- **Restored phones.** A restored phone has the sealed summaries and no key, so the widget shows its empty state until the app is opened and writes a new summary with a new key (the Plan tab writes both when it appears).
+- **Before the first unlock.** The widget cannot read the key and shows its empty state, as it always could not read the defaults then. It now asks again after 15 minutes in that case, not after four hours.
+- **If no key can be made** (no App Group container, a disk error, or the key could not be kept out of backups), the old plain copy is written, so the widgets keep working. Availability comes before the lock for what a widget shows.
+- **Clear everything** now also removes both summaries and the key file, and reloads the widgets. It did not take the contact summary off the device before.
+
+What this does and does not cover: it keeps the summaries out of a backup in a readable form, and out of a copy of the defaults file. It does not hide them from someone with the phone unlocked, and the widgets themselves can still show them on a lock screen (the privacy page says so). A Keychain item shared through a Keychain Sharing group would tie the key to the device more tightly, but it needs a new capability on both targets and the team prefix in code, so it is left as a choice (see the plan).
+
+## Not done yet (Patch 35b)
+
+Locking the stored text and moving what is already there, in a way that can be undone and survives being stopped half way; a start-up check for a missing key that stops the store being opened over locked text; the voice note and photo files; and a way to turn it off. How locked text is held in the store is the open question D15 in the plan.
 
 ## Checking a test build on a device
 
@@ -51,3 +66,11 @@ Locking the stored text and moving what is already there, in a way that can be u
 3. Check my recovery key with the written key; then with one character changed (it should say it is not a whole recovery key or does not match).
 4. Make a new recovery key (it asks for Face ID or the passcode). The old key should now say it does not match.
 5. Delete the app and install again from Xcode, or use Remove the key and the recovery file and make another. After a reinstall from a backup the screen should say the key is not on this device and offer Restore.
+
+## Checking the widget summaries on a device (Patch 35a)
+
+1. Open a debug build: it should start (the widget self-test runs at launch and stops the app with a message if the Swift and the script disagree).
+2. With a contact and a Recovery counter set up, open Plan once and check the widgets still show the names and the counter.
+3. Optional, with a Mac: the sealed values are strings under `AnchorWidgetSnapshot.sealed` and `AnchorCounterWidgetItems.sealed` in the App Group defaults, and begin with `anchor.widget.v1:`. The plain keys should be gone.
+4. Restart the phone and look at the widget before unlocking: empty is expected. Unlock it: the widget should fill in within about 15 minutes, or at once when the app is opened.
+5. Clear everything in Your data: the widgets should empty.
