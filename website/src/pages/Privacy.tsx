@@ -40,8 +40,8 @@ export default function Privacy() {
         <li><strong>Microphone.</strong> Used only when you choose to record a voice note on a message. Anchor asks the first time you do. The recording is saved on your device and goes nowhere unless you send or share it yourself.</li>
         <li><strong>Apple Health (sleep).</strong> Used only if you choose to connect it from the Sleep screen. If you connect it, Anchor reads your sleep so the nights Apple Health already has can appear in your sleep journal, and keeps its own copy of one summary per night on your device. If you separately turn on saving, Anchor writes the nights you type to Apple Health, marked as coming from Anchor, and can remove them again. None of it is sent anywhere, used for advertising or stored in iCloud by Anchor. Remove imported sleep deletes the copy in Anchor, and Remove what Anchor saved deletes what Anchor wrote to Health.</li>
         <li><strong>Photos.</strong> Used to suggest photos from the day you are journaling about, and to attach photos you pick. Only photos you choose are copied into Anchor.</li>
-        <li><strong>Apple Music (MusicKit).</strong> Used to suggest recently played songs as journal context. This request is handled by Apple.</li>
-        <li><strong>Journaling Suggestions.</strong> If you use Apple&rsquo;s suggestions picker, iOS shows you suggestions and passes back only the one you choose. Apple&rsquo;s own privacy terms apply to that feature.</li>
+        <li><strong>Apple Music (MusicKit).</strong> Used to suggest recently played songs as journal context. This request is handled by Apple, under <a href="https://www.apple.com/legal/privacy/" target="_blank" rel="noopener noreferrer">Apple&rsquo;s Privacy Policy</a>.</li>
+        <li><strong>Journaling Suggestions.</strong> If you use Apple&rsquo;s suggestions picker, iOS shows you suggestions and passes back only the one you choose. Apple&rsquo;s own privacy terms apply to that feature: see <a href="https://www.apple.com/legal/privacy/" target="_blank" rel="noopener noreferrer">Apple&rsquo;s Privacy Policy</a>.</li>
         <li><strong>Contacts.</strong> When you pick a trusted contact, iOS shows a contact picker. Anchor receives only the contact you select.</li>
       </ul>
 
@@ -50,8 +50,8 @@ export default function Privacy() {
       <ul>
         <li><strong>Messages.</strong> If you tap a button to message a contact, Anchor opens the standard iOS message composer. You review and send the message yourself. Anchor cannot send messages on its own.</li>
         <li><strong>Exports.</strong> Exports (JSON backup, encrypted backup, CSV, PDF, and calendar files) are created on your device and handed to the iOS share sheet. An encrypted backup is locked with a password you choose, which is never stored or sent, so I cannot open it or recover it for you. Where exports go is up to you.</li>
-        <li><strong>Links.</strong> Grounding tools can open links such as Spotify, Discord or a web page. Those open in the relevant app or in your browser, and are then governed by that service&rsquo;s own privacy policy.</li>
-        <li><strong>Backups.</strong> If you use iCloud Backup or a computer backup for your device, Apple may include Anchor&rsquo;s data in that backup according to your device settings. That is controlled by Apple and you.</li>
+        <li><strong>Links.</strong> Grounding tools can open links such as Spotify, Discord or a web page. Those open in the relevant app or in your browser, and are then governed by that service&rsquo;s own privacy policy, such as <a href="https://www.spotify.com/legal/privacy-policy/" target="_blank" rel="noopener noreferrer">Spotify&rsquo;s</a> or <a href="https://discord.com/privacy" target="_blank" rel="noopener noreferrer">Discord&rsquo;s</a>.</li>
+        <li><strong>Backups.</strong> If you use iCloud Backup or a computer backup for your device, Apple may include Anchor&rsquo;s data in that backup according to your device settings. That is controlled by Apple and you, and Apple&rsquo;s terms for it are in <a href="https://www.apple.com/legal/privacy/" target="_blank" rel="noopener noreferrer">its Privacy Policy</a>.</li>
       </ul>
 
       <h2>Your control</h2>
@@ -75,6 +75,11 @@ export default function Privacy() {
       <h2>Not medical or emergency advice</h2>
       <p>
         Anchor is a personal organisation and support tool. It does not diagnose, treat or monitor any condition, and it does not contact emergency services or anyone else for you. The crisis numbers shown in the app are a convenience for the region you choose. If you or someone else is in immediate danger, call your local emergency number.
+      </p>
+
+      <h2>Reading this policy</h2>
+      <p>
+        If you would like help reading a privacy policy, this one or any other, Reject Convenience has a free <a href="https://rejectconvenience.com/privacy-visualizer/" target="_blank" rel="noopener noreferrer">Privacy Visualizer</a>. It lists the kinds of data an app can collect, based on Apple&rsquo;s <a href="https://developer.apple.com/app-store/app-privacy-details/" target="_blank" rel="noopener noreferrer">App Store privacy categories</a>. You mark each one as you read, and each has a short explanation and search terms for skimming a policy. I am not connected to it, and nothing from Anchor is sent to it. It is a separate website with its own privacy practices.
       </p>
 
       <h2>Changes to this policy</h2>
