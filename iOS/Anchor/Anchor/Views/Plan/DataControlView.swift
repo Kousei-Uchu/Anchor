@@ -71,34 +71,15 @@ struct DataControlView: View {
             }
             .listRowBackground(Color.clear)
 
-            Section("What's stored") {
-                countRow("Journal entries", journalEntries.count, icon: "text.quote")
-                countRow("Check-ins", checkIns.count, icon: "circle.hexagongrid.fill")
-                countRow("Trusted contacts", contacts.count, icon: "person.2.fill")
-                countRow("Grounding tools", groundingTools.count, icon: "leaf.fill")
-                countRow("Safety plan sections", planSections.count, icon: "shield.fill")
-                countRow("Trigger windows", triggerWindows.count, icon: "clock.fill")
-                countRow("Providers", appointmentSeries.count, icon: "calendar")
-                countRow("Bridge draft items", bridgeDraftItems.count, icon: "doc.text.fill")
-                countRow("Feedback-loop diagrams", diagrams.count, icon: "point.3.connected.trianglepath.dotted")
-                countRow("Thread messages", threadMessages.count, icon: "bubble.left.and.bubble.right.fill")
-                countRow("Support calendar entries", supportCalendarEntries.count, icon: "calendar.badge.clock")
-                countRow("Notes to future you", futureNotes.count, icon: "envelope.open.badge.clock")
-                countRow("Unsent drafts", unsentDrafts.count, icon: "square.and.pencil")
-                countRow("Decision-preset categories", decisionCategories.count, icon: "checklist")
-                countRow("De-escalation scripts", deEscalationScripts.count, icon: "wind")
-                countRow("Affirmations", affirmations.count, icon: "sparkles")
-                countRow("Tasks", tasks.count, icon: "checkmark.circle.fill")
-                countRow("Quick lists", quickLists.count, icon: "list.bullet.clipboard")
-                countRow("Routines", routines.count, icon: "list.number")
-                countRow("Item lists", itemLists.count, icon: "suitcase")
-                countRow("Boundaries sections", boundarySections.count, icon: "hand.raised.fill")
-                countRow("Person page sections", personSections.count, icon: "person.crop.circle.fill")
-                countRow("Sleep nights", sleepEntries.count, icon: "moon.zzz.fill")
-                countRow("Message starters", messageStarters.count, icon: "text.bubble")
-                countRow("Personal goals", personalGoals.count, icon: "flag.fill")
-                countRow("Recovery counters", recoveryCounters.count, icon: "calendar.badge.checkmark")
-                countRow("Urges logged", recoveryUrges.count, icon: "wind")
+            Section {
+                NavigationLink {
+                    DataViewerGate { DataViewerHome() }
+                } label: {
+                    Anchor.MenuRow(icon: "list.bullet.rectangle", title: "Look at what's stored",
+                                   subtitle: "\(totalItems) items. Read only, and it asks for your lock first.", tint: Anchor.Theme.sage)
+                }
+            } header: {
+                Text("What's stored")
             }
 
             Section {
@@ -149,7 +130,7 @@ struct DataControlView: View {
             } header: {
                 Text("Danger zone")
             } footer: {
-                Text("Deletes everything listed above from this device. This can't be undone, so export first if you want a copy.")
+                Text("Deletes everything Anchor stores from this device. This can't be undone, so export first if you want a copy.")
             }
         }
         .anchorSettingsStyle()
@@ -179,14 +160,14 @@ struct DataControlView: View {
         }
     }
 
-    private func countRow(_ label: String, _ count: Int, icon: String) -> some View {
-        HStack {
-            Anchor.MenuRow(icon: icon, title: label, tint: Anchor.Theme.sage)
-            Spacer()
-            Text("\(count)")
-                .font(.system(.subheadline, design: .rounded))
-                .foregroundStyle(.secondary)
-        }
+    private var totalItems: Int {
+        journalEntries.count + checkIns.count + contacts.count + groundingTools.count + safetyPlans.count
+            + planSections.count + triggerWindows.count + appointmentSeries.count + bridgeDraftItems.count
+            + diagrams.count + threadMessages.count + supportCalendarEntries.count + futureNotes.count
+            + unsentDrafts.count + decisionCategories.count + deEscalationScripts.count + affirmations.count
+            + tasks.count + quickLists.count + routines.count + itemLists.count + boundarySections.count
+            + personSections.count + sleepEntries.count + messageStarters.count + personalGoals.count
+            + recoveryCounters.count + recoveryMotivations.count + recoveryDayEntries.count + recoveryUrges.count
     }
 
     // MARK: - Full JSON export/import
@@ -1163,4 +1144,948 @@ struct AffirmationDTO: Codable {
     var id: UUID; var text: String; var sortOrder: Int
     init(_ m: Affirmation) { id = m.id; text = m.text; sortOrder = m.sortOrder }
     func toModel() -> Affirmation { Affirmation(id: id, text: text, sortOrder: sortOrder) }
+}
+
+// MARK: - Data viewer
+
+/// One thing Anchor stores, shown in plain language. The viewer is read only:
+/// nothing here can be changed, and app lock settings, keys and raw files are
+/// never shown (a file is only ever described as stored data and its size).
+struct BrowseField: Identifiable {
+    let id = UUID()
+    let label: String
+    /// Empty means nothing is set, which the viewer says plainly.
+    let value: String
+
+    static func text(_ label: String, _ value: String?) -> BrowseField {
+        BrowseField(label: label, value: value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "")
+    }
+    static func yesNo(_ label: String, _ value: Bool) -> BrowseField {
+        BrowseField(label: label, value: value ? "Yes" : "No")
+    }
+    static func number(_ label: String, _ value: Int?) -> BrowseField {
+        BrowseField(label: label, value: value.map(String.init) ?? "")
+    }
+    static func decimal(_ label: String, _ value: Double) -> BrowseField {
+        BrowseField(label: label, value: value.formatted(.number.precision(.fractionLength(0...2))))
+    }
+    static func date(_ label: String, _ value: Date?) -> BrowseField {
+        BrowseField(label: label, value: value?.formatted(date: .abbreviated, time: .shortened) ?? "")
+    }
+    static func linked(_ label: String, _ value: UUID?) -> BrowseField {
+        BrowseField(label: label, value: value == nil ? "" : "Linked")
+    }
+    static func size(_ label: String, _ value: Data?) -> BrowseField {
+        guard let value, !value.isEmpty else { return BrowseField(label: label, value: "") }
+        return BrowseField(label: label, value: "Stored data, " + ByteCountFormatter.string(fromByteCount: Int64(value.count), countStyle: .file))
+    }
+    static func lines(_ label: String, _ values: [String]) -> BrowseField {
+        BrowseField(label: label, value: values.joined(separator: "\n"))
+    }
+    static func count(_ label: String, _ n: Int, _ one: String, _ many: String) -> BrowseField {
+        BrowseField(label: label, value: n == 0 ? "" : "\(n) " + (n == 1 ? one : many))
+    }
+    static func weekdays(_ label: String, _ days: [Int]) -> BrowseField {
+        let names = Calendar.current.weekdaySymbols
+        let shown = days.sorted().compactMap { names.indices.contains($0 - 1) ? names[$0 - 1] : nil }
+        return BrowseField(label: label, value: shown.joined(separator: ", "))
+    }
+    static func choice(_ label: String, _ value: Any?) -> BrowseField {
+        guard let value else { return BrowseField(label: label, value: "") }
+        return BrowseField(label: label, value: DataText.humanise(String(describing: value)))
+    }
+}
+
+enum DataText {
+    /// The first non-empty line, shortened.
+    static func firstLine(_ text: String, _ fallback: String) -> String {
+        let line = text.split(whereSeparator: \.isNewline)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .first { !$0.isEmpty } ?? ""
+        if line.isEmpty { return fallback }
+        return line.count > 90 ? String(line.prefix(90)) + "..." : line
+    }
+
+    /// "physicalAction" becomes "Physical action". Text that already has
+    /// brackets or spaces in it is left as it is.
+    static func humanise(_ raw: String) -> String {
+        if raw.contains("(") || raw.contains(" ") || raw.isEmpty { return raw }
+        var out = ""
+        for (index, ch) in raw.enumerated() {
+            if ch.isUppercase && index > 0 { out.append(" ") }
+            out.append(index == 0 ? Character(ch.uppercased()) : Character(ch.lowercased()))
+        }
+        return out
+    }
+}
+
+/// A model the data viewer can show. Adopt it, add the type to
+/// `DataViewerKinds.all`, and it appears in the viewer.
+protocol DataBrowsable {
+    static var browseTitle: String { get }
+    static var browseSingular: String { get }
+    static var browseIcon: String { get }
+    var browseHeadline: String { get }
+    var browseSubtitle: String? { get }
+    var browseDate: Date? { get }
+    var browseFields: [BrowseField] { get }
+}
+
+/// One row of a list, copied out of the store so the lists themselves need
+/// nothing generic.
+struct DataRecord: Identifiable {
+    let id = UUID()
+    let headline: String
+    let subtitle: String?
+    let date: Date?
+    let fields: [BrowseField]
+    let searchText: String
+
+    init<M: DataBrowsable>(_ model: M) {
+        headline = model.browseHeadline
+        subtitle = model.browseSubtitle
+        date = model.browseDate
+        fields = model.browseFields
+        searchText = ([model.browseHeadline] + model.browseFields.map { $0.label + " " + $0.value })
+            .joined(separator: "\n")
+    }
+}
+
+struct DataKind: Identifiable {
+    let id: String
+    let title: String
+    let icon: String
+    let count: (ModelContext) -> Int
+    let list: () -> AnyView
+
+    static func of<M: PersistentModel & DataBrowsable>(_ type: M.Type) -> DataKind {
+        DataKind(
+            id: String(describing: M.self),
+            title: M.browseTitle,
+            icon: M.browseIcon,
+            count: { (try? $0.fetchCount(FetchDescriptor<M>())) ?? 0 },
+            list: { AnyView(DataKindListView<M>()) }
+        )
+    }
+}
+
+enum DataViewerKinds {
+    static let all: [DataKind] = [
+        .of(JournalEntry.self), .of(CheckIn.self), .of(SleepEntry.self),
+        .of(RecoveryCounter.self), .of(RecoveryDayEntry.self), .of(RecoveryUrge.self), .of(RecoveryMotivation.self),
+        .of(SafetyPlanSection.self), .of(SafetyPlan.self), .of(TrustedContact.self), .of(GroundingTool.self),
+        .of(TriggerWindow.self), .of(AppointmentSeries.self), .of(TaskItem.self), .of(QuickList.self),
+        .of(Routine.self), .of(ItemList.self), .of(DecisionPresetCategory.self), .of(DeEscalationScript.self),
+        .of(Affirmation.self), .of(BridgeDraftItem.self), .of(FeedbackLoopDiagram.self), .of(PersonalGoal.self),
+        .of(BoundarySection.self), .of(PersonSection.self), .of(ThreadMessage.self), .of(MessageStarter.self),
+        .of(SupportCalendarEntry.self), .of(FutureNote.self), .of(UnsentDraft.self)
+    ]
+
+    /// Stored kinds that are deliberately not listed: app content, a retired
+    /// list, and children that show inside their parent.
+    static let leftOut: Set<String> = ["MascotLine", "NextHourItem", "AppointmentOccurrence", "DecisionPresetChoice"]
+
+    /// Names of stored kinds the viewer does not know about. A debug build
+    /// stops on this, so a new model cannot be forgotten.
+    static var missing: [String] {
+        let known = Set(all.map(\.id)).union(leftOut)
+        return AnchorSchema.models.map { String(describing: $0) }.filter { !known.contains($0) }
+    }
+}
+
+/// Asks for Face ID or the passcode again each time the viewer is opened, when
+/// the app lock is on. With the lock off, or no way to ask, it opens.
+struct DataViewerGate<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+    @State private var opened = false
+    @State private var asking = false
+
+    var body: some View {
+        Group {
+            if opened {
+                content()
+            } else {
+                VStack(spacing: 14) {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 34))
+                        .foregroundStyle(.secondary)
+                    Text("Unlock to look at your data")
+                        .font(.system(.headline, design: .rounded))
+                    Button("Unlock") { Task { await unlock() } }
+                        .buttonStyle(Anchor.PrimaryButtonStyle())
+                        .disabled(asking)
+                }
+                .padding()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .anchorBackground()
+            }
+        }
+        .navigationBarTitleDisplayMode(.inline)
+        .task { await unlock() }
+    }
+
+    private func unlock() async {
+        guard !opened, !asking else { return }
+        asking = true
+        opened = await AppLock.shared.confirmPresence(reason: "Unlock to look at what Anchor has stored.")
+        asking = false
+    }
+}
+
+struct DataViewerHome: View {
+    @Environment(\.modelContext) private var modelContext
+    @AppStorage("anchor.dataViewer.blur") private var blur = false
+    @State private var counts: [String: Int] = [:]
+
+    var body: some View {
+        List {
+            Section {
+                Text("Everything here is read only. Nothing can be changed from this screen.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .listRowBackground(Color.clear)
+
+            Section {
+                ForEach(DataViewerKinds.all) { kind in
+                    NavigationLink {
+                        kind.list()
+                    } label: {
+                        HStack {
+                            Anchor.MenuRow(icon: kind.icon, title: kind.title, tint: Anchor.Theme.sage)
+                            Spacer()
+                            Text("\(counts[kind.id] ?? 0)")
+                                .font(.system(.subheadline, design: .rounded))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+        }
+        .anchorSettingsStyle()
+        .navigationTitle("What's stored")
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    Toggle("Blur what is written", isOn: $blur)
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+                .accessibilityLabel("More")
+            }
+        }
+        .task {
+            #if DEBUG
+            assert(DataViewerKinds.missing.isEmpty, "Not in the data viewer: \(DataViewerKinds.missing)")
+            #endif
+            var found: [String: Int] = [:]
+            for kind in DataViewerKinds.all { found[kind.id] = kind.count(modelContext) }
+            counts = found
+        }
+    }
+}
+
+/// Fetches one kind, copies it out as records and hands them to the list.
+struct DataKindListView<M: PersistentModel & DataBrowsable>: View {
+    @Environment(\.modelContext) private var modelContext
+    @State private var records: [DataRecord] = []
+    @State private var loaded = false
+
+    var body: some View {
+        DataRecordList(title: M.browseTitle, singular: M.browseSingular, records: records, loaded: loaded)
+            .task {
+                let items = (try? modelContext.fetch(FetchDescriptor<M>())) ?? []
+                records = items.map { DataRecord($0) }.sorted {
+                    switch ($0.date, $1.date) {
+                    case let (a?, b?): return a > b
+                    case (_?, nil): return true
+                    case (nil, _?): return false
+                    default: return $0.headline.localizedCaseInsensitiveCompare($1.headline) == .orderedAscending
+                    }
+                }
+                loaded = true
+            }
+    }
+}
+
+struct DataRecordList: View {
+    let title: String
+    let singular: String
+    let records: [DataRecord]
+    let loaded: Bool
+
+    @AppStorage("anchor.dataViewer.blur") private var blur = false
+    @State private var search = ""
+
+    private var shown: [DataRecord] {
+        let q = search.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else { return records }
+        return records.filter { $0.searchText.localizedCaseInsensitiveContains(q) }
+    }
+
+    var body: some View {
+        List {
+            if loaded && records.isEmpty {
+                Text("Nothing stored here.")
+                    .foregroundStyle(.secondary)
+            } else if loaded && shown.isEmpty {
+                Text("Nothing matches that.")
+                    .foregroundStyle(.secondary)
+            }
+            ForEach(shown) { record in
+                NavigationLink {
+                    DataRecordDetail(singular: singular, record: record)
+                } label: {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(record.headline)
+                            .font(.system(.body, design: .rounded))
+                            .lineLimit(2)
+                        if let subtitle = record.subtitle, !subtitle.isEmpty {
+                            Text(subtitle)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                        if let date = record.date {
+                            Text(date.formatted(date: .abbreviated, time: .shortened))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .blur(radius: blur ? 6 : 0)
+                }
+            }
+        }
+        .anchorSettingsStyle()
+        .navigationTitle(title)
+        .navigationBarTitleDisplayMode(.inline)
+        .searchable(text: $search, prompt: "Search")
+    }
+}
+
+struct DataRecordDetail: View {
+    let singular: String
+    let record: DataRecord
+
+    @AppStorage("anchor.dataViewer.blur") private var blur = false
+    @State private var revealed = false
+
+    private var hidden: Bool { blur && !revealed }
+
+    var body: some View {
+        List {
+            if blur {
+                Section {
+                    Button(revealed ? "Hide again" : "Show what is written") { revealed.toggle() }
+                }
+            }
+            Section {
+                ForEach(record.fields) { field in
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(field.label)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        if field.value.isEmpty {
+                            Text("Not set")
+                                .foregroundStyle(.tertiary)
+                        } else {
+                            Text(field.value)
+                                .textSelection(.enabled)
+                                .blur(radius: hidden ? 6 : 0)
+                        }
+                    }
+                    .padding(.vertical, 2)
+                    .accessibilityElement(children: .combine)
+                }
+            } footer: {
+                Text("Read only.")
+            }
+        }
+        .anchorSettingsStyle()
+        .navigationTitle(singular)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - What each kind shows
+
+extension JournalEntry: DataBrowsable {
+    static var browseTitle: String { "Journal entries" }
+    static var browseSingular: String { "Journal entry" }
+    static var browseIcon: String { "text.quote" }
+    var browseHeadline: String { DataText.firstLine(text, "Empty entry") }
+    var browseSubtitle: String? { nil }
+    var browseDate: Date? { createdAt }
+    var browseFields: [BrowseField] {
+        [
+            .date("Created", createdAt),
+            .text("Text", text),
+            .yesNo("Favourite", isFavorited),
+            .choice("Where it was written from", linkedContext),
+            .yesNo("Voice note", audioFileName != nil)
+        ]
+    }
+}
+
+extension CheckIn: DataBrowsable {
+    static var browseTitle: String { "Check-ins" }
+    static var browseSingular: String { "Check-in" }
+    static var browseIcon: String { "circle.hexagongrid.fill" }
+    var browseHeadline: String { "Check-in" }
+    var browseSubtitle: String? { nil }
+    var browseDate: Date? { timestamp }
+    var browseFields: [BrowseField] {
+        [
+            .date("Timestamp", timestamp),
+            .decimal("Physical exhaustion", physicalExhaustion),
+            .decimal("Cognitive burnout", cognitiveBurnout),
+            .decimal("Mental load", mentalLoad),
+            .decimal("Physical energy", physicalEnergy),
+            .decimal("Social energy", socialEnergy),
+            .linked("Journal entry written from this", expandedEntryID)
+        ]
+    }
+}
+
+extension TrustedContact: DataBrowsable {
+    static var browseTitle: String { "Trusted contacts" }
+    static var browseSingular: String { "Contact" }
+    static var browseIcon: String { "person.2.fill" }
+    var browseHeadline: String { name.isEmpty ? "Unnamed contact" : name }
+    var browseSubtitle: String? { nil }
+    var browseDate: Date? { nil }
+    var browseFields: [BrowseField] {
+        [
+            .text("Name", name),
+            .text("Phone number", phoneNumber),
+            .number("Position in the list", sortOrder),
+            .yesNo("Escalation on", escalationEnabled),
+            .number("Escalation window (minutes)", escalationWindowMinutes),
+            .lines("Message templates", messageTemplates.map { ($0.isCustom ? "Your own: " : "") + $0.label + ": " + $0.body }),
+            .choice("Contact method", contactMethod),
+            .text("Discord user", discordUserID),
+            .text("Time zone", timeZoneIdentifier),
+            .number("Available from (hour)", availableFromHour),
+            .number("Available from (minute)", availableFromMinute),
+            .number("Available to (hour)", availableToHour),
+            .number("Available to (minute)", availableToMinute)
+        ]
+    }
+}
+
+extension GroundingTool: DataBrowsable {
+    static var browseTitle: String { "Grounding tools" }
+    static var browseSingular: String { "Grounding tool" }
+    static var browseIcon: String { "leaf.fill" }
+    var browseHeadline: String { title.isEmpty ? "Untitled tool" : title }
+    var browseSubtitle: String? { nil }
+    var browseDate: Date? { nil }
+    var browseFields: [BrowseField] {
+        [
+            .text("Title", title),
+            .choice("Kind", kind),
+            .text("Steps", steps),
+            .text("Opens", deepLink.map { String(describing: $0) }),
+            .number("Position in the list", sortOrder),
+            .lines("Useful at", relevantTimeWindows.map { DataText.humanise(String(describing: $0)) })
+        ]
+    }
+}
+
+extension SafetyPlan: DataBrowsable {
+    static var browseTitle: String { "Safety plan (older form)" }
+    static var browseSingular: String { "Safety plan" }
+    static var browseIcon: String { "shield.fill" }
+    var browseHeadline: String { "Safety plan" }
+    var browseSubtitle: String? { nil }
+    var browseDate: Date? { lastEditedAt }
+    var browseFields: [BrowseField] {
+        [
+            .date("Last edited", lastEditedAt),
+            .text("Warning signs text", warningSignsText),
+            .text("Coping strategies text", copingStrategiesText),
+            .text("Reasons to keep going text", reasonsToKeepGoingText),
+            .text("Environment safety steps text", environmentSafetyStepsText)
+        ]
+    }
+}
+
+extension SafetyPlanSection: DataBrowsable {
+    static var browseTitle: String { "Safety plan sections" }
+    static var browseSingular: String { "Safety plan section" }
+    static var browseIcon: String { "shield.fill" }
+    var browseHeadline: String { title.isEmpty ? "Untitled section" : title }
+    var browseSubtitle: String? { DataText.firstLine(text, "") }
+    var browseDate: Date? { lastEditedAt }
+    var browseFields: [BrowseField] {
+        [
+            .text("Title", title),
+            .text("Text", text),
+            .text("Icon", iconName),
+            .text("Colour", tintName),
+            .number("Position in the list", sortOrder),
+            .yesNo("Hidden", isHidden),
+            .text("Role", role),
+            .date("Last edited", lastEditedAt)
+        ]
+    }
+}
+
+extension BoundarySection: DataBrowsable {
+    static var browseTitle: String { "Boundaries sections" }
+    static var browseSingular: String { "Boundaries section" }
+    static var browseIcon: String { "hand.raised.fill" }
+    var browseHeadline: String { title.isEmpty ? "Untitled section" : title }
+    var browseSubtitle: String? { DataText.firstLine(text, "") }
+    var browseDate: Date? { lastEditedAt }
+    var browseFields: [BrowseField] {
+        [
+            .text("Title", title),
+            .text("Text", text),
+            .text("Icon", iconName),
+            .text("Colour", tintName),
+            .number("Position in the list", sortOrder),
+            .yesNo("Hidden", isHidden),
+            .yesNo("Can be shared", isShareable),
+            .date("Last edited", lastEditedAt)
+        ]
+    }
+}
+
+extension PersonSection: DataBrowsable {
+    static var browseTitle: String { "Person page sections" }
+    static var browseSingular: String { "Person page section" }
+    static var browseIcon: String { "person.crop.circle.fill" }
+    var browseHeadline: String { title.isEmpty ? "Untitled section" : title }
+    var browseSubtitle: String? { DataText.firstLine(text, "") }
+    var browseDate: Date? { lastEditedAt }
+    var browseFields: [BrowseField] {
+        [
+            .linked("Contact", contactID),
+            .text("Title", title),
+            .text("Text", text),
+            .text("Icon", iconName),
+            .text("Colour", tintName),
+            .number("Position in the list", sortOrder),
+            .yesNo("Hidden", isHidden),
+            .date("Last edited", lastEditedAt)
+        ]
+    }
+}
+
+extension SleepEntry: DataBrowsable {
+    static var browseTitle: String { "Sleep nights" }
+    static var browseSingular: String { "Sleep night" }
+    static var browseIcon: String { "moon.zzz.fill" }
+    var browseHeadline: String { "Night of " + nightDate.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)) }
+    var browseSubtitle: String? { shownMinutes.map { SleepEntry.describe(minutes: $0) } }
+    var browseDate: Date? { nightDate }
+    var browseFields: [BrowseField] {
+        [
+            .date("Night date", nightDate),
+            .date("Bed time", bedTime),
+            .date("Wake time", wakeTime),
+            .number("Time asleep typed (minutes)", minutesAsleep),
+            .number("How it felt (0 to 2)", feel),
+            .text("Note", note),
+            .text("Source", sourceRaw),
+            .text("Source id", externalID),
+            .date("Created", createdAt),
+            .date("Last edited", lastEditedAt)
+        ]
+    }
+}
+
+extension PersonalGoal: DataBrowsable {
+    static var browseTitle: String { "Personal goals" }
+    static var browseSingular: String { "Personal goal" }
+    static var browseIcon: String { "flag.fill" }
+    var browseHeadline: String { title.isEmpty ? "Untitled goal" : title }
+    var browseSubtitle: String? { DataText.humanise(statusRaw) }
+    var browseDate: Date? { lastEditedAt }
+    var browseFields: [BrowseField] {
+        [
+            .text("Title", title),
+            .text("Why", why),
+            .text("Status", statusRaw),
+            .lines("Notes", notes.map { $0.date.formatted(date: .abbreviated, time: .omitted) + ": " + $0.text }),
+            .number("Position in the list", sortOrder),
+            .date("Created", createdAt),
+            .date("Last edited", lastEditedAt)
+        ]
+    }
+}
+
+extension MessageStarter: DataBrowsable {
+    static var browseTitle: String { "Message starters" }
+    static var browseSingular: String { "Message starter" }
+    static var browseIcon: String { "text.bubble" }
+    var browseHeadline: String { text }
+    var browseSubtitle: String? { nil }
+    var browseDate: Date? { lastEditedAt }
+    var browseFields: [BrowseField] {
+        [
+            .text("Text", text),
+            .number("Position in the list", sortOrder),
+            .date("Last edited", lastEditedAt)
+        ]
+    }
+}
+
+extension TriggerWindow: DataBrowsable {
+    static var browseTitle: String { "Trigger windows" }
+    static var browseSingular: String { "Trigger window" }
+    static var browseIcon: String { "clock.fill" }
+    var browseHeadline: String { label.isEmpty ? "Trigger window" : label }
+    var browseSubtitle: String? { String(format: "%d:%02d to %d:%02d", startHour, startMinute, endHour, endMinute) }
+    var browseDate: Date? { nil }
+    var browseFields: [BrowseField] {
+        [
+            .text("Label", label),
+            .weekdays("Days", daysOfWeek),
+            .number("Starts (hour)", startHour),
+            .number("Starts (minute)", startMinute),
+            .number("Ends (hour)", endHour),
+            .number("Ends (minute)", endMinute),
+            .yesNo("On", isActive)
+        ]
+    }
+}
+
+extension AppointmentSeries: DataBrowsable {
+    static var browseTitle: String { "Providers" }
+    static var browseSingular: String { "Provider" }
+    static var browseIcon: String { "calendar" }
+    var browseHeadline: String { clinicianLabel.isEmpty ? "Provider" : clinicianLabel }
+    var browseSubtitle: String? { role.isEmpty ? nil : role }
+    var browseDate: Date? { nil }
+    var browseFields: [BrowseField] {
+        [
+            .text("Name", clinicianLabel),
+            .weekdays("Usual day", typicalDayOfWeek.map { [$0] } ?? []),
+            .number("Usual hour", typicalHour),
+            .number("Usual minute", typicalMinute),
+            .number("Usual gap (days)", typicalCadenceDays),
+            .text("Role", role),
+            .text("Name on exports", exportLabel),
+            .text("Notes", notes),
+            .number("Position in the list", sortOrder),
+            .lines("Sessions", occurrences.sorted { $0.scheduledDate < $1.scheduledDate }.map { $0.scheduledDate.formatted(date: .abbreviated, time: .shortened) + ($0.wasMoved ? " (moved)" : "") })
+        ]
+    }
+}
+
+extension BridgeDraftItem: DataBrowsable {
+    static var browseTitle: String { "Things to raise" }
+    static var browseSingular: String { "Thing to raise" }
+    static var browseIcon: String { "doc.text.fill" }
+    var browseHeadline: String { text }
+    var browseSubtitle: String? { isQuestion ? "Question" : nil }
+    var browseDate: Date? { createdAt }
+    var browseFields: [BrowseField] {
+        [
+            .date("Created", createdAt),
+            .text("Text", text),
+            .yesNo("Already brought up", isResolved),
+            .yesNo("A question", isQuestion),
+            .text("Answer", answer),
+            .linked("Provider", providerID)
+        ]
+    }
+}
+
+extension FeedbackLoopDiagram: DataBrowsable {
+    static var browseTitle: String { "Feedback-loop diagrams" }
+    static var browseSingular: String { "Diagram" }
+    static var browseIcon: String { "point.3.connected.trianglepath.dotted" }
+    var browseHeadline: String { title.isEmpty ? "Untitled diagram" : title }
+    var browseSubtitle: String? { nil }
+    var browseDate: Date? { lastEditedAt }
+    var browseFields: [BrowseField] {
+        [
+            .text("Title", title),
+            .date("Last edited", lastEditedAt),
+            .size("Diagram data", graphJSON)
+        ]
+    }
+}
+
+extension ThreadMessage: DataBrowsable {
+    static var browseTitle: String { "Thread messages" }
+    static var browseSingular: String { "Message" }
+    static var browseIcon: String { "bubble.left.and.bubble.right.fill" }
+    var browseHeadline: String { text.isEmpty ? "Voice note" : DataText.firstLine(text, "Message") }
+    var browseSubtitle: String? { nil }
+    var browseDate: Date? { timestamp }
+    var browseFields: [BrowseField] {
+        [
+            .date("Timestamp", timestamp),
+            .text("Text", text),
+            .yesNo("Voice note", audioFileName != nil),
+            .linked("With contact", withContactID)
+        ]
+    }
+}
+
+extension SupportCalendarEntry: DataBrowsable {
+    static var browseTitle: String { "Support calendar entries" }
+    static var browseSingular: String { "Support calendar entry" }
+    static var browseIcon: String { "calendar.badge.clock" }
+    var browseHeadline: String { date.formatted(date: .abbreviated, time: .omitted) }
+    var browseSubtitle: String? { DataText.firstLine(note, "") }
+    var browseDate: Date? { date }
+    var browseFields: [BrowseField] {
+        [
+            .date("Date", date),
+            .text("Note", note),
+            .count("Shared with", visibleToContactIDs.count, "person", "people")
+        ]
+    }
+}
+
+extension FutureNote: DataBrowsable {
+    static var browseTitle: String { "Notes to future you" }
+    static var browseSingular: String { "Note to future you" }
+    static var browseIcon: String { "envelope.open.badge.clock" }
+    var browseHeadline: String { DataText.firstLine(text, "Empty note") }
+    var browseSubtitle: String? { openWhen.isEmpty ? "Opens " + unlockDate.formatted(date: .abbreviated, time: .omitted) : "Open when " + openWhen }
+    var browseDate: Date? { writtenAt }
+    var browseFields: [BrowseField] {
+        [
+            .date("Written", writtenAt),
+            .date("Unlock date", unlockDate),
+            .text("Text", text),
+            .yesNo("Unlocked", isUnlocked),
+            .text("Open when", openWhen)
+        ]
+    }
+}
+
+extension UnsentDraft: DataBrowsable {
+    static var browseTitle: String { "Unsent drafts" }
+    static var browseSingular: String { "Unsent draft" }
+    static var browseIcon: String { "square.and.pencil" }
+    var browseHeadline: String { recipientLabel.isEmpty ? "Draft" : recipientLabel }
+    var browseSubtitle: String? { DataText.firstLine(text, "") }
+    var browseDate: Date? { createdAt }
+    var browseFields: [BrowseField] {
+        [
+            .date("Created", createdAt),
+            .text("Recipient label", recipientLabel),
+            .text("Text", text),
+            .yesNo("Sent", wasSent)
+        ]
+    }
+}
+
+extension DecisionPresetCategory: DataBrowsable {
+    static var browseTitle: String { "Decision-preset categories" }
+    static var browseSingular: String { "Decision-preset category" }
+    static var browseIcon: String { "checklist" }
+    var browseHeadline: String { name.isEmpty ? "Category" : name }
+    var browseSubtitle: String? { nil }
+    var browseDate: Date? { nil }
+    var browseFields: [BrowseField] {
+        [
+            .text("Name", name),
+            .number("Position in the list", sortOrder),
+            .lines("Options", choices.sorted { $0.sortOrder < $1.sortOrder }.map { $0.name + ($0.steps.isEmpty ? "" : ": " + $0.steps) })
+        ]
+    }
+}
+
+extension DeEscalationScript: DataBrowsable {
+    static var browseTitle: String { "De-escalation scripts" }
+    static var browseSingular: String { "De-escalation script" }
+    static var browseIcon: String { "wind" }
+    var browseHeadline: String { text }
+    var browseSubtitle: String? { nil }
+    var browseDate: Date? { nil }
+    var browseFields: [BrowseField] {
+        [
+            .text("Text", text),
+            .number("Position in the list", sortOrder)
+        ]
+    }
+}
+
+extension Affirmation: DataBrowsable {
+    static var browseTitle: String { "Affirmations" }
+    static var browseSingular: String { "Affirmation" }
+    static var browseIcon: String { "sparkles" }
+    var browseHeadline: String { text }
+    var browseSubtitle: String? { nil }
+    var browseDate: Date? { nil }
+    var browseFields: [BrowseField] {
+        [
+            .text("Text", text),
+            .number("Position in the list", sortOrder)
+        ]
+    }
+}
+
+extension TaskItem: DataBrowsable {
+    static var browseTitle: String { "Tasks" }
+    static var browseSingular: String { "Task" }
+    static var browseIcon: String { "checkmark.circle.fill" }
+    var browseHeadline: String { title.isEmpty ? "Untitled task" : title }
+    var browseSubtitle: String? { isDone ? "Done" : nil }
+    var browseDate: Date? { createdAt }
+    var browseFields: [BrowseField] {
+        [
+            .text("Title", title),
+            .text("Notes", notes),
+            .yesNo("Done", isDone),
+            .date("Completed", completedAt),
+            .date("Created", createdAt),
+            .number("Position in the list", sortOrder),
+            .yesNo("Linked to a Reminders item", reminderIdentifier != nil),
+            .choice("Due kind", dueKind),
+            .date("Due date", dueDate),
+            .linked("Step of another task", parentID),
+            .yesNo("Steps folded away", subtasksCollapsed),
+            .count("Waiting on", blockedByIDs.count, "task", "tasks"),
+            .choice("Status", status),
+            .choice("Energy", energy),
+            .text("First step", firstStep),
+            .number("Focus sessions", focusSessions),
+            .number("Focus minutes", focusMinutes),
+            .number("Estimate (minutes)", estimateMinutes)
+        ]
+    }
+}
+
+extension QuickList: DataBrowsable {
+    static var browseTitle: String { "Quick lists" }
+    static var browseSingular: String { "Quick list" }
+    static var browseIcon: String { "list.bullet.clipboard" }
+    var browseHeadline: String { title.isEmpty ? "Quick list" : title }
+    var browseSubtitle: String? { archivedAt == nil ? nil : "In the archive" }
+    var browseDate: Date? { createdAt }
+    var browseFields: [BrowseField] {
+        [
+            .text("Title", title),
+            .date("Created", createdAt),
+            .lines("Items", items.map { ($0.isDone ? "[ticked] " : "") + $0.text }),
+            .date("Archived", archivedAt)
+        ]
+    }
+}
+
+extension Routine: DataBrowsable {
+    static var browseTitle: String { "Routines" }
+    static var browseSingular: String { "Routine" }
+    static var browseIcon: String { "list.number" }
+    var browseHeadline: String { name.isEmpty ? "Routine" : name }
+    var browseSubtitle: String? { nil }
+    var browseDate: Date? { createdAt }
+    var browseFields: [BrowseField] {
+        [
+            .text("Name", name),
+            .date("Created", createdAt),
+            .lines("Steps", steps.map { $0.text + ($0.minutes > 0 ? " (\($0.minutes) min)" : "") }),
+            .yesNo("Reminder on", reminderEnabled),
+            .weekdays("Reminder days", reminderDays),
+            .number("Reminder hour", reminderHour),
+            .number("Reminder minute", reminderMinute)
+        ]
+    }
+}
+
+extension ItemList: DataBrowsable {
+    static var browseTitle: String { "Item lists" }
+    static var browseSingular: String { "Item list" }
+    static var browseIcon: String { "suitcase" }
+    var browseHeadline: String { name.isEmpty ? "List" : name }
+    var browseSubtitle: String? { nil }
+    var browseDate: Date? { createdAt }
+    var browseFields: [BrowseField] {
+        [
+            .text("Name", name),
+            .date("Created", createdAt),
+            .lines("Numbers", variables.map { "\($0.name): \($0.value)" }),
+            .lines("Items", items.map { ($0.isDone ? "[ticked] " : "") + $0.name + ($0.category.isEmpty ? "" : " (" + $0.category + ")") + ($0.rule.variableID == nil ? " x" + String($0.rule.fixed) : " (follows a number)") })
+        ]
+    }
+}
+
+extension RecoveryCounter: DataBrowsable {
+    static var browseTitle: String { "Recovery counters" }
+    static var browseSingular: String { "Recovery counter" }
+    static var browseIcon: String { "calendar.badge.checkmark" }
+    var browseHeadline: String { name.isEmpty ? "Counter" : name }
+    var browseSubtitle: String? { isArchived ? "Archived" : nil }
+    var browseDate: Date? { createdAt }
+    var browseFields: [BrowseField] {
+        [
+            .text("Name", name),
+            .text("Name shown outside the app", discreetLabel),
+            .yesNo("Name shown outside the app", showNameOutsideApp),
+            .choice("Mode", mode),
+            .size("Runs (stored data)", runsData),
+            .decimal("Savings amount", savingsAmount),
+            .choice("Savings period", savingsPeriod),
+            .text("Currency code", currencyCode),
+            .lines("Milestones already seen (days)", [acknowledgedMilestones.map(String.init).joined(separator: ", ")].filter { !$0.isEmpty }),
+            .number("Position in the list", sortOrder),
+            .date("Created", createdAt),
+            .yesNo("Archived", isArchived),
+            .number("Times per day before tracking", priorTimesPerDay)
+        ]
+    }
+}
+
+extension RecoveryMotivation: DataBrowsable {
+    static var browseTitle: String { "Recovery reasons" }
+    static var browseSingular: String { "Recovery reason" }
+    static var browseIcon: String { "heart.fill" }
+    var browseHeadline: String { text }
+    var browseSubtitle: String? { DataText.humanise(String(describing: kind)) }
+    var browseDate: Date? { createdAt }
+    var browseFields: [BrowseField] {
+        [
+            .choice("Kind", kind),
+            .text("Text", text),
+            .number("Position in the list", sortOrder),
+            .date("Created", createdAt)
+        ]
+    }
+}
+
+extension RecoveryDayEntry: DataBrowsable {
+    static var browseTitle: String { "Recovery day entries" }
+    static var browseSingular: String { "Recovery day entry" }
+    static var browseIcon: String { "sun.max.fill" }
+    var browseHeadline: String { day.formatted(date: .abbreviated, time: .omitted) }
+    var browseSubtitle: String? { nil }
+    var browseDate: Date? { day }
+    var browseFields: [BrowseField] {
+        [
+            .linked("Counter", counterID),
+            .date("Day", day),
+            .date("Pledged", pledgedAt),
+            .date("Reviewed", reviewedAt),
+            .text("Helped", helped),
+            .text("Hard", hard),
+            .text("Tomorrow", tomorrow),
+            .number("Slip times", slipTimes)
+        ]
+    }
+}
+
+extension RecoveryUrge: DataBrowsable {
+    static var browseTitle: String { "Urges logged" }
+    static var browseSingular: String { "Urge" }
+    static var browseIcon: String { "wind" }
+    var browseHeadline: String { DataText.firstLine(note, "Urge") }
+    var browseSubtitle: String? { DataText.humanise(String(describing: strength)) }
+    var browseDate: Date? { date }
+    var browseFields: [BrowseField] {
+        [
+            .linked("Counter", counterID),
+            .date("Date", date),
+            .choice("Strength", strength),
+            .text("Note", note)
+        ]
+    }
 }

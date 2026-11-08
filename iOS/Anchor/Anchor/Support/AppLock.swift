@@ -82,6 +82,20 @@ final class AppLock: ObservableObject {
         }
     }
 
+    /// Asks for Face ID or the passcode again, for the few screens that hold
+    /// more than the rest of the app. Returns true straight away when the lock
+    /// is switched off or the phone has nothing to ask with, so nobody is shut out.
+    func confirmPresence(reason: String) async -> Bool {
+        guard isEnabled, canAuthenticate() else { return true }
+        let context = LAContext()
+        context.localizedFallbackTitle = "Use Passcode"
+        do {
+            return try await context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: reason)
+        } catch {
+            return false
+        }
+    }
+
     func attemptUnlock() async {
         bypassIfNotApplicable()
         guard !isUnlocked, !isAuthenticating else { return }
