@@ -57,7 +57,7 @@ What this does and does not cover: it keeps the summaries out of a backup in a r
 
 ## Not done yet (Patch 35b)
 
-Locking the stored text and moving what is already there, in a way that can be undone and survives being stopped half way; a start-up check for a missing key that stops the store being opened over locked text; the voice note and photo files; and a way to turn it off. How locked text is held in the store is the open question D15 in the plan.
+Locking the stored text and moving what is already there, in a way that can be undone and survives being stopped half way; a start-up check for a missing key that stops the store being opened over locked text; the voice note and photo files; and a way to turn it off. D15 is answered (option B, every model in one go, with a safety copy first), so 35b is three patches: 35b1 the safety copy and the way back, 35b2 the locked fields, and 35b3 the Lock my data flow. See the plan and `docs/DECISIONS_EXPLAINED.md`.
 
 ## Checking a test build on a device
 

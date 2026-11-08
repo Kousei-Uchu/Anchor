@@ -83,6 +83,35 @@ If you would still like to learn whether E can work, there is a cheap test: one 
 
 ## D15. How should locked text be kept in the database? (in plain words)
 
+### Answer (9 Nov 2026): option B, with a safety copy and a way back first
+
+**What you decided:** lock every model in one go (option B). Before anything is locked or moved, make a backup of all the data, and make going back easy, so that nothing can be lost.
+
+**How I am building it.** B stays one switch for you, but it is written as three pastes so that the way back exists before the lock does:
+
+1. **35b1, the safety copy and the way back.** Anchor makes an exact copy of everything it has saved: the database, the voice notes and the Journal photos and drawings. It is made when Anchor starts and before the database is opened, because a copy of a file nobody is writing to cannot be half old and half new. Every file is checked against its fingerprint. Go back puts the copy in place, and Undo go back reverses that. This works on its own, with no locking, and you can try it first.
+2. **35b2, the new stored fields.** Each text field gets a second stored field beside it. Nothing is locked yet, and everything reads as before.
+3. **35b3, Lock my data.** One flow: checks your recovery key, asks you to keep an encrypted backup off the phone (the existing Make an encrypted backup), takes the safety copy, locks every model, then checks that every item is still there and that every locked value opens to exactly what it was. If anything is off, it goes back by itself and tells you.
+
+**What I read "back up all the data that isn't touched by the encryption" as.** I made the copy cover everything, including the voice notes and photos (which locking the text does not touch) and the database itself (which it does). If you meant only the files, say so, but I think the whole copy is what makes a rollback possible.
+
+**What this can and cannot promise.** I cannot promise zero risk, and I would not trust anyone who did. This is what it does promise:
+
+- Nothing in the database is changed until the copy exists and has been checked.
+- Going back returns you to exactly that copy. Anything you wrote after it was made is set aside, not deleted, and Undo go back brings it back.
+- A failed lock goes back by itself.
+
+And this is what it cannot do:
+
+- **It sits on the same phone.** If the phone is lost, broken or wiped, the copy goes with it. That is why 35b3 asks for an encrypted backup kept somewhere else first, and will not start until you say you have one.
+- **It is a plain copy.** While it exists, a copy of the phone's files shows your data readable, which is exactly what locking is meant to stop. It is kept out of phone backups and given the phone's file protection, and you delete it once you are happy. Clear all data deletes it too.
+- **Going back loses nothing, but it does not merge.** Entries made after the copy are in the set-aside folder and can be brought back with Undo go back, but they do not appear alongside the older data. The way to keep them is to go back as soon as something looks wrong, before writing more.
+- **It needs a restart.** Making the copy and going back both happen when Anchor starts. The screen says so, and tells you to close Anchor from the app switcher and open it again.
+- **Settings, keys and widget summaries are not in the copy.** The lock does not change them.
+
+I have not run any of this. It is written without a compiler and needs a build and a try on your phone, on a copy of your data, as every patch does.
+
+
 ### The picture
 
 Your journal is stored in one file on the phone. Think of that file as a paper diary.
@@ -139,4 +168,4 @@ To switch the diary to secret code, the app has to change how the file is laid o
 - Whether to change the old field's name or add a new one beside it. Adding is the more routine kind of change, so I lean that way for the first model.
 - Whether locking is automatic or a switch you turn on in Settings. I lean towards a switch, so you see the recovery key at the moment you turn it on.
 
-**To answer, reply:** `D15: A`, `D15: B` or `D15: C`. If A, 35b is the next Swift patch after the ones that are not waiting on a decision.
+**Answered:** B, see the top of this section.
