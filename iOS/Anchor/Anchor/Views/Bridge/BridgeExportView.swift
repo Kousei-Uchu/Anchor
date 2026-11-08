@@ -207,7 +207,10 @@ struct BridgeExportBuilder {
                 let name = "Night of " + night.nightDate.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))
                 return ExportCandidate(
                     id: night.id, category: category, headline: name,
-                    entry: ExportEntry(id: night.id, date: night.nightDate, heading: name, lines: lines, footnote: nil)
+                    entry: ExportEntry(
+                        id: night.id, date: night.nightDate, heading: name, lines: lines, footnote: nil,
+                        values: night.shownMinutes.map { [ExportValue(label: "Time asleep", number: Double($0))] } ?? []
+                    )
                 )
             }
         case .recovery:
@@ -658,7 +661,8 @@ enum BridgeHTMLExporter {
         let footnote: String?
         let values: [ValueDTO]
     }
-    private struct SectionDTO: Encodable { let key: String; let title: String; let entries: [EntryDTO] }
+    /// "fraction" values run from 0 to 1 (check-ins); "minutes" is time asleep.
+    private struct SectionDTO: Encodable { let key: String; let title: String; let unit: String; let entries: [EntryDTO] }
     private struct DocDTO: Encodable {
         let title: String
         let note: String
@@ -693,7 +697,7 @@ enum BridgeHTMLExporter {
             range: document.rangeText,
             fileBase: String(fileName.dropLast(5)),
             sections: document.sections.map { section in
-                SectionDTO(key: section.category.rawValue, title: section.category.title, entries: section.entries.map { entry in
+                SectionDTO(key: section.category.rawValue, title: section.category.title, unit: section.category == .sleep ? "minutes" : "fraction", entries: section.entries.map { entry in
                     EntryDTO(
                         date: entry.date.map { iso.string(from: $0) },
                         dateText: entry.date.map { $0.formatted(date: .abbreviated, time: .shortened) },
@@ -917,6 +921,13 @@ button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
       .sort(function (a, b) { return a.date < b.date ? -1 : 1; });
     if (rows.length < 2) return null;
     var wrap = el("div", "charts");
+    var minutes = section.unit === "minutes";
+    var top = 1;
+    if (minutes) {
+      var most = 0;
+      rows.forEach(function (r) { r.values.forEach(function (x) { if (x.number > most) most = x.number; }); });
+      top = Math.max(60, Math.ceil(most / 60) * 60);
+    }
     var labels = [];
     rows[0].values.forEach(function (v) { labels.push(v.label); });
     labels.forEach(function (label) {
@@ -929,7 +940,7 @@ button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
         var v = 0;
         r.values.forEach(function (x) { if (x.label === label) v = x.number; });
         var x = P + (W - 2 * P) * (rows.length === 1 ? 0 : i / (rows.length - 1));
-        var y = H - P - (H - 2 * P) * Math.max(0, Math.min(1, v));
+        var y = H - P - (H - 2 * P) * Math.max(0, Math.min(1, v / top));
         return x.toFixed(1) + "," + y.toFixed(1);
       });
       var base = document.createElementNS(SVGNS, "line");
@@ -946,7 +957,10 @@ button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
       box.appendChild(svg);
       wrap.appendChild(box);
     });
-    wrap.appendChild(el("p", "note", "Each line runs from empty (bottom) to full (top). " + rows[0].dateText + " to " + rows[rows.length - 1].dateText + "."));
+    var span = rows[0].dateText + " to " + rows[rows.length - 1].dateText + ".";
+    wrap.appendChild(el("p", "note", (minutes
+      ? "Each line shows time asleep from 0 h (bottom) to " + (top / 60) + " h (top). "
+      : "Each line runs from empty (bottom) to full (top). ") + span));
     return wrap;
   }
 

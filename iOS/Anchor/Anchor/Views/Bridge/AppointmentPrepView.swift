@@ -82,6 +82,14 @@ struct AppointmentPrepView: View {
                         onAddToNotes: appendToNotes
                     )
 
+                    // Only appears once there are nights written down since then.
+                    // Descriptive only; nothing is added unless the person taps.
+                    SleepSessionSummaryCard(
+                        since: summaryStart,
+                        sinceIsLastSession: lastSessionDate != nil,
+                        onAddToNotes: appendToNotes
+                    )
+
                     Button { showingEditor = true } label: {
                         Anchor.TextCard(
                             icon: "list.bullet.clipboard.fill",
@@ -362,6 +370,113 @@ struct JournalSessionSummaryCard: View {
                 }
             }
             .onChange(of: chosen) { _, _ in added = false }
+        }
+    }
+}
+
+// MARK: - Sleep for session prep
+
+/// "Sleep since your last session": how many nights are written down, the
+/// shortest and longest time asleep, and the usual bedtime window. It only
+/// describes. There is no average, no target and no word for whether it was
+/// enough. Nothing goes into the prep notes unless the person taps the button.
+struct SleepSessionSummaryCard: View {
+    let since: Date
+    let sinceIsLastSession: Bool
+    let onAddToNotes: (String) -> Void
+
+    @Query(sort: \SleepEntry.nightDate, order: .reverse) private var allNights: [SleepEntry]
+    @State private var added = false
+
+    /// Nights with something written down, from the day of the last session on.
+    private var nights: [SleepEntry] {
+        let start = Calendar.current.startOfDay(for: since)
+        return allNights.filter { !$0.isBlank && $0.nightDate >= start && $0.nightDate <= .now }
+    }
+
+    private func dayText(_ date: Date) -> String {
+        date.formatted(date: .abbreviated, time: .omitted)
+    }
+
+    private var countLine: String {
+        let n = nights.count
+        return (n == 1 ? "1 night" : "\(n) nights") + " written down since \(dayText(since))."
+    }
+
+    private var asleepLine: String? {
+        let minutes = nights.compactMap { $0.shownMinutes }
+        guard let low = minutes.min(), let high = minutes.max() else { return nil }
+        if minutes.count == 1 { return "Asleep about \(SleepEntry.describe(minutes: low)) on the night with a time." }
+        if low == high { return "Asleep about \(SleepEntry.describe(minutes: low)) each of those nights." }
+        return "Time asleep from \(SleepEntry.describe(minutes: low)) to \(SleepEntry.describe(minutes: high))."
+    }
+
+    /// Bed times as minutes after 6 pm, so a bedtime after midnight sorts after
+    /// one before it.
+    private var bedOffsets: [Int] {
+        let cal = Calendar.current
+        return nights.compactMap { $0.bedTime }.map { bed in
+            let parts = cal.dateComponents([.hour, .minute], from: bed)
+            let clock = (parts.hour ?? 0) * 60 + (parts.minute ?? 0)
+            return (clock - 18 * 60 + 24 * 60) % (24 * 60)
+        }.sorted()
+    }
+
+    private func clockText(offset: Int) -> String {
+        let clock = (offset + 18 * 60) % (24 * 60)
+        let cal = Calendar.current
+        let date = cal.date(bySettingHour: clock / 60, minute: clock % 60, second: 0, of: .now) ?? .now
+        return date.formatted(date: .omitted, time: .shortened)
+    }
+
+    /// The middle of the bed times, rounded to a quarter of an hour, from three
+    /// nights up. The same rule as the usual range on the Sleep screen.
+    private var bedtimeLine: String? {
+        let offsets = bedOffsets
+        guard offsets.count >= 3 else { return nil }
+        func rounded(_ value: Int) -> Int { ((value + 7) / 15) * 15 }
+        let low = rounded(offsets[Int((Double(offsets.count - 1) * 0.2).rounded())])
+        let high = rounded(offsets[Int((Double(offsets.count - 1) * 0.8).rounded())])
+        if low == high { return "Usually in bed around \(clockText(offset: low))." }
+        return "Usually in bed between \(clockText(offset: low)) and \(clockText(offset: high))."
+    }
+
+    private var lines: [String] {
+        [countLine, asleepLine, bedtimeLine].compactMap { $0 }
+    }
+
+    var body: some View {
+        if !nights.isEmpty {
+            Anchor.Card {
+                VStack(alignment: .leading, spacing: 10) {
+                    Anchor.SectionHeader(icon: "moon.zzz.fill",
+                                         title: sinceIsLastSession ? "Sleep since your last session" : "Sleep lately")
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(lines, id: \.self) { line in
+                            Text(line)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+
+                    Text("Only shown here. Nothing goes into your notes unless you add it.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+
+                    Button {
+                        onAddToNotes("Sleep since \(dayText(since)): " + lines.joined(separator: " "))
+                        added = true
+                    } label: {
+                        Label(added ? "Added to prep notes" : "Add to prep notes",
+                              systemImage: added ? "checkmark" : "plus")
+                    }
+                    .buttonStyle(Anchor.SecondaryButtonStyle(tint: Anchor.Theme.accent))
+                    .disabled(added)
+                }
+            }
+            .onChange(of: nights.count) { _, _ in added = false }
         }
     }
 }
