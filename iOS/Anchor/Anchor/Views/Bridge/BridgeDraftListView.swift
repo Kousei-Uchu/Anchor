@@ -113,7 +113,7 @@ struct BridgeDraftListView: View {
             }
         }
         .sheet(isPresented: $showingExport) {
-            BridgeExportView(items: items)
+            BridgeExportView()
         }
         .sheet(item: $editing, onDismiss: finishEditing) { item in
             BridgeDraftItemEditorSheet(item: item) { toDelete = item }

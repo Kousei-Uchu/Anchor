@@ -9,6 +9,7 @@ import SwiftData
 struct BridgeView: View {
     @AppStorage(TabLayoutStyle.storageKey) private var layoutRaw = TabLayoutStyle.widgets.rawValue
     @State private var showReframing = false
+    @State private var showExport = false
 
     private var usesWidgets: Bool { layoutRaw != TabLayoutStyle.icons.rawValue }
 
@@ -28,11 +29,20 @@ struct BridgeView: View {
             .navigationTitle("Bridge")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    HelpToolbarButton(topic: .bridge)
+                    HStack(spacing: 14) {
+                        Button { showExport = true } label: {
+                            Image(systemName: "square.and.arrow.up")
+                        }
+                        .accessibilityLabel("Export for someone")
+                        HelpToolbarButton(topic: .bridge)
+                    }
                 }
             }
             .sheet(isPresented: $showReframing) {
                 ReframingPromptView()
+            }
+            .sheet(isPresented: $showExport) {
+                BridgeExportView()
             }
         }
     }
