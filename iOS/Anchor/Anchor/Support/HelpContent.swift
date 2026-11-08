@@ -91,7 +91,7 @@ struct GuideEntry: Identifiable, Hashable {
 enum Guide {
     /// Entries for individual screens. They are written tab by tab, and each
     /// one is looked up by the id a screen passes to `guideButton`.
-    static let screenEntries: [GuideEntry] = planEntries
+    static let screenEntries: [GuideEntry] = planEntries + bridgeEntries + threadEntries + recoveryEntries
 
     /// The entry for a tab itself, built from its topic so the text lives in one place.
     static func tabEntry(_ topic: HelpTopic) -> GuideEntry {
@@ -247,6 +247,156 @@ extension Guide {
             tips: [
                 "Anchor does not keep a backup's password and cannot get it back, so keep it somewhere safe.",
                 "To share something with your psych, use the share button on Bridge instead. You choose what goes in."
+            ]
+        )
+    ]
+}
+
+// MARK: - Guide entries: Bridge, Thread and Recovery
+
+// Patch 43a. Journal and Settings follow in 43b. There is no entry for the NSW mental health
+// law screen, because it is only compiled into personal builds and the tour must not describe
+// a screen the public app does not have. Recovery screens sit on the Now tab, where the
+// Recovery counter lives.
+
+extension Guide {
+    static let bridgeEntries: [GuideEntry] = [
+        GuideEntry(
+            id: "bridge.things-to-raise", tab: .bridge, title: "Things to raise", icon: "text.bubble.fill",
+            whatItIs: "A list of what you want to bring up, kept for your next session.",
+            howToUse: "Add things whenever they come up, with the plus. Tap an item to reword it, and tick it off on its card once you have said it. In an item's sheet you can mark it as a question to ask, with room to write the answer afterwards, and switch on Already brought up. With two or more providers, each item can be for anyone or for one person. The filter button then shows what is for one person and for anyone. The share button opens Export for someone.",
+            tips: [
+                "In the Journal, hold an entry and choose Add to things to raise to copy its first line here.",
+                "Session prep shows what is still waiting here, and you choose whether it goes into your notes."
+            ]
+        ),
+        GuideEntry(
+            id: "bridge.session-prep", tab: .bridge, title: "Session prep", icon: "calendar.badge.clock",
+            whatItIs: "One place to get ready for your next session with a person.",
+            howToUse: "It shows the next session and a place for prep notes. Under that are cards that look back since your last session: your journal entries and check-ins, your sleep and your Recovery counters if you keep them, and what is still waiting in Things to raise. To bring is a short checklist of your own for that one session. You need an upcoming session, which you add in Plan under Appointments.",
+            tips: [
+                "Cards are only shown here. Nothing goes into your notes unless you add it.",
+                "Check-ins are only counted, never read out.",
+                "Nothing is suggested, and the next session starts with an empty To bring list."
+            ]
+        ),
+        GuideEntry(
+            id: "bridge.post-session", tab: .bridge, title: "Post-session notes", icon: "note.text",
+            whatItIs: "Your own notes on how a session went, one for each session.",
+            howToUse: "Past sessions are listed with whether they have notes yet. Tap one and write whatever you want to keep. If you close it with nothing written, no note is kept.",
+            tips: [
+                "With more than one provider, a row of names at the top of Bridge switches between them."
+            ]
+        ),
+        GuideEntry(
+            id: "bridge.goals", tab: .bridge, title: "Personal goals", icon: "flag.fill",
+            whatItIs: "Goals in your own words, with a few notes along the way.",
+            howToUse: "Use the plus to write what you want and why it matters to you. Say where it is: Working on it, Reached or Set aside for now. Add short dated notes as things change. Tap a goal to open it.",
+            tips: [
+                "Nothing is scored and nothing becomes a percentage."
+            ]
+        ),
+        GuideEntry(
+            id: "bridge.feedback-loops", tab: .bridge, title: "Feedback-loop diagrams", icon: "arrow.triangle.2.circlepath",
+            whatItIs: "A way to draw how things feed into each other, in your own words, to show someone else.",
+            howToUse: "The plus offers New loop, New map or From a template. A loop is a ring of steps: write what happens first, what that leads to, and so on, and the last step leads back to the first. Mark each link as more leading to more, or more leading to less, and Anchor says in plain words whether the loop tends to keep itself going or to settle back. A map is free: drag the background to move, pinch to zoom, drag items to place them, and switch to Link to connect one item to another. The menu on a diagram can share it as a picture or a PDF, with the written reading on or off.",
+            tips: [
+                "A loop can be opened as a free map from its menu.",
+                "Undo and Redo are at the bottom of a map.",
+                "A template makes a copy you can rewrite."
+            ]
+        )
+    ]
+
+    static let threadEntries: [GuideEntry] = [
+        GuideEntry(
+            id: "thread.messages", tab: .thread, title: "Message log", icon: "bubble.left.and.bubble.right.fill",
+            whatItIs: "A record of what you have written to the people in your life, tied to your contacts.",
+            howToUse: "Write something opens a sheet where you pick who it is about, write the message, and add a voice note if you like. You can save it privately, or save it and send it through Messages or Discord. Tap an earlier message to see it, send it again or copy it. The filter at the top shows what you have said to one person. The speech bubble opens your message starters.",
+            tips: [
+                "Saving privately sends nothing to anyone.",
+                "The first time you record, iOS asks for the microphone.",
+                "Anchor never sends a message by itself."
+            ]
+        ),
+        GuideEntry(
+            id: "thread.message-starters", tab: .thread, title: "Message starters", icon: "text.bubble",
+            whatItIs: "Short lines of your own for starting a message when talking is hard.",
+            howToUse: "Use the plus to write a line. When you write a message, tap a starter to begin with it, and change it before anything is sent. They also appear when you use Quick contact on Now.",
+            tips: [
+                "The list starts empty. Nothing is written for you."
+            ]
+        ),
+        GuideEntry(
+            id: "thread.people", tab: .thread, title: "People", icon: "person.crop.circle.fill",
+            whatItIs: "A page for each of your contacts, for whatever you want to keep about them.",
+            howToUse: "People you add under Contacts in Plan appear here. A person's page has sections that you write and arrange yourself, such as a note, what helps, and things you have told them. It also shows the last few messages in your log with them and the support calendar days you have shared with them. Sections can be hidden or deleted.",
+            tips: [
+                "Nothing on a page is counted or scored, and nothing is sent from it.",
+                "Deleting a contact deletes their page."
+            ]
+        ),
+        GuideEntry(
+            id: "thread.support-calendar", tab: .thread, title: "Support calendar", icon: "calendar.badge.clock",
+            whatItIs: "Days when you would like some extra support, and who can see each one.",
+            howToUse: "Use the plus to mark a day and choose which of your contacts can see it. Share with makes a calendar file of the days you chose to share, so the person does not need Anchor to open it.",
+            tips: [
+                "Add contacts in Plan first, so there is someone to choose.",
+                "A day nobody can see is not shared."
+            ]
+        ),
+        GuideEntry(
+            id: "thread.future-notes", tab: .thread, title: "To future me", icon: "envelope.open.badge.clock",
+            whatItIs: "Notes to yourself that stay sealed until you are ready to read them.",
+            howToUse: "Use the plus and choose how it opens. A note on a date stays sealed until that day, and until then only the date shows. A letter that opens when you choose has a few words after Open when, such as the kind of night it is for, and no date. You open it yourself when you need it.",
+            tips: [
+                "A sealed note cannot be read early."
+            ]
+        ),
+        GuideEntry(
+            id: "thread.unsent", tab: .thread, title: "Things I haven't said", icon: "square.and.pencil",
+            whatItIs: "A private place for the big things you might never send to anyone.",
+            howToUse: "Write now, and share only if and when you are ready. If you do send something somewhere, switch on I've actually sent this and it is marked Sent.",
+            tips: [
+                "Nothing here goes anywhere unless you send it yourself."
+            ]
+        ),
+        GuideEntry(
+            id: "thread.boundaries", tab: .thread, title: "Boundaries", icon: "hand.raised.fill",
+            whatItIs: "A short list of what you would like people to know, what helps and what does not.",
+            howToUse: "It is made of sections that belong to you, like the Safety plan. Tap one to rename it, write in it and change how it looks, and use the plus to add more. A section marked Can be shared goes out when you tap Share, and nothing else does. Hide keeps a section but takes it off the list, and Reorder changes the order.",
+            tips: [
+                "Deleting a section deletes what is written in it."
+            ]
+        )
+    ]
+
+    static let recoveryEntries: [GuideEntry] = [
+        GuideEntry(
+            id: "recovery.home", tab: .now, title: "Recovery", icon: "calendar.badge.checkmark",
+            whatItIs: "Your own counters, kept on this phone.",
+            howToUse: "Add a counter for something you are stepping away from, or a habit you are building. You choose the name, the start date and how the days are counted. From here you can also open Riding out an urge, a timer with your reasons and your grounding tools, and Who I'm doing this for.",
+            tips: [
+                "Nothing here is scored, shared or compared.",
+                "A counter can sit on Now as a widget."
+            ]
+        ),
+        GuideEntry(
+            id: "recovery.counter", tab: .now, title: "A counter", icon: "calendar",
+            whatItIs: "One counter, with everything that goes with it.",
+            howToUse: "The screen has Summary, Savings, Calendar, Urges, Reasons and Today. Today holds the daily pledge and an evening review with a few optional words. Urges lets you log a hard moment and say how strong it was, then ride it out if you want to. When you reach a milestone you can tick Noted, or tell someone, and you can change the message before it sends. If it costs money, Savings keeps a rough running estimate of what you have not spent. Streak history shows your start dates and, when you start again, you can note how many times it happened that day.",
+            tips: [
+                "Everything stays on your phone.",
+                "Starting again is part of the record, not a mark against you.",
+                "Before tracking is a number only you see, for your own reference."
+            ]
+        ),
+        GuideEntry(
+            id: "recovery.motivations", tab: .now, title: "Who I'm doing this for", icon: "heart.fill",
+            whatItIs: "The people, pets or future you that matter, and why.",
+            howToUse: "Use the plus to add someone, or a reason in your own words. They show up when you take today's pledge and when you are riding out an urge.",
+            tips: [
+                "They are only for you."
             ]
         )
     ]
