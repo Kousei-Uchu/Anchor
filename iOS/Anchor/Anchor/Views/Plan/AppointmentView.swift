@@ -2,18 +2,15 @@
 //  AppointmentView.swift
 //  Anchor
 //
-//  Was a stack of steppers, DatePicker rows, and add/delete buttons —
-//  feedback asked for a calendar month view instead, where tapping a date
-//  is how you schedule, move, or cancel a session. A typical cadence is
-//  still just a default for *suggesting* dates when scheduling a
-//  repeating run — every individual occurrence is still its own row
-//  underneath, because real sessions get moved and this needs to survive
-//  that without losing history.
-//
-//  One screen, no Edit button. Tap an empty day to schedule a session, tap a
-//  day with a session (or its row in the list) to move or cancel it, and the
-//  plus schedules one for any date. The typical cadence is a stepper right on
-//  the screen.
+//  One calm screen for a person's sessions. The ones coming up are at the top,
+//  with how far away each is. Under them is a month calendar: tap an empty day
+//  to schedule a session, tap a day with one to move or cancel it, and the plus
+//  schedules one for any date. Earlier sessions are folded away until asked
+//  for. Removing every session is in the menu, not on the page. The usual gap
+//  between sessions lives in the person's details, and in the schedule sheet
+//  when a run of sessions is made.
+//  Every individual session is still its own row, because real sessions get
+//  moved and this has to survive that without losing history.
 //
 
 import SwiftUI
@@ -25,8 +22,8 @@ private struct ScheduleRequest: Identifiable {
     let date: Date
 }
 
-/// Sessions: the next one, a month calendar you can tap, the list of
-/// sessions, and the typical cadence.
+/// Sessions: the ones coming up, a month calendar you can tap, and the
+/// earlier ones folded underneath.
 struct AppointmentView: View {
     @Environment(\.modelContext) private var modelContext
     @Bindable var series: AppointmentSeries
@@ -39,6 +36,11 @@ struct AppointmentView: View {
     @State private var editingOccurrence: AppointmentOccurrence?
     @State private var occurrenceToDelete: AppointmentOccurrence?
     @State private var showRemoveAllConfirm = false
+    @State private var showAllUpcoming = false
+    @State private var showEarlier = false
+
+    /// How many coming-up sessions show before "Show all".
+    private let upcomingLimit = 4
 
     private var calendar: Calendar { Calendar.current }
 
@@ -50,111 +52,27 @@ struct AppointmentView: View {
         series.occurrences.sorted { $0.scheduledDate < $1.scheduledDate }
     }
 
-    private var nextOccurrence: AppointmentOccurrence? {
-        sortedOccurrences.first { $0.scheduledDate > .now }
+    /// Today's sessions and every later one, soonest first.
+    private var upcomingOccurrences: [AppointmentOccurrence] {
+        let todayStart = calendar.startOfDay(for: .now)
+        return sortedOccurrences.filter { $0.scheduledDate >= todayStart }
+    }
+
+    /// Sessions from before today, most recent first.
+    private var earlierOccurrences: [AppointmentOccurrence] {
+        let todayStart = calendar.startOfDay(for: .now)
+        return Array(sortedOccurrences.filter { $0.scheduledDate < todayStart }.reversed())
+    }
+
+    private var hasMovedSession: Bool {
+        series.occurrences.contains { $0.wasMoved }
     }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                Anchor.Card {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Anchor.SectionHeader(icon: "calendar.badge.clock", title: "Next session")
-                        if let next = nextOccurrence {
-                            Text(next.scheduledDate.formatted(date: .abbreviated, time: .shortened))
-                                .font(.system(.title3, design: .rounded))
-                            Text(daysUntil(next.scheduledDate))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            if !remindDayBefore && !remindSameDay {
-                                HStack(spacing: 4) {
-                                    Text("Reminders for sessions are off.")
-                                    Button("Turn on") {
-                                        remindDayBefore = true
-                                        NotificationScheduler.askForPermissionIfNeeded()
-                                        AppointmentReminders.refresh(using: modelContext)
-                                    }
-                                }
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                                .padding(.top, 2)
-                            }
-                        } else {
-                            Text("Nothing scheduled yet.")
-                                .foregroundStyle(.secondary)
-                            Button("Schedule a session") { scheduling = ScheduleRequest(date: .now) }
-                                .buttonStyle(Anchor.SecondaryButtonStyle())
-                                .padding(.top, 4)
-                        }
-                    }
-                }
-
-                Anchor.Card {
-                    VStack(alignment: .leading, spacing: 12) {
-                        monthHeader
-
-                        MonthCalendarGrid(
-                            displayedMonth: displayedMonth,
-                            occurrencesByDay: occurrencesByDay,
-                            onSelectDay: selectDay
-                        )
-
-                        HStack(spacing: 16) {
-                            Label("Scheduled", systemImage: "circle.fill")
-                                .foregroundStyle(Anchor.Theme.accent)
-                            Label("Moved", systemImage: "circle.fill")
-                                .foregroundStyle(Anchor.Theme.sage)
-                        }
-                        .font(.caption2)
-                        .labelStyle(.titleAndIcon)
-                    }
-                }
-
-                if !sortedOccurrences.isEmpty {
-                    Anchor.Card {
-                        VStack(alignment: .leading, spacing: 10) {
-                            HStack {
-                                Anchor.SectionHeader(icon: "list.bullet", title: "All sessions")
-                                Spacer()
-                                Button("Remove all", role: .destructive) {
-                                    showRemoveAllConfirm = true
-                                }
-                                .font(.caption)
-                            }
-                            ForEach(sortedOccurrences) { occurrence in
-                                Button {
-                                    editingOccurrence = occurrence
-                                } label: {
-                                    HStack {
-                                        Text(occurrence.scheduledDate.formatted(date: .abbreviated, time: .shortened))
-                                        if occurrence.wasMoved {
-                                            Text("moved").font(.caption2).foregroundStyle(Anchor.Theme.sage)
-                                        }
-                                        Spacer()
-                                        Image(systemName: "chevron.right")
-                                            .font(.caption.weight(.semibold))
-                                            .foregroundStyle(.tertiary)
-                                    }
-                                    .foregroundStyle(occurrence.scheduledDate < .now ? .secondary : .primary)
-                                    .contentShape(Rectangle())
-                                }
-                                .buttonStyle(.plain)
-                                .accessibilityHint("Opens the session")
-                                .anchorDeletable("Cancel session") { modelContext.delete(occurrence) }
-                            }
-                        }
-                    }
-                }
-
-                Anchor.Card(accentColor: Anchor.Theme.sage) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Anchor.SectionHeader(icon: "arrow.triangle.2.circlepath", title: "Typical cadence", tint: Anchor.Theme.sage)
-                        Stepper("Every \(series.typicalCadenceDays) days", value: $series.typicalCadenceDays, in: 1...60)
-                        Text("Just a starting point for suggesting dates when you schedule a repeating run. The actual gap can always be longer or shorter.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
+                sessionsCard
+                calendarCard
             }
             .padding()
         }
@@ -163,7 +81,17 @@ struct AppointmentView: View {
         .guideButton("plan.appointments", tab: .plan)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
+            ToolbarItemGroup(placement: .primaryAction) {
+                if !series.occurrences.isEmpty {
+                    Menu {
+                        Button("Remove all sessions", role: .destructive) {
+                            showRemoveAllConfirm = true
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                    .accessibilityLabel("More")
+                }
                 Anchor.AddToolbarButton(label: "Schedule a session") {
                     scheduling = ScheduleRequest(date: .now)
                 }
@@ -180,6 +108,131 @@ struct AppointmentView: View {
                 for occurrence in series.occurrences { modelContext.delete(occurrence) }
             }
             Button("Cancel", role: .cancel) {}
+        }
+    }
+
+    // MARK: Sessions
+
+    private var sessionsCard: some View {
+        Anchor.Card {
+            VStack(alignment: .leading, spacing: 10) {
+                Anchor.SectionHeader(icon: "calendar.badge.clock", title: "Coming up")
+
+                if upcomingOccurrences.isEmpty {
+                    Text("Nothing scheduled yet.")
+                        .foregroundStyle(.secondary)
+                    Button("Schedule a session") { scheduling = ScheduleRequest(date: .now) }
+                        .buttonStyle(Anchor.SecondaryButtonStyle())
+                        .padding(.top, 4)
+                } else {
+                    let shown = showAllUpcoming ? upcomingOccurrences : Array(upcomingOccurrences.prefix(upcomingLimit))
+                    ForEach(shown) { occurrence in
+                        sessionRow(occurrence, showsDistance: true)
+                    }
+                    if upcomingOccurrences.count > upcomingLimit {
+                        Button(showAllUpcoming ? "Show fewer" : "Show all \(upcomingOccurrences.count)") {
+                            withAnimation { showAllUpcoming.toggle() }
+                        }
+                        .font(.footnote)
+                    }
+                    if !remindDayBefore && !remindSameDay {
+                        HStack(spacing: 4) {
+                            Text("Reminders for sessions are off.")
+                            Button("Turn on") {
+                                remindDayBefore = true
+                                NotificationScheduler.askForPermissionIfNeeded()
+                                AppointmentReminders.refresh(using: modelContext)
+                            }
+                        }
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .padding(.top, 2)
+                    }
+                }
+
+                if !earlierOccurrences.isEmpty {
+                    Divider()
+                    Button {
+                        withAnimation { showEarlier.toggle() }
+                    } label: {
+                        HStack {
+                            Text("Earlier sessions (\(earlierOccurrences.count))")
+                            Spacer()
+                            Image(systemName: showEarlier ? "chevron.up" : "chevron.down")
+                                .font(.caption.weight(.semibold))
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                    .accessibilityHint(showEarlier ? "Hides earlier sessions" : "Shows earlier sessions")
+                    if showEarlier {
+                        ForEach(earlierOccurrences) { occurrence in
+                            sessionRow(occurrence, showsDistance: false)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func sessionRow(_ occurrence: AppointmentOccurrence, showsDistance: Bool) -> some View {
+        Button {
+            editingOccurrence = occurrence
+        } label: {
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(occurrence.scheduledDate.formatted(date: .abbreviated, time: .shortened))
+                    if showsDistance || occurrence.wasMoved {
+                        HStack(spacing: 6) {
+                            if showsDistance {
+                                Text(daysUntil(occurrence.scheduledDate))
+                            }
+                            if occurrence.wasMoved {
+                                Text("Moved").foregroundStyle(Anchor.Theme.sage)
+                            }
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    }
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .foregroundStyle(showsDistance ? .primary : .secondary)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Opens the session")
+        .anchorDeletable("Cancel session") { modelContext.delete(occurrence) }
+    }
+
+    // MARK: Calendar
+
+    private var calendarCard: some View {
+        Anchor.Card {
+            VStack(alignment: .leading, spacing: 12) {
+                monthHeader
+
+                MonthCalendarGrid(
+                    displayedMonth: displayedMonth,
+                    occurrencesByDay: occurrencesByDay,
+                    onSelectDay: selectDay
+                )
+
+                if hasMovedSession {
+                    HStack(spacing: 16) {
+                        Label("Scheduled", systemImage: "circle.fill")
+                            .foregroundStyle(Anchor.Theme.accent)
+                        Label("Moved", systemImage: "circle.fill")
+                            .foregroundStyle(Anchor.Theme.sage)
+                    }
+                    .font(.caption2)
+                    .labelStyle(.titleAndIcon)
+                }
+            }
         }
     }
 
@@ -323,27 +376,46 @@ private struct MonthCalendarGrid: View {
 }
 
 /// Schedule either just one date, or a repeating run of sessions starting
-/// there (spaced by the series' cadence, since that's the exact "typical
-/// cadence" the user already set). The date can be changed here, so the plus
-/// in the bar and a tap on an empty calendar day open the same sheet.
+/// there. The gap between them starts at the person's usual gap and can be
+/// changed here, which also becomes their usual gap. The time starts at the
+/// time of their latest session, so a regular slot does not have to be set
+/// again. The date can be changed here, so the plus in the bar and a tap on an
+/// empty calendar day open the same sheet.
 private struct ScheduleSessionSheet: View {
     let series: AppointmentSeries
     @Environment(\.dismiss) private var dismiss
 
     @State private var date: Date
-    @State private var time = Date()
+    @State private var time: Date
     @State private var repeats = false
     @State private var numberOfSessions = 4
+    @State private var gapDays: Int
 
     init(series: AppointmentSeries, date: Date) {
         self.series = series
         _date = State(initialValue: date)
+        _time = State(initialValue: Self.startingTime(for: series, on: date))
+        _gapDays = State(initialValue: series.typicalCadenceDays)
+    }
+
+    /// The time of the person's latest session, or their usual time if they
+    /// have one, or the current time.
+    private static func startingTime(for series: AppointmentSeries, on date: Date) -> Date {
+        let calendar = Calendar.current
+        if let latest = series.occurrences.max(by: { $0.scheduledDate < $1.scheduledDate }) {
+            let parts = calendar.dateComponents([.hour, .minute], from: latest.scheduledDate)
+            return calendar.date(bySettingHour: parts.hour ?? 9, minute: parts.minute ?? 0, second: 0, of: date) ?? Date()
+        }
+        if let hour = series.typicalHour {
+            return calendar.date(bySettingHour: hour, minute: series.typicalMinute ?? 0, second: 0, of: date) ?? Date()
+        }
+        return Date()
     }
 
     var body: some View {
         NavigationStack {
             Form {
-                Section("Date") {
+                Section {
                     DatePicker("Date", selection: $date, displayedComponents: .date)
                     DatePicker("Time", selection: $time, displayedComponents: .hourAndMinute)
                 }
@@ -352,12 +424,9 @@ private struct ScheduleSessionSheet: View {
                     Toggle("Repeat", isOn: $repeats)
                         .tint(Anchor.Theme.accent)
                     if repeats {
-                        Stepper("\(numberOfSessions) sessions, every \(series.typicalCadenceDays) days", value: $numberOfSessions, in: 2...26)
+                        Stepper("\(numberOfSessions) sessions", value: $numberOfSessions, in: 2...26)
+                        Stepper("Every \(gapDays) days", value: $gapDays, in: 1...60)
                     }
-                } footer: {
-                    Text(repeats
-                         ? "Creates \(numberOfSessions) sessions starting here, \(series.typicalCadenceDays) days apart. Any of them can still be moved or cancelled individually afterward."
-                         : "Just this one session.")
                 }
             }
             .anchorSettingsStyle()
@@ -383,9 +452,10 @@ private struct ScheduleSessionSheet: View {
 
         let count = repeats ? numberOfSessions : 1
         for index in 0..<count {
-            let sessionDate = Calendar.current.date(byAdding: .day, value: index * series.typicalCadenceDays, to: firstDate) ?? firstDate
+            let sessionDate = Calendar.current.date(byAdding: .day, value: index * gapDays, to: firstDate) ?? firstDate
             series.occurrences.append(AppointmentOccurrence(scheduledDate: sessionDate))
         }
+        if repeats { series.typicalCadenceDays = gapDays }
         dismiss()
     }
 }
@@ -620,6 +690,9 @@ private struct ProviderEditorSheet: View {
                     TextField("Name", text: $provider.clinicianLabel)
                         .textInputAutocapitalization(.words)
                     TextField("What they do, if you like", text: $provider.role)
+                }
+                Section("Usual gap between sessions") {
+                    Stepper("\(provider.typicalCadenceDays) days", value: $provider.typicalCadenceDays, in: 1...60)
                 }
                 Section("Name on exports") {
                     TextField("Same as the name above", text: $provider.exportLabel)

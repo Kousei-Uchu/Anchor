@@ -119,7 +119,7 @@ enum ReviewStops {
          "Open Contacts, use Reorder. Open Grounding tools and press play.", 1, .contacts),
         ("12c", "Decision presets", "Tap an option to edit, tap a category name to rename, plus to add.",
          "Rename a category and add an option from inside its card.", 1, .decisions),
-        ("12d", "Appointments", "One screen: tap a calendar day, plus for any date, cadence set on the screen.",
+        ("12d", "Appointments", "One screen: tap a calendar day, plus for any date. (RV3 moved the cadence into the person's details.)",
          "Tap a calendar day and schedule a session.", 1, .appointments),
         ("13a", "Affirmations and scripts", "Open in one sheet when tapped; labelled Reorder on the first two.",
          "Open Affirmations, then De-escalation scripts.", 1, .affirmations),
@@ -232,7 +232,9 @@ enum ReviewStops {
         ("RV4", "Goals: an optional SMART frame", "A switch inside a goal, off by default, adds Specific, Measurable, Achievable and Time-bound boxes; Relevant is the existing why box. Nothing is required or dated.",
          "Open Personal goals. The walking goal has it on; open the pottery goal, turn the switch on and off, and leave boxes blank.", 3, .goals),
         ("RV5", "Check-ins on the Journal rows", "Each check-in row shows its own five sliders as small bars, one colour, no numbers, nothing added up. The detail sheet now names each slider as the check-in did, with both ends.",
-         "Open the Journal. Compare the three check-ins (five, three and one day ago): the bars differ, nothing else does. Tap one and check the names match Now. Try large text.", 2, nil)
+         "Open the Journal. Compare the three check-ins (five, three and one day ago): the bars differ, nothing else does. Tap one and check the names match Now. Try large text.", 2, nil),
+        ("RV3", "Appointments, calmer", "Two cards instead of four: Coming up, each with how far away it is, then the calendar. Earlier sessions fold away, Remove all is in the three dots menu, the usual gap moved into the schedule sheet and the person's details, and a new session starts at the time of the last one.",
+         "Open Appointments. Look at Coming up, then Show all, then open Earlier sessions. Tap the plus: the time should be that of the last session. Turn Repeat on and change the gap. Open the person button, Details, and find Usual gap. Check the three dots menu.", 1, .appointments)
     ])
 }
 
