@@ -162,7 +162,7 @@ extension Guide {
         GuideEntry(
             id: "plan.appointments", tab: .plan, title: "Appointments", icon: "calendar",
             whatItIs: "Your sessions with each person you see, on a calendar you can change.",
-            howToUse: "Tap an empty day to schedule a session, or use the plus for any date. Tap a day with a session to move or cancel it. A session you have moved is marked Moved. Switch Repeat on when you schedule to make a run of sessions. Typical cadence is only a starting point for suggesting dates, and the real gap can be shorter or longer. If you see more than one person, add them from the menu at the top. Each one has their own sessions and notes, and a Name on exports, which is the name used on files you make for them.",
+            howToUse: "Tap an empty day to schedule a session, or use the plus for any date. Tap a day with a session to move or cancel it. A session you have moved is marked Moved. Switch Repeat on when you schedule to make a run of sessions. Reminders for sessions are off until you switch them on, from the line under the next session or in Settings. There is one the evening before, at 6 pm, and one a couple of hours ahead, and the lock screen only says something you planned is coming up. Typical cadence is only a starting point for suggesting dates, and the real gap can be shorter or longer. If you see more than one person, add them from the menu at the top. Each one has their own sessions and notes, and a Name on exports, which is the name used on files you make for them.",
             tips: [
                 "Session prep and Things to raise in Bridge follow the person you pick.",
                 "If you remove someone, their items stay and become for anyone."
@@ -450,12 +450,12 @@ extension Guide {
         GuideEntry(
             id: "settings", tab: nil, title: "Settings", icon: "gearshape.fill",
             whatItIs: "The switches, reminders and controls for the whole app. You can use Anchor without changing any of them.",
-            howToUse: "Privacy has Require Face ID, which locks Anchor on its own, separately from your phone's lock. Reminders has the daily check-in, with a time you choose, and the focus timer's alerts and lock screen timer. Layout switches Plan, Bridge and Thread between widgets and a grid of icons, and opens Customise widgets. Your data and help has Your data, Take the tour, About Anchor and Showcase mode.",
+            howToUse: "Privacy has Require Face ID, which locks Anchor on its own, separately from your phone's lock. Reminders has the daily check-in, with a time you choose, and the focus timer's alerts and lock screen timer. Session reminders has two switches for the evening before and a couple of hours before a session. Layout switches Plan, Bridge and Thread between widgets and a grid of icons, and opens Customise widgets. Your data and help has Your data, Take the tour, About Anchor and Showcase mode.",
             tips: [
                 "The reminders and the optional extras are off until you switch them on.",
                 "Routine reminders, Recovery and Sleep only show here once you have a routine, a Recovery counter, or have started using Sleep, so Settings stays short until you need them.",
                 "Recovery has a Daily pledge, an Evening review and Milestones, each with its own switch.",
-                "What shows on the lock screen is plain wording. Routine, Recovery and Sleep reminders never say what they are about.",
+                "What shows on the lock screen is plain wording. Routine, Session, Recovery and Sleep reminders never say what they are about.",
                 "Require Face ID needs Face ID, Touch ID or a passcode on the phone. Without one, the switch cannot be used."
             ]
         ),

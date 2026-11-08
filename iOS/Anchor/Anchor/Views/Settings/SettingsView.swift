@@ -55,6 +55,8 @@ struct SettingsView: View {
     @AppStorage(RecoverySettings.reviewHour) private var reviewHour = 20
     @AppStorage(RecoverySettings.reviewMinute) private var reviewMinute = 30
     @AppStorage(RecoverySettings.milestonesEnabled) private var milestonesEnabled = false
+    @AppStorage(AppointmentReminders.dayBeforeKey) private var remindDayBefore = false
+    @AppStorage(AppointmentReminders.sameDayKey) private var remindSameDay = false
     @AppStorage(SleepSettings.nowCardKey) private var sleepNowCard = false
     @AppStorage(SleepSettings.journalKey) private var sleepInJournal = false
     @AppStorage(SleepSettings.checkInKey) private var sleepInCheckIn = false
@@ -111,6 +113,14 @@ struct SettingsView: View {
                             RoutineReminderSettingsRow(routine: routine)
                         }
                     }
+                }
+
+                Anchor.SettingsSection(
+                    title: "Session reminders",
+                    footer: "Off until you switch one on. The evening before comes at 6 pm. The lock screen only says something you planned is coming up, never who it is with."
+                ) {
+                    Anchor.SettingsToggle(title: "The evening before", isOn: $remindDayBefore)
+                    Anchor.SettingsToggle(title: "A couple of hours before", isOn: $remindSameDay)
                 }
 
                 if showsRecovery {
@@ -220,6 +230,14 @@ struct SettingsView: View {
             .onChange(of: sleepReminderOn) { _, isOn in
                 if isOn { NotificationScheduler.askForPermissionIfNeeded() }
                 SleepReminder.refresh()
+            }
+            .onChange(of: remindDayBefore) { _, isOn in
+                if isOn { NotificationScheduler.askForPermissionIfNeeded() }
+                AppointmentReminders.refresh(using: modelContext)
+            }
+            .onChange(of: remindSameDay) { _, isOn in
+                if isOn { NotificationScheduler.askForPermissionIfNeeded() }
+                AppointmentReminders.refresh(using: modelContext)
             }
             .onChange(of: sleepReminderHour) { _, _ in SleepReminder.refresh() }
             .onChange(of: sleepReminderMinute) { _, _ in SleepReminder.refresh() }

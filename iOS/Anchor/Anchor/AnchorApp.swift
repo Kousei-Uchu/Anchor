@@ -393,6 +393,7 @@ enum ShowcaseSweep {
         // The reminders and the counter widget, the same ones Plan refreshes when it appears.
         RecoveryNotifications.refresh(using: context)
         RoutineReminders.refresh(using: context)
+        AppointmentReminders.refresh(using: context)
         SleepReminder.refresh()
         NotificationScheduler.resyncTriggerWindows(using: context)
         DailyCheckInSettings.reapplyIfEnabled(using: context)

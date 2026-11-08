@@ -53,6 +53,7 @@ struct PlanView: View {
                 // something that needs notifications (see NotificationScheduler.askForPermissionIfNeeded).
                 RecoveryNotifications.refresh(using: modelContext)
                 RoutineReminders.refresh(using: modelContext)
+                AppointmentReminders.refresh(using: modelContext)
                 SleepReminder.refresh()
                 let scheduler = NotificationScheduler(context: modelContext)
                 refreshWidgetSnapshot()

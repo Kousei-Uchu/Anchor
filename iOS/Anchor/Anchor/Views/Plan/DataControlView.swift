@@ -512,6 +512,7 @@ struct DataControlView: View {
         }
         RecoveryNotifications.refresh(using: modelContext)
         RoutineReminders.refresh(using: modelContext)
+        AppointmentReminders.refresh(using: modelContext)
 
         if importedCount == 0 && restoredFiles == 0 {
             importResultMessage = "Nothing new to import. Everything in that file is already here."
@@ -667,6 +668,7 @@ struct DataControlView: View {
         for item in recoveryUrges { modelContext.delete(item) }
         RecoveryNotifications.refresh(counters: [])
         RoutineReminders.refresh(routines: [])
+        AppointmentReminders.refresh(sessions: [])
         RecoveryWidgetSync.refresh(counters: [])
         WidgetSealing.removeEverything()
         ShowcasePasscode.remove()

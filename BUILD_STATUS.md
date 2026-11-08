@@ -1,6 +1,6 @@
 # Anchor — build status
 
-> **Status note (November 2026).** This file is a running build log and some older entries are out of date. There is no Electron companion app in this repository. The privacy and support pages now live in `website/` (a Vite app). Escalation is a local reminder to the user, never an automatic message. Appointment reminder scheduling exists in `NotificationScheduler` but is not yet called from the Appointments screen. The NSW mental health law screen is compiled only with the `PERSONAL_BUILD` flag and is not part of the public build.
+> **Status note (November 2026).** This file is a running build log and some older entries are out of date. There is no Electron companion app in this repository. The privacy and support pages now live in `website/` (a Vite app). Escalation is a local reminder to the user, never an automatic message. Session reminders (the evening before and a couple of hours before) are optional, off by default and scheduled by `AppointmentReminders` in `NotificationScheduler.swift`. The NSW mental health law screen is compiled only with the `PERSONAL_BUILD` flag and is not part of the public build.
 
 ## Done
 - Repo/project directory structure matching a standard Xcode App-template layout
@@ -59,7 +59,7 @@
   with one stored "reasons to keep going" line slotted in — the file has
   no path that calls a generator. Registers actionable categories
   (message a contact / "I'm okay" / open app) so windows are actionable
-  without opening the app. (Appointment reminder scheduling exists in `NotificationScheduler.scheduleAppointmentReminder` but is not yet called from the Appointments screen.)
+  without opening the app. (Optional session reminders are in `AppointmentReminders`, which is refreshed whenever sessions change.)
 - Escalation timer logic (per-contact opt-in "if I don't respond in X
   minutes") is modeled in `TrustedContact.escalationEnabled` /
   `escalationWindowMinutes` from the data layer, but the actual

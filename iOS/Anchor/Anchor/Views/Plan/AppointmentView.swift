@@ -31,6 +31,9 @@ struct AppointmentView: View {
     @Environment(\.modelContext) private var modelContext
     @Bindable var series: AppointmentSeries
 
+    @AppStorage(AppointmentReminders.dayBeforeKey) private var remindDayBefore = false
+    @AppStorage(AppointmentReminders.sameDayKey) private var remindSameDay = false
+
     @State private var displayedMonth: Date = .now
     @State private var scheduling: ScheduleRequest?
     @State private var editingOccurrence: AppointmentOccurrence?
@@ -63,6 +66,19 @@ struct AppointmentView: View {
                             Text(daysUntil(next.scheduledDate))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
+                            if !remindDayBefore && !remindSameDay {
+                                HStack(spacing: 4) {
+                                    Text("Reminders for sessions are off.")
+                                    Button("Turn on") {
+                                        remindDayBefore = true
+                                        NotificationScheduler.askForPermissionIfNeeded()
+                                        AppointmentReminders.refresh(using: modelContext)
+                                    }
+                                }
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .padding(.top, 2)
+                            }
                         } else {
                             Text("Nothing scheduled yet.")
                                 .foregroundStyle(.secondary)
@@ -489,6 +505,17 @@ struct ProviderPageHost: View {
         .sheet(item: $editing, onDismiss: finishEditing) { provider in
             ProviderEditorSheet(provider: provider) { toDelete = provider }
         }
+        // Reminders follow the sessions: any session added, moved or removed, here or in a
+        // sheet, changes this and the waiting reminders are made to match.
+        .onChange(of: sessionSignature) { _, _ in AppointmentReminders.refresh(using: modelContext) }
+        .onDisappear { AppointmentReminders.refresh(using: modelContext) }
+    }
+
+    private var sessionSignature: String {
+        providers.flatMap { $0.occurrences }
+            .map { "\($0.id.uuidString)\($0.scheduledDate.timeIntervalSince1970)" }
+            .sorted()
+            .joined(separator: ",")
     }
 
     @ViewBuilder private func pageView(for provider: AppointmentSeries) -> some View {

@@ -189,46 +189,6 @@ struct NotificationScheduler {
         }
     }
 
-    /// Two reminders per appointment now, not one: the existing day-before
-    /// nudge to prep in Bridge, plus a same-day reminder a couple of hours
-    /// out — appointments getting missed or arrived at unprepared were
-    /// both real risks a single 20-hours-out reminder didn't cover well.
-    func scheduleAppointmentReminder(for occurrence: AppointmentOccurrence, clinicianLabel: String) {
-        guard !DemoMode.isOn else { return }
-        Self.askForPermissionIfNeeded()
-        scheduleSingleAppointmentReminder(
-            for: occurrence, clinicianLabel: clinicianLabel,
-            hoursBefore: 20, identifierSuffix: "day-before",
-            body: "Your session is tomorrow. Want to jot anything down for it in Bridge?"
-        )
-        scheduleSingleAppointmentReminder(
-            for: occurrence, clinicianLabel: clinicianLabel,
-            hoursBefore: 2, identifierSuffix: "same-day",
-            body: "Your session is in a couple of hours."
-        )
-    }
-
-    private func scheduleSingleAppointmentReminder(for occurrence: AppointmentOccurrence, clinicianLabel: String,
-                                                    hoursBefore: Int, identifierSuffix: String, body: String) {
-        guard let reminderDate = Calendar.current.date(byAdding: .hour, value: -hoursBefore, to: occurrence.scheduledDate),
-              reminderDate > .now else { return }
-
-        let content = UNMutableNotificationContent()
-        content.title = "Upcoming: \(clinicianLabel)"
-        content.body = body
-        content.categoryIdentifier = NotificationCategory.appointmentReminder.rawValue
-        content.sound = .default
-
-        let triggerDate = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: reminderDate)
-        let trigger = UNCalendarNotificationTrigger(dateMatching: triggerDate, repeats: false)
-        let request = UNNotificationRequest(
-            identifier: "appointment-\(occurrence.id.uuidString)-\(identifierSuffix)",
-            content: content,
-            trigger: trigger
-        )
-        UNUserNotificationCenter.current().add(request)
-    }
-
     /// A daily, non-crisis-specific check-in — separate from trigger
     /// windows, which are about specific known risk periods. This is just
     /// "want to check in today?" at a time the user picks in Plan, so
@@ -378,5 +338,88 @@ enum SleepReminder {
         content.body = body
         let trigger = UNCalendarNotificationTrigger(dateMatching: time, repeats: true)
         center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: trigger))
+    }
+}
+
+/// Optional reminders before a session, set by the person and off unless
+/// they switch them on. There are two: one the evening before and one a couple
+/// of hours ahead. The lock screen never says who the session is with, or even
+/// that it is a session. Like the other reminders, every call clears what was
+/// scheduled and adds the current set again, so what is scheduled always
+/// matches the sessions as they are now.
+enum AppointmentReminders {
+    static let prefix = "appointment-"
+    static let dayBeforeKey = "reminders.appointment.dayBefore"
+    static let sameDayKey = "reminders.appointment.sameDay"
+    static let dayBeforeBody = "Something you planned is coming up tomorrow."
+    static let sameDayBody = "Something you planned is coming up in a couple of hours."
+
+    /// The evening before is always at 6 in the evening, whatever time the
+    /// session is, so a late session never gets a reminder that says tomorrow
+    /// on the day itself.
+    static let eveningHour = 18
+    static let hoursAhead = 2
+    /// iOS keeps only 64 waiting notifications for the whole app, so only the
+    /// soonest few are scheduled; the rest are added as they come near.
+    static let limit = 20
+
+    struct Planned {
+        let id: String
+        let date: Date
+        let body: String
+    }
+
+    static func refresh(using context: ModelContext) {
+        let all = (try? context.fetch(FetchDescriptor<AppointmentOccurrence>())) ?? []
+        refresh(sessions: all.map { (id: $0.id, date: $0.scheduledDate) })
+    }
+
+    static func refresh(sessions: [(id: UUID, date: Date)], defaults: UserDefaults = .standard) {
+        guard !DemoMode.isOn else { return }
+        let planned = plan(
+            sessions: sessions,
+            dayBefore: defaults.bool(forKey: dayBeforeKey),
+            sameDay: defaults.bool(forKey: sameDayKey),
+            now: .now,
+            calendar: .current
+        )
+        apply(planned)
+    }
+
+    static func plan(sessions: [(id: UUID, date: Date)], dayBefore: Bool, sameDay: Bool,
+                     now: Date, calendar: Calendar) -> [Planned] {
+        var planned: [Planned] = []
+        for session in sessions where session.date > now {
+            if dayBefore,
+               let previous = calendar.date(byAdding: .day, value: -1, to: calendar.startOfDay(for: session.date)),
+               let evening = calendar.date(bySettingHour: eveningHour, minute: 0, second: 0, of: previous),
+               evening > now {
+                planned.append(Planned(id: "\(prefix)\(session.id.uuidString)-day-before", date: evening, body: dayBeforeBody))
+            }
+            if sameDay,
+               let ahead = calendar.date(byAdding: .hour, value: -hoursAhead, to: session.date),
+               ahead > now {
+                planned.append(Planned(id: "\(prefix)\(session.id.uuidString)-same-day", date: ahead, body: sameDayBody))
+            }
+        }
+        return Array(planned.sorted { $0.date < $1.date }.prefix(limit))
+    }
+
+    private static func apply(_ planned: [Planned]) {
+        let center = UNUserNotificationCenter.current()
+        center.getPendingNotificationRequests { pending in
+            let old = pending.map(\.identifier).filter { $0.hasPrefix(prefix) }
+            center.removePendingNotificationRequests(withIdentifiers: old)
+            for item in planned {
+                let content = UNMutableNotificationContent()
+                content.title = "Anchor"
+                content.body = item.body
+                content.categoryIdentifier = NotificationCategory.appointmentReminder.rawValue
+                content.sound = .default
+                let parts = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: item.date)
+                let trigger = UNCalendarNotificationTrigger(dateMatching: parts, repeats: false)
+                center.add(UNNotificationRequest(identifier: item.id, content: content, trigger: trigger))
+            }
+        }
     }
 }
