@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch SL3: Apple Health, read only, for the sleep journal. A Connect Apple Health button at the bottom of the Sleep screen (nothing is asked of Health until you tap it) brings in one summary per night, the last 30 days at first and then what is new when the Sleep screen opens or the app comes forward. A night you typed is never replaced, an imported night you change becomes yours, Bring in new nights switches it off, and Remove imported sleep takes out only the nights that came from Health. Needs the HealthKit capability on the app target.
 - Patch SL2d: an optional Morning reminder for the sleep journal, with a time you pick, in the Sleep section of Settings (off until you turn it on). The lock screen wording never says what it is about.
 - Patch SL2c: an optional Ask about sleep in check-ins switch in Settings (off until you turn it on). A check-in gets one more optional question, How did you sleep?, with sentence starters. The answer is kept as the note on last night, and it is not asked when last night is already written down.
 - Patch SL2b: an optional Show sleep in the Journal switch in Settings (off until you turn it on). Each night gets a small row on its morning and a moon mark on the month view, and a note on a night can be copied into your journal as an ordinary entry.

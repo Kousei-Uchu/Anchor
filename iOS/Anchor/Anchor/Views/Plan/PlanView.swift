@@ -5,6 +5,7 @@
 
 import SwiftUI
 import SwiftData
+import HealthKit
 
 struct PlanView: View {
     @Environment(\.modelContext) private var modelContext
@@ -348,9 +349,15 @@ struct SleepView: View {
                         .anchorCardRow()
                 }
             }
+
+            if SleepHealthReader.shared.isAvailable {
+                SleepHealthCard()
+                    .anchorCardRow()
+            }
         }
         .listStyle(.plain)
         .anchorBackground()
+        .task { await SleepHealthReader.shared.sync(context: modelContext) }
         .navigationTitle("Sleep")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -462,6 +469,11 @@ private struct SleepRow: View {
                             .font(.subheadline)
                             .lineLimit(2)
                     }
+                    if entry.sourceRaw == SleepHealthSettings.sourceHealth {
+                        Text("From Apple Health")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
@@ -481,8 +493,22 @@ private struct SleepEntrySheet: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var allEntries: [SleepEntry]
     @State private var addedToJournal = false
+    @State private var openedAs: String?
 
     private var cal: Calendar { .current }
+
+    /// Everything the sheet can change, as one string, so it can tell whether
+    /// anything was changed while it was open.
+    private var fingerprint: String {
+        [
+            String(entry.nightDate.timeIntervalSince1970),
+            entry.bedTime.map { String($0.timeIntervalSince1970) } ?? "-",
+            entry.wakeTime.map { String($0.timeIntervalSince1970) } ?? "-",
+            entry.minutesAsleep.map(String.init) ?? "-",
+            entry.feel.map(String.init) ?? "-",
+            entry.note
+        ].joined(separator: "|")
+    }
 
     /// True when a different entry already holds this night.
     private var nightTaken: Bool {
@@ -586,6 +612,14 @@ private struct SleepEntrySheet: View {
     var body: some View {
         NavigationStack {
             Form {
+                if entry.sourceRaw == SleepHealthSettings.sourceHealth {
+                    Section {
+                        Label("From Apple Health", systemImage: "heart.text.square")
+                    } footer: {
+                        Text("If you change anything here, this night becomes yours and Apple Health will not change it again.")
+                    }
+                }
+
                 Section {
                     DatePicker("Woke up on", selection: nightBinding, in: ...Date.now, displayedComponents: .date)
                 } footer: {
@@ -656,6 +690,16 @@ private struct SleepEntrySheet: View {
                 }
             }
         }
+        .onAppear { if openedAs == nil { openedAs = fingerprint } }
+        .onDisappear {
+            // A night from Apple Health that was changed here is now the
+            // person's own, so a later import never touches it.
+            if entry.sourceRaw == SleepHealthSettings.sourceHealth, let openedAs, openedAs != fingerprint {
+                entry.sourceRaw = "typed"
+                entry.externalID = nil
+                entry.lastEditedAt = .now
+            }
+        }
     }
 }
 
@@ -698,6 +742,293 @@ private struct SleepWordsSheet: View {
                     Button("Done") { dismiss() }
                 }
             }
+        }
+    }
+}
+
+// MARK: - Apple Health (sleep, read only)
+
+enum SleepHealthSettings {
+    /// On while Anchor is bringing in new nights from Apple Health.
+    static let connectedKey = "anchor.sleep.health.read"
+    /// When Apple Health was last checked, as seconds since 1970.
+    static let lastSyncKey = "anchor.sleep.health.lastSync"
+    /// The `sourceRaw` of a night that came from Apple Health.
+    static let sourceHealth = "health"
+}
+
+/// Reads sleep from Apple Health and keeps one summary per night in Anchor's
+/// own store. Nothing is read until the person taps Connect, and a night they
+/// typed is never replaced. HealthKit does not say whether read access was
+/// refused, so a refusal looks the same as no sleep being there.
+@MainActor
+@Observable
+final class SleepHealthReader {
+    static let shared = SleepHealthReader()
+
+    /// True while a check is running.
+    var isWorking = false
+    /// How many nights the last check found in Apple Health. Nil until one has run.
+    var foundNights: Int?
+
+    @ObservationIgnored private let store = HKHealthStore()
+
+    var isAvailable: Bool { HKHealthStore.isHealthDataAvailable() }
+
+    private var sleepType: HKCategoryType? { HKObjectType.categoryType(forIdentifier: .sleepAnalysis) }
+
+    /// Asks for read access to sleep, which is when iOS shows its own
+    /// question, then brings in the last 30 days.
+    func connect(context: ModelContext) async {
+        guard isAvailable, !DemoMode.isOn, let type = sleepType else { return }
+        do {
+            try await store.requestAuthorization(toShare: [], read: [type])
+        } catch {
+            return
+        }
+        UserDefaults.standard.set(true, forKey: SleepHealthSettings.connectedKey)
+        await sync(context: context, full: true)
+    }
+
+    func disconnect() {
+        UserDefaults.standard.set(false, forKey: SleepHealthSettings.connectedKey)
+    }
+
+    /// Removes only the nights that came from Apple Health and were not
+    /// changed since, and stops bringing in more. Nothing in Health changes.
+    @discardableResult
+    func removeImported(context: ModelContext) -> Int {
+        disconnect()
+        let all = (try? context.fetch(FetchDescriptor<SleepEntry>())) ?? []
+        var removed = 0
+        for entry in all where entry.sourceRaw == SleepHealthSettings.sourceHealth {
+            context.delete(entry)
+            removed += 1
+        }
+        try? context.save()
+        foundNights = nil
+        UserDefaults.standard.removeObject(forKey: SleepHealthSettings.lastSyncKey)
+        return removed
+    }
+
+    private struct Piece {
+        var start: Date
+        var end: Date
+        var asleep: Bool
+    }
+
+    private struct Night {
+        var day: Date
+        var bed: Date
+        var wake: Date
+        var minutesAsleep: Int?
+    }
+
+    private static func unionMinutes(_ pieces: [Piece]) -> Int {
+        let sorted = pieces.sorted { $0.start < $1.start }
+        var total: TimeInterval = 0
+        var runStart: Date?
+        var runEnd: Date?
+        for piece in sorted {
+            if let start = runStart, let end = runEnd {
+                if piece.start <= end {
+                    runEnd = max(end, piece.end)
+                } else {
+                    total += end.timeIntervalSince(start)
+                    runStart = piece.start
+                    runEnd = piece.end
+                }
+            } else {
+                runStart = piece.start
+                runEnd = piece.end
+            }
+        }
+        if let start = runStart, let end = runEnd { total += end.timeIntervalSince(start) }
+        return Int(total / 60)
+    }
+
+    /// Brings in nights from Apple Health: the last 30 days the first time,
+    /// then what is new. It does nothing unless the person has connected.
+    func sync(context: ModelContext, full: Bool = false) async {
+        let defaults = UserDefaults.standard
+        guard defaults.bool(forKey: SleepHealthSettings.connectedKey),
+              isAvailable, !DemoMode.isOn, !isWorking, let type = sleepType else { return }
+        isWorking = true
+        defer { isWorking = false }
+
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: .now)
+        guard let floor = cal.date(byAdding: .day, value: -30, to: today) else { return }
+        var from = floor
+        let last = defaults.double(forKey: SleepHealthSettings.lastSyncKey)
+        if !full, last > 0,
+           let back = cal.date(byAdding: .day, value: -2, to: cal.startOfDay(for: Date(timeIntervalSince1970: last))) {
+            from = max(floor, back)
+        }
+        // Start earlier than the first day, so a night that began the evening before is whole.
+        let predicate = HKQuery.predicateForSamples(withStart: from.addingTimeInterval(-18 * 3600), end: .now, options: [])
+        let descriptor = HKSampleQueryDescriptor(
+            predicates: [.categorySample(type: type, predicate: predicate)],
+            sortDescriptors: [SortDescriptor(\.startDate)]
+        )
+        let samples: [HKCategorySample]
+        do {
+            samples = try await descriptor.result(for: store)
+        } catch {
+            return
+        }
+
+        var pieces: [Piece] = []
+        for sample in samples {
+            // Never read back anything Anchor wrote itself.
+            if sample.sourceRevision.source.bundleIdentifier == Bundle.main.bundleIdentifier { continue }
+            guard let value = HKCategoryValueSleepAnalysis(rawValue: sample.value) else { continue }
+            if value == .awake { continue }
+            let asleep = HKCategoryValueSleepAnalysis.allAsleepValues.contains(value)
+            pieces.append(Piece(start: sample.startDate, end: sample.endDate, asleep: asleep))
+        }
+        pieces.sort { $0.start < $1.start }
+
+        // Pieces less than three hours apart are one sleep. Each is a night
+        // for the day it ended on, and the longest one that day is kept.
+        var sessions: [[Piece]] = []
+        var runEnd = Date.distantPast
+        for piece in pieces {
+            if piece.start.timeIntervalSince(runEnd) > 3 * 3600 || sessions.isEmpty {
+                sessions.append([piece])
+            } else {
+                sessions[sessions.count - 1].append(piece)
+            }
+            runEnd = max(runEnd, piece.end)
+        }
+        var longestByDay: [Date: Night] = [:]
+        for session in sessions {
+            guard let bed = session.map(\.start).min(), let wake = session.map(\.end).max() else { continue }
+            let span = wake.timeIntervalSince(bed)
+            guard span > 0, span <= 20 * 3600 else { continue }
+            let day = cal.startOfDay(for: wake)
+            guard day >= from, day <= today else { continue }
+            let asleepPieces = session.filter(\.asleep)
+            let minutes = asleepPieces.isEmpty ? nil : Self.unionMinutes(asleepPieces)
+            let night = Night(day: day, bed: bed, wake: wake, minutesAsleep: minutes.flatMap { $0 > 0 ? $0 : nil })
+            if let existing = longestByDay[day], existing.wake.timeIntervalSince(existing.bed) >= span { continue }
+            longestByDay[day] = night
+        }
+
+        let existing = (try? context.fetch(FetchDescriptor<SleepEntry>())) ?? []
+        var typedDays = Set<Date>()
+        var healthByKey: [String: SleepEntry] = [:]
+        for entry in existing {
+            if entry.sourceRaw == SleepHealthSettings.sourceHealth, let key = entry.externalID {
+                healthByKey[key] = entry
+            } else {
+                typedDays.insert(cal.startOfDay(for: entry.nightDate))
+            }
+        }
+        for night in longestByDay.values {
+            // A night you wrote down is yours, so Apple Health never replaces it.
+            if typedDays.contains(night.day) { continue }
+            let parts = cal.dateComponents([.year, .month, .day], from: night.day)
+            let key = String(format: "health:%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
+            if let entry = healthByKey[key] {
+                if entry.bedTime != night.bed { entry.bedTime = night.bed }
+                if entry.wakeTime != night.wake { entry.wakeTime = night.wake }
+                if entry.minutesAsleep != night.minutesAsleep { entry.minutesAsleep = night.minutesAsleep }
+            } else {
+                context.insert(SleepEntry(
+                    nightDate: night.day, bedTime: night.bed, wakeTime: night.wake,
+                    minutesAsleep: night.minutesAsleep, sourceRaw: SleepHealthSettings.sourceHealth, externalID: key
+                ))
+            }
+        }
+        try? context.save()
+        foundNights = longestByDay.count
+        defaults.set(Date.now.timeIntervalSince1970, forKey: SleepHealthSettings.lastSyncKey)
+    }
+}
+
+/// The Apple Health section at the bottom of the Sleep screen. Nothing is
+/// asked of Apple Health until Connect is tapped.
+private struct SleepHealthCard: View {
+    @Environment(\.modelContext) private var modelContext
+    @AppStorage(SleepHealthSettings.connectedKey) private var connected = false
+    @AppStorage(SleepHealthSettings.lastSyncKey) private var lastSync = 0.0
+    @Query private var entries: [SleepEntry]
+    @State private var connecting = false
+    @State private var confirmingRemove = false
+
+    private let reader = SleepHealthReader.shared
+
+    private var importedCount: Int {
+        entries.filter { $0.sourceRaw == SleepHealthSettings.sourceHealth }.count
+    }
+
+    private var statusLine: String? {
+        guard connected else { return nil }
+        if reader.foundNights == 0 { return "No sleep found in Apple Health yet." }
+        guard lastSync > 0 else { return nil }
+        return "Last checked " + Date(timeIntervalSince1970: lastSync).formatted(.relative(presentation: .named)) + "."
+    }
+
+    var body: some View {
+        Anchor.Card(accentColor: Anchor.Theme.accent) {
+            VStack(alignment: .leading, spacing: 10) {
+                Label("Apple Health", systemImage: "heart.text.square")
+                    .font(.system(.headline, design: .rounded))
+
+                if connected {
+                    Toggle("Bring in new nights", isOn: Binding(
+                        get: { connected },
+                        set: { on in if !on { reader.disconnect() } }
+                    ))
+                    if let statusLine {
+                        Text(statusLine)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    Button("Check now") {
+                        Task { await reader.sync(context: modelContext, full: true) }
+                    }
+                    .disabled(reader.isWorking)
+                    Text("Anchor only reads sleep, and keeps its own copy on this phone. To stop Anchor asking at all, change Sleep under Sharing in the Health app.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    Text("Bring in the nights Apple Health already has, so you do not have to type them. Anchor only reads sleep, only after you choose this, and keeps it on this phone.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Button("Connect Apple Health") {
+                        connecting = true
+                        Task {
+                            await reader.connect(context: modelContext)
+                            connecting = false
+                        }
+                    }
+                    .disabled(connecting)
+                }
+
+                if importedCount > 0 {
+                    Button("Remove imported sleep", role: .destructive) { confirmingRemove = true }
+                    Text(importedCount == 1 ? "1 night here came from Apple Health." : "\(importedCount) nights here came from Apple Health.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .buttonStyle(.borderless)
+        }
+        .confirmationDialog(
+            "Remove imported sleep?",
+            isPresented: $confirmingRemove,
+            titleVisibility: .visible
+        ) {
+            Button("Remove and stop bringing in nights", role: .destructive) {
+                reader.removeImported(context: modelContext)
+            }
+            Button("Keep them", role: .cancel) {}
+        } message: {
+            Text("This takes out the nights that came from Apple Health. Nights you typed or changed yourself stay, and nothing in Apple Health is touched.")
         }
     }
 }

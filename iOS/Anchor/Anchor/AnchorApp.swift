@@ -10,6 +10,7 @@ import UserNotifications
 @main
 struct AnchorApp: App {
     let container = DemoMode.isOn ? DemoMode.makeContainer() : AnchorSchema.makeContainer()
+    @Environment(\.scenePhase) private var scenePhase
 
     init() {
         UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
@@ -31,6 +32,12 @@ struct AnchorApp: App {
             }
         }
         .modelContainer(container)
+        .onChange(of: scenePhase) { _, phase in
+            // Brings in new nights from Apple Health, only if it was connected.
+            if phase == .active {
+                Task { await SleepHealthReader.shared.sync(context: container.mainContext) }
+            }
+        }
     }
 }
 

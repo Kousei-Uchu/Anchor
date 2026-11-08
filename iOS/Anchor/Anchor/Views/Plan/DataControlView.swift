@@ -526,6 +526,8 @@ struct DataControlView: View {
         for item in boundarySections { modelContext.delete(item) }
         for item in personSections { modelContext.delete(item) }
         for item in sleepEntries { modelContext.delete(item) }
+        SleepHealthReader.shared.disconnect()
+        UserDefaults.standard.removeObject(forKey: SleepHealthSettings.lastSyncKey)
         for item in messageStarters { modelContext.delete(item) }
         for item in personalGoals { modelContext.delete(item) }
         UserDefaults.standard.removeObject(forKey: DayPlan.key)
