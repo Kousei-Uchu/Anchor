@@ -90,6 +90,13 @@ struct AppointmentPrepView: View {
                         onAddToNotes: appendToNotes
                     )
 
+                    // What is waiting in Things to raise for this person or for
+                    // anyone. Read-only here; nothing is added unless the person taps.
+                    RaiseSessionCard(providerID: series.id, onAddToNotes: appendToNotes)
+
+                    // A short list of things to have with them, for this session only.
+                    PrepChecklistCard(occurrence: next)
+
                     Button { showingEditor = true } label: {
                         Anchor.TextCard(
                             icon: "list.bullet.clipboard.fill",
@@ -477,6 +484,161 @@ struct SleepSessionSummaryCard: View {
                 }
             }
             .onChange(of: nights.count) { _, _ in added = false }
+        }
+    }
+}
+
+// MARK: - Things to raise for session prep
+
+/// What is waiting in Things to raise for this provider or for anyone: the
+/// open items and the questions not yet asked. It is shown here so the list is
+/// in front of the person while they prepare, and it only goes into the prep
+/// notes if they tap the button.
+struct RaiseSessionCard: View {
+    let providerID: UUID
+    let onAddToNotes: (String) -> Void
+
+    @Query(sort: \BridgeDraftItem.createdAt) private var allItems: [BridgeDraftItem]
+    @Query(sort: \AppointmentSeries.sortOrder) private var providers: [AppointmentSeries]
+    @State private var added = false
+
+    private var items: [BridgeDraftItem] {
+        allItems.filter {
+            !$0.isResolved
+                && !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                && $0.isFor(providerID, in: providers)
+        }
+    }
+
+    private var summaryText: String {
+        var parts = ["To raise:"]
+        parts.append(contentsOf: items.map { ($0.isQuestion ? "- Question: " : "- ") + $0.text })
+        return parts.joined(separator: "\n")
+    }
+
+    var body: some View {
+        if !items.isEmpty {
+            Anchor.Card {
+                VStack(alignment: .leading, spacing: 10) {
+                    Anchor.SectionHeader(icon: "text.bubble.fill", title: "Waiting to be raised")
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(items) { item in
+                            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                Image(systemName: item.isQuestion ? "questionmark.circle" : "circle.fill")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                    .accessibilityHidden(true)
+                                Text(item.text)
+                                    .font(.system(.subheadline, design: .rounded))
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .accessibilityElement(children: .combine)
+                            .accessibilityLabel(item.isQuestion ? "Question: \(item.text)" : item.text)
+                        }
+                    }
+
+                    Text("Only shown here. Nothing goes into your notes unless you add it.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+
+                    Button {
+                        onAddToNotes(summaryText)
+                        added = true
+                    } label: {
+                        Label(added ? "Added to prep notes" : "Add to prep notes",
+                              systemImage: added ? "checkmark" : "plus")
+                    }
+                    .buttonStyle(Anchor.SecondaryButtonStyle(tint: Anchor.Theme.accent))
+                    .disabled(added)
+                }
+            }
+            .onChange(of: items.map(\.id)) { _, _ in added = false }
+        }
+    }
+}
+
+// MARK: - Checklist for one session
+
+/// A short list of what the person wants to have with them for one session
+/// (a card, a form, a page of notes). They write it and they tick it. Nothing
+/// is suggested, counted or reminded, and ticks carry nothing over to the next
+/// session.
+struct PrepChecklistCard: View {
+    @Bindable var occurrence: AppointmentOccurrence
+    @State private var newText = ""
+    @FocusState private var typing: Bool
+
+    private var trimmed: String { newText.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    private func add() {
+        guard !trimmed.isEmpty else { return }
+        occurrence.prepChecklist = occurrence.prepChecklist + [QuickListItem(text: trimmed)]
+        newText = ""
+        typing = true
+    }
+
+    private func toggle(_ item: QuickListItem) {
+        var list = occurrence.prepChecklist
+        guard let index = list.firstIndex(where: { $0.id == item.id }) else { return }
+        list[index].isDone.toggle()
+        occurrence.prepChecklist = list
+    }
+
+    private func remove(_ item: QuickListItem) {
+        occurrence.prepChecklist = occurrence.prepChecklist.filter { $0.id != item.id }
+    }
+
+    var body: some View {
+        Anchor.Card {
+            VStack(alignment: .leading, spacing: 10) {
+                Anchor.SectionHeader(icon: "checklist", title: "To bring")
+
+                ForEach(occurrence.prepChecklist) { item in
+                    HStack(alignment: .top, spacing: 4) {
+                        Button { toggle(item) } label: {
+                            HStack(alignment: .top, spacing: 12) {
+                                Image(systemName: item.isDone ? "checkmark.circle.fill" : "circle")
+                                    .font(.title3)
+                                    .foregroundStyle(item.isDone ? Anchor.Theme.sage : Anchor.Theme.accent)
+                                Text(item.text)
+                                    .font(.system(.body, design: .rounded))
+                                    .foregroundStyle(item.isDone ? .secondary : .primary)
+                                    .multilineTextAlignment(.leading)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .frame(minHeight: 44)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(item.text)
+                        .accessibilityValue(item.isDone ? "Ticked" : "Not ticked")
+                        .accessibilityHint("Double tap to change")
+
+                        Button { remove(item) } label: {
+                            Image(systemName: "xmark")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                                .frame(width: 44, height: 44)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Remove \(item.text)")
+                    }
+                }
+
+                HStack(spacing: 8) {
+                    TextField("Add something to bring", text: $newText)
+                        .focused($typing)
+                        .submitLabel(.done)
+                        .onSubmit(add)
+                    Button("Add", action: add)
+                        .disabled(trimmed.isEmpty)
+                }
+                .frame(minHeight: 44)
+            }
         }
     }
 }

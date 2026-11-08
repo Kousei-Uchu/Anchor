@@ -1685,13 +1685,17 @@ struct PersonalGoalDTO: Codable {
 struct AppointmentOccurrenceDTO: Codable {
     var id: UUID; var scheduledDate: Date; var wasMoved: Bool
     var prepNoteEntryID: UUID?; var postSessionNoteEntryID: UUID?
+    /// Optional so exports made before session checklists existed still import.
+    var prepChecklist: [QuickListItem]?
     init(_ m: AppointmentOccurrence) {
         id = m.id; scheduledDate = m.scheduledDate; wasMoved = m.wasMoved
         prepNoteEntryID = m.prepNoteEntryID; postSessionNoteEntryID = m.postSessionNoteEntryID
+        prepChecklist = m.prepChecklist.isEmpty ? nil : m.prepChecklist
     }
     func toModel() -> AppointmentOccurrence {
         AppointmentOccurrence(id: id, scheduledDate: scheduledDate, wasMoved: wasMoved,
-                              prepNoteEntryID: prepNoteEntryID, postSessionNoteEntryID: postSessionNoteEntryID)
+                              prepNoteEntryID: prepNoteEntryID, postSessionNoteEntryID: postSessionNoteEntryID,
+                              prepChecklist: prepChecklist ?? [])
     }
 }
 

@@ -810,14 +810,20 @@ final class AppointmentOccurrence {
     var wasMoved: Bool
     var prepNoteEntryID: UUID?    // links to a Journal/Bridge prep entry
     var postSessionNoteEntryID: UUID?
+    /// What the person wants to have with them for this one session, written
+    /// and ticked by them. It reuses the small text-and-tick value that quick
+    /// lists use, kept inside the occurrence so there is no new record.
+    var prepChecklist: [QuickListItem] = []
 
     init(id: UUID = UUID(), scheduledDate: Date, wasMoved: Bool = false,
-         prepNoteEntryID: UUID? = nil, postSessionNoteEntryID: UUID? = nil) {
+         prepNoteEntryID: UUID? = nil, postSessionNoteEntryID: UUID? = nil,
+         prepChecklist: [QuickListItem] = []) {
         self.id = id
         self.scheduledDate = scheduledDate
         self.wasMoved = wasMoved
         self.prepNoteEntryID = prepNoteEntryID
         self.postSessionNoteEntryID = postSessionNoteEntryID
+        self.prepChecklist = prepChecklist
     }
 }
 

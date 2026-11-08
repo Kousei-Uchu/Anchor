@@ -216,7 +216,10 @@ enum DemoMode {
                                                 matchingPolicy: .nextTime) ?? now.addingTimeInterval(3 * 86_400)
         let lee = AppointmentSeries(clinicianLabel: "Dr Lee", typicalDayOfWeek: 3,
             typicalTime: DateComponents(hour: 10, minute: 30), typicalCadenceDays: 14,
-            occurrences: [AppointmentOccurrence(scheduledDate: tuesday)],
+            occurrences: [AppointmentOccurrence(scheduledDate: tuesday, prepChecklist: [
+                QuickListItem(text: "Medicare card"),
+                QuickListItem(text: "My notes from this week", isDone: true)
+            ])],
             role: "Psychologist", sortOrder: 0)
         context.insert(lee)
         let patel = AppointmentSeries(clinicianLabel: "Dr Patel", typicalCadenceDays: 60,
