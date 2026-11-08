@@ -63,44 +63,80 @@ If you would still like to learn whether E can work, there is a cheap test: one 
 
 **To answer, reply:** `D3: parked`, `D3: option C`, or `D3: try the one-screen test`.
 
+### Your answer, and what it changes (9 Nov 2026)
+
+**Decided:** park D3 until the end, just before the Android work and the other awkward extras.
+
+**What you want from the demo:** a script you run when you want the demo updated. It shows the screens and features with demo data. It does not have to work as a real app. It has to look close enough to be the same at a glance, and build itself from the app's demo data and how the app really looks. Data can behave like a session store that clears on refresh. Health, Journaling Suggestions, Photos and the other Apple-only parts can be small pretend placeholders that show what the feature does without doing it.
+
+**Why that is a lighter job than the one I assessed above.** Two of the hardest items in the table, the SwiftData stand-in and the Apple frameworks, mostly disappear, because nothing has to really work. What is left is one thing: something has to draw the screens in a browser. There are two ways to do that, and the choice can wait until the work starts.
+
+1. **Swift in the browser.** Compile the real screens for the web with a SwiftUI-style framework. It stays a live, tappable app, but it needs a framework that is still maintained (Tokamak is not), and a lot of screens may need small changes.
+2. **Generated from the running app.** A script starts the app in showcase mode on the simulator, visits each screen, and records the picture of it plus where every button, label and field sits. A second script turns that into web pages where tapping a button goes to the next screen. Because it starts from the real app's own picture, it looks the same by construction, and it updates by running the script again. Typing and anything that needs real behaviour would be faked. I lean towards this one, since your goal is looking identical, not working identically. I have not built either.
+
+**What helps in the meantime, and is already done:** the showcase mode and its made-up content for every kind of content (RV7), and the guide registry. Both are what the demo script would read. Nothing else needs to change now.
+
+**Where it sits:** Patch 55 in Phase H, last, before the Android work.
+
 ---
 
-## D15. How should locked text be kept in the database?
 
-**What is already decided.** D5 chose field-level encryption: the text is scrambled inside the database, with a key kept in the Keychain on this phone and a recovery key shown to you once. The keys (Patch 34) and the widget summaries (Patch 35a) are done. D15 is not about whether to lock stored text. It is about how, because that is the risky part, and what Patch 35b should do.
+## D15. How should locked text be kept in the database? (in plain words)
 
-### What protects your text today
+### The picture
 
-iOS encrypts the phone's storage, and Anchor's database file is marked so that it can be read once the phone has been unlocked after a restart. That is good against someone with a powered-off phone. It is not a lock on the text itself: while the phone is running, the app and anything that gets at the file can read it, and, to my knowledge, a backup made to a computer without a backup password carries the database as readable text.
+Your journal is stored in one file on the phone. Think of that file as a paper diary.
 
-### What locking a field adds
+- **Right now,** the diary sits in a drawer. The drawer is locked when the phone is switched off or just restarted. Once you have unlocked the phone, the drawer is open to the app. If someone gets a copy of the diary file (for example from a backup of your phone saved on a computer, with no backup password), they can read it like any other document. That is how I understand it works; I cannot test it here.
+- **Locking the text** means the words in the diary are written in a secret code. A copy of the file is just gibberish. The app has the key to the code, kept safe on your phone only, and turns the gibberish back into words when you open an entry. You notice nothing as you use the app.
 
-The database file would hold scrambled text for the locked fields. A copy of the file, or a computer backup, would show nothing readable for them. The key lives only on this phone, so the copy cannot be opened elsewhere. It does not protect against someone using your unlocked phone with Anchor open. The app lock (Face ID or passcode) covers that.
+Already built: the key, and the 28 character recovery key you would be shown once. Not built: actually writing the secret code into the diary. That is Patch 35b, and the question is how careful to be when doing it.
 
-### How it would work, in one example
+### Why this is scary
 
-`JournalEntry.text` is a stored field. SwiftData cannot lock a stored field by itself. So the field gets a new stored name that holds the scrambled value, and a second property with the old name opens it when read and locks it when written. Every screen keeps using `text` as before. Existing entries are read as plain text until they have been locked in a one-time pass.
+To switch the diary to secret code, the app has to change how the file is laid out, and rewrite the entries already in it. If that goes wrong halfway, entries could be lost or the app could refuse to open the file. I cannot run it here, and nobody has run it on your real data. That is the whole reason there is a choice.
 
-### Why it is risky
+### Option A: scramble the journal first, check it, then do the rest
 
-- **It changes the database layout.** Every model touched needs a migration, and I cannot run one here. A store that fails to open shows the red banner, and a bad migration on real data is the worst outcome in this whole plan.
-- **Searching and sorting stop working on locked fields.** A search written into the database query cannot see inside scrambled text. Anything that searches locked text has to load the entries and search in memory.
-- **The widget cannot read it.** The widget is built from the same model file but must not hold the data key (that was the point of 35a). Any locked field the widget touches would come back as scrambled text.
-- **Speed.** Each read opens the text. Long lists of entries need the opened text kept briefly, or scrolling suffers.
-- **A lost key means lost text.** A restored phone has the database but not the key until the recovery key is entered. The app must not open the store over locked text and carry on as if all were well.
-- **Old plain text may linger.** SQLite does not wipe deleted data, so readable copies of old entries can stay in unused parts of the file after they are locked. I do not know whether SwiftData's store clears them. Lock sooner rather than later, and treat the guarantee as covering new writes more than the past.
+**What it does:** Patch 35b scrambles only the journal entry text. You try it on your phone. Then a later patch (35c) does messages, safety plan, Boundaries, goals and notes.
 
-### The options
+**Why you might want it:** the journal is the most private thing in the app. If something goes wrong, only the journal is at risk, and you find out before everything else is changed. It is the careful route.
 
-**A. One model at a time, starting with `JournalEntry.text`. (My recommendation.)** Patch 35b locks the journal text only, with the one-time pass and the missing-key check. You try it on a device, on a copy of your data, with an export and a computer backup made first. If it holds, patch 35c widens it to messages, the safety plan sections, Boundaries, goals and notes. Slower, and each step is small enough to check.
+**What it costs:** it takes two patches, and you have to test in between. Until 35c, your messages and safety plan are still readable in a file copy.
 
-**B. Every model at once.** One patch, one migration, one chance to get it right. Faster to finish, and a mistake affects everything.
+### Option B: scramble everything at once
 
-**C. Do not lock text in the store.** Keep what iOS gives, and rely on encrypted exports and an encrypted backup and the viewer. It is less than the plan promised, and nothing here can damage the database. It also drops the one thing that the Keychain key and recovery key were built for.
+**What it does:** one patch, one big change, every piece of text scrambled together.
 
-### Two smaller things that are mine to settle, not yours
+**Why you might want it:** it is the quickest way to finish, and everything is covered from the first day. You test once.
 
-- Renaming the stored field (`@Attribute(originalName:)`, the plan's idea) or adding a new field beside the old one. Adding a field is the most routine kind of migration, so I lean towards it for the first model, and I would say so in 35b.
-- Whether locking is automatic or something you switch on in Settings. I lean towards a switch, since turning it on is also when you see your recovery key.
+**What it costs:** if it goes wrong, everything goes wrong together, and it is harder to tell which part broke. It is the riskiest way.
+
+### Option C: do not scramble the file at all
+
+**What it does:** nothing changes in the file. The phone's own protection stays (locked when off, the app lock on top), and exports and backups can still be password protected.
+
+**Why you might want it:** zero chance of damaging your data. It is the least work. If only you use the app on a phone with a passcode, it may be enough.
+
+**What it costs:** a copy of the file stays readable. And the recovery key and the key work already built would have no job, which goes against what you chose earlier in D5.
+
+### Things that change in the app if you pick A or B
+
+- You are shown a recovery key once, and must keep it. Lose both your phone's key and the recovery key and the locked text is gone for good. Nobody, including me, can get it back.
+- A new phone or reinstall asks for the recovery key before the text opens.
+- Searching the journal might be slower, since the app has to unscramble entries to search them.
+- Widgets cannot show locked text. They already use their own separate summary, so they keep working.
+- Old entries that were readable before may still leave readable traces in unused parts of the file. I cannot confirm whether they do. New writing is covered best.
+
+### My pick, and who it is for
+
+- Pick **A** if you want the promise in D5 kept and want to be careful. It is my recommendation.
+- Pick **B** if you would rather get it over with and are willing to test hard, with a full backup made first.
+- Pick **C** if you decide the risk of touching the file is worse than the risk of someone copying it.
+
+### Two details that are mine to settle, not yours
+
+- Whether to change the old field's name or add a new one beside it. Adding is the more routine kind of change, so I lean that way for the first model.
+- Whether locking is automatic or a switch you turn on in Settings. I lean towards a switch, so you see the recovery key at the moment you turn it on.
 
 **To answer, reply:** `D15: A`, `D15: B` or `D15: C`. If A, 35b is the next Swift patch after the ones that are not waiting on a decision.
