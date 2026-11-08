@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch SL2d: an optional Morning reminder for the sleep journal, with a time you pick, in the Sleep section of Settings (off until you turn it on). The lock screen wording never says what it is about.
 - Patch SL2c: an optional Ask about sleep in check-ins switch in Settings (off until you turn it on). A check-in gets one more optional question, How did you sleep?, with sentence starters. The answer is kept as the note on last night, and it is not asked when last night is already written down.
 - Patch SL2b: an optional Show sleep in the Journal switch in Settings (off until you turn it on). Each night gets a small row on its morning and a moon mark on the month view, and a note on a night can be copied into your journal as an ordinary entry.
 - Patch SL2a: an optional Last night card on Now in the morning, with a Show Last night on Now switch in Settings (off until you turn it on, and the Sleep section only appears once Sleep is in use). Not now puts it away for the day.

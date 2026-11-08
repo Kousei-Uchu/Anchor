@@ -346,3 +346,34 @@ enum RoutineReminders {
         }
     }
 }
+
+/// The optional morning reminder for the sleep journal. Off until it is
+/// switched on in Settings. It is one repeating notification at the time the
+/// person picks, and its wording never says what it is about, so nobody
+/// reading the lock screen learns anything. Like the other reminders, every
+/// call clears it and adds the current one again, so what is scheduled always
+/// matches what is saved.
+enum SleepReminder {
+    static let identifier = "sleep-morning"
+    static let body = "A quiet note for yourself this morning, if you would like."
+
+    /// The time as saved, or nil when the reminder is off.
+    static func components(defaults: UserDefaults = .standard) -> DateComponents? {
+        guard defaults.bool(forKey: SleepSettings.reminderEnabledKey) else { return nil }
+        let hour = defaults.object(forKey: SleepSettings.reminderHourKey) as? Int ?? 8
+        let minute = defaults.object(forKey: SleepSettings.reminderMinuteKey) as? Int ?? 0
+        return DateComponents(hour: hour, minute: minute)
+    }
+
+    static func refresh() {
+        guard !DemoMode.isOn else { return }
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: [identifier])
+        guard let time = components() else { return }
+        let content = UNMutableNotificationContent()
+        content.title = "Anchor"
+        content.body = body
+        let trigger = UNCalendarNotificationTrigger(dateMatching: time, repeats: true)
+        center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: trigger))
+    }
+}

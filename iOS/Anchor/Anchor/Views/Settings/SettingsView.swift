@@ -57,6 +57,9 @@ struct SettingsView: View {
     @AppStorage(SleepSettings.nowCardKey) private var sleepNowCard = false
     @AppStorage(SleepSettings.journalKey) private var sleepInJournal = false
     @AppStorage(SleepSettings.checkInKey) private var sleepInCheckIn = false
+    @AppStorage(SleepSettings.reminderEnabledKey) private var sleepReminderOn = false
+    @AppStorage(SleepSettings.reminderHourKey) private var sleepReminderHour = 8
+    @AppStorage(SleepSettings.reminderMinuteKey) private var sleepReminderMinute = 0
     @AppStorage(WidgetTab.plan.hiddenKey) private var planHiddenRaw = WidgetTab.plan.defaultHiddenRaw
     @Query private var sleepEntries: [SleepEntry]
 
@@ -71,7 +74,7 @@ struct SettingsView: View {
     /// Sleep widget has been turned on or a night has been written down (or
     /// the card is already on, so it can always be turned back off).
     private var showsSleep: Bool {
-        !sleepEntries.isEmpty || sleepNowCard || sleepInJournal || sleepInCheckIn || !WidgetLayoutStore.decode(planHiddenRaw).contains(.sleep)
+        !sleepEntries.isEmpty || sleepNowCard || sleepInJournal || sleepInCheckIn || sleepReminderOn || !WidgetLayoutStore.decode(planHiddenRaw).contains(.sleep)
     }
 
     var body: some View {
@@ -129,11 +132,15 @@ struct SettingsView: View {
                 if showsSleep {
                     Anchor.SettingsSection(
                         title: "Sleep",
-                        footer: "These are off until you switch them on. Last night is a small card on Now in the morning, until you write down last night or tap Not now. In the Journal, each night gets a small row on its morning and a mark on the month. In a check-in, one more optional question asks how you slept, unless last night is already written down."
+                        footer: "These are off until you switch them on. Last night is a card on Now in the morning, until you write down last night or tap Not now. The Journal gets a small row for each night and a mark on the month. A check-in gets one more optional question, unless last night is already written down. The reminder never says on the lock screen what it is about."
                     ) {
                         Anchor.SettingsToggle(title: "Show Last night on Now", isOn: $sleepNowCard)
                         Anchor.SettingsToggle(title: "Show sleep in the Journal", isOn: $sleepInJournal)
                         Anchor.SettingsToggle(title: "Ask about sleep in check-ins", isOn: $sleepInCheckIn)
+                        Anchor.SettingsToggle(title: "Morning reminder", isOn: $sleepReminderOn)
+                        if sleepReminderOn {
+                            Anchor.SettingsTimeRow(time: timeBinding($sleepReminderHour, $sleepReminderMinute))
+                        }
                     }
                 }
 
@@ -191,6 +198,12 @@ struct SettingsView: View {
             }
             .onChange(of: faceIDEnabled) { _, isOn in appLock.isEnabled = isOn }
             .onChange(of: dailyCheckInEnabled) { _, _ in applyDailyCheckIn() }
+            .onChange(of: sleepReminderOn) { _, isOn in
+                if isOn { NotificationScheduler.askForPermissionIfNeeded() }
+                SleepReminder.refresh()
+            }
+            .onChange(of: sleepReminderHour) { _, _ in SleepReminder.refresh() }
+            .onChange(of: sleepReminderMinute) { _, _ in SleepReminder.refresh() }
             .onChange(of: focusAlertsEnabled) { _, isOn in PomodoroSettings.alertsChanged(isOn) }
             .onChange(of: focusLockScreenEnabled) { _, isOn in PomodoroSettings.lockScreenChanged(isOn) }
             .onChange(of: dailyCheckInHour) { _, _ in applyDailyCheckIn() }

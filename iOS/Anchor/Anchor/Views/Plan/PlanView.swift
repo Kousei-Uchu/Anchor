@@ -52,6 +52,7 @@ struct PlanView: View {
                 // something that needs notifications (see NotificationScheduler.askForPermissionIfNeeded).
                 RecoveryNotifications.refresh(using: modelContext)
                 RoutineReminders.refresh(using: modelContext)
+                SleepReminder.refresh()
                 let scheduler = NotificationScheduler(context: modelContext)
                 refreshWidgetSnapshot()
                 rescheduleTriggerWindowNotifications(using: scheduler)
@@ -712,6 +713,10 @@ enum SleepSettings {
     static let journalKey = "anchor.sleep.journal"
     /// Ask "How did you sleep?" as an extra optional question in a check-in.
     static let checkInKey = "anchor.sleep.checkIn"
+    /// An optional morning reminder, its time, with wording that never says what it is about.
+    static let reminderEnabledKey = "anchor.sleep.reminder.enabled"
+    static let reminderHourKey = "anchor.sleep.reminder.hour"
+    static let reminderMinuteKey = "anchor.sleep.reminder.minute"
     /// The day, as year-month-day text, that the card was put away with Not now.
     static let nowDismissedKey = "anchor.sleep.nowDismissedDay"
 
