@@ -44,6 +44,7 @@ struct NSWMentalHealthReferenceView: View {
             }
         }
         .navigationTitle("NSW mental health law")
+        .guideButton("bridge.nsw-reference", tab: .bridge)
     }
 }
 

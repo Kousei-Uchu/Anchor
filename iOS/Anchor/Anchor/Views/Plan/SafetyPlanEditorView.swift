@@ -167,6 +167,7 @@ struct SafetyPlanView: View {
         }
         .anchorBackground()
         .navigationTitle("Safety plan")
+        .guideButton("plan.safety-plan", tab: .plan)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {

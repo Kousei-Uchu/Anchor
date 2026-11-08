@@ -146,6 +146,7 @@ struct BoundariesView: View {
         }
         .anchorBackground()
         .navigationTitle("Boundaries")
+        .guideButton("thread.boundaries", tab: .thread)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
@@ -400,6 +401,7 @@ struct PeopleView: View {
         }
         .anchorBackground()
         .navigationTitle("People")
+        .guideButton("thread.people", tab: .thread)
         .navigationBarTitleDisplayMode(.inline)
     }
 }
@@ -564,6 +566,7 @@ struct PersonPageView: View {
         .listStyle(.plain)
         .anchorBackground()
         .navigationTitle(contact.pageName)
+        .guideButton("thread.people", tab: .thread)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {

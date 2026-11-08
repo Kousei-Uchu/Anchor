@@ -68,6 +68,7 @@ struct PostSessionNotesView: View {
         }
         .anchorBackground()
         .navigationTitle("Post-session notes")
+        .guideButton("bridge.post-session", tab: .bridge)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $editing, onDismiss: dropBlankNote) { occurrence in
             Anchor.ItemEditorSheet(title: occurrence.scheduledDate.formatted(date: .abbreviated, time: .omitted)) {

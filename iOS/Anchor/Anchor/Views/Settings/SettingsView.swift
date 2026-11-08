@@ -180,7 +180,7 @@ struct SettingsView: View {
                     Button {
                         showTour = true
                     } label: {
-                        Text("Replay the tour")
+                        Text("Take the tour")
                             .font(.system(.subheadline, design: .rounded))
                             .foregroundStyle(.primary)
                     }

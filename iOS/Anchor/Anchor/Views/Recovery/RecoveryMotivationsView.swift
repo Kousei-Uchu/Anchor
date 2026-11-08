@@ -69,6 +69,7 @@ struct RecoveryMotivationsView: View {
         }
         .anchorBackground()
         .navigationTitle("Who I'm doing this for")
+        .guideButton("recovery.motivations", tab: .now)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {

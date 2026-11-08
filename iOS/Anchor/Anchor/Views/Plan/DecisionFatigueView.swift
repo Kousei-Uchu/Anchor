@@ -64,6 +64,7 @@ struct DecisionFatigueView: View {
         }
         .anchorBackground()
         .navigationTitle("Decision-fatigue presets")
+        .guideButton("plan.presets", tab: .plan)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -418,6 +419,7 @@ struct RoutinesView: View {
         }
         .anchorBackground()
         .navigationTitle("Routines")
+        .guideButton("plan.routines", tab: .plan)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -806,6 +808,7 @@ struct ItemListsView: View {
         }
         .anchorBackground()
         .navigationTitle("Lists")
+        .guideButton("plan.lists", tab: .plan)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -881,6 +884,7 @@ private struct ItemListDetailView: View {
         .scrollContentBackground(.hidden)
         .anchorBackground()
         .navigationTitle(list.displayName)
+        .guideButton("plan.lists", tab: .plan)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {

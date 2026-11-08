@@ -95,6 +95,7 @@ struct FutureNoteListView: View {
         }
         .anchorBackground()
         .navigationTitle("To future me")
+        .guideButton("thread.future-notes", tab: .thread)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {

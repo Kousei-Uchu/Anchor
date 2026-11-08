@@ -156,6 +156,7 @@ struct DataControlView: View {
         }
         .anchorSettingsStyle()
         .navigationTitle("Your data")
+        .guideButton("plan.your-data", tab: .plan)
         .onAppear {
             #if DEBUG
             BackupSelfTest.run()

@@ -73,6 +73,7 @@ struct RecoveryHomeView: View {
         }
         .anchorBackground()
         .navigationTitle("Recovery")
+        .guideButton("recovery.home", tab: .now)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {

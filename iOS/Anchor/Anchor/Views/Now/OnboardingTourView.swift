@@ -3,10 +3,11 @@
 //  Anchor
 //
 //  Shown automatically once, on first launch (tracked via UserDefaults,
-//  not SwiftData — this is a device preference, not user data). Reuses
-//  the exact same HelpTopic content as the per-tab "?" buttons, so there's
-//  one source of truth for these explanations, not two to keep in sync.
-//  Replayable anytime from Plan → Settings (gear).
+//  not SwiftData — this is a device preference, not user data). It reads
+//  the guide registry (Guide.tourEntries in HelpContent.swift), the same
+//  entries the "?" buttons open, so there's one source of truth for these
+//  explanations, not two to keep in sync. Retakeable anytime from Settings,
+//  Your data and help, Take the tour.
 //
 
 import SwiftUI
@@ -15,27 +16,51 @@ struct OnboardingTourView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var pageIndex = 0
 
-    private let topics = HelpTopic.allCases
+    private let entries = Guide.tourEntries
+
+    private var isLast: Bool { pageIndex >= entries.count - 1 }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 TabView(selection: $pageIndex) {
-                    ForEach(Array(topics.enumerated()), id: \.offset) { index, topic in
-                        tourPage(topic).tag(index)
+                    ForEach(Array(entries.enumerated()), id: \.offset) { index, entry in
+                        ScrollView {
+                            VStack(spacing: 18) {
+                                MascotCharacterView(mood: .gentle)
+                                    .frame(width: 84, height: 84)
+                                GuideEntryBody(entry: entry)
+                            }
+                            .padding(.horizontal, 28)
+                            .padding(.top, 24)
+                            .padding(.bottom, 16)
+                        }
+                        .tag(index)
                     }
                 }
-                .tabViewStyle(.page(indexDisplayMode: .always))
-                .indexViewStyle(.page(backgroundDisplayMode: .always))
+                .tabViewStyle(.page(indexDisplayMode: .never))
 
-                Button(pageIndex == topics.count - 1 ? "Start using Anchor" : "Next") {
-                    if pageIndex == topics.count - 1 {
-                        dismiss()
-                    } else {
-                        withAnimation { pageIndex += 1 }
+                Text("\(pageIndex + 1) of \(entries.count)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.bottom, 8)
+
+                HStack(spacing: 12) {
+                    if pageIndex > 0 {
+                        Button("Back") {
+                            withAnimation { pageIndex -= 1 }
+                        }
+                        .buttonStyle(Anchor.SecondaryButtonStyle(tint: Anchor.Theme.accent))
                     }
+                    Button(isLast ? "Start using Anchor" : "Next") {
+                        if isLast {
+                            dismiss()
+                        } else {
+                            withAnimation { pageIndex += 1 }
+                        }
+                    }
+                    .buttonStyle(Anchor.PrimaryButtonStyle())
                 }
-                .buttonStyle(Anchor.PrimaryButtonStyle())
                 .padding(.horizontal, 40)
                 .padding(.bottom, 24)
             }
@@ -45,29 +70,6 @@ struct OnboardingTourView: View {
                     Button("Skip") { dismiss() }
                 }
             }
-        }
-    }
-
-    private func tourPage(_ topic: HelpTopic) -> some View {
-        VStack(spacing: 20) {
-            Spacer()
-            MascotCharacterView(mood: .gentle)
-                .frame(width: 84, height: 84)
-            ZStack {
-                Circle().fill(Anchor.Theme.accentSoft).frame(width: 56, height: 56)
-                Image(systemName: topic.icon)
-                    .font(.system(size: 22, weight: .medium))
-                    .foregroundStyle(Anchor.Theme.accent)
-            }
-            Text(topic.tabName)
-                .font(.system(.title2, design: .rounded).weight(.semibold))
-            Text(topic.explanation)
-                .font(.system(.body, design: .rounded))
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-            Spacer()
-            Spacer()
         }
     }
 }

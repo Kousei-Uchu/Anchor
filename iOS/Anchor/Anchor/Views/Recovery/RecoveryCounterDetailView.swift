@@ -68,6 +68,7 @@ struct RecoveryCounterDetailView: View {
         }
         .anchorBackground()
         .navigationTitle(counter.name)
+        .guideButton("recovery.counter", tab: .now)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {

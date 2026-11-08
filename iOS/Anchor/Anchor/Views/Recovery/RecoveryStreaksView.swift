@@ -35,6 +35,7 @@ struct RecoveryStreaksView: View {
         }
         .anchorBackground()
         .navigationTitle(counter.name)
+        .guideButton("recovery.counter", tab: .now)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingPriorEditor) {
             Anchor.ItemEditorSheet(title: "Before tracking") {

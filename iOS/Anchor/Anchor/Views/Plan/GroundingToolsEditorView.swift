@@ -55,6 +55,7 @@ struct GroundingToolsListView: View {
         }
         .anchorBackground()
         .navigationTitle("Grounding tools")
+        .guideButton("plan.grounding-tools", tab: .plan)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {

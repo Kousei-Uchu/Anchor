@@ -85,6 +85,7 @@ struct BridgeDraftListView: View {
         }
         .anchorBackground()
         .navigationTitle("Bridge draft")
+        .guideButton("bridge.things-to-raise", tab: .bridge)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
@@ -314,6 +315,7 @@ struct PersonalGoalsView: View {
         }
         .anchorBackground()
         .navigationTitle("Personal goals")
+        .guideButton("bridge.goals", tab: .bridge)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {

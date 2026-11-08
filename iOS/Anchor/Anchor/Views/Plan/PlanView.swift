@@ -358,6 +358,7 @@ struct SleepView: View {
             await SleepHealthWriter.shared.reconcile(context: modelContext)
         }
         .navigationTitle("Sleep")
+        .guideButton("plan.sleep", tab: .plan)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {

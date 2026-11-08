@@ -97,6 +97,7 @@ struct DeEscalationScriptsView: View {
         }
         .anchorBackground()
         .navigationTitle("De-escalation scripts")
+        .guideButton("now.de-escalation", tab: .now)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {

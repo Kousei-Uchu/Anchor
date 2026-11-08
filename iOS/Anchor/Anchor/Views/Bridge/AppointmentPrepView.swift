@@ -122,6 +122,7 @@ struct AppointmentPrepView: View {
         }
         .anchorBackground()
         .navigationTitle("Session prep")
+        .guideButton("bridge.session-prep", tab: .bridge)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingEditor) {
             Anchor.ItemEditorSheet(title: "Prep notes") {

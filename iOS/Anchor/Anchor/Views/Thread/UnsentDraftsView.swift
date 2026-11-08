@@ -71,6 +71,7 @@ struct UnsentDraftsView: View {
         }
         .anchorBackground()
         .navigationTitle("Things I haven't said")
+        .guideButton("thread.unsent", tab: .thread)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {

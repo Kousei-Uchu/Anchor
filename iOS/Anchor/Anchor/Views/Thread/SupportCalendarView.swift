@@ -95,6 +95,7 @@ struct SupportCalendarView: View {
         }
         .anchorBackground()
         .navigationTitle("Support calendar")
+        .guideButton("thread.support-calendar", tab: .thread)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {

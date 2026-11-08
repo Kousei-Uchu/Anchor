@@ -51,6 +51,7 @@ struct TriggerWindowListView: View {
         }
         .anchorBackground()
         .navigationTitle("Trigger windows")
+        .guideButton("plan.trigger-windows", tab: .plan)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {

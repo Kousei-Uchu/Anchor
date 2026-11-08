@@ -353,6 +353,7 @@ struct TasksView: View {
             PomodoroBar { showFocus = true }
         }
         .navigationTitle("Tasks")
+        .guideButton("now.tasks", tab: .now)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
@@ -1897,6 +1898,7 @@ private struct QuickListView: View {
         .anchorBackground()
         .safeAreaInset(edge: .bottom) { addBar }
         .navigationTitle(list.displayTitle)
+        .guideButton("now.quick-list", tab: .now)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
@@ -2039,6 +2041,7 @@ private struct QuickListArchiveView: View {
         }
         .anchorBackground()
         .navigationTitle("Archive")
+        .guideButton("now.quick-list", tab: .now)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $opened, onDismiss: finish) { list in
             NavigationStack {

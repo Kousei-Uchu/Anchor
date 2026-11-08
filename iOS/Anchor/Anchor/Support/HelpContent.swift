@@ -9,6 +9,11 @@
 //  gathered into a first-launch tour (OnboardingTourView) so nobody has
 //  to discover the "?" button to get the basics.
 //
+//  Everything below the topics is one guide registry (GuideEntry and Guide).
+//  The tour, the "?" sheet and the "?" button on each screen all read from
+//  it, so a screen is explained in one place. A screen asks for its entry by
+//  id; until it has one of its own, it shows the entry for its tab.
+//
 
 import SwiftUI
 
@@ -38,6 +43,17 @@ enum HelpTopic: String, CaseIterable, Identifiable {
         }
     }
 
+    /// One line on what the tab is, shown above the longer explanation.
+    var summary: String {
+        switch self {
+        case .now: return "The quick-access home screen, made for the moment you are in."
+        case .plan: return "Where you set things up ahead of time, so they are ready when you need them."
+        case .journal: return "A timeline of what you have written, with your check-ins on the same line."
+        case .bridge: return "Everything that makes talking to your psych easier."
+        case .thread: return "Where you keep track of the people who matter to you."
+        }
+    }
+
     var explanation: String {
         switch self {
         case .now:
@@ -54,36 +70,151 @@ enum HelpTopic: String, CaseIterable, Identifiable {
     }
 }
 
-struct HelpSheetView: View {
-    let topic: HelpTopic
+// MARK: - Guide registry
+
+/// One entry in the guide. `id` is stable: a screen names its entry with it,
+/// so renaming a title never breaks the link.
+struct GuideEntry: Identifiable, Hashable {
+    let id: String
+    /// The tab it belongs to. The tour goes tab by tab, a tab's own entry first.
+    let tab: HelpTopic
+    let title: String
+    let icon: String
+    /// One or two sentences on what this is.
+    let whatItIs: String
+    /// How to use it, in plain prose.
+    let howToUse: String
+    /// Short extras, listed under the text when there are any.
+    let tips: [String]
+}
+
+enum Guide {
+    /// Entries for individual screens. They are written tab by tab, and each
+    /// one is looked up by the id a screen passes to `guideButton`.
+    static let screenEntries: [GuideEntry] = []
+
+    /// The entry for a tab itself, built from its topic so the text lives in one place.
+    static func tabEntry(_ topic: HelpTopic) -> GuideEntry {
+        GuideEntry(id: topic.rawValue, tab: topic, title: topic.tabName, icon: topic.icon,
+                   whatItIs: topic.summary, howToUse: topic.explanation, tips: [])
+    }
+
+    /// The entry a screen should show: its own if it has one, otherwise its tab's.
+    static func entry(for id: String, tab: HelpTopic) -> GuideEntry {
+        screenEntries.first { $0.id == id } ?? tabEntry(tab)
+    }
+
+    /// Everything in tour order: each tab's own entry, then that tab's screens.
+    static var tourEntries: [GuideEntry] {
+        HelpTopic.allCases.flatMap { topic in
+            [tabEntry(topic)] + screenEntries.filter { $0.tab == topic }
+        }
+    }
+}
+
+/// The page for one entry, shared by the "?" sheet and the tour.
+struct GuideEntryBody: View {
+    let entry: GuideEntry
+
+    var body: some View {
+        VStack(spacing: 18) {
+            ZStack {
+                Circle().fill(Anchor.Theme.accentSoft).frame(width: 56, height: 56)
+                Image(systemName: entry.icon)
+                    .font(.system(size: 22, weight: .medium))
+                    .foregroundStyle(Anchor.Theme.accent)
+            }
+            .accessibilityHidden(true)
+            Text(entry.title)
+                .font(.system(.title3, design: .rounded).weight(.semibold))
+                .multilineTextAlignment(.center)
+            Text(entry.whatItIs)
+                .font(.system(.body, design: .rounded).weight(.medium))
+                .multilineTextAlignment(.center)
+            Text(entry.howToUse)
+                .font(.system(.body, design: .rounded))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            if !entry.tips.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Good to know")
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                    ForEach(entry.tips, id: \.self) { tip in
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Image(systemName: "circle.fill")
+                                .font(.system(size: 5))
+                                .foregroundStyle(.secondary)
+                                .accessibilityHidden(true)
+                            Text(tip)
+                                .font(.system(.subheadline, design: .rounded))
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+struct GuideSheetView: View {
+    let entry: GuideEntry
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 20) {
-                Spacer()
-                ZStack {
-                    Circle().fill(Anchor.Theme.accentSoft).frame(width: 64, height: 64)
-                    Image(systemName: topic.icon)
-                        .font(.system(size: 26, weight: .medium))
-                        .foregroundStyle(Anchor.Theme.accent)
-                }
-                Text(topic.title)
-                    .font(.system(.title3, design: .rounded).weight(.semibold))
-                Text(topic.explanation)
-                    .font(.system(.body, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
+            ScrollView {
+                GuideEntryBody(entry: entry)
                     .padding(.horizontal, 28)
-                Spacer()
-                Spacer()
+                    .padding(.vertical, 32)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .anchorBackground()
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Got it") { dismiss() }
                 }
+            }
+        }
+    }
+}
+
+/// The sheet for a tab's own topic, kept so the five tab roots need no change.
+struct HelpSheetView: View {
+    let topic: HelpTopic
+
+    var body: some View {
+        GuideSheetView(entry: Guide.tabEntry(topic))
+    }
+}
+
+/// The "?" button for one screen. It opens that screen's entry, or its tab's
+/// while the screen has none of its own yet.
+struct GuideToolbarButton: View {
+    let entryID: String
+    let tab: HelpTopic
+    @State private var showing = false
+
+    var body: some View {
+        Button {
+            showing = true
+        } label: {
+            Image(systemName: "questionmark.circle")
+        }
+        .accessibilityLabel("Help for this screen")
+        .sheet(isPresented: $showing) {
+            GuideSheetView(entry: Guide.entry(for: entryID, tab: tab))
+        }
+    }
+}
+
+extension View {
+    /// Puts the "?" button in a screen's toolbar. Pass the screen's guide id and its tab.
+    func guideButton(_ id: String, tab: HelpTopic) -> some View {
+        toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                GuideToolbarButton(entryID: id, tab: tab)
             }
         }
     }
@@ -101,6 +232,7 @@ struct HelpToolbarButton: View {
         } label: {
             Image(systemName: "questionmark.circle")
         }
+        .accessibilityLabel("Help for this screen")
         .sheet(isPresented: $showHelp) {
             HelpSheetView(topic: topic)
         }
@@ -162,6 +294,7 @@ struct HelpNoteToolbarButton: View {
         } label: {
             Image(systemName: "questionmark.circle")
         }
+        .accessibilityLabel("Help for this screen")
         .sheet(isPresented: $showHelp) {
             HelpNoteSheet(icon: icon, title: title, paragraphs: paragraphs)
         }

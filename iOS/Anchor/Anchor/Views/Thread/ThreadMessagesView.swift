@@ -281,6 +281,7 @@ struct ThreadMessagesView: View {
         }
         .anchorBackground()
         .navigationTitle("Message log")
+        .guideButton("thread.messages", tab: .thread)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
@@ -756,6 +757,7 @@ struct MessageStartersView: View {
         }
         .anchorBackground()
         .navigationTitle("Message starters")
+        .guideButton("thread.message-starters", tab: .thread)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {

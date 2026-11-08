@@ -144,6 +144,7 @@ struct AppointmentView: View {
         }
         .anchorBackground()
         .navigationTitle(series.displayName)
+        .guideButton("plan.appointments", tab: .plan)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {

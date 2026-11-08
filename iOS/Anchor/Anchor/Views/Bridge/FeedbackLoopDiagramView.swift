@@ -298,6 +298,7 @@ struct FeedbackLoopDiagramListView: View {
         }
         .anchorBackground()
         .navigationTitle("Feedback-loop diagrams")
+        .guideButton("bridge.feedback-loops", tab: .bridge)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -392,6 +393,7 @@ struct FeedbackLoopDiagramView: View {
         }
         .anchorBackground()
         .navigationTitle(diagram.title)
+        .guideButton("bridge.feedback-loops", tab: .bridge)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if !graph.nodes.isEmpty {

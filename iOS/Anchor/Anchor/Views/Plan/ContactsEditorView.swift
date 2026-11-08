@@ -84,6 +84,7 @@ struct ContactsView: View {
         }
         .anchorBackground()
         .navigationTitle("Contacts")
+        .guideButton("plan.contacts", tab: .plan)
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(isPresented: $showingAvailability) {
             ContactAvailabilityView(contacts: contacts)
