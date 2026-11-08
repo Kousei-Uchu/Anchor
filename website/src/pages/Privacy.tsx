@@ -45,7 +45,7 @@ export default function Privacy() {
       <p>Only when you decide it should:</p>
       <ul>
         <li><strong>Messages.</strong> If you tap a button to message a contact, Anchor opens the standard iOS message composer. You review and send the message yourself. Anchor cannot send messages on its own.</li>
-        <li><strong>Exports.</strong> Exports (JSON backup, CSV, PDF, and calendar files) are created on your device and handed to the iOS share sheet. Where they go is up to you.</li>
+        <li><strong>Exports.</strong> Exports (JSON backup, encrypted backup, CSV, PDF, and calendar files) are created on your device and handed to the iOS share sheet. An encrypted backup is locked with a password you choose, which is never stored or sent, so I cannot open it or recover it for you. Where exports go is up to you.</li>
         <li><strong>Links.</strong> Grounding tools can open links such as Spotify, Discord or a web page. Those open in the relevant app or in your browser, and are then governed by that service&rsquo;s own privacy policy.</li>
         <li><strong>Backups.</strong> If you use iCloud Backup or a computer backup for your device, Apple may include Anchor&rsquo;s data in that backup according to your device settings. That is controlled by Apple and you.</li>
       </ul>

@@ -15,6 +15,8 @@
 import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
+import CryptoKit
+import CommonCrypto
 
 struct DataControlView: View {
     @Environment(\.modelContext) private var modelContext
@@ -56,6 +58,10 @@ struct DataControlView: View {
     @State private var importResultMessage: String?
     @State private var showClearConfirm = false
     @State private var showClearedAlert = false
+    @State private var showBackupSheet = false
+    @State private var readyBackup: URL?
+    @State private var pendingRestore: IdentifiableURL?
+    @State private var restoreCopy: URL?
 
     enum DateRangeExportKind: Identifiable {
         case csv, pdf
@@ -87,7 +93,13 @@ struct DataControlView: View {
                     exportFullJSON()
                 } label: {
                     Anchor.MenuRow(icon: "doc.zipper", title: "Export everything (JSON)",
-                                   subtitle: "A full backup you can import back in later", tint: Anchor.Theme.accent)
+                                   subtitle: "Plain text, without photos or voice notes. Anyone with the file can read it", tint: Anchor.Theme.accent)
+                }
+                Button {
+                    showBackupSheet = true
+                } label: {
+                    Anchor.MenuRow(icon: "lock.doc", title: "Make an encrypted backup",
+                                   subtitle: "Everything, with photos and voice notes, locked with a password you choose", tint: Anchor.Theme.accent)
                 }
                 Button {
                     showDateRangeSheet = .csv
@@ -110,7 +122,7 @@ struct DataControlView: View {
                     showImporter = true
                 } label: {
                     Anchor.MenuRow(icon: "square.and.arrow.down", title: "Import from a previous export",
-                                   subtitle: "Anchor JSON exports, including ones from earlier versions", tint: Anchor.Theme.sage)
+                                   subtitle: "Encrypted backups and JSON exports, including ones from earlier versions", tint: Anchor.Theme.sage)
                 }
                 if let importResultMessage {
                     Text(importResultMessage)
@@ -135,8 +147,43 @@ struct DataControlView: View {
         }
         .anchorSettingsStyle()
         .navigationTitle("Your data")
+        .onAppear {
+            #if DEBUG
+            BackupSelfTest.run()
+            #endif
+        }
         .sheet(item: $exportURL) { wrapped in
             ShareSheet(activityItems: [wrapped.url])
+        }
+        .sheet(isPresented: $showBackupSheet, onDismiss: {
+            if let url = readyBackup {
+                readyBackup = nil
+                exportURL = IdentifiableURL(url: url)
+            }
+        }) {
+            BackupPasswordSheet(
+                title: "Encrypted backup",
+                message: "At least 8 characters. If you lose this password, nobody can open the backup, so keep it somewhere safe.",
+                buttonTitle: "Make the backup",
+                asksTwice: true
+            ) { password in
+                await makeEncryptedBackup(password: password)
+            }
+        }
+        .sheet(item: $pendingRestore, onDismiss: {
+            if let copy = restoreCopy {
+                try? FileManager.default.removeItem(at: copy)
+                restoreCopy = nil
+            }
+        }) { pending in
+            BackupPasswordSheet(
+                title: "Open a backup",
+                message: "Type the password you chose when you made this backup.",
+                buttonTitle: "Restore",
+                asksTwice: false
+            ) { password in
+                await restoreBackup(from: pending.url, password: password)
+            }
         }
         .sheet(item: $showDateRangeSheet) { kind in
             DateRangeExportSheet(kind: kind, hasRecovery: recoveryCounters.contains { !$0.isArchived }) { range, includeRecovery in
@@ -146,7 +193,7 @@ struct DataControlView: View {
                 }
             }
         }
-        .fileImporter(isPresented: $showImporter, allowedContentTypes: [.json, .plainText]) { result in
+        .fileImporter(isPresented: $showImporter, allowedContentTypes: [.json, .plainText, .data]) { result in
             handleImport(result)
         }
         .confirmationDialog("Clear all Anchor data?", isPresented: $showClearConfirm, titleVisibility: .visible) {
@@ -172,8 +219,8 @@ struct DataControlView: View {
 
     // MARK: - Full JSON export/import
 
-    private func exportFullJSON() {
-        let export = AnchorDataExport(
+    private func buildExport() -> AnchorDataExport {
+        AnchorDataExport(
             journalEntries: journalEntries.map(JournalEntryDTO.init),
             checkIns: checkIns.map(CheckInDTO.init),
             contacts: contacts.map(TrustedContactDTO.init),
@@ -205,8 +252,72 @@ struct DataControlView: View {
             personSections: personSections.map(PersonSectionDTO.init),
             sleepEntries: sleepEntries.map(SleepEntryDTO.init)
         )
-        guard let data = try? JSONEncoder.anchorExport.encode(export) else { return }
+    }
+
+    private func exportFullJSON() {
+        guard let data = try? JSONEncoder.anchorExport.encode(buildExport()) else { return }
         writeAndShare(data: data, filename: "anchor-export-\(fileTimestamp()).json")
+    }
+
+    // MARK: - Encrypted backup
+
+    /// Makes the .anchorbackup in the background and hands it to the share
+    /// sheet once the password sheet has closed. Returns text to show if it
+    /// could not be made, and nil when it worked.
+    private func makeEncryptedBackup(password: String) async -> String? {
+        guard let json = try? JSONEncoder.anchorExport.encode(buildExport()) else {
+            return BackupError.io.message
+        }
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("anchor-backup-\(fileTimestamp()).anchorbackup")
+        let failure: String? = await Task.detached(priority: .userInitiated) { () -> String? in
+            do {
+                try BackupArchive.write(json: json, to: url, password: password)
+                return nil
+            } catch {
+                try? FileManager.default.removeItem(at: url)
+                return (error as? BackupError)?.message ?? BackupError.io.message
+            }
+        }.value
+        if failure == nil { readyBackup = url }
+        return failure
+    }
+
+    /// Opens a backup in a temporary folder first, so a wrong password or a
+    /// damaged file changes nothing. Only when the whole file has checked out
+    /// is anything added: the records, then each photo or voice note whose
+    /// name is not already on this device.
+    private func restoreBackup(from url: URL, password: String) async -> String? {
+        let staging = FileManager.default.temporaryDirectory
+            .appendingPathComponent("restore-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: staging) }
+        let opened: Result<BackupContents, BackupError> = await Task.detached(priority: .userInitiated) { () -> Result<BackupContents, BackupError> in
+            do {
+                return .success(try BackupArchive.open(url: url, password: password, staging: staging))
+            } catch let error as BackupError {
+                return .failure(error)
+            } catch {
+                return .failure(.io)
+            }
+        }.value
+        switch opened {
+        case .failure(let error):
+            return error.message
+        case .success(let contents):
+            guard let export = try? JSONDecoder.anchorExport.decode(AnchorDataExport.self, from: contents.json) else {
+                return BackupError.damaged.message
+            }
+            let restored = BackupArchive.restoreFiles(contents)
+            importExport(export, restoredFiles: restored)
+            return nil
+        }
+    }
+
+    private func isBackupFile(_ url: URL) -> Bool {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return false }
+        defer { try? handle.close() }
+        let first = try? handle.read(upToCount: BackupFormat.magic.count)
+        return first == BackupFormat.magic
     }
 
     private func handleImport(_ result: Result<URL, Error>) {
@@ -217,6 +328,20 @@ struct DataControlView: View {
         let didAccess = url.startAccessingSecurityScopedResource()
         defer { if didAccess { url.stopAccessingSecurityScopedResource() } }
 
+        if isBackupFile(url) {
+            // The chosen file is only readable while access is open, so work from a copy.
+            let copy = FileManager.default.temporaryDirectory
+                .appendingPathComponent("restore-\(UUID().uuidString).anchorbackup")
+            do {
+                try FileManager.default.copyItem(at: url, to: copy)
+                restoreCopy = copy
+                pendingRestore = IdentifiableURL(url: copy)
+            } catch {
+                importResultMessage = "Couldn't read that file."
+            }
+            return
+        }
+
         guard let data = try? Data(contentsOf: url),
               let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
               !Set(object.keys).isDisjoint(with: AnchorDataExport.knownKeys),
@@ -225,6 +350,11 @@ struct DataControlView: View {
             return
         }
 
+        importExport(export)
+    }
+
+    /// Adds everything in a decoded export that isn't here yet, and says how much.
+    private func importExport(_ export: AnchorDataExport, restoredFiles: Int = 0) {
         let existingJournalIDs = Set(journalEntries.map(\.id))
         let existingCheckInIDs = Set(checkIns.map(\.id))
         let existingContactIDs = Set(contacts.map(\.id))
@@ -373,9 +503,17 @@ struct DataControlView: View {
         RecoveryNotifications.refresh(using: modelContext)
         RoutineReminders.refresh(using: modelContext)
 
-        importResultMessage = importedCount == 0
-            ? "Nothing new to import. Everything in that file is already here."
-            : "Imported \(importedCount) item\(importedCount == 1 ? "" : "s")."
+        if importedCount == 0 && restoredFiles == 0 {
+            importResultMessage = "Nothing new to import. Everything in that file is already here."
+        } else {
+            var message = importedCount == 0
+                ? "Nothing new to import."
+                : "Imported \(importedCount) item\(importedCount == 1 ? "" : "s")."
+            if restoredFiles > 0 {
+                message += " Restored \(restoredFiles) photo or voice note file\(restoredFiles == 1 ? "" : "s")."
+            }
+            importResultMessage = message
+        }
     }
 
     // MARK: - CSV / PDF (Journal + Check-ins only — the two things worth handing a psych)
@@ -597,6 +735,447 @@ struct ShareSheet: UIViewControllerRepresentable {
         UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
     }
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
+// MARK: - Encrypted backup (.anchorbackup)
+//
+// The format is written down in docs/BACKUP.md, and scripts/anchorbackup.py
+// reads it without the app. In short: a 33 byte header, then chunks of up to
+// 1 MiB, each sealed with AES-256-GCM under a key from PBKDF2-SHA256, so a
+// large backup is never held in memory whole. Inside is the same JSON as the
+// plain export plus the photo and voice note files.
+
+enum BackupError: Error {
+    case wrongPassword, damaged, newer, notABackup, io
+
+    var message: String {
+        switch self {
+        case .wrongPassword: return "That password didn't work, or the file was changed."
+        case .damaged: return "This backup is damaged or incomplete, so nothing was restored."
+        case .newer: return "This backup was made by a newer version of Anchor. Update Anchor and try again."
+        case .notABackup: return "That file isn't an Anchor backup."
+        case .io: return "Couldn't read or write the file."
+        }
+    }
+}
+
+enum BackupFormat {
+    static let magic = Data("ANCHORBK".utf8)
+    static let version: UInt8 = 1
+    static let headerLength = 33
+    static let chunkSize = 1 << 20
+    static let sliceSize = 262_144
+    static let iterations: UInt32 = 600_000
+    static let minIterations: UInt32 = 100_000
+    static let maxIterations: UInt32 = 5_000_000
+    static let archiveMagic = Data("AP01".utf8)
+    static let maxJSON = 256 * 1024 * 1024
+    static let maxFiles: UInt64 = 1_000_000
+
+    static func bigEndian(_ value: UInt64, bytes: Int) -> Data {
+        Data((0..<bytes).map { UInt8((value >> UInt64(8 * (bytes - 1 - $0))) & 0xff) })
+    }
+
+    static func number(_ data: Data) -> UInt64 {
+        data.reduce(UInt64(0)) { ($0 << 8) | UInt64($1) }
+    }
+
+    static func deriveKey(password: String, salt: Data, iterations: UInt32) -> SymmetricKey? {
+        let secret = password.precomposedStringWithCanonicalMapping
+        let saltBytes = [UInt8](salt)
+        guard !secret.isEmpty else { return nil }
+        var derived = [UInt8](repeating: 0, count: 32)
+        let status = CCKeyDerivationPBKDF(
+            CCPBKDFAlgorithm(kCCPBKDF2),
+            secret, secret.utf8.count,
+            saltBytes, saltBytes.count,
+            CCPseudoRandomAlgorithm(kCCPRFHmacAlgSHA256), iterations,
+            &derived, derived.count
+        )
+        return status == kCCSuccess ? SymmetricKey(data: derived) : nil
+    }
+}
+
+/// Seals what it is given into chunks and writes them to a file as it goes.
+final class BackupWriter {
+    private let handle: FileHandle
+    private let key: SymmetricKey
+    private let header: Data
+    private let prefix: Data
+    private var buffer = Data()
+    private var index: UInt64 = 0
+
+    init(url: URL, password: String) throws {
+        let salt = Data((0..<16).map { _ in UInt8.random(in: 0...255) })
+        let prefix = Data((0..<4).map { _ in UInt8.random(in: 0...255) })
+        var header = BackupFormat.magic
+        header.append(BackupFormat.version)
+        header.append(BackupFormat.bigEndian(UInt64(BackupFormat.iterations), bytes: 4))
+        header.append(salt)
+        header.append(prefix)
+        guard let key = BackupFormat.deriveKey(password: password, salt: salt, iterations: BackupFormat.iterations) else {
+            throw BackupError.io
+        }
+        FileManager.default.createFile(
+            atPath: url.path, contents: nil,
+            attributes: [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication]
+        )
+        guard let handle = try? FileHandle(forWritingTo: url) else { throw BackupError.io }
+        self.handle = handle
+        self.key = key
+        self.header = header
+        self.prefix = prefix
+        try handle.write(contentsOf: header)
+    }
+
+    func write(_ data: Data) throws {
+        buffer.append(data)
+        // Keep at least one byte back, so the last chunk is never empty.
+        while buffer.count > BackupFormat.chunkSize {
+            try seal(Data(buffer.prefix(BackupFormat.chunkSize)), last: false)
+            buffer = Data(buffer.dropFirst(BackupFormat.chunkSize))
+        }
+    }
+
+    func finish() throws {
+        try seal(buffer, last: true)
+        buffer = Data()
+        try handle.close()
+    }
+
+    private func seal(_ plain: Data, last: Bool) throws {
+        let flag: UInt8 = last ? 1 : 0
+        let nonce = try AES.GCM.Nonce(data: prefix + BackupFormat.bigEndian(index, bytes: 8))
+        let box = try AES.GCM.seal(plain, using: key, nonce: nonce, authenticating: header + Data([flag]))
+        let sealed = box.ciphertext + box.tag
+        var out = Data([flag])
+        out.append(BackupFormat.bigEndian(UInt64(sealed.count), bytes: 4))
+        out.append(sealed)
+        try handle.write(contentsOf: out)
+        index += 1
+    }
+}
+
+/// Opens one chunk at a time and hands the plain bytes out in the order they
+/// were written. A wrong password shows up on the first chunk; a missing,
+/// changed, reordered or extra chunk shows up as damage.
+final class BackupReader {
+    private let handle: FileHandle
+    private let key: SymmetricKey
+    private let header: Data
+    private let prefix: Data
+    private var buffer = Data()
+    private var position = 0
+    private var index: UInt64 = 0
+    private var finished = false
+
+    init(url: URL, password: String) throws {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { throw BackupError.io }
+        guard let header = try? handle.read(upToCount: BackupFormat.headerLength),
+              header.count == BackupFormat.headerLength,
+              header.prefix(BackupFormat.magic.count) == BackupFormat.magic else {
+            throw BackupError.notABackup
+        }
+        let version = header.subdata(in: 8..<9)[0]
+        if version > BackupFormat.version { throw BackupError.newer }
+        guard version == BackupFormat.version else { throw BackupError.damaged }
+        let iterations = UInt32(BackupFormat.number(header.subdata(in: 9..<13)))
+        guard iterations >= BackupFormat.minIterations, iterations <= BackupFormat.maxIterations else {
+            throw BackupError.damaged
+        }
+        let salt = header.subdata(in: 13..<29)
+        guard let key = BackupFormat.deriveKey(password: password, salt: salt, iterations: iterations) else {
+            throw BackupError.wrongPassword
+        }
+        self.handle = handle
+        self.header = header
+        self.prefix = header.subdata(in: 29..<33)
+        self.key = key
+    }
+
+    deinit { try? handle.close() }
+
+    private var available: Int { buffer.count - position }
+
+    /// Opens the next chunk into the buffer. False when there are no more.
+    private func fill() throws -> Bool {
+        if finished { return false }
+        guard let head = try? handle.read(upToCount: 5), head.count == 5 else { throw BackupError.damaged }
+        let flag = head.subdata(in: 0..<1)[0]
+        let length = Int(BackupFormat.number(head.subdata(in: 1..<5)))
+        guard flag <= 1, length >= 16, length <= BackupFormat.chunkSize + 16 else { throw BackupError.damaged }
+        guard let body = try? handle.read(upToCount: length), body.count == length else { throw BackupError.damaged }
+        do {
+            let nonce = try AES.GCM.Nonce(data: prefix + BackupFormat.bigEndian(index, bytes: 8))
+            let box = try AES.GCM.SealedBox(nonce: nonce, ciphertext: body.prefix(length - 16), tag: body.suffix(16))
+            buffer = try AES.GCM.open(box, using: key, authenticating: header + Data([flag]))
+        } catch {
+            throw index == 0 ? BackupError.wrongPassword : BackupError.damaged
+        }
+        position = 0
+        index += 1
+        if flag == 1 {
+            finished = true
+            // Nothing may follow the last chunk.
+            if let extra = try? handle.read(upToCount: 1), !extra.isEmpty { throw BackupError.damaged }
+        }
+        return true
+    }
+
+    /// Up to `count` bytes; empty only at the very end.
+    func read(upTo count: Int) throws -> Data {
+        if available == 0 {
+            guard try fill() else { return Data() }
+        }
+        let take = min(count, available)
+        let start = buffer.startIndex + position
+        position += take
+        return Data(buffer[start..<(start + take)])
+    }
+
+    func read(exactly count: Int) throws -> Data {
+        var out = Data()
+        while out.count < count {
+            let piece = try read(upTo: count - out.count)
+            if piece.isEmpty { throw BackupError.damaged }
+            out.append(piece)
+        }
+        return out
+    }
+
+    /// Call when everything expected has been read: the last chunk must have
+    /// been seen and nothing may be left over.
+    func finish() throws {
+        if available > 0 { throw BackupError.damaged }
+        while !finished {
+            guard try fill() else { throw BackupError.damaged }
+            if available > 0 { throw BackupError.damaged }
+        }
+    }
+}
+
+struct BackupContents {
+    let json: Data
+    let staging: URL
+    let files: [(folder: UInt8, name: String)]
+}
+
+enum BackupArchive {
+    static func isSafeName(_ name: String) -> Bool {
+        !name.isEmpty && name.utf8.count <= 255 && !name.contains("/") && !name.contains("\\")
+            && !name.contains("\0") && !name.hasPrefix(".")
+    }
+
+    private static func folderURL(_ folder: UInt8) -> URL {
+        folder == 0 ? JournalAttachmentStore.folderURL : VoiceNoteStore.folder
+    }
+
+    /// Writes the JSON and then every photo and voice note file, one slice at a time.
+    static func write(json: Data, to url: URL, password: String) throws {
+        guard json.count <= BackupFormat.maxJSON else { throw BackupError.io }
+        let writer = try BackupWriter(url: url, password: password)
+        let manager = FileManager.default
+        var entries: [(folder: UInt8, url: URL, name: String, size: UInt64)] = []
+        let folders: [(UInt8, URL)] = [(0, JournalAttachmentStore.folderURL), (1, VoiceNoteStore.folder)]
+        for (folder, directory) in folders {
+            let urls = (try? manager.contentsOfDirectory(
+                at: directory, includingPropertiesForKeys: [.fileSizeKey, .isRegularFileKey]
+            )) ?? []
+            for fileURL in urls {
+                let values = try? fileURL.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey])
+                let name = fileURL.lastPathComponent
+                guard values?.isRegularFile == true, let size = values?.fileSize, isSafeName(name) else { continue }
+                entries.append((folder, fileURL, name, UInt64(size)))
+            }
+        }
+        try writer.write(BackupFormat.archiveMagic)
+        try writer.write(BackupFormat.bigEndian(UInt64(json.count), bytes: 4))
+        try writer.write(json)
+        try writer.write(BackupFormat.bigEndian(UInt64(entries.count), bytes: 4))
+        for entry in entries {
+            let nameData = Data(entry.name.utf8)
+            var head = Data([entry.folder])
+            head.append(BackupFormat.bigEndian(UInt64(nameData.count), bytes: 2))
+            head.append(nameData)
+            head.append(BackupFormat.bigEndian(entry.size, bytes: 8))
+            try writer.write(head)
+            let input = try FileHandle(forReadingFrom: entry.url)
+            defer { try? input.close() }
+            var remaining = entry.size
+            while remaining > 0 {
+                let want = Int(min(remaining, UInt64(BackupFormat.sliceSize)))
+                guard let piece = try input.read(upToCount: want), !piece.isEmpty else { throw BackupError.io }
+                try writer.write(piece)
+                remaining -= UInt64(piece.count)
+            }
+        }
+        try writer.finish()
+    }
+
+    /// Reads and checks the whole file, putting the photos and voice notes in a
+    /// temporary folder. Nothing in the app changes here.
+    static func open(url: URL, password: String, staging: URL) throws -> BackupContents {
+        let reader = try BackupReader(url: url, password: password)
+        guard try reader.read(exactly: 4) == BackupFormat.archiveMagic else { throw BackupError.damaged }
+        let jsonLength = Int(BackupFormat.number(try reader.read(exactly: 4)))
+        guard jsonLength <= BackupFormat.maxJSON else { throw BackupError.damaged }
+        let json = try reader.read(exactly: jsonLength)
+        let count = BackupFormat.number(try reader.read(exactly: 4))
+        guard count <= BackupFormat.maxFiles else { throw BackupError.damaged }
+
+        let manager = FileManager.default
+        var seen = Set<String>()
+        var files: [(folder: UInt8, name: String)] = []
+        for _ in 0..<count {
+            let folder = try reader.read(exactly: 1).subdata(in: 0..<1)[0]
+            let nameLength = Int(BackupFormat.number(try reader.read(exactly: 2)))
+            let nameData = try reader.read(exactly: nameLength)
+            guard folder <= 1, let name = String(data: nameData, encoding: .utf8), isSafeName(name),
+                  seen.insert("\(folder)/\(name)").inserted else { throw BackupError.damaged }
+            var remaining = BackupFormat.number(try reader.read(exactly: 8))
+
+            let directory = staging.appendingPathComponent("\(folder)", isDirectory: true)
+            try? manager.createDirectory(at: directory, withIntermediateDirectories: true)
+            let target = directory.appendingPathComponent(name)
+            guard manager.createFile(atPath: target.path, contents: nil),
+                  let output = try? FileHandle(forWritingTo: target) else { throw BackupError.io }
+            defer { try? output.close() }
+            while remaining > 0 {
+                let piece = try reader.read(upTo: Int(min(remaining, UInt64(BackupFormat.sliceSize))))
+                guard !piece.isEmpty else { throw BackupError.damaged }
+                try output.write(contentsOf: piece)
+                remaining -= UInt64(piece.count)
+            }
+            files.append((folder, name))
+        }
+        try reader.finish()
+        return BackupContents(json: json, staging: staging, files: files)
+    }
+
+    /// Moves each checked file into place unless that name is already there.
+    /// Returns how many were added.
+    static func restoreFiles(_ contents: BackupContents) -> Int {
+        let manager = FileManager.default
+        var added = 0
+        for file in contents.files {
+            let source = contents.staging
+                .appendingPathComponent("\(file.folder)", isDirectory: true)
+                .appendingPathComponent(file.name)
+            let destination = folderURL(file.folder).appendingPathComponent(file.name)
+            if manager.fileExists(atPath: destination.path) { continue }
+            if (try? manager.moveItem(at: source, to: destination)) != nil { added += 1 }
+        }
+        return added
+    }
+}
+
+#if DEBUG
+/// Opens a small backup made by scripts/anchorbackup.py, so a debug build proves
+/// this code and the reference tool agree on the format. It stops the app with a
+/// message if they do not. Only compiled into debug builds.
+enum BackupSelfTest {
+    private static let vector = "414e43484f52424b01000186a0000102030405060708090a0b0c0d0e0f01020304010000003193396be10fb430f75e7bcd6757dd024c83df701cb5a5dde00af6f6be949da5781c2f2f0aae4ba0c18d63c33281fa59cd13"
+
+    private static var hasRun = false
+
+    static func run() {
+        if hasRun { return }
+        hasRun = true
+        let bytes = stride(from: 0, to: vector.count, by: 2).compactMap { offset -> UInt8? in
+            let start = vector.index(vector.startIndex, offsetBy: offset)
+            return UInt8(vector[start..<vector.index(start, offsetBy: 2)], radix: 16)
+        }
+        let id = UUID().uuidString
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("selftest-\(id).anchorbackup")
+        let staging = FileManager.default.temporaryDirectory.appendingPathComponent("selftest-\(id)", isDirectory: true)
+        defer {
+            try? FileManager.default.removeItem(at: file)
+            try? FileManager.default.removeItem(at: staging)
+        }
+        do {
+            try Data(bytes).write(to: file)
+            let contents = try BackupArchive.open(url: file, password: "anchor test password", staging: staging)
+            let voice = staging.appendingPathComponent("1", isDirectory: true).appendingPathComponent("v.m4a")
+            let good = contents.json == Data("{}".utf8) && contents.files.count == 1
+                && contents.files[0].folder == 1 && contents.files[0].name == "v.m4a"
+                && (try? Data(contentsOf: voice)) == Data("abc".utf8)
+            if !good { fatalError("Backup self-test: the file opened but its contents are wrong.") }
+            do {
+                _ = try BackupArchive.open(url: file, password: "not the password", staging: staging.appendingPathComponent("x"))
+                fatalError("Backup self-test: a wrong password was accepted.")
+            } catch BackupError.wrongPassword {
+            }
+        } catch {
+            fatalError("Backup self-test failed: \(error)")
+        }
+    }
+}
+#endif
+
+/// Asks for a password, either to make a backup (twice, at least 8 characters)
+/// or to open one. The action returns text to show when it fails, or nil when
+/// it worked and the sheet can close.
+private struct BackupPasswordSheet: View {
+    let title: String
+    let message: String
+    let buttonTitle: String
+    let asksTwice: Bool
+    let action: (String) async -> String?
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var password = ""
+    @State private var again = ""
+    @State private var working = false
+    @State private var errorText: String?
+
+    private var canGo: Bool {
+        guard !working else { return false }
+        return asksTwice ? (password.count >= 8 && password == again) : !password.isEmpty
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    SecureField("Password", text: $password)
+                        .textContentType(.password)
+                    if asksTwice {
+                        SecureField("Type it again", text: $again)
+                            .textContentType(.password)
+                    }
+                } footer: {
+                    Text(message)
+                }
+                if let errorText {
+                    Section {
+                        Text(errorText).foregroundStyle(.red)
+                    }
+                }
+                Section {
+                    Button {
+                        working = true
+                        errorText = nil
+                        Task {
+                            let failure = await action(password)
+                            working = false
+                            if let failure { errorText = failure } else { dismiss() }
+                        }
+                    } label: {
+                        Text(working ? "Working..." : buttonTitle)
+                    }
+                    .disabled(!canGo)
+                }
+            }
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }.disabled(working)
+                }
+            }
+            .interactiveDismissDisabled(working)
+        }
+    }
 }
 
 // MARK: - Codable DTOs for full JSON export/import
