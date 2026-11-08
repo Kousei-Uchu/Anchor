@@ -392,7 +392,7 @@ struct BridgeExportView: View {
                 } header: {
                     Text("What it holds")
                 } footer: {
-                    Text("The web page opens in any browser, with search, a timeline and a button to print or save a PDF or download a CSV. It works on its own, and nothing in it is sent anywhere. Some mail apps block web page attachments, so a PDF is the safer thing to send.")
+                    Text("The web page opens in any browser, with search, a timeline and buttons to print or save a PDF, or to download a CSV or a Word file. It works on its own, and nothing in it is sent anywhere. Some mail apps block web page attachments, so a PDF is the safer thing to send.")
                 }
             }
             .navigationTitle("Export for someone")
@@ -642,7 +642,7 @@ enum BridgeExporter {
 // MARK: - The web page
 
 /// A single .html file with the document inside it and a small viewer: search,
-/// a timeline, charts of check-ins, a print stylesheet and a CSV button. It has
+/// a timeline, charts of check-ins, a print stylesheet and buttons for CSV and Word. It has
 /// no network access of its own (a strict content security policy pins the one
 /// script by its hash) and everything is drawn with textContent, so what was
 /// written can never run as code. With a password the document is AES-256-GCM
@@ -963,16 +963,145 @@ button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
       });
     });
     var text = "\uFEFF" + rows.map(function (r) { return r.map(csvCell).join(","); }).join("\r\n");
-    var blob = new Blob([text], { type: "text/csv;charset=utf-8" });
+    saveBlob(new Blob([text], { type: "text/csv;charset=utf-8" }), ".csv");
+  }
+  function saveBlob(blob, ext) {
     var url = URL.createObjectURL(blob);
     var a = document.createElement("a");
     a.href = url;
-    a.download = (doc.fileBase || "anchor-export") + ".csv";
+    a.download = (doc.fileBase || "anchor-export") + ext;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
   }
+
+  // ---------- Word (.docx), made here with no library ----------
+  var crcTable = null;
+  function crc32(bytes) {
+    if (!crcTable) {
+      crcTable = new Uint32Array(256);
+      for (var n = 0; n < 256; n++) {
+        var c = n;
+        for (var k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+        crcTable[n] = c >>> 0;
+      }
+    }
+    var crc = 0xFFFFFFFF;
+    for (var i = 0; i < bytes.length; i++) crc = crcTable[(crc ^ bytes[i]) & 0xFF] ^ (crc >>> 8);
+    return (crc ^ 0xFFFFFFFF) >>> 0;
+  }
+  function u16(v) { return [v & 255, (v >>> 8) & 255]; }
+  function u32(v) { return [v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255]; }
+  function joinBytes(parts) {
+    var total = 0;
+    parts.forEach(function (p) { total += p.length; });
+    var out = new Uint8Array(total), at = 0;
+    parts.forEach(function (p) { out.set(p, at); at += p.length; });
+    return out;
+  }
+  // A zip with every file stored as it is. A .docx opens fine this way.
+  function zipStored(files) {
+    var enc = new TextEncoder();
+    var now = new Date();
+    var year = Math.max(1980, now.getFullYear());
+    var dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+    var dosDate = ((year - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+    var body = [], central = [], offset = 0;
+    files.forEach(function (f) {
+      var name = enc.encode(f.name);
+      var data = enc.encode(f.text);
+      var crc = crc32(data);
+      var head = new Uint8Array([].concat(
+        u32(0x04034b50), u16(20), u16(0x0800), u16(0), u16(dosTime), u16(dosDate),
+        u32(crc), u32(data.length), u32(data.length), u16(name.length), u16(0)));
+      body.push(head, name, data);
+      central.push(new Uint8Array([].concat(
+        u32(0x02014b50), u16(20), u16(20), u16(0x0800), u16(0), u16(dosTime), u16(dosDate),
+        u32(crc), u32(data.length), u32(data.length), u16(name.length),
+        u16(0), u16(0), u16(0), u16(0), u32(0), u32(offset))), name);
+      offset += head.length + name.length + data.length;
+    });
+    var centralBytes = joinBytes(central);
+    var end = new Uint8Array([].concat(
+      u32(0x06054b50), u16(0), u16(0), u16(files.length), u16(files.length),
+      u32(centralBytes.length), u32(offset), u16(0)));
+    return joinBytes(body.concat([centralBytes, end]));
+  }
+
+  function xmlText(s) {
+    return String(s === undefined || s === null ? "" : s)
+      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g, "")
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  function wPara(style, text, before) {
+    var props = "";
+    if (style || before) {
+      props = "<w:pPr>" + (style ? '<w:pStyle w:val="' + style + '"/>' : "") +
+        (before ? '<w:spacing w:before="' + before + '"/>' : "") + "</w:pPr>";
+    }
+    var runs = String(text === undefined || text === null ? "" : text).split(/\r\n|\r|\n/).map(function (part, i) {
+      return (i ? "<w:r><w:br/></w:r>" : "") + '<w:r><w:t xml:space="preserve">' + xmlText(part) + "</w:t></w:r>";
+    }).join("");
+    return "<w:p>" + props + runs + "</w:p>";
+  }
+  function wordParts() {
+    var parts = [wPara("Title", doc.title)];
+    parts.push(wPara("Small", "Prepared " + doc.created + (doc.range ? " | " + doc.range : "")));
+    if (doc.note) parts.push(wPara("Note", doc.note, 160));
+    doc.sections.forEach(function (s) {
+      if (!s.entries.length) return;
+      parts.push(wPara("Heading1", s.title + " (" + s.entries.length + ")"));
+      s.entries.forEach(function (e) {
+        var first = true;
+        function next(style, text) {
+          parts.push(wPara(style, text, first ? 200 : 0));
+          first = false;
+        }
+        if (e.dateText) next("Small", e.dateText);
+        if (e.heading) next("Heading2", e.heading);
+        e.lines.forEach(function (line) { next("", line); });
+        if (e.footnote) next("Small", e.footnote);
+        if (first) next("", "");
+      });
+    });
+    return parts;
+  }
+  function wordFile() {
+    var usLetter = /-(US|CA|MX|PH)$/i.test(navigator.language || "");
+    var page = usLetter ? 'w:w="12240" w:h="15840"' : 'w:w="11906" w:h="16838"';
+    var ns = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"';
+    var head = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+    var documentXml = head + "<w:document " + ns + "><w:body>" + wordParts().join("") +
+      "<w:sectPr><w:pgSz " + page + '/><w:pgMar w:top="1300" w:right="1300" w:bottom="1300" w:left="1300" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:body></w:document>';
+    function style(id, name, based, ppr, rpr) {
+      return '<w:style w:type="paragraph" w:styleId="' + id + '"><w:name w:val="' + name + '"/>' +
+        (based ? '<w:basedOn w:val="Normal"/>' : "") + "<w:qFormat/>" +
+        (ppr ? "<w:pPr>" + ppr + "</w:pPr>" : "") + (rpr ? "<w:rPr>" + rpr + "</w:rPr>" : "") + "</w:style>";
+    }
+    var stylesXml = head + "<w:styles " + ns + '><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:eastAsia="Calibri" w:cs="Calibri"/><w:sz w:val="22"/><w:szCs w:val="22"/><w:lang w:val="en-AU"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="100" w:line="264" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>' +
+      '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>' +
+      style("Title", "Title", true, '<w:spacing w:after="60"/>', '<w:b/><w:sz w:val="40"/><w:szCs w:val="40"/>') +
+      style("Heading1", "heading 1", true, '<w:keepNext/><w:pBdr><w:bottom w:val="single" w:sz="4" w:space="3" w:color="BBBBBB"/></w:pBdr><w:spacing w:before="360" w:after="120"/><w:outlineLvl w:val="0"/>', '<w:b/><w:sz w:val="30"/><w:szCs w:val="30"/>') +
+      style("Heading2", "heading 2", true, '<w:keepNext/><w:spacing w:after="40"/><w:outlineLvl w:val="1"/>', '<w:b/><w:sz w:val="24"/><w:szCs w:val="24"/>') +
+      style("Small", "Small", true, '<w:spacing w:after="40"/>', '<w:color w:val="6F6760"/><w:sz w:val="18"/><w:szCs w:val="18"/>') +
+      style("Note", "Note", true, '<w:pBdr><w:left w:val="single" w:sz="18" w:space="8" w:color="B5603C"/></w:pBdr><w:ind w:left="200"/><w:spacing w:after="160"/>', "") +
+      "</w:styles>";
+    var types = head + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>';
+    var rels = head + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>';
+    var docRels = head + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>';
+    return zipStored([
+      { name: "[Content_Types].xml", text: types },
+      { name: "_rels/.rels", text: rels },
+      { name: "word/document.xml", text: documentXml },
+      { name: "word/_rels/document.xml.rels", text: docRels },
+      { name: "word/styles.xml", text: stylesXml }
+    ]);
+  }
+  function downloadWord() {
+    saveBlob(new Blob([wordFile()], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" }), ".docx");
+  }
+
 
   function render() {
     app.textContent = "";
@@ -1008,6 +1137,10 @@ button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
     csv.type = "button";
     csv.addEventListener("click", downloadCSV);
     bar.appendChild(csv);
+    var word = el("button", null, "Download Word file");
+    word.type = "button";
+    word.addEventListener("click", downloadWord);
+    bar.appendChild(word);
     app.appendChild(bar);
 
     var body = el("main");
