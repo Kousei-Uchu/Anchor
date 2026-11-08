@@ -59,7 +59,10 @@ final class AppLock: ObservableObject {
     /// set up at all. Used both to decide whether to show the "Require
     /// Face ID" toggle as meaningful, and to avoid locking someone out
     /// with no way back in.
-    func canAuthenticate() -> Bool {
+    ///
+    /// Touches no state of the lock, only a fresh `LAContext`, so it can be asked from anywhere,
+    /// including the non-isolated `ShowcaseMode`.
+    nonisolated func canAuthenticate() -> Bool {
         var error: NSError?
         return LAContext().canEvaluatePolicy(.deviceOwnerAuthentication, error: &error)
     }
