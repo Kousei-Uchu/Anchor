@@ -22,6 +22,8 @@ enum RecoverySettings {
     static let reviewHour = "recovery.reviewReminder.hour"
     static let reviewMinute = "recovery.reviewReminder.minute"
     static let milestonesEnabled = "recovery.milestoneReminders.enabled"
+    /// Off until switched on: the longest run, and anything that sets the current run beside it.
+    static let showLongest = "recovery.showLongest"
 }
 
 // MARK: - Reminders

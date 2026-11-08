@@ -475,8 +475,40 @@ private struct RecoveryTotalPage: View {
 
 private struct RecoveryRecordPage: View {
     let counter: RecoveryCounter
+    @AppStorage(RecoverySettings.showLongest) private var showLongest = false
 
     var body: some View {
+        if showLongest { comparison } else { plain }
+    }
+
+    /// The default: where this run began and the history, with nothing set against anything else.
+    private var plain: some View {
+        SummaryPage(title: "Current run") {
+            VStack(spacing: 10) {
+                Text("A run in progress")
+                    .font(.system(.title, design: .rounded).weight(.bold))
+                HStack(spacing: 4) {
+                    Text("Your longest run is hidden.")
+                    Button("Show it") { showLongest = true }
+                }
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                NavigationLink { RecoveryStreaksView(counter: counter) } label: {
+                    Text("View streak history").font(.footnote)
+                }
+                .tint(Anchor.Theme.accent)
+                Divider()
+                HStack {
+                    Text("Current start date").font(.subheadline)
+                    Spacer()
+                    Text(counter.currentRun?.start.formatted(.dateTime.day().month().year()) ?? "-")
+                        .font(.subheadline.weight(.semibold))
+                }
+            }
+        }
+    }
+
+    @ViewBuilder private var comparison: some View {
         let timeline = counter.timeline()
         let current = counter.currentRunDays()
         let best = max(timeline.longestStreakDays, 1)

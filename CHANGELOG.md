@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 44b: a counter's longest run and the Personal best bar are hidden until you switch on Show my longest run (Settings, Recovery); until then its Streak record page is a plain Current run page with the start date and the history.
 - Patch 45a: reminders for your sessions, off until you switch them on in Settings (Session reminders) or from the line under your next session: one the evening before at 6 pm and one a couple of hours ahead. The lock screen only says something you planned is coming up, never who it is with or that it is a session, and a session you move or cancel takes its reminders with it.
 - Patch 44a: an appointment the next morning now reads Tomorrow all day instead of Today, the Previous and Next month buttons on the Appointments and Recovery calendars are named for VoiceOver, each day on the Recovery calendar says whether it was counted or you started again, and the calendar no longer says sober, so a counter can be about anything.
 - Patch 43b: the ? button now explains itself on the Journal page you write on and on Journaling Suggestions, and Settings has one too, with About Anchor and Customise widgets. The tour ends with a short page on Settings. The Journal page has Help for this page in its three-dot menu.
