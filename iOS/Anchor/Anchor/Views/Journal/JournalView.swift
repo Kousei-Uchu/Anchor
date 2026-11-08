@@ -377,11 +377,11 @@ struct JournalView: View {
     }
 
     /// Check-ins get a lighter-weight row than journal entries: a small
-    /// mood-colored dot on the spine and a compact label. Tapping opens
-    /// CheckInDetailSheet with the full five-metric breakdown.
+    /// dot on the spine and a plain label. Nothing is rated or coloured by how
+    /// the sliders were set. Tapping opens CheckInDetailSheet with the five sliders.
     private func checkInRow(_ checkIn: CheckIn) -> some View {
         HStack(alignment: .top, spacing: 0) {
-            timelineConnector(color: moodColor(for: checkIn), checkIn: true)
+            timelineConnector(color: Anchor.Theme.accent, checkIn: true)
 
             Button {
                 checkInToView = checkIn
@@ -391,9 +391,9 @@ struct JournalView: View {
                         .font(.caption2)
                         .foregroundStyle(.secondary)
 
-                    Text(moodLabel(for: checkIn))
+                    Text("Check-in")
                         .font(.system(.caption, design: .rounded).weight(.medium))
-                        .foregroundStyle(moodColor(for: checkIn))
+                        .foregroundStyle(Anchor.Theme.accent)
 
                     Image(systemName: "chevron.right")
                         .font(.caption2.weight(.semibold))
@@ -466,38 +466,6 @@ struct JournalView: View {
                 .offset(x: 10, y: 10)
         }
         .padding(.trailing, 10)
-    }
-
-    // MARK: - Score helpers
-
-    /// 0...1 "how good" score, in the same "more = better" direction
-    /// established in the check-in redesign (physicalExhaustion/
-    /// cognitiveBurnout/mentalLoad are inverted before averaging).
-    private func normalizedScore(for checkIn: CheckIn) -> Double {
-        let better =
-            (1 - checkIn.physicalExhaustion) +
-            (1 - checkIn.cognitiveBurnout) +
-            (1 - checkIn.mentalLoad) +
-            checkIn.physicalEnergy +
-            checkIn.socialEnergy
-
-        return better / 5
-    }
-
-    private func moodColor(for checkIn: CheckIn) -> Color {
-        switch normalizedScore(for: checkIn) {
-        case ..<0.35: return .red.opacity(0.8)
-        case ..<0.65: return .orange.opacity(0.8)
-        default: return Anchor.Theme.accent
-        }
-    }
-
-    private func moodLabel(for checkIn: CheckIn) -> String {
-        switch normalizedScore(for: checkIn) {
-        case ..<0.35: return "Rough check-in"
-        case ..<0.65: return "Mixed check-in"
-        default: return "Good check-in"
-        }
     }
 
     private var emptyMessage: String {
@@ -823,11 +791,10 @@ struct JournalYearView: View {
     }
 }
 
-/// Detail sheet shown when a check-in row is tapped. Breaks the single
-/// rolled-up score back out into its five source metrics so the user can
-/// see what actually drove it, each shown as a labeled bar in the same
-/// "more = better" direction used everywhere else (the three burden
-/// metrics are inverted before display, matching moodColor/moodLabel).
+/// Detail sheet shown when a check-in row is tapped. Shows the five sliders
+/// as they were set, each as a labeled bar in the same "more = better"
+/// direction (the three burden metrics are inverted before display). There
+/// is no total and no rating.
 private struct CheckInDetailSheet: View {
     let checkIn: CheckIn
     @Environment(\.dismiss) private var dismiss
