@@ -400,6 +400,7 @@ struct BridgeExportView: View {
             }
             .navigationTitle("Export for someone")
             .navigationBarTitleDisplayMode(.inline)
+            .guideButton("bridge.export", tab: .bridge)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { dismiss() }

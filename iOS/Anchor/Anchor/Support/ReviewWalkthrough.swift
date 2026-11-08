@@ -236,7 +236,9 @@ enum ReviewStops {
         ("RV3", "Appointments, calmer", "Two cards instead of four: Coming up, each with how far away it is, then the calendar. Earlier sessions fold away, Remove all is in the three dots menu, the usual gap moved into the schedule sheet and the person's details, and a new session starts at the time of the last one.",
          "Open Appointments. Look at Coming up, then Show all, then open Earlier sessions. Tap the plus: the time should be that of the last session. Turn Repeat on and change the gap. Open the person button, Details, and find Usual gap. Check the three dots menu.", 1, .appointments),
         ("RV9", "Apple Health sleep, tidier", "Both halves are the same: a switch with one short line under it, and the buttons that belong to it only when it is on. The long paragraphs moved into the Sleep guide, and the Connect button became a switch.",
-         "Open Sleep and scroll to Apple Health. Switch Bring in nights from Apple Health on and off, and Save nights I type on and off. In a review run Health is never touched, so the switches go back to off; check them on a normal build.", 1, .sleep)
+         "Open Sleep and scroll to Apple Health. Switch Bring in nights from Apple Health on and off, and Save nights I type on and off. In a review run Health is never touched, so the switches go back to off; check them on a normal build.", 1, .sleep),
+        ("RV8", "The ? guides, less crowded", "Each guide shows its ideas one to a line, four at first with Show more for the rest, and the extras wait behind Show more on longer ones. The five tab guides are short overviews. The tour now meets all five tabs first, then each tab's screens. Export for someone has its own ? .",
+         "Open the ? on Now, Plan and Bridge, then on Appointments and Sleep and tap Show more. Take the tour from Settings and check the first five pages are the tabs. Open Export for someone from the share button on Bridge and tap its ?.", 2, nil)
     ])
 }
 

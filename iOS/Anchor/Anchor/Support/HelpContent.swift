@@ -54,18 +54,20 @@ enum HelpTopic: String, CaseIterable, Identifiable {
         }
     }
 
+    /// Written as short paragraphs, one idea each, separated by a blank line. The detail for each
+    /// screen is in that screen's own entry, so this stays an overview.
     var explanation: String {
         switch self {
         case .now:
-            return "Your quick-access dashboard. Crisis numbers, grounding tools, your tasks, quick contacts, check-ins, and today's affirmation all live here. If you've added a Recovery counter, it sits here too, with a shortcut to ride out an urge. Everything on this screen is meant to be used in the moment, not configured. When you need something right now, this is the tab."
+            return "Now is the quick home screen. It is for the moment you are in, so nothing here needs setting up.\n\nThe crisis numbers for your region, your grounding tools, quick contacts, tasks, check-ins and today's affirmation are all here.\n\nIf you keep a Recovery counter, it sits here too, with a shortcut for riding out an urge.\n\nSet things up ahead of time in Plan. Come to Now when you need something straight away."
         case .plan:
-            return "Where everything gets set up ahead of time. Contacts, your safety plan (in sections you can rename, reorder, add, hide and delete, with one of them used for reminder quotes), trigger windows, appointments (you can keep more than one provider, each with their own sessions, notes and a name to use on exports), your task list (a task can have steps, can wait on another task, can be moved to tomorrow or set aside for now, and can say how much energy it needs, so a low day can show only the small ones, and can be worked on with the focus timer: hold a task or step, or use the menu on the Tasks screen, and the length of focus and break is yours to set, with an optional alert and lock screen timer that never show the task; Plan my day, in the same menu, lets you pick a few tasks or steps, put them in order and walk through them one at a time; Quick list, also in that menu, is a one-off checklist: type or paste one item per line, tick them off, and it goes to an Archive by itself when the last one is ticked, or you can move what is left into your tasks), and the presets Now pulls from (grounding tools, decision presets, de-escalation scripts, affirmations; Presets also holds item lists, packing-style checklists with headings where an amount can follow a number you set, like one T-shirt for each day, and routines, which are lists of steps you run one at a time, each with an optional rough time and an optional reminder on the days you pick, off until you switch it on) are all edited here, and nothing else: switches, reminders and your data live behind the gear at the top, in Settings. In Settings, Your data can make an encrypted backup, locked with a password you choose, that holds photos and voice notes too; the same Import button opens it. Your data has Look at what's stored, which asks for your lock again and then shows everything Anchor holds, kind by kind, read only, with a switch that blurs what is written. Come here when you're calm and have a moment, not mid-crisis. The Customise button under the widgets lets you drag them into a new order, hide the ones you don't use and add them back, and make some half-width widgets full width. Sleep is a quiet journal of your nights, added hidden: turn it on under Customise and a night holds when you went to bed and woke, how long you slept (worked out from the times, or typed if you do not know them), how it felt in three words you can rename, and a note. It has no score, no target hours and no streak, and it is only a record for you to look back over. Settings has switches, all off to begin with, for a Last night card on Now in the morning, a small row for each night in the Journal, one more optional question in a check-in, and a morning reminder at a time you pick whose wording never mentions sleep. In a check-in the answer is kept as the note on last night, and the question is not asked when last night is already written down. At the bottom of the Sleep screen, Apple Health can be connected so the nights it already has are brought in, one summary per night, the last 30 days at first and then whatever is new. Anchor only reads sleep, only after you tap Connect, and a night you typed is never replaced. If you change an imported night it becomes yours, and Remove imported sleep takes out the nights that came from Apple Health and stops bringing in more, without touching anything in Health. A second switch there, off to begin with, saves the nights you type to Apple Health when they have both a bed time and a wake time, marked as coming from Anchor. A night Health already has from somewhere else is left alone, deleting a night here removes the one Anchor saved, and Remove what Anchor saved takes back all of it."
+            return "Plan is where you set things up ahead of time, so they are ready when you need them. Come here when you are calm, not in the middle of a hard moment.\n\nContacts, your safety plan, trigger windows and appointments are here, each with its own page.\n\nYour tasks are here too, with steps, a focus timer and Plan my day. Grounding tools, decision presets, routines, lists, de-escalation scripts and affirmations are what Now draws on.\n\nSleep is a quiet record of your nights. It is off until you add it under Customise, and it has no score and no target.\n\nCustomise, under the widgets, lets you reorder and hide them. The gear at the top opens Settings, where the switches, reminders and Your data are.\n\nTap the question mark on any of these screens to read about it."
         case .journal:
-            return "A timeline of what you've written, with your check-ins on the same line. Each check-in shows its five sliders as small bars, exactly where you left them, with no numbers and nothing worked out from them; tap one to see each slider with its two ends named. Switch to Month for a calendar and tap a day to open it, or to Year to see the whole year at a glance and tap a month. Tap the pencil to write. While you write, the tools at the bottom give you Journaling Suggestions (calendar events, photos and music from that day), photos, drawings, a prompt, and formatting. Search finds anything you've written. The page is laid out like a journal: the date at the top, your writing in paragraphs, and photos, events, songs and suggestions as their own blocks that you can move or remove from the small menu on each. One row of tools sits at the bottom. Bookmark an entry from the menu at the top of the page, or press and hold it in the list, and use Bookmarked only in the menu to see just those. Press and hold an entry, or use the menu at the top of the page, to copy its first line into Things to raise in Bridge. If you use the Sleep journal, Settings can show each night as a small row on its morning here and as a moon mark on the month view. Tapping the row opens the night, and a note on a night can be copied into your journal as an ordinary entry."
+            return "The Journal is a timeline of what you have written, with your check-ins on the same line. Each check-in shows its five sliders as small bars, exactly where you left them. Nothing is scored.\n\nTap the pencil to write. The tools at the bottom add Journaling Suggestions, photos, drawings, a prompt and formatting.\n\nSwitch to Month for a calendar or Year for the whole year, and use search to find anything you have written.\n\nBookmark an entry from its menu or by pressing and holding it, then choose Bookmarked only to see just those. Press and hold also copies its first line into Things to raise in Bridge.\n\nIf you keep a sleep journal, Settings can show each night as a small row here."
         case .bridge:
-            return "Everything that makes talking to your psych easier. Drafting what you want to say (an item can be marked as a question, with room to write the answer once you have asked), prepping for a session, notes afterward, optional cognitive tools (reframing, feedback-loop diagrams). If you keep a Recovery counter, session prep can show how it's gone since your last session, and you choose whether to add that to your notes. Session prep also counts the journal entries and check-ins since then, and lets you pick entries to bring (check-ins are only ever counted, never read out). Under those, Waiting to be raised lists what is still open in Things to raise for that provider and for anyone, and you choose whether to add it to your notes. To bring is a short list of your own for that one session: type what you want to have with you, tick it off, and remove what you no longer need. Nothing is suggested or counted, and the next session starts with an empty list. If you keep a sleep journal, a card shows how many nights are written down since then, the shortest and longest time asleep and your usual bedtime, and you choose whether to add that to your notes. The Customise button under the widgets lets you drag them into a new order, hide the ones you don't use and add them back, and make some half-width widgets full width. A feedback-loop diagram starts as a loop: write what happens first, what that leads to, and so on, and the last step leads back to the first. Mark each link as more leading to more or more leading to less, and Anchor says in plain words whether the loop tends to keep itself going or to settle back. A free map is there too, from the plus menu: drag the background to move around, pinch to zoom, drag items to place them, switch to Link and drag from one item onto another to connect them, and use the pencil on an item for its words, colour and links. Undo and Redo are at the bottom. A loop can be opened as a free map from the menu on its page. The plus menu also has From a template, which makes a copy you can rewrite. The menu on a diagram's page can share it as a picture or a PDF, with the written reading switched on or off. Personal goals are yours alone: write what you want and why, say where it is, and add short dated notes along the way. Nothing is scored. Each provider you add has their own sessions, prep and after-session notes, and a row of names at the top switches between them. The share button at the top of Bridge (and the one in Things to raise) opens Export for someone: write who it is for and an optional note for the top, then choose what goes in. Only Things to raise is on to begin with, every time; your journal, check-ins, sleep and a Recovery summary are left out unless you switch them on, and you can limit it to a date range or tick individual items. A count and a preview show what it holds before anything is made, and the name is in the file name and at the top. You can make a PDF, or a web page: one file that opens in any browser with search, a timeline, charts of check-ins and buttons to print, or to download a CSV or a Word file, and that can have a password. Anchor does not keep the password and cannot get it back, so tell the person it another way. Some mail apps block web pages, so a PDF is the safer thing to send. Choosing a provider fills in their name for exports. With two or more providers, each item in Things to raise can be for anyone or for one of them, which you choose in the item. The filter button at the top then shows what is for one person and for anyone, and exporting for that person leaves out what was meant for someone else. If you remove a provider, their items stay and become for anyone."
+            return "Bridge is everything that makes talking to your psych easier.\n\nThings to raise is a list of what you want to bring up. Session prep gathers it for the next session, and Post-session notes are for afterwards. Each person you see has their own.\n\nPersonal goals and Feedback-loop diagrams are optional tools for thinking things through. Nothing in them is scored.\n\nThe share button opens Export for someone. You choose what goes in, and only Things to raise is on to begin with, every time.\n\nTap the question mark on any of these screens to read about it."
         case .thread:
-            return "Where you keep track of the people who matter. A message log tied to real contacts: write to someone in one tap, send it through Messages or Discord or just keep it, add a voice note, and look back over what you've told each person, short message starters of your own (from the speech bubble in the log, or while writing) that you can tap to begin a message and also use from Quick contact on Now, a support calendar you can share with someone outside the app, notes to your future self (sealed until a date, or a letter that opens when you choose), a private space for bigger things you might never send to anyone, and a Boundaries list: what you would like people to know, what helps and what does not, in sections you can rename, reorder, hide and mark as shareable, so that Share sends only those. People gives each of your contacts a page of their own: sections you write and arrange yourself (a note, what helps, things you have told them, anything else), the last few messages in your log with them, and the support calendar days you have shared with them. Nothing on a page is counted or scored, and nothing is sent from it. Deleting a contact deletes their page. The Customise button under the widgets lets you drag them into a new order, hide the ones you don't use and add them back, and make some half-width widgets full width."
+            return "Thread is for the people who matter to you.\n\nThe Message log is a record of what you have written to each of your contacts. You can send a message through Messages or Discord, add a voice note, or just keep it.\n\nMessage starters, People, the Support calendar, notes to your future self, things you have not said and a Boundaries list are all here, and each is yours to arrange. Nothing is scored, and nothing is sent unless you choose to send it.\n\nTap the question mark on any of these screens to read about it."
         }
     }
 }
@@ -110,13 +112,15 @@ enum Guide {
         return screenEntries.first { $0.id == "settings" } ?? tabEntry(.now)
     }
 
-    /// Everything in tour order: each tab's own entry, then that tab's screens,
-    /// and Settings last. Entries marked `inTour: false` are left out.
+    /// Everything in tour order: the five tabs first, one page each, so the main
+    /// places are met before any detail. Then each tab's screens in the same tab
+    /// order, and Settings last. Entries marked `inTour: false` are left out.
     static var tourEntries: [GuideEntry] {
-        let tabs = HelpTopic.allCases.flatMap { topic in
-            [tabEntry(topic)] + screenEntries.filter { $0.tab == topic && $0.inTour }
+        let tabs = HelpTopic.allCases.map { tabEntry($0) }
+        let screens = HelpTopic.allCases.flatMap { topic in
+            screenEntries.filter { $0.tab == topic && $0.inTour }
         }
-        return tabs + screenEntries.filter { $0.tab == nil && $0.inTour }
+        return tabs + screens + screenEntries.filter { $0.tab == nil && $0.inTour }
     }
 }
 
@@ -162,8 +166,11 @@ extension Guide {
         GuideEntry(
             id: "plan.appointments", tab: .plan, title: "Appointments", icon: "calendar",
             whatItIs: "Your sessions with each person you see, on a calendar you can change.",
-            howToUse: "The sessions coming up are at the top, each with how far away it is. Tap an empty day on the calendar to schedule a session, or use the plus for any date. Tap a day with a session, or a session in the list, to move or cancel it. A session you have moved is marked Moved. Earlier sessions are folded under the list until you open them. Switch Repeat on when you schedule to make a run of sessions. The time starts at the time of your last session. Remove all sessions is in the three dots menu. Reminders for sessions are off until you switch them on, from the line under the list or in Settings. There is one the evening before, at 6 pm, and one a couple of hours ahead, and the lock screen only says something you planned is coming up. The usual gap between sessions is in each person's details, from the person button at the top, and is only a starting point. If you see more than one person, add them from that button. Each one has their own sessions and notes, and a Name on exports, which is the name used on files you make for them.",
+            howToUse: "The sessions coming up are at the top, each with how far away it is. Tap an empty day on the calendar to schedule a session, or use the plus for any date. Tap a day with a session, or a session in the list, to move or cancel it. Switch Repeat on when you schedule to make a run of sessions. Earlier sessions are folded under the list. If you see more than one person, the person button at the top adds them and holds each one's details.",
             tips: [
+                "Reminders for sessions are off until you switch them on, from the line under the list or in Settings. One comes the evening before, at 6 pm, and one a couple of hours ahead. The lock screen only says something you planned is coming up.",
+                "The usual gap between sessions is in each person's details. It is only a starting point for a repeating run.",
+                "Remove all sessions is in the three dots menu.",
                 "Session prep and Things to raise in Bridge follow the person you pick.",
                 "If you remove someone, their items stay and become for anyone."
             ]
@@ -315,6 +322,17 @@ extension Guide {
                 "Undo and Redo are at the bottom of a map.",
                 "A template makes a copy you can rewrite."
             ]
+        ),
+        GuideEntry(
+            id: "bridge.export", tab: .bridge, title: "Export for someone", icon: "square.and.arrow.up",
+            whatItIs: "A file for one person, with only what you choose to put in it.",
+            howToUse: "Write who it is for, and a note for the top if you like. Then choose what goes in. Only Things to raise is on to begin with, every time. Your journal, check-ins, sleep and a Recovery summary stay out unless you switch them on, and you can limit it to a date range or tick single items. A count and a preview show what it holds before anything is made. You can make a PDF, or a web page that opens in any browser with search, a timeline, charts of check-ins and buttons to print or to download a CSV or a Word file.",
+            tips: [
+                "The web page can have a password. Anchor does not keep it and cannot get it back, so tell the person another way.",
+                "Some mail apps block web pages, so a PDF is the safer thing to send.",
+                "Choosing a provider fills in their name, and exporting for that person leaves out what was meant for someone else."
+            ],
+            inTour: false
         )
     ]
 
@@ -503,9 +521,51 @@ extension Guide {
     }
 }
 
-/// The page for one entry, shared by the "?" sheet and the tour.
+/// Splits a guide's text into its separate ideas. Text written as paragraphs (blank lines
+/// between them) keeps those paragraphs. Anything else is split into sentences, so each idea
+/// stands on its own line and none is buried in a block.
+enum GuideText {
+    static func ideas(in text: String) -> [String] {
+        let paragraphs = text.components(separatedBy: "\n\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        if paragraphs.count > 1 { return paragraphs }
+        var result: [String] = []
+        var current = ""
+        let characters = Array(text)
+        var index = 0
+        while index < characters.count {
+            current.append(characters[index])
+            let endsSentence = ".!?".contains(characters[index])
+            if endsSentence, index + 2 < characters.count, characters[index + 1] == " ", characters[index + 2].isUppercase {
+                result.append(current)
+                current = ""
+                index += 2
+                continue
+            }
+            index += 1
+        }
+        let rest = current.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !rest.isEmpty { result.append(rest) }
+        return result
+    }
+}
+
+/// The page for one entry, shared by the "?" sheet and the tour. The first few ideas show,
+/// each on its own, and the rest wait behind Show more, along with the extras, so a page is
+/// short until the person asks for more.
 struct GuideEntryBody: View {
     let entry: GuideEntry
+    @State private var expanded = false
+
+    /// How many ideas show before Show more.
+    private let visibleIdeas = 4
+
+    private var ideas: [String] { GuideText.ideas(in: entry.howToUse) }
+    private var hasMore: Bool { ideas.count > visibleIdeas }
+    private var shownIdeas: [String] { expanded ? ideas : Array(ideas.prefix(visibleIdeas)) }
+    /// Extras show with the page when it is short, and behind Show more when it is not.
+    private var showsTips: Bool { !entry.tips.isEmpty && (expanded || !hasMore) }
 
     var body: some View {
         VStack(spacing: 18) {
@@ -522,29 +582,45 @@ struct GuideEntryBody: View {
             Text(entry.whatItIs)
                 .font(.system(.body, design: .rounded).weight(.medium))
                 .multilineTextAlignment(.center)
-            Text(entry.howToUse)
-                .font(.system(.body, design: .rounded))
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-            if !entry.tips.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Good to know")
-                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                    ForEach(entry.tips, id: \.self) { tip in
-                        HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Image(systemName: "circle.fill")
-                                .font(.system(size: 5))
-                                .foregroundStyle(.secondary)
-                                .accessibilityHidden(true)
-                            Text(tip)
-                                .font(.system(.subheadline, design: .rounded))
-                                .foregroundStyle(.secondary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+
+            VStack(alignment: .leading, spacing: 14) {
+                ForEach(Array(shownIdeas.enumerated()), id: \.offset) { _, idea in
+                    Text(idea)
+                        .font(.system(.body, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if hasMore {
+                    Button(expanded ? "Show less" : "Show more") {
+                        withAnimation { expanded.toggle() }
+                    }
+                    .font(.system(.subheadline, design: .rounded).weight(.medium))
+                    .tint(Anchor.Theme.accent)
+                }
+                if showsTips {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Good to know")
+                            .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                        ForEach(entry.tips, id: \.self) { tip in
+                            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                Image(systemName: "circle.fill")
+                                    .font(.system(size: 5))
+                                    .foregroundStyle(.secondary)
+                                    .accessibilityHidden(true)
+                                Text(tip)
+                                    .font(.system(.subheadline, design: .rounded))
+                                    .foregroundStyle(.secondary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
                         }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 4)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(maxWidth: .infinity)
     }
