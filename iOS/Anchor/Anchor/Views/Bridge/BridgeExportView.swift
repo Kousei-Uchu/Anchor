@@ -9,13 +9,15 @@
 //  the system share sheet. Nothing is uploaded. Nothing is included unless it
 //  is switched on for that export, and the choices are not remembered.
 //
-//  Everything is built into one `ExportDocument` first. The preview and the
-//  PDF both read it, so they always agree, and other formats can read it too.
+//  Everything is built into one `ExportDocument` first. The preview, the PDF
+//  and the web page all read it, so they always agree.
 //
 
 import SwiftUI
 import SwiftData
 import UIKit
+import CryptoKit
+import CommonCrypto
 
 // MARK: - The document
 
@@ -55,12 +57,19 @@ enum ExportCategory: String, CaseIterable, Identifiable {
     }
 }
 
+/// A number that can be drawn, such as one of a check-in's four values (0 to 1).
+struct ExportValue {
+    let label: String
+    let number: Double
+}
+
 struct ExportEntry: Identifiable {
     let id: UUID
     var date: Date?
     var heading: String?
     var lines: [String]
     var footnote: String?
+    var values: [ExportValue] = []
 }
 
 struct ExportSection: Identifiable {
@@ -175,7 +184,15 @@ struct BridgeExportBuilder {
                 return ExportCandidate(
                     id: check.id, category: category,
                     headline: check.timestamp.formatted(date: .abbreviated, time: .shortened),
-                    entry: ExportEntry(id: check.id, date: check.timestamp, heading: nil, lines: [line], footnote: nil)
+                    entry: ExportEntry(
+                        id: check.id, date: check.timestamp, heading: nil, lines: [line], footnote: nil,
+                        values: [
+                            ExportValue(label: "Energy", number: check.physicalEnergy),
+                            ExportValue(label: "Clarity", number: 1 - check.cognitiveBurnout),
+                            ExportValue(label: "Room in head", number: 1 - check.mentalLoad),
+                            ExportValue(label: "Social energy", number: check.socialEnergy)
+                        ]
+                    )
                 )
             }
         case .sleep:
@@ -251,6 +268,10 @@ struct BridgeExportView: View {
     @State private var end: Date = .now
     @State private var shareURL: IdentifiableURL?
     @State private var failed = false
+    @State private var password = ""
+    @State private var makingPage = false
+
+    private var passwordTooShort: Bool { !password.isEmpty && password.count < 8 }
 
     private var builder: BridgeExportBuilder {
         var chosen = selection
@@ -325,6 +346,19 @@ struct BridgeExportView: View {
                 }
 
                 Section {
+                    SecureField("Password (optional)", text: $password)
+                        .textContentType(.newPassword)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                } header: {
+                    Text("Web page password")
+                } footer: {
+                    Text(passwordTooShort
+                         ? "Use at least 8 characters, or leave it empty for no password."
+                         : "Only for the web page. With one, what is in the file is scrambled, and whoever has the file needs the password to read it. Tell them the password another way, not in the same message. Anchor does not keep it and cannot get it back.")
+                }
+
+                Section {
                     Text(document.summary)
                         .font(.subheadline)
                     NavigationLink("Preview") {
@@ -338,11 +372,27 @@ struct BridgeExportView: View {
                             failed = true
                         }
                     } label: {
-                        Label("Make a PDF to share", systemImage: "square.and.arrow.up")
+                        Label("Make a PDF to share", systemImage: "doc.richtext")
                     }
-                    .disabled(document.isEmpty)
+                    .disabled(document.isEmpty || makingPage)
+                    Button {
+                        makingPage = true
+                        let secret: String? = password.isEmpty ? nil : password
+                        Task {
+                            let url = await Task.detached(priority: .userInitiated) {
+                                BridgeHTMLExporter.makeHTML(document: document, password: secret)
+                            }.value
+                            makingPage = false
+                            if let url { shareURL = IdentifiableURL(url: url) } else { failed = true }
+                        }
+                    } label: {
+                        Label(makingPage ? "Making the web page..." : "Make a web page to share", systemImage: "safari")
+                    }
+                    .disabled(document.isEmpty || makingPage || passwordTooShort)
                 } header: {
                     Text("What it holds")
+                } footer: {
+                    Text("The web page opens in any browser, with search, a timeline and a button to print or save a PDF or download a CSV. It works on its own, and nothing in it is sent anywhere. Some mail apps block web page attachments, so a PDF is the safer thing to send.")
                 }
             }
             .navigationTitle("Export for someone")
@@ -490,16 +540,16 @@ private struct BridgeExportPreview: View {
 
 enum BridgeExporter {
     /// "Anchor-for-Dr-Patel-2026-11-08.pdf", or "Anchor-export-2026-11-08.pdf" with no name.
-    static func fileName(for document: ExportDocument) -> String {
+    static func fileName(for document: ExportDocument, ext: String = "pdf") -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "yyyy-MM-dd"
         let day = formatter.string(from: document.created)
-        guard let name = document.recipient else { return "Anchor-export-\(day).pdf" }
+        guard let name = document.recipient else { return "Anchor-export-\(day).\(ext)" }
         let cleaned = name.filter { $0.isLetter || $0.isNumber || $0 == " " || $0 == "-" }
             .split(separator: " ").joined(separator: "-")
         let short = String(cleaned.prefix(40))
-        return short.isEmpty ? "Anchor-export-\(day).pdf" : "Anchor-for-\(short)-\(day).pdf"
+        return short.isEmpty ? "Anchor-export-\(day).\(ext)" : "Anchor-for-\(short)-\(day).\(ext)"
     }
 
     static func makePDF(document: ExportDocument) -> URL? {
@@ -587,4 +637,422 @@ enum BridgeExporter {
         if !current.isEmpty { result.append(current) }
         return result
     }
+}
+
+// MARK: - The web page
+
+/// A single .html file with the document inside it and a small viewer: search,
+/// a timeline, charts of check-ins, a print stylesheet and a CSV button. It has
+/// no network access of its own (a strict content security policy pins the one
+/// script by its hash) and everything is drawn with textContent, so what was
+/// written can never run as code. With a password the document is AES-256-GCM
+/// encrypted with a key from PBKDF2-SHA256 (600,000 rounds), and the page
+/// decrypts it in the browser with WebCrypto.
+enum BridgeHTMLExporter {
+    private struct ValueDTO: Encodable { let label: String; let number: Double }
+    private struct EntryDTO: Encodable {
+        let date: String?
+        let dateText: String?
+        let heading: String?
+        let lines: [String]
+        let footnote: String?
+        let values: [ValueDTO]
+    }
+    private struct SectionDTO: Encodable { let key: String; let title: String; let entries: [EntryDTO] }
+    private struct DocDTO: Encodable {
+        let title: String
+        let note: String
+        let created: String
+        let range: String?
+        let fileBase: String
+        let sections: [SectionDTO]
+    }
+    private struct PlainPayload: Encodable {
+        let v = 1
+        let enc = false
+        let doc: DocDTO
+    }
+    private struct LockedPayload: Encodable {
+        let v = 1
+        let enc = true
+        let salt: String
+        let iv: String
+        let ct: String
+        let iter: Int
+    }
+
+    static let iterations = 600_000
+
+    static func makeHTML(document: ExportDocument, password: String?) -> URL? {
+        let iso = ISO8601DateFormatter()
+        let fileName = BridgeExporter.fileName(for: document, ext: "html")
+        let dto = DocDTO(
+            title: document.title,
+            note: document.coverNote,
+            created: document.created.formatted(date: .abbreviated, time: .shortened),
+            range: document.rangeText,
+            fileBase: String(fileName.dropLast(5)),
+            sections: document.sections.map { section in
+                SectionDTO(key: section.category.rawValue, title: section.category.title, entries: section.entries.map { entry in
+                    EntryDTO(
+                        date: entry.date.map { iso.string(from: $0) },
+                        dateText: entry.date.map { $0.formatted(date: .abbreviated, time: .shortened) },
+                        heading: entry.heading, lines: entry.lines, footnote: entry.footnote,
+                        values: entry.values.map { ValueDTO(label: $0.label, number: $0.number) }
+                    )
+                })
+            }
+        )
+
+        let encoder = JSONEncoder()
+        let json: Data
+        do {
+            if let password, !password.isEmpty {
+                guard let locked = lock(try encoder.encode(dto), password: password) else { return nil }
+                json = try encoder.encode(locked)
+            } else {
+                json = try encoder.encode(PlainPayload(doc: dto))
+            }
+        } catch {
+            return nil
+        }
+        // "<" can never appear inside the data block, so nothing in it can close the tag.
+        let payload = String(decoding: json, as: UTF8.self).replacingOccurrences(of: "<", with: "\\u003c")
+
+        let hash = Data(SHA256.hash(data: Data(viewerScript.utf8))).base64EncodedString()
+        let policy = "default-src 'none'; script-src 'sha256-\(hash)'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'"
+        let title = document.title
+            .replacingOccurrences(of: "&", with: "&amp;")
+            .replacingOccurrences(of: "<", with: "&lt;")
+            .replacingOccurrences(of: ">", with: "&gt;")
+            .replacingOccurrences(of: "\"", with: "&quot;")
+
+        var page = "<!doctype html>\n<html lang=\"en\"><head><meta charset=\"utf-8\">"
+        page += "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
+        page += "<meta http-equiv=\"Content-Security-Policy\" content=\"\(policy)\">"
+        page += "<meta name=\"referrer\" content=\"no-referrer\"><meta name=\"robots\" content=\"noindex\">"
+        page += "<title>\(title)</title><style>\(viewerStyle)</style></head><body>"
+        page += "<div id=\"app\"><noscript>This page needs JavaScript to show its contents. Ask for the PDF instead.</noscript></div>"
+        page += "<script type=\"application/json\" id=\"payload\">\(payload)</script>"
+        page += "<script>\(viewerScript)</script></body></html>\n"
+
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("anchor-export-\(UUID().uuidString)", isDirectory: true)
+        let url = folder.appendingPathComponent(fileName)
+        do {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            try page.write(to: url, atomically: true, encoding: .utf8)
+            return url
+        } catch {
+            return nil
+        }
+    }
+
+    private static func lock(_ plain: Data, password: String) -> LockedPayload? {
+        var salt = Data(count: 16)
+        let status = salt.withUnsafeMutableBytes { SecRandomCopyBytes(kSecRandomDefault, 16, $0.baseAddress!) }
+        guard status == errSecSuccess,
+              let key = deriveKey(password: password, salt: salt),
+              let box = try? AES.GCM.seal(plain, using: key) else { return nil }
+        // WebCrypto expects the tag straight after the ciphertext.
+        return LockedPayload(
+            salt: salt.base64EncodedString(),
+            iv: Data(box.nonce).base64EncodedString(),
+            ct: (box.ciphertext + box.tag).base64EncodedString(),
+            iter: iterations
+        )
+    }
+
+    private static func deriveKey(password: String, salt: Data) -> SymmetricKey? {
+        let secret = Array(password.precomposedStringWithCanonicalMapping.utf8)
+        guard !secret.isEmpty else { return nil }
+        var derived = [UInt8](repeating: 0, count: 32)
+        let status = secret.withUnsafeBufferPointer { secretBytes in
+            salt.withUnsafeBytes { saltBytes in
+                CCKeyDerivationPBKDF(
+                    CCPBKDFAlgorithm(kCCPBKDF2),
+                    UnsafeRawPointer(secretBytes.baseAddress!).assumingMemoryBound(to: Int8.self), secret.count,
+                    saltBytes.bindMemory(to: UInt8.self).baseAddress!, salt.count,
+                    CCPseudoRandomAlgorithm(kCCPRFHmacAlgSHA256), UInt32(iterations),
+                    &derived, derived.count
+                )
+            }
+        }
+        return status == kCCSuccess ? SymmetricKey(data: derived) : nil
+    }
+
+    private static let viewerStyle = #"""
+:root{--bg:#faf7f2;--fg:#2b2622;--muted:#6f6760;--card:#fff;--line:#e4ddd3;--accent:#b5603c;color-scheme:light dark}
+@media (prefers-color-scheme:dark){:root{--bg:#1d1b19;--fg:#ece6df;--muted:#a69d94;--card:#262320;--line:#3a3530;--accent:#e08a63}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+#app{max-width:760px;margin:0 auto;padding:24px 18px 60px}
+h1{font-size:1.7rem;margin:0 0 4px}
+h2{font-size:1.15rem;margin:28px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+h3{font-size:1rem;margin:2px 0 4px}
+.meta,.date,.foot,.note,.footer,.badge{color:var(--muted);font-size:.85rem}
+.cover{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;white-space:pre-wrap}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 6px;align-items:center}
+.toolbar input[type=search]{flex:1 1 180px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--fg);font:inherit}
+button{font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--fg);cursor:pointer}
+button:hover{border-color:var(--accent)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.seg{display:flex}.seg button{border-radius:0}.seg button:first-child{border-radius:10px 0 0 10px}.seg button:last-child{border-radius:0 10px 10px 0;border-left:0}
+.seg button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.entry{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:8px 0}
+.entry p{margin:4px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.badge{text-transform:uppercase;letter-spacing:.04em;font-size:.7rem}
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-bottom:10px}
+.chart{margin:0;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.chart figcaption{font-size:.85rem;color:var(--muted)}
+.chart svg{width:100%;height:auto;display:block}
+.axis{stroke:var(--line);stroke-width:1}
+.plot{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
+.unlock{max-width:380px;margin:12vh auto 0;display:flex;flex-direction:column;gap:10px}
+.unlock input{padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--fg);font:inherit}
+.msg{min-height:1.4em;color:var(--accent)}
+.footer{margin-top:36px;text-align:center}
+@media print{
+  :root{--bg:#fff;--fg:#000;--muted:#444;--card:#fff;--line:#bbb;--accent:#000}
+  .toolbar,.footer{display:none}
+  #app{max-width:none;padding:0}
+  .entry,.chart{break-inside:avoid}
+  h2{break-after:avoid}
+  .cover{border-color:#999}
+}
+"""#
+
+    private static let viewerScript = #"""
+(function () {
+  "use strict";
+  var payload = JSON.parse(document.getElementById("payload").textContent);
+  var app = document.getElementById("app");
+  var doc = null;
+  var query = "";
+  var mode = "sections";
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined && text !== null) e.textContent = text;
+    return e;
+  }
+  function b64(s) {
+    var bin = atob(s), out = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+
+  // ---------- locked pages ----------
+  function showUnlock() {
+    app.textContent = "";
+    var box = el("form", "unlock");
+    box.appendChild(el("h1", null, "This page is locked"));
+    box.appendChild(el("p", null, "Enter the password you were given. It is checked here in your browser and is never sent anywhere."));
+    var label = el("label", null, "Password");
+    var input = el("input");
+    input.type = "password";
+    input.autocomplete = "off";
+    input.id = "pw";
+    label.htmlFor = "pw";
+    var button = el("button", "primary", "Unlock");
+    button.type = "submit";
+    var msg = el("p", "msg");
+    msg.setAttribute("role", "alert");
+    box.appendChild(label); box.appendChild(input); box.appendChild(button); box.appendChild(msg);
+    box.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      msg.textContent = "";
+      if (!(window.crypto && window.crypto.subtle)) {
+        msg.textContent = "This browser cannot unlock the page from a file. Try opening it in Safari, Chrome or Firefox, or ask for the PDF instead.";
+        return;
+      }
+      button.disabled = true;
+      msg.textContent = "Unlocking...";
+      decrypt(input.value).then(function (d) {
+        doc = d;
+        render();
+      }).catch(function () {
+        button.disabled = false;
+        msg.textContent = "That password did not work.";
+      });
+    });
+    app.appendChild(box);
+    input.focus();
+  }
+
+  function decrypt(password) {
+    var enc = new TextEncoder();
+    return crypto.subtle.importKey("raw", enc.encode(password.normalize("NFC")), "PBKDF2", false, ["deriveKey"]).then(function (base) {
+      return crypto.subtle.deriveKey(
+        { name: "PBKDF2", salt: b64(payload.salt), iterations: payload.iter, hash: "SHA-256" },
+        base, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+    }).then(function (key) {
+      return crypto.subtle.decrypt({ name: "AES-GCM", iv: b64(payload.iv) }, key, b64(payload.ct));
+    }).then(function (plain) {
+      return JSON.parse(new TextDecoder().decode(plain));
+    });
+  }
+
+  // ---------- the document ----------
+  function matches(entry) {
+    if (!query) return true;
+    var hay = [entry.heading || "", entry.lines.join(" "), entry.footnote || "", entry.dateText || ""].join(" ").toLowerCase();
+    return hay.indexOf(query) !== -1;
+  }
+
+  function entryNode(entry, sectionTitle) {
+    var card = el("article", "entry");
+    if (sectionTitle) card.appendChild(el("div", "badge", sectionTitle));
+    if (entry.dateText) card.appendChild(el("div", "date", entry.dateText));
+    if (entry.heading) card.appendChild(el("h3", null, entry.heading));
+    entry.lines.forEach(function (line) { card.appendChild(el("p", null, line)); });
+    if (entry.footnote) card.appendChild(el("div", "foot", entry.footnote));
+    return card;
+  }
+
+  var SVGNS = "http://www.w3.org/2000/svg";
+  function chartFor(section) {
+    var rows = section.entries.filter(function (e) { return e.values && e.values.length && e.date; })
+      .sort(function (a, b) { return a.date < b.date ? -1 : 1; });
+    if (rows.length < 2) return null;
+    var wrap = el("div", "charts");
+    var labels = [];
+    rows[0].values.forEach(function (v) { labels.push(v.label); });
+    labels.forEach(function (label) {
+      var W = 600, H = 110, P = 8;
+      var svg = document.createElementNS(SVGNS, "svg");
+      svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+      svg.setAttribute("role", "img");
+      svg.setAttribute("aria-label", label + " over time, from " + rows[0].dateText + " to " + rows[rows.length - 1].dateText);
+      var pts = rows.map(function (r, i) {
+        var v = 0;
+        r.values.forEach(function (x) { if (x.label === label) v = x.number; });
+        var x = P + (W - 2 * P) * (rows.length === 1 ? 0 : i / (rows.length - 1));
+        var y = H - P - (H - 2 * P) * Math.max(0, Math.min(1, v));
+        return x.toFixed(1) + "," + y.toFixed(1);
+      });
+      var base = document.createElementNS(SVGNS, "line");
+      base.setAttribute("x1", P); base.setAttribute("x2", W - P);
+      base.setAttribute("y1", H - P); base.setAttribute("y2", H - P);
+      base.setAttribute("class", "axis");
+      svg.appendChild(base);
+      var line = document.createElementNS(SVGNS, "polyline");
+      line.setAttribute("points", pts.join(" "));
+      line.setAttribute("class", "plot");
+      svg.appendChild(line);
+      var box = el("figure", "chart");
+      box.appendChild(el("figcaption", null, label));
+      box.appendChild(svg);
+      wrap.appendChild(box);
+    });
+    wrap.appendChild(el("p", "note", "Each line runs from empty (bottom) to full (top). " + rows[0].dateText + " to " + rows[rows.length - 1].dateText + "."));
+    return wrap;
+  }
+
+  function csvCell(value) {
+    var s = String(value === undefined || value === null ? "" : value).replace(/\r?\n/g, " ");
+    if (/^[=+\-@\t]/.test(s)) s = "'" + s;
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  function downloadCSV() {
+    var rows = [["section", "date", "heading", "text", "note"]];
+    doc.sections.forEach(function (s) {
+      s.entries.forEach(function (e) {
+        rows.push([s.title, e.date || "", e.heading || "", e.lines.join(" | "), e.footnote || ""]);
+      });
+    });
+    var text = "\uFEFF" + rows.map(function (r) { return r.map(csvCell).join(","); }).join("\r\n");
+    var blob = new Blob([text], { type: "text/csv;charset=utf-8" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = (doc.fileBase || "anchor-export") + ".csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+  }
+
+  function render() {
+    app.textContent = "";
+    var head = el("header", "head");
+    head.appendChild(el("h1", null, doc.title));
+    head.appendChild(el("p", "meta", "Prepared " + doc.created + (doc.range ? " | " + doc.range : "")));
+    if (doc.note) head.appendChild(el("p", "cover", doc.note));
+    app.appendChild(head);
+
+    var bar = el("div", "toolbar");
+    var search = el("input");
+    search.type = "search";
+    search.placeholder = "Search";
+    search.setAttribute("aria-label", "Search");
+    search.value = query;
+    search.addEventListener("input", function () { query = search.value.trim().toLowerCase(); renderBody(); });
+    bar.appendChild(search);
+
+    var group = el("div", "seg");
+    [["sections", "By section"], ["timeline", "Timeline"]].forEach(function (m) {
+      var b = el("button", mode === m[0] ? "on" : "", m[1]);
+      b.type = "button";
+      b.addEventListener("click", function () { mode = m[0]; render(); });
+      group.appendChild(b);
+    });
+    bar.appendChild(group);
+
+    var print = el("button", null, "Print or save as PDF");
+    print.type = "button";
+    print.addEventListener("click", function () { window.print(); });
+    bar.appendChild(print);
+    var csv = el("button", null, "Download CSV");
+    csv.type = "button";
+    csv.addEventListener("click", downloadCSV);
+    bar.appendChild(csv);
+    app.appendChild(bar);
+
+    var body = el("main");
+    body.id = "body";
+    app.appendChild(body);
+    app.appendChild(el("p", "footer", "This page works entirely in your browser. Nothing in it is sent anywhere."));
+    renderBody();
+    if (document.activeElement !== search && query) search.focus();
+  }
+
+  function renderBody() {
+    var body = document.getElementById("body");
+    body.textContent = "";
+    var shown = 0;
+    if (mode === "timeline") {
+      var all = [];
+      doc.sections.forEach(function (s) { s.entries.forEach(function (e) { all.push({ s: s, e: e }); }); });
+      all.sort(function (a, b) {
+        if (a.e.date && b.e.date) return a.e.date < b.e.date ? -1 : 1;
+        if (a.e.date) return -1;
+        if (b.e.date) return 1;
+        return 0;
+      });
+      all.filter(function (x) { return matches(x.e); }).forEach(function (x) {
+        body.appendChild(entryNode(x.e, x.s.title));
+        shown++;
+      });
+    } else {
+      doc.sections.forEach(function (s) {
+        var list = s.entries.filter(matches);
+        if (!list.length) return;
+        var sec = el("section", "section");
+        sec.appendChild(el("h2", null, s.title + " (" + list.length + (list.length !== s.entries.length ? " of " + s.entries.length : "") + ")"));
+        if (!query) {
+          var chart = chartFor(s);
+          if (chart) sec.appendChild(chart);
+        }
+        list.forEach(function (e) { sec.appendChild(entryNode(e)); shown++; });
+        body.appendChild(sec);
+      });
+    }
+    if (!shown) body.appendChild(el("p", "empty", query ? "Nothing matches that." : "Nothing here."));
+  }
+
+  if (payload.enc) { showUnlock(); } else { doc = payload.doc; render(); }
+})();
+"""#
 }
