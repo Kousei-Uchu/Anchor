@@ -224,7 +224,11 @@ enum ReviewStops {
         ("45c", "No scoring of check-ins", "A check-in row only says Check-in.",
          "Look at the check-in row in the Journal timeline.", 2, nil),
         ("46a", "Docs and privacy page", "The privacy page covers Recovery, widget, reminders and Live Activity.",
-         "Settings, privacy page, read the Recovery and reminders sections.", 1, .settings)
+         "Settings, privacy page, read the Recovery and reminders sections.", 1, .settings),
+        ("RV1", "Lighter task rows, add several at once", "A task card is a title and one quiet line; steps start folded; the editor keeps the common things up front; a button next to Add takes a pasted list.",
+         "Open Tasks. Tap the list button by Add and paste: Pack bag, then an indented line Charger, then a deeper line Cable. Open one task and look at More options.", 1, .tasks),
+        ("RV2", "Steps inside steps", "Steps nest to any depth, and each step opens its own details and steps.",
+         "Open Get ready for the weekend away, open its arrow, then open the step Pack and its arrow. Press and hold a step for Open details.", 1, .tasks)
     ])
 }
 
@@ -401,6 +405,15 @@ enum ReviewSeed {
             }
         }
         let start = Date.now.addingTimeInterval(-40 * 86_400)
+        let trip = TaskItem(title: "Get ready for the weekend away", sortOrder: 90)
+        let pack = TaskItem(title: "Pack", sortOrder: 1, parentID: trip.id)
+        let clothes = TaskItem(title: "Clothes", sortOrder: 1, parentID: pack.id)
+        context.insert(trip)
+        context.insert(pack)
+        context.insert(clothes)
+        context.insert(TaskItem(title: "Socks", sortOrder: 1, parentID: clothes.id))
+        context.insert(TaskItem(title: "Charger and cable", sortOrder: 2, parentID: pack.id))
+        context.insert(TaskItem(title: "Book the train", sortOrder: 2, parentID: trip.id))
         context.insert(RecoveryCounter(name: "Example counter", startDate: start))
         context.insert(RecoveryCounter(name: "Started today", startDate: Date.now.addingTimeInterval(-20 * 60), sortOrder: 1))
         try? context.save()

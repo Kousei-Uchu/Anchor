@@ -1124,8 +1124,8 @@ final class TaskItem {
     /// Steps share this model so ticking, ordering, export and import all
     /// work as they do for tasks, and no store migration is needed.
     var parentID: UUID? = nil
-    /// Whether this task's steps are folded away on the list.
-    var subtasksCollapsed: Bool = false
+    /// Whether this task's steps are folded away on the list. New tasks start folded, so a card stays small.
+    var subtasksCollapsed: Bool = true
     /// Tasks this one is waiting on. While any of them is still open, this
     /// task sits under "Waiting on something else". A blocker that has been
     /// deleted is simply ignored.
@@ -1161,7 +1161,7 @@ final class TaskItem {
         dueKind: TaskDueKind = .noDate,
         dueDate: Date? = nil,
         parentID: UUID? = nil,
-        subtasksCollapsed: Bool = false,
+        subtasksCollapsed: Bool = true,
         blockedByIDs: [UUID] = [],
         status: TaskStatus = .notStarted,
         energy: TaskEnergy = .unset,
@@ -1485,9 +1485,9 @@ extension TaskItem {
 }
 
 extension ModelContext {
-    /// Deleting a task takes its steps with it.
+    /// Deleting a task takes its steps with it, and their steps, to any depth.
     func deleteTask(_ task: TaskItem, among tasks: [TaskItem]) {
-        for step in TaskItem.steps(of: task, in: tasks) { delete(step) }
+        for step in TaskItem.steps(of: task, in: tasks) { deleteTask(step, among: tasks) }
         delete(task)
     }
 }

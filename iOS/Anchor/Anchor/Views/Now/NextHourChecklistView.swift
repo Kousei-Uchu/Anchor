@@ -53,6 +53,115 @@ struct ImportableReminder: Identifiable {
     let title: String
 }
 
+/// Turns pasted or typed text into tasks. One task a line. A line indented more than the one above it
+/// becomes a step of that line, to any depth. Dashes, bullets, numbers and [ ] at the start of a line are
+/// dropped, and [x] marks that one done.
+enum TaskListParser {
+    struct Line: Equatable {
+        var depth: Int
+        var title: String
+        var done: Bool
+    }
+
+    static func parse(_ text: String) -> [Line] {
+        var raw: [(indent: Int, title: String, done: Bool)] = []
+        for rawLine in text.components(separatedBy: .newlines) {
+            var indent = 0
+            var rest = Substring(rawLine)
+            while let first = rest.first, first == " " || first == "\t" {
+                indent += first == "\t" ? 4 : 1
+                rest = rest.dropFirst()
+            }
+            var title = rest.trimmingCharacters(in: .whitespaces)
+            for bullet in ["- ", "* ", "\u{2022} ", "\u{2013} "] where title.hasPrefix(bullet) {
+                title = String(title.dropFirst(bullet.count)).trimmingCharacters(in: .whitespaces)
+                break
+            }
+            var done = false
+            for box in ["[ ] ", "[x] ", "[X] "] where title.hasPrefix(box) {
+                done = box != "[ ] "
+                title = String(title.dropFirst(box.count)).trimmingCharacters(in: .whitespaces)
+                break
+            }
+            if let range = title.range(of: #"^\d+[.)]\s+"#, options: .regularExpression) {
+                title = String(title[range.upperBound...]).trimmingCharacters(in: .whitespaces)
+            }
+            guard !title.isEmpty else { continue }
+            raw.append((indent, title, done))
+        }
+        var open: [Int] = []
+        var lines: [Line] = []
+        for item in raw {
+            while let last = open.last, last >= item.indent { open.removeLast() }
+            lines.append(Line(depth: open.count, title: item.title, done: item.done))
+            open.append(item.indent)
+        }
+        return lines
+    }
+
+    /// Adds the lines as tasks and steps, after the tasks already there.
+    static func insert(_ lines: [Line], into context: ModelContext, startingAt start: Int) {
+        var order = start
+        var ancestors: [UUID] = []
+        for line in lines {
+            ancestors = Array(ancestors.prefix(line.depth))
+            let task = TaskItem(title: line.title, isDone: line.done,
+                                completedAt: line.done ? Date.now : nil,
+                                sortOrder: order, parentID: ancestors.last)
+            order += 1
+            context.insert(task)
+            ancestors.append(task.id)
+        }
+    }
+}
+
+private struct AddSeveralSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var text = ""
+    let onAdd: (String) -> Void
+
+    private var lines: [TaskListParser.Line] { TaskListParser.parse(text) }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextEditor(text: $text)
+                        .frame(minHeight: 180)
+                } header: {
+                    Text("One task a line")
+                } footer: {
+                    Text("Indent a line to make it a step of the one above, as deep as you like. Dashes, bullets and numbers are dropped, so you can paste a list from anywhere.")
+                }
+                if !lines.isEmpty {
+                    Section("Adds \(lines.count)") {
+                        ForEach(Array(lines.prefix(60).enumerated()), id: \.offset) { _, line in
+                            Text(line.title)
+                                .font(line.depth == 0 ? .body : .subheadline)
+                                .foregroundStyle(line.depth == 0 ? .primary : .secondary)
+                                .padding(.leading, CGFloat(line.depth) * 18)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Add several")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Add") {
+                        onAdd(text)
+                        dismiss()
+                    }
+                    .disabled(lines.isEmpty)
+                }
+            }
+        }
+    }
+}
+
 /// Ticks a task off (or back on) and keeps a linked reminder in step.
 private func setTask(_ task: TaskItem, done: Bool, among tasks: [TaskItem]) {
     task.setDone(done)
@@ -218,6 +327,7 @@ struct TasksView: View {
     @State private var energyFilter: TaskEnergyFilter = .everything
     @State private var showFocus = false
     @State private var showDayPlan = false
+    @State private var showAddSeveral = false
 
     private var open: [TaskItem] { TaskItem.listOrder(tasks).filter { energyFilter.allows($0.energy) } }
     private var done: [TaskItem] {
@@ -238,6 +348,8 @@ struct TasksView: View {
                             actionTitle: "Add a task",
                             tint: Anchor.Theme.accent
                         ) { startNew() }
+                        Button("Add several at once") { showAddSeveral = true }
+                            .buttonStyle(Anchor.SecondaryButtonStyle())
                         Button("Make a quick list") { quickRoute = .new }
                             .buttonStyle(Anchor.SecondaryButtonStyle())
                     }
@@ -287,10 +399,10 @@ struct TasksView: View {
                                 .anchorCardRow()
 
                             ForEach(group) { task in
-                                TaskCard(task: task, steps: TaskItem.steps(of: task, in: tasks),
+                                TaskCard(task: task, steps: TaskItem.steps(of: task, in: tasks), allTasks: tasks,
                                          blockedBy: task.openBlockers(among: tasks),
                                          onToggle: { toggle(task) }, onEdit: { editing = task },
-                                         onFocusStep: { openFocus($0) })
+                                         onFocusStep: { openFocus($0) }, onEditStep: { editing = $0 })
                                     .taskRowActions(task, onFocus: { openFocus(task) }) { modelContext.deleteTask(task, among: tasks) }
                                     .anchorCardRow()
                             }
@@ -312,7 +424,7 @@ struct TasksView: View {
                         .anchorCardRow()
 
                         ForEach(done) { task in
-                            TaskCard(task: task, steps: TaskItem.steps(of: task, in: tasks),
+                            TaskCard(task: task, steps: TaskItem.steps(of: task, in: tasks), allTasks: tasks,
                                      blockedBy: [],
                                      onToggle: { toggle(task) }, onEdit: { editing = task })
                                 .anchorDeletable { modelContext.deleteTask(task, among: tasks) }
@@ -397,6 +509,11 @@ struct TasksView: View {
         .sheet(isPresented: $showDayPlan) {
             PlanMyDayView()
         }
+        .sheet(isPresented: $showAddSeveral) {
+            AddSeveralSheet { text in
+                TaskListParser.insert(TaskListParser.parse(text), into: modelContext, startingAt: nextSortOrder())
+            }
+        }
         .sheet(item: $quickRoute, onDismiss: finishQuickLists) { route in
             switch route {
             case .new:
@@ -448,6 +565,12 @@ struct TasksView: View {
             Button("Add", action: quickAdd)
                 .buttonStyle(Anchor.SecondaryButtonStyle())
                 .disabled(newTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            Button { showAddSeveral = true } label: {
+                Image(systemName: "text.badge.plus")
+                    .font(.title3)
+            }
+            .buttonStyle(.borderless)
+            .accessibilityLabel("Add several at once")
         }
         .padding()
         .background(.thinMaterial)
@@ -529,11 +652,14 @@ struct TasksView: View {
 private struct TaskCard: View {
     @Bindable var task: TaskItem
     let steps: [TaskItem]
+    /// Every task, so the steps of steps can be shown to any depth.
+    let allTasks: [TaskItem]
     /// The open tasks this one is waiting on. Empty when it is free to do.
     let blockedBy: [TaskItem]
     let onToggle: () -> Void
     let onEdit: () -> Void
     var onFocusStep: ((TaskItem) -> Void)? = nil
+    var onEditStep: ((TaskItem) -> Void)? = nil
 
     private var doneSteps: Int { steps.filter(\.isDone).count }
     private var isBlocked: Bool { !task.isDone && !blockedBy.isEmpty }
@@ -546,84 +672,31 @@ private struct TaskCard: View {
         return blockedBy.count == 1 ? "Waiting on \(first)" : "Waiting on \(first) and \(blockedBy.count - 1) more"
     }
 
+    /// Everything worth knowing at a glance, on one quiet line instead of a line each.
+    private var summary: String {
+        var parts: [String] = []
+        if !task.isDone, let due = task.dueText() { parts.append(due) }
+        if !task.isDone, let estimate = task.estimateText { parts.append(estimate) }
+        if isStarted { parts.append("Started") }
+        if !task.isDone, let energy = task.energy.cardText { parts.append(energy) }
+        if !task.isDone, !steps.isEmpty { parts.append("\(doneSteps) of \(steps.count) steps") }
+        if let focus = task.focusSummary { parts.append(focus) }
+        return parts.joined(separator: " \u{00B7} ")
+    }
+
+    private var showsFirstStep: Bool {
+        !task.isDone && !isBlocked && !isSetAside && !isStarted && !task.firstStep.isEmpty
+    }
+
     var body: some View {
         Anchor.Card {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 8) {
                 HStack(alignment: .top, spacing: 12) {
-                    if isBlocked {
-                        Image(systemName: "hourglass")
-                            .font(.title3)
-                            .foregroundStyle(.secondary)
-                            .accessibilityLabel("Waiting")
-                    } else {
-                        Button(action: onToggle) {
-                            Image(systemName: task.isDone ? "checkmark.circle.fill" : "circle")
-                                .font(.title3)
-                                .foregroundStyle(task.isDone ? Anchor.Theme.sage : Anchor.Theme.accent)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(task.isDone ? "Mark as not done" : "Mark as done")
-                    }
-
+                    leadingControl
                     Button(action: onEdit) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(task.title.isEmpty ? "Untitled" : task.title)
-                                .font(.system(.body, design: .rounded))
-                                .strikethrough(task.isDone)
-                                .foregroundStyle(task.isDone ? .secondary : .primary)
-                                .fixedSize(horizontal: false, vertical: true)
-                            if isBlocked {
-                                Text(waitingText)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            if !task.isDone, let due = task.dueText() {
-                                Label(due, systemImage: "calendar")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            if !task.isDone, let estimate = task.estimateText {
-                                Label(estimate, systemImage: "clock")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            if isStarted {
-                                Label("Started", systemImage: "play.circle")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            if !task.isDone, let energy = task.energy.cardText {
-                                Label(energy, systemImage: "bolt")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            if !task.isDone, !isBlocked, !isSetAside, !isStarted, !task.firstStep.isEmpty {
-                                Text("Start with: \(task.firstStep)")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(2)
-                            }
-                            if showsSteps {
-                                Text("\(doneSteps) of \(steps.count) steps")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                ProgressView(value: Double(doneSteps), total: Double(steps.count))
-                                    .tint(Anchor.Theme.sage)
-                            }
-                            if let focus = task.focusSummary {
-                                Label(focus, systemImage: "timer")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            if !task.notes.isEmpty {
-                                Text(task.notes)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(2)
-                            }
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
+                        rowText
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .accessibilityHint("Opens the editor")
@@ -645,30 +718,8 @@ private struct TaskCard: View {
                 if showsSteps && !task.subtasksCollapsed {
                     VStack(alignment: .leading, spacing: 8) {
                         ForEach(steps) { step in
-                            Button {
-                                withAnimation(.snappy) { step.setDone(!step.isDone) }
-                            } label: {
-                                HStack(spacing: 10) {
-                                    Image(systemName: step.isDone ? "checkmark.circle.fill" : "circle")
-                                        .foregroundStyle(step.isDone ? Anchor.Theme.sage : Color.secondary)
-                                    Text(step.title.isEmpty ? "Untitled step" : step.title)
-                                        .font(.system(.subheadline, design: .rounded))
-                                        .strikethrough(step.isDone)
-                                        .foregroundStyle(step.isDone ? .secondary : .primary)
-                                        .multilineTextAlignment(.leading)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel(step.isDone ? "Mark step as not done" : "Mark step as done")
-                            .contextMenu {
-                                if !step.isDone, let onFocusStep {
-                                    Button { onFocusStep(step) } label: {
-                                        Label("Focus on this step", systemImage: "timer")
-                                    }
-                                }
-                            }
+                            StepTreeRow(step: step, allTasks: allTasks,
+                                        onFocusStep: onFocusStep, onEditStep: onEditStep)
                         }
                     }
                     .padding(.leading, 34)
@@ -676,6 +727,123 @@ private struct TaskCard: View {
             }
         }
         .opacity(isBlocked || isSetAside ? 0.6 : 1)
+    }
+
+    @ViewBuilder private var leadingControl: some View {
+        if isBlocked {
+            Image(systemName: "hourglass")
+                .font(.title3)
+                .foregroundStyle(.secondary)
+                .accessibilityLabel("Waiting")
+        } else {
+            Button(action: onToggle) {
+                Image(systemName: task.isDone ? "checkmark.circle.fill" : "circle")
+                    .font(.title3)
+                    .foregroundStyle(task.isDone ? Anchor.Theme.sage : Anchor.Theme.accent)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(task.isDone ? "Mark as not done" : "Mark as done")
+        }
+    }
+
+    private var rowText: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(task.title.isEmpty ? "Untitled" : task.title)
+                .font(.system(.body, design: .rounded))
+                .strikethrough(task.isDone)
+                .foregroundStyle(task.isDone ? .secondary : .primary)
+                .fixedSize(horizontal: false, vertical: true)
+            if isBlocked {
+                Text(waitingText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            if !summary.isEmpty {
+                Text(summary)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+            if showsFirstStep {
+                Text("Start with: \(task.firstStep)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+        }
+    }
+}
+
+/// One step on a task's card, and the steps under it, to any depth. Tap to tick it; the arrow folds
+/// the steps under it away; press and hold for its details or a focus timer.
+private struct StepTreeRow: View {
+    @Bindable var step: TaskItem
+    let allTasks: [TaskItem]
+    var onFocusStep: ((TaskItem) -> Void)? = nil
+    var onEditStep: ((TaskItem) -> Void)? = nil
+
+    private var children: [TaskItem] { TaskItem.steps(of: step, in: allTasks) }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Button {
+                    withAnimation(.snappy) { step.setDone(!step.isDone) }
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: step.isDone ? "checkmark.circle.fill" : "circle")
+                            .foregroundStyle(step.isDone ? Anchor.Theme.sage : Color.secondary)
+                        Text(step.title.isEmpty ? "Untitled step" : step.title)
+                            .font(.system(.subheadline, design: .rounded))
+                            .strikethrough(step.isDone)
+                            .foregroundStyle(step.isDone ? .secondary : .primary)
+                            .multilineTextAlignment(.leading)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(step.isDone ? "Mark step as not done" : "Mark step as done")
+                .contextMenu {
+                    if let onEditStep {
+                        Button { onEditStep(step) } label: {
+                            Label("Open details", systemImage: "square.and.pencil")
+                        }
+                    }
+                    if !step.isDone, let onFocusStep {
+                        Button { onFocusStep(step) } label: {
+                            Label("Focus on this step", systemImage: "timer")
+                        }
+                    }
+                }
+
+                if !children.isEmpty {
+                    Text("\(children.filter(\.isDone).count)/\(children.count)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Button {
+                        withAnimation(.snappy) { step.subtasksCollapsed.toggle() }
+                    } label: {
+                        Image(systemName: step.subtasksCollapsed ? "chevron.down" : "chevron.up")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 24, height: 24)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(step.subtasksCollapsed ? "Show steps under this step" : "Hide steps under this step")
+                }
+            }
+
+            if !children.isEmpty && !step.subtasksCollapsed {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(children) { child in
+                        StepTreeRow(step: child, allTasks: allTasks,
+                                    onFocusStep: onFocusStep, onEditStep: onEditStep)
+                    }
+                }
+                .padding(.leading, 24)
+            }
+        }
     }
 }
 
@@ -689,7 +857,11 @@ private struct TaskEditorSheet: View {
     @State private var newStep = ""
     @State private var editMode: EditMode = .inactive
     @State private var showFocus = false
+    @State private var showMore = false
+    @State private var editingStep: TaskItem?
+    @State private var stepToDelete: TaskItem?
 
+    private var isStep: Bool { task.parentID != nil }
     private var steps: [TaskItem] { TaskItem.steps(of: task, in: liveTasks) }
     private var blockers: [TaskItem] {
         task.blockedByIDs.compactMap { id in liveTasks.first(where: { $0.id == id }) }
@@ -698,82 +870,24 @@ private struct TaskEditorSheet: View {
     private var dueIsTomorrow: Bool {
         task.dueKind == .exact && (task.dueDate.map { Calendar.current.isDateInTomorrow($0) } ?? false)
     }
+    /// True when anything under More options has been filled in, so it opens already showing it.
+    private var hasMoreSet: Bool {
+        !task.firstStep.isEmpty || !task.blockedByIDs.isEmpty || task.estimateMinutes > 0
+            || task.status != .notStarted || task.energy != .unset || task.focusSessions > 0
+    }
 
     var body: some View {
         Anchor.ItemEditorSheet(
-            title: task.title.isEmpty ? "New task" : "Task",
+            title: isStep ? "Step" : (task.title.isEmpty ? "New task" : "Task"),
             onDelete: onDelete,
-            deleteQuestion: "Delete this task?"
+            deleteQuestion: isStep ? "Delete this step?" : "Delete this task?"
         ) {
             Form {
                 Section {
-                    TextField("What needs doing?", text: $task.title, axis: .vertical)
+                    TextField(isStep ? "What is this step?" : "What needs doing?", text: $task.title, axis: .vertical)
                         .lineLimit(1...4)
                 }
-                Section("First tiny step") {
-                    TextField("The smallest way to begin", text: $task.firstStep, axis: .vertical)
-                        .lineLimit(1...3)
-                }
-                Section {
-                    ForEach(steps) { step in
-                        StepEditorRow(step: step)
-                            .swipeActions(edge: .trailing) {
-                                Button(role: .destructive) {
-                                    modelContext.delete(step)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                            }
-                    }
-                    .onMove(perform: moveSteps)
-
-                    HStack {
-                        TextField("Add a step", text: $newStep)
-                            .onSubmit(addStep)
-                        Button("Add", action: addStep)
-                            .buttonStyle(.borderless)
-                            .disabled(newStep.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    }
-                } header: {
-                    HStack {
-                        Text("Steps")
-                        Spacer()
-                        if steps.count > 1 {
-                            Button(editMode.isEditing ? "Done" : "Reorder") {
-                                withAnimation { editMode = editMode.isEditing ? .inactive : .active }
-                            }
-                            .font(.footnote)
-                            .textCase(nil)
-                        }
-                    }
-                }
-                if !blockers.isEmpty || !possibleBlockers.isEmpty {
-                    Section("Waiting on") {
-                        ForEach(blockers) { blocker in
-                            Label(blocker.title.isEmpty ? "Untitled" : blocker.title,
-                                  systemImage: blocker.isDone ? "checkmark.circle" : "hourglass")
-                                .foregroundStyle(blocker.isDone ? .secondary : .primary)
-                                .swipeActions(edge: .trailing) {
-                                    Button(role: .destructive) {
-                                        task.blockedByIDs.removeAll { $0 == blocker.id }
-                                    } label: {
-                                        Label("Remove", systemImage: "xmark")
-                                    }
-                                }
-                        }
-                        if !possibleBlockers.isEmpty {
-                            Menu {
-                                ForEach(possibleBlockers) { candidate in
-                                    Button(candidate.title.isEmpty ? "Untitled" : candidate.title) {
-                                        task.blockedByIDs.append(candidate.id)
-                                    }
-                                }
-                            } label: {
-                                Label("Wait on another task", systemImage: "plus")
-                            }
-                        }
-                    }
-                }
+                stepsSection
                 Section("When") {
                     Picker("When", selection: Binding(
                         get: { task.dueKind },
@@ -793,58 +907,152 @@ private struct TaskEditorSheet: View {
                         Button("Move to tomorrow") { task.snoozeToTomorrow() }
                     }
                 }
-                Section("How long") {
-                    Picker("How long", selection: $task.estimateMinutes) {
-                        Text("None").tag(0)
-                        ForEach(TaskItem.estimateChoices, id: \.self) { minutes in
-                            Text(minutes == 60 ? "1 hr" : "\(minutes) min").tag(minutes)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                }
-                Section("How it is going") {
-                    Picker("Status", selection: $task.status) {
-                        ForEach(TaskStatus.allCases) { status in
-                            Text(status.label).tag(status)
-                        }
-                    }
-                    Picker("Energy it needs", selection: $task.energy) {
-                        ForEach(TaskEnergy.allCases) { energy in
-                            Text(energy.label).tag(energy)
-                        }
-                    }
-                }
-                Section("Focus") {
-                    if !task.isDone {
-                        Button {
-                            PomodoroTimer.shared.use(modelContext)
-                            PomodoroTimer.shared.setTask(task)
-                            showFocus = true
-                        } label: {
-                            Label("Focus on this task", systemImage: "timer")
-                        }
-                    }
-                    if let focus = task.focusSummary {
-                        Text(focus)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                }
                 Section("Notes") {
                     TextField("Anything to remember", text: $task.notes, axis: .vertical)
-                        .lineLimit(3...8)
+                        .lineLimit(2...8)
                 }
                 Section {
                     Toggle("Done", isOn: Binding(
                         get: { task.isDone },
                         set: { setTask(task, done: $0, among: allTasks) }
                     ))
+                    Button {
+                        withAnimation { showMore.toggle() }
+                    } label: {
+                        HStack {
+                            Text(showMore ? "Fewer options" : "More options")
+                            Spacer()
+                            Image(systemName: showMore ? "chevron.up" : "chevron.down")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
                 }
+                if showMore { moreSections }
             }
             .environment(\.editMode, $editMode)
         }
+        .onAppear { if hasMoreSet { showMore = true } }
         .sheet(isPresented: $showFocus) {
             PomodoroView()
+        }
+        .sheet(item: $editingStep, onDismiss: finishStepEditing) { step in
+            TaskEditorSheet(task: step, allTasks: liveTasks) { stepToDelete = step }
+        }
+    }
+
+    private var stepsSection: some View {
+        Section {
+            ForEach(steps) { step in
+                StepEditorRow(step: step,
+                              childCount: TaskItem.steps(of: step, in: liveTasks).count,
+                              onOpen: { editingStep = step })
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            modelContext.deleteTask(step, among: liveTasks)
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
+            }
+            .onMove(perform: moveSteps)
+
+            HStack {
+                TextField("Add a step", text: $newStep)
+                    .onSubmit(addStep)
+                Button("Add", action: addStep)
+                    .buttonStyle(.borderless)
+                    .disabled(newStep.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        } header: {
+            HStack {
+                Text("Steps")
+                Spacer()
+                if steps.count > 1 {
+                    Button(editMode.isEditing ? "Done" : "Reorder") {
+                        withAnimation { editMode = editMode.isEditing ? .inactive : .active }
+                    }
+                    .font(.footnote)
+                    .textCase(nil)
+                }
+            }
+        } footer: {
+            if !steps.isEmpty {
+                Text("Tap the arrow on a step to give it its own details and steps.")
+            }
+        }
+    }
+
+    @ViewBuilder private var moreSections: some View {
+        Section("First tiny step") {
+            TextField("The smallest way to begin", text: $task.firstStep, axis: .vertical)
+                .lineLimit(1...3)
+        }
+        if !blockers.isEmpty || !possibleBlockers.isEmpty {
+            Section("Waiting on") {
+                ForEach(blockers) { blocker in
+                    Label(blocker.title.isEmpty ? "Untitled" : blocker.title,
+                          systemImage: blocker.isDone ? "checkmark.circle" : "hourglass")
+                        .foregroundStyle(blocker.isDone ? .secondary : .primary)
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) {
+                                task.blockedByIDs.removeAll { $0 == blocker.id }
+                            } label: {
+                                Label("Remove", systemImage: "xmark")
+                            }
+                        }
+                }
+                if !possibleBlockers.isEmpty {
+                    Menu {
+                        ForEach(possibleBlockers) { candidate in
+                            Button(candidate.title.isEmpty ? "Untitled" : candidate.title) {
+                                task.blockedByIDs.append(candidate.id)
+                            }
+                        }
+                    } label: {
+                        Label("Wait on another task", systemImage: "plus")
+                    }
+                }
+            }
+        }
+        Section("How long") {
+            Picker("How long", selection: $task.estimateMinutes) {
+                Text("None").tag(0)
+                ForEach(TaskItem.estimateChoices, id: \.self) { minutes in
+                    Text(minutes == 60 ? "1 hr" : "\(minutes) min").tag(minutes)
+                }
+            }
+            .pickerStyle(.segmented)
+        }
+        Section("How it is going") {
+            Picker("Status", selection: $task.status) {
+                ForEach(TaskStatus.allCases) { status in
+                    Text(status.label).tag(status)
+                }
+            }
+            Picker("Energy it needs", selection: $task.energy) {
+                ForEach(TaskEnergy.allCases) { energy in
+                    Text(energy.label).tag(energy)
+                }
+            }
+        }
+        Section("Focus") {
+            if !task.isDone {
+                Button {
+                    PomodoroTimer.shared.use(modelContext)
+                    PomodoroTimer.shared.setTask(task)
+                    showFocus = true
+                } label: {
+                    Label("Focus on this task", systemImage: "timer")
+                }
+            }
+            if let focus = task.focusSummary {
+                Text(focus)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 
@@ -866,10 +1074,26 @@ private struct TaskEditorSheet: View {
         reordered.move(fromOffsets: offsets, toOffset: destination)
         for (index, step) in reordered.enumerated() { step.sortOrder = slots[index] }
     }
+
+    /// Runs once a step's own editor has closed: removes a step you chose to delete, and any step left
+    /// blank with nothing under it.
+    private func finishStepEditing() {
+        let deleting = stepToDelete
+        stepToDelete = nil
+        if let deleting { modelContext.deleteTask(deleting, among: liveTasks) }
+        for step in TaskItem.steps(of: task, in: liveTasks) where step !== deleting
+            && step.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && step.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && TaskItem.steps(of: step, in: liveTasks).isEmpty {
+            modelContext.delete(step)
+        }
+    }
 }
 
 private struct StepEditorRow: View {
     @Bindable var step: TaskItem
+    let childCount: Int
+    let onOpen: () -> Void
 
     var body: some View {
         HStack(spacing: 10) {
@@ -883,6 +1107,20 @@ private struct StepEditorRow: View {
             .accessibilityLabel(step.isDone ? "Mark step as not done" : "Mark step as done")
             TextField("Step", text: $step.title, axis: .vertical)
                 .foregroundStyle(step.isDone ? .secondary : .primary)
+            if childCount > 0 {
+                Text("\(childCount)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel("\(childCount) steps under this step")
+            }
+            Button(action: onOpen) {
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.borderless)
+            .accessibilityLabel("Open step details")
         }
     }
 }

@@ -1,5 +1,6 @@
 # Changelog
 
+- Patches RV1 and RV2: task cards are a title and one quiet line, steps start folded, the task editor keeps the common things up front, and Add several at once takes a pasted list. Steps can now sit inside steps to any depth, each opening its own details, and deleting a task removes everything under it.
 - Patch RV10: the mascot in a check-in keeps one calm face instead of following the sliders. One switch in the code brings it back.
 - Patch R2: the review run now shows the Last night card and the sleep question in a check-in, which the demo data had been hiding.
 - Patch R1a: the review script passes the app launch arguments after a double dash, so the device tool no longer reads them as its own options.
