@@ -321,7 +321,11 @@ enum DemoMode {
                                     why: "It helps my head more than I expect.",
                                     notes: [GoalNote(date: ago(3), text: "Walked to the end of the street and back. That counted."),
                                             GoalNote(date: ago(1), text: "Skipped it today and that was fine.")],
-                                    sortOrder: 0))
+                                    sortOrder: 0,
+                                    usesSMART: true,
+                                    smartSpecific: "Walk to the end of the street and back.",
+                                    smartMeasurable: "Count the days I went. Not a streak, just a count.",
+                                    smartAchievable: "Five minutes is enough, and a skipped day is fine."))
         context.insert(PersonalGoal(title: "Go back to the pottery class", status: .reached, sortOrder: 1))
 
         context.insert(FeedbackLoopDiagram(

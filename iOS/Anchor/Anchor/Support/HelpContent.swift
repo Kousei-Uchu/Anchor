@@ -301,7 +301,8 @@ extension Guide {
             whatItIs: "Goals in your own words, with a few notes along the way.",
             howToUse: "Use the plus to write what you want and why it matters to you. Say where it is: Working on it, Reached or Set aside for now. Add short dated notes as things change. Tap a goal to open it.",
             tips: [
-                "Nothing is scored and nothing becomes a percentage."
+                "Nothing is scored and nothing becomes a percentage.",
+                "The SMART frame is a switch inside a goal. It is off unless you turn it on, and any part can stay blank."
             ]
         ),
         GuideEntry(

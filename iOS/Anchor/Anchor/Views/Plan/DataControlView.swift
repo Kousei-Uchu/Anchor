@@ -1675,13 +1675,21 @@ struct MessageStarterDTO: Codable {
 struct PersonalGoalDTO: Codable {
     var id: UUID; var title: String; var why: String; var statusRaw: String
     var notes: [GoalNote]; var sortOrder: Int; var createdAt: Date; var lastEditedAt: Date
+    /// Optional so exports made before the SMART frame existed still import.
+    var usesSMART: Bool?; var smartSpecific: String?; var smartMeasurable: String?
+    var smartAchievable: String?; var smartTimeBound: String?
     init(_ m: PersonalGoal) {
         id = m.id; title = m.title; why = m.why; statusRaw = m.statusRaw; notes = m.notes
         sortOrder = m.sortOrder; createdAt = m.createdAt; lastEditedAt = m.lastEditedAt
+        usesSMART = m.usesSMART; smartSpecific = m.smartSpecific; smartMeasurable = m.smartMeasurable
+        smartAchievable = m.smartAchievable; smartTimeBound = m.smartTimeBound
     }
     func toModel() -> PersonalGoal {
         PersonalGoal(id: id, title: title, why: why, status: GoalStatus(rawValue: statusRaw) ?? .active,
-                     notes: notes, sortOrder: sortOrder, createdAt: createdAt, lastEditedAt: lastEditedAt)
+                     notes: notes, sortOrder: sortOrder, createdAt: createdAt, lastEditedAt: lastEditedAt,
+                     usesSMART: usesSMART ?? false, smartSpecific: smartSpecific ?? "",
+                     smartMeasurable: smartMeasurable ?? "", smartAchievable: smartAchievable ?? "",
+                     smartTimeBound: smartTimeBound ?? "")
     }
 }
 

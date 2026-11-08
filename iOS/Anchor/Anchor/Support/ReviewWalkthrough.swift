@@ -228,7 +228,9 @@ enum ReviewStops {
         ("RV1", "Lighter task rows, add several at once", "A task card is a title and one quiet line; steps start folded; the editor keeps the common things up front; a button next to Add takes a pasted list.",
          "Open Tasks. Tap the list button by Add and paste: Pack bag, then an indented line Charger, then a deeper line Cable. Open one task and look at More options.", 1, .tasks),
         ("RV2", "Steps inside steps", "Steps nest to any depth, and each step opens its own details and steps.",
-         "Open Get ready for the weekend away, open its arrow, then open the step Pack and its arrow. Press and hold a step for Open details.", 1, .tasks)
+         "Open Get ready for the weekend away, open its arrow, then open the step Pack and its arrow. Press and hold a step for Open details.", 1, .tasks),
+        ("RV4", "Goals: an optional SMART frame", "A switch inside a goal, off by default, adds Specific, Measurable, Achievable and Time-bound boxes; Relevant is the existing why box. Nothing is required or dated.",
+         "Open Personal goals. The walking goal has it on; open the pottery goal, turn the switch on and off, and leave boxes blank.", 3, .goals)
     ])
 }
 

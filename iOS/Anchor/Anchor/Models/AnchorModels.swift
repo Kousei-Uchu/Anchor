@@ -533,9 +533,19 @@ final class PersonalGoal {
     var sortOrder: Int = 0
     var createdAt: Date = Date.now
     var lastEditedAt: Date = Date.now
+    /// An optional frame some people find useful, off unless switched on for a goal. Every part can stay
+    /// blank. Nothing here is required, scored or dated. "Relevant" is the goal's own `why`, so it is not
+    /// stored twice, and Time-bound is the person's own words, never a date that can pass.
+    var usesSMART: Bool = false
+    var smartSpecific: String = ""
+    var smartMeasurable: String = ""
+    var smartAchievable: String = ""
+    var smartTimeBound: String = ""
 
     init(id: UUID = UUID(), title: String = "", why: String = "", status: GoalStatus = .active,
-         notes: [GoalNote] = [], sortOrder: Int = 0, createdAt: Date = .now, lastEditedAt: Date = .now) {
+         notes: [GoalNote] = [], sortOrder: Int = 0, createdAt: Date = .now, lastEditedAt: Date = .now,
+         usesSMART: Bool = false, smartSpecific: String = "", smartMeasurable: String = "",
+         smartAchievable: String = "", smartTimeBound: String = "") {
         self.id = id
         self.title = title
         self.why = why
@@ -544,6 +554,11 @@ final class PersonalGoal {
         self.sortOrder = sortOrder
         self.createdAt = createdAt
         self.lastEditedAt = lastEditedAt
+        self.usesSMART = usesSMART
+        self.smartSpecific = smartSpecific
+        self.smartMeasurable = smartMeasurable
+        self.smartAchievable = smartAchievable
+        self.smartTimeBound = smartTimeBound
     }
 
     var status: GoalStatus {

@@ -345,8 +345,8 @@ struct PersonalGoalsView: View {
                             .lineLimit(2)
                             .multilineTextAlignment(.leading)
                     }
-                    if !goal.notes.isEmpty {
-                        Text(goal.notes.count == 1 ? "1 note" : "\(goal.notes.count) notes")
+                    if let caption = caption(goal) {
+                        Text(caption)
                             .font(.caption)
                             .foregroundStyle(.tertiary)
                     }
@@ -359,6 +359,13 @@ struct PersonalGoalsView: View {
         .accessibilityHint("Opens the goal")
         .anchorDeletable { modelContext.delete(goal) }
         .anchorCardRow()
+    }
+
+    private func caption(_ goal: PersonalGoal) -> String? {
+        var parts: [String] = []
+        if goal.usesSMART { parts.append("SMART") }
+        if !goal.notes.isEmpty { parts.append(goal.notes.count == 1 ? "1 note" : "\(goal.notes.count) notes") }
+        return parts.isEmpty ? nil : parts.joined(separator: " \u{00B7} ")
     }
 
     private func startNew() {
@@ -383,6 +390,8 @@ struct PersonalGoalsView: View {
         for goal in goals where goal !== deleting
             && goal.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && goal.why.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && goal.smartSpecific.isEmpty && goal.smartMeasurable.isEmpty
+            && goal.smartAchievable.isEmpty && goal.smartTimeBound.isEmpty
             && goal.notes.isEmpty {
             modelContext.delete(goal)
         }
@@ -400,6 +409,22 @@ private struct PersonalGoalEditorSheet: View {
         newNote.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    /// Changes whenever any part of the SMART frame changes, so the goal's edited time follows it.
+    private var smartSignature: String {
+        [goal.usesSMART ? "1" : "0", goal.smartSpecific, goal.smartMeasurable,
+         goal.smartAchievable, goal.smartTimeBound].joined(separator: "\u{1F}")
+    }
+
+    private func smartField(_ letter: String, prompt: String, text: Binding<String>) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(letter)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            TextField(prompt, text: text, axis: .vertical)
+                .lineLimit(1...4)
+        }
+    }
+
     var body: some View {
         Anchor.ItemEditorSheet(
             title: goal.title.isEmpty ? "New goal" : "Goal",
@@ -410,8 +435,24 @@ private struct PersonalGoalEditorSheet: View {
                 Section {
                     TextField("What I want", text: $goal.title, axis: .vertical)
                         .lineLimit(1...4)
-                    TextField("Why it matters to me", text: $goal.why, axis: .vertical)
+                    TextField(goal.usesSMART ? "Relevant: why it matters to me" : "Why it matters to me",
+                              text: $goal.why, axis: .vertical)
                         .lineLimit(2...8)
+                }
+                Section {
+                    Toggle("Use the SMART frame", isOn: $goal.usesSMART)
+                } footer: {
+                    Text("Specific, Measurable, Achievable, Relevant, Time-bound. It is optional, and any part can stay blank.")
+                }
+                if goal.usesSMART {
+                    Section {
+                        smartField("Specific", prompt: "What exactly would I do?", text: $goal.smartSpecific)
+                        smartField("Measurable", prompt: "How would I know I am getting somewhere?", text: $goal.smartMeasurable)
+                        smartField("Achievable", prompt: "What makes it doable for me right now?", text: $goal.smartAchievable)
+                        smartField("Time-bound", prompt: "When, in my own words, if that helps", text: $goal.smartTimeBound)
+                    } footer: {
+                        Text("Relevant is the box above. Time-bound can stay open: no date is needed, and nothing is ever marked late.")
+                    }
                 }
                 Section {
                     Picker("Where it is", selection: Binding(
@@ -452,6 +493,7 @@ private struct PersonalGoalEditorSheet: View {
             }
             .onChange(of: goal.title) { _, _ in goal.lastEditedAt = .now }
             .onChange(of: goal.why) { _, _ in goal.lastEditedAt = .now }
+            .onChange(of: smartSignature) { _, _ in goal.lastEditedAt = .now }
         }
     }
 }
