@@ -7,7 +7,7 @@ Layout
 iOS/               Xcode project (open iOS/Anchor/Anchor.xcodeproj in Xcode 26 or later)
 website/           Vite and React site for anchor.aspens.page
 remotion-project/  Source for the promo video
-scripts/           make-screenshots.sh (App Store screenshots and demo video), check-about-content.mjs (the About copy in the app and on the website must match), anchorbackup.py (opens an encrypted backup without the app)
+scripts/           make-screenshots.sh (App Store screenshots and demo video), check-about-content.mjs (the About copy in the app and on the website must match), anchorbackup.py (opens an encrypted backup without the app), anchorkey.py (the key and recovery key formats, with a self-test)
 docs/              Release guide and App Store copy
 BUILD_STATUS.md    Running notes on the app's state (some older entries are out of date)
 

@@ -189,6 +189,13 @@ struct SettingsView: View {
                     } label: {
                         Text("About Anchor").font(.system(.subheadline, design: .rounded))
                     }
+                    #if DEBUG
+                    NavigationLink {
+                        EncryptionSettingsView()
+                    } label: {
+                        Text("Encryption (test build)").font(.system(.subheadline, design: .rounded))
+                    }
+                    #endif
                 }
             }
             .anchorSettingsStyle()
@@ -472,5 +479,315 @@ struct WhatsNewView: View {
         .anchorSettingsStyle()
         .navigationTitle("What's new")
         .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - Encryption: the data key and the recovery key
+//
+// Patch 34. Reached only from test builds for now; Patch 35 locks the stored text
+// with this key and opens the screen to everyone.
+
+private struct ShownRecoveryKey: Identifiable {
+    let id = UUID()
+    let text: String
+}
+
+private enum KeyEntryKind: Identifiable {
+    case check
+    case restore
+
+    var id: Self { self }
+}
+
+private func keyMessage(for error: Error) -> String {
+    switch (error as? DataKeyError) ?? .storage {
+    case .notARecoveryKey: return "That is not a whole recovery key. Check it against what you wrote down."
+    case .wrongRecoveryKey: return "That recovery key does not match."
+    case .damagedFile: return "The recovery file is damaged."
+    case .noRecoveryFile: return "The recovery file is not on this device."
+    case .otherKey: return "The recovery file was made for a different key."
+    case .noKey: return "There is no key on this device."
+    case .alreadySetUp: return "A key is already here."
+    case .storage: return "That could not be saved. Try again."
+    }
+}
+
+struct EncryptionSettingsView: View {
+    @StateObject private var keys = DataKeyManager.shared
+    @State private var shownKey: ShownRecoveryKey?
+    @State private var entryKind: KeyEntryKind?
+    @State private var resultLine: String?
+    @State private var confirmRemove = false
+
+    private var statusText: String {
+        switch keys.status {
+        case .notSetUp: return "Not made yet"
+        case .ready: return "On this device"
+        case .needsRecovery: return "Not on this device"
+        case .unavailable: return "Cannot be read right now"
+        }
+    }
+
+    var body: some View {
+        Form {
+            Anchor.SettingsSection(title: "Data key", footer: "Stored text is not locked with this key yet.") {
+                keyRow("Data key", statusText)
+                if keys.status == .notSetUp {
+                    Button {
+                        makeKey()
+                    } label: {
+                        rowText("Make a key and a recovery key")
+                    }
+                }
+                if keys.status == .needsRecovery {
+                    Button {
+                        entryKind = .restore
+                    } label: {
+                        rowText("Restore with your recovery key")
+                    }
+                }
+            }
+
+            if keys.status == .ready || keys.hasRecoveryFile {
+                Anchor.SettingsSection(title: "Recovery key") {
+                    keyRow("Recovery file", keys.hasRecoveryFile ? "Kept with your data" : "Missing")
+                    if keys.hasRecoveryFile {
+                        Button {
+                            entryKind = .check
+                        } label: {
+                            rowText("Check my recovery key")
+                        }
+                    }
+                    if keys.status == .ready {
+                        Button {
+                            makeNewRecoveryKey()
+                        } label: {
+                            rowText("Make a new recovery key")
+                        }
+                    }
+                }
+            }
+
+            if let resultLine {
+                Anchor.SettingsSection(title: nil) {
+                    Text(resultLine).font(.system(.subheadline, design: .rounded))
+                }
+            }
+
+            #if DEBUG
+            Anchor.SettingsSection(title: "Test build only") {
+                Button(role: .destructive) {
+                    confirmRemove = true
+                } label: {
+                    rowText("Remove the key and the recovery file")
+                }
+            }
+            #endif
+        }
+        .anchorSettingsStyle()
+        .navigationTitle("Encryption")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            keys.refresh()
+            #if DEBUG
+            DataKeySelfTest.run()
+            #endif
+        }
+        .sheet(item: $shownKey) { shown in
+            RecoveryKeyShownSheet(text: shown.text)
+        }
+        .sheet(item: $entryKind) { kind in
+            switch kind {
+            case .check:
+                RecoveryKeyEntrySheet(title: "Check recovery key", buttonTitle: "Check") { typed in
+                    do {
+                        try keys.checkRecoveryKey(typed)
+                        resultLine = "That recovery key opens your recovery file."
+                        return nil
+                    } catch {
+                        return keyMessage(for: error)
+                    }
+                }
+            case .restore:
+                RecoveryKeyEntrySheet(title: "Restore the key", buttonTitle: "Restore") { typed in
+                    do {
+                        try keys.restore(with: typed)
+                        resultLine = "The key is back on this device."
+                        return nil
+                    } catch {
+                        return keyMessage(for: error)
+                    }
+                }
+            }
+        }
+        .confirmationDialog("Remove the key and the recovery file?", isPresented: $confirmRemove, titleVisibility: .visible) {
+            Button("Remove", role: .destructive) {
+                #if DEBUG
+                keys.removeEverything()
+                resultLine = nil
+                #endif
+            }
+            Button("Cancel", role: .cancel) {}
+        }
+    }
+
+    private func keyRow(_ title: String, _ value: String) -> some View {
+        HStack {
+            Text(title).font(.system(.subheadline, design: .rounded))
+            Spacer(minLength: 12)
+            Text(value)
+                .font(.system(.subheadline, design: .rounded))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.trailing)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private func rowText(_ title: String) -> some View {
+        Text(title).font(.system(.subheadline, design: .rounded))
+    }
+
+    @MainActor
+    private func makeKey() {
+        resultLine = nil
+        do {
+            let text = try keys.setUp()
+            shownKey = ShownRecoveryKey(text: text)
+        } catch {
+            resultLine = keyMessage(for: error)
+        }
+    }
+
+    @MainActor
+    private func makeNewRecoveryKey() {
+        resultLine = nil
+        Task {
+            let present = await AppLock.shared.confirmPresence(reason: "Make a new recovery key for Anchor.")
+            guard present else { return }
+            do {
+                let text = try keys.makeNewRecoveryKey()
+                shownKey = ShownRecoveryKey(text: text)
+            } catch {
+                resultLine = keyMessage(for: error)
+            }
+        }
+    }
+}
+
+/// The recovery key, once. It cannot be closed until the last four characters are typed
+/// back, so a key is not lost to a stray swipe.
+private struct RecoveryKeyShownSheet: View {
+    let text: String
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var typed = ""
+    @State private var copied = false
+
+    private var lastGroup: String { String(text.suffix(4)) }
+
+    private var isConfirmed: Bool {
+        RecoveryKeyText.canonical(typed) == RecoveryKeyText.canonical(lastGroup)
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("This is the only time your recovery key is shown. Write it down, or keep it somewhere safe that is not on this phone.")
+                        .font(.system(.subheadline, design: .rounded))
+
+                    Text(text)
+                        .font(.system(.title3, design: .monospaced).weight(.medium))
+                        .padding(14)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .fill(Color.secondary.opacity(0.12))
+                        )
+
+                    HStack(spacing: 12) {
+                        Button {
+                            UIPasteboard.general.setItems(
+                                [["public.utf8-plain-text": text]],
+                                options: [.localOnly: true, .expirationDate: Date().addingTimeInterval(120)]
+                            )
+                            copied = true
+                        } label: {
+                            Label(copied ? "Copied for 2 minutes" : "Copy", systemImage: "doc.on.doc")
+                        }
+                        ShareLink(item: text) {
+                            Label("Share", systemImage: "square.and.arrow.up")
+                        }
+                    }
+                    .buttonStyle(.bordered)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("To check you have it, type the last four characters.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                        TextField("Last four characters", text: $typed)
+                            .textFieldStyle(.roundedBorder)
+                            .font(.system(.body, design: .monospaced))
+                            .textInputAutocapitalization(.characters)
+                            .autocorrectionDisabled()
+                    }
+                }
+                .padding(20)
+            }
+            .navigationTitle("Your recovery key")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                        .disabled(!isConfirmed)
+                }
+            }
+        }
+        .interactiveDismissDisabled()
+    }
+}
+
+/// Asks for a recovery key. The action returns text to show when it fails, or nil when it
+/// worked and the sheet can close.
+private struct RecoveryKeyEntrySheet: View {
+    let title: String
+    let buttonTitle: String
+    let action: (String) -> String?
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var typed = ""
+    @State private var errorText: String?
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Recovery key", text: $typed, axis: .vertical)
+                        .font(.system(.body, design: .monospaced))
+                        .textInputAutocapitalization(.characters)
+                        .autocorrectionDisabled()
+                    if let errorText {
+                        Text(errorText).font(.footnote).foregroundStyle(.red)
+                    }
+                }
+                Section {
+                    Button(buttonTitle) {
+                        if let failure = action(typed) {
+                            errorText = failure
+                        } else {
+                            dismiss()
+                        }
+                    }
+                    .disabled(typed.isEmpty)
+                }
+            }
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+        }
     }
 }
