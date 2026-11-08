@@ -197,7 +197,7 @@ enum ReviewStops {
          "Start a check-in and look for the sleep question.", 0, nil),
         ("SL2d", "Sleep morning reminder", "An optional reminder at a time you pick.",
          "Settings, Sleep. (Reminders are not scheduled in demo mode.)", 1, .settings),
-        ("SL3-4", "Apple Health sleep", "Read nights in, and optionally save typed nights.",
+        ("SL3-4", "Apple Health sleep", "Read nights in, and optionally save typed nights. (RV9 made both of them plain switches.)",
          "Sleep screen, Apple Health card. Hidden in showcase mode; best tested on a real device.", 1, .sleep),
         ("SL5", "Sleep on session prep", "A Sleep since your last session card.",
          "Open Session prep and find the sleep card.", 3, .prep),
@@ -234,7 +234,9 @@ enum ReviewStops {
         ("RV5", "Check-ins on the Journal rows", "Each check-in row shows its own five sliders as small bars, one colour, no numbers, nothing added up. The detail sheet now names each slider as the check-in did, with both ends.",
          "Open the Journal. Compare the three check-ins (five, three and one day ago): the bars differ, nothing else does. Tap one and check the names match Now. Try large text.", 2, nil),
         ("RV3", "Appointments, calmer", "Two cards instead of four: Coming up, each with how far away it is, then the calendar. Earlier sessions fold away, Remove all is in the three dots menu, the usual gap moved into the schedule sheet and the person's details, and a new session starts at the time of the last one.",
-         "Open Appointments. Look at Coming up, then Show all, then open Earlier sessions. Tap the plus: the time should be that of the last session. Turn Repeat on and change the gap. Open the person button, Details, and find Usual gap. Check the three dots menu.", 1, .appointments)
+         "Open Appointments. Look at Coming up, then Show all, then open Earlier sessions. Tap the plus: the time should be that of the last session. Turn Repeat on and change the gap. Open the person button, Details, and find Usual gap. Check the three dots menu.", 1, .appointments),
+        ("RV9", "Apple Health sleep, tidier", "Both halves are the same: a switch with one short line under it, and the buttons that belong to it only when it is on. The long paragraphs moved into the Sleep guide, and the Connect button became a switch.",
+         "Open Sleep and scroll to Apple Health. Switch Bring in nights from Apple Health on and off, and Save nights I type on and off. In a review run Health is never touched, so the switches go back to off; check them on a normal build.", 1, .sleep)
     ])
 }
 

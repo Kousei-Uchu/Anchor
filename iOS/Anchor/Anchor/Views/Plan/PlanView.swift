@@ -1125,6 +1125,7 @@ private struct SleepHealthCard: View {
     @AppStorage(SleepHealthSettings.writeKey) private var writing = false
     @Query private var entries: [SleepEntry]
     @State private var connecting = false
+    @State private var enablingWrite = false
     @State private var confirmingRemove = false
     @State private var confirmingRemoveSaved = false
 
@@ -1144,76 +1145,15 @@ private struct SleepHealthCard: View {
 
     var body: some View {
         Anchor.Card(accentColor: Anchor.Theme.accent) {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 14) {
                 Label("Apple Health", systemImage: "heart.text.square")
                     .font(.system(.headline, design: .rounded))
 
-                if connected {
-                    Toggle("Bring in new nights", isOn: Binding(
-                        get: { connected },
-                        set: { on in if !on { reader.disconnect() } }
-                    ))
-                    if let statusLine {
-                        Text(statusLine)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    Button("Check now") {
-                        Task { await reader.sync(context: modelContext, full: true) }
-                    }
-                    .disabled(reader.isWorking)
-                    Text("Anchor only reads sleep, and keeps its own copy on this phone. To stop Anchor asking at all, change Sleep under Sharing in the Health app.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                } else {
-                    Text("Bring in the nights Apple Health already has, so you do not have to type them. Anchor only reads sleep, only after you choose this, and keeps it on this phone.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Button("Connect Apple Health") {
-                        connecting = true
-                        Task {
-                            await reader.connect(context: modelContext)
-                            connecting = false
-                        }
-                    }
-                    .disabled(connecting)
-                }
-
-                if importedCount > 0 {
-                    Button("Remove imported sleep", role: .destructive) { confirmingRemove = true }
-                    Text(importedCount == 1 ? "1 night here came from Apple Health." : "\(importedCount) nights here came from Apple Health.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
+                bringInSection
 
                 Divider()
 
-                Toggle("Save nights I type to Apple Health", isOn: Binding(
-                    get: { writing },
-                    set: { on in
-                        if on { Task { await writer.enable(context: modelContext) } } else { writer.disable() }
-                    }
-                ))
-                if writing {
-                    Button("Save the last 30 nights I typed") {
-                        Task { await writer.saveRecent(context: modelContext) }
-                    }
-                    .disabled(writer.isWorking)
-                    if let message = writer.message {
-                        Text(message)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                Text("Only nights with both a bed time and a wake time are saved, marked as coming from Anchor. A night Health already has from somewhere else is left alone. Deleting a night here removes the one Anchor saved. Anchor also looks at what Health holds for that night, so it never doubles one up.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                if writing || writer.savedCount > 0 {
-                    Button("Remove what Anchor saved", role: .destructive) { confirmingRemoveSaved = true }
-                }
+                saveSection
             }
             .buttonStyle(.borderless)
         }
@@ -1240,6 +1180,95 @@ private struct SleepHealthCard: View {
             Button("Keep them", role: .cancel) {}
         } message: {
             Text("This takes out the nights that came from Apple Health. Nights you typed or changed yourself stay, and nothing in Apple Health is touched.")
+        }
+    }
+}
+
+private extension SleepHealthCard {
+    /// Reading: one switch, and what belongs to it under it.
+    var bringInSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Toggle("Bring in nights from Apple Health", isOn: Binding(
+                get: { connected || connecting },
+                set: { on in
+                    if on {
+                        connecting = true
+                        Task {
+                            await reader.connect(context: modelContext)
+                            connecting = false
+                        }
+                    } else {
+                        reader.disconnect()
+                    }
+                }
+            ))
+            .tint(Anchor.Theme.accent)
+            .disabled(connecting)
+            Text("Reads sleep only, and keeps a copy on this phone.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            if connected {
+                if let statusLine {
+                    Text(statusLine)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                Button("Check now") {
+                    Task { await reader.sync(context: modelContext, full: true) }
+                }
+                .disabled(reader.isWorking)
+            }
+
+            if importedCount > 0 {
+                Button("Remove imported sleep", role: .destructive) { confirmingRemove = true }
+                    .padding(.top, 2)
+                Text(importedCount == 1 ? "1 night here came from Apple Health." : "\(importedCount) nights here came from Apple Health.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    /// Writing: one switch, and what belongs to it under it.
+    var saveSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Toggle("Save nights I type to Apple Health", isOn: Binding(
+                get: { writing || enablingWrite },
+                set: { on in
+                    if on {
+                        enablingWrite = true
+                        Task {
+                            await writer.enable(context: modelContext)
+                            enablingWrite = false
+                        }
+                    } else {
+                        writer.disable()
+                    }
+                }
+            ))
+            .tint(Anchor.Theme.accent)
+            .disabled(enablingWrite)
+            Text("Only nights with a bed time and a wake time.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            if writing {
+                Button("Save the last 30 nights I typed") {
+                    Task { await writer.saveRecent(context: modelContext) }
+                }
+                .disabled(writer.isWorking)
+                if let message = writer.message {
+                    Text(message)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if writing || writer.savedCount > 0 {
+                Button("Remove what Anchor saved", role: .destructive) { confirmingRemoveSaved = true }
+                    .padding(.top, 2)
+            }
         }
     }
 }

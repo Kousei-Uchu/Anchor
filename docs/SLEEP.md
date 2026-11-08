@@ -5,7 +5,7 @@ An optional, quiet record of nights. It has no score, no target hours, no streak
 ## What it does
 - **Nights.** One entry per night, named for the day you woke up. Bed time, wake time, time asleep (worked out from the two, or typed), an optional feel in three words you can rename, and a note.
 - **Where it shows up.** Each is optional and off until switched on in Settings: a Last night card on Now in the morning, a small row for each night in the Journal and a mark on the month view, one extra question in a check-in, and a morning reminder whose wording never says what it is about. Two things reach Bridge: session prep has a Sleep since your last session card (how many nights are written down, the shortest and longest time asleep, and the usual bedtime, with an Add to prep notes button that only does anything when tapped), and Export for someone can include Sleep, with a plain chart of time asleep in the web page.
-- **Apple Health.** A Connect Apple Health button at the bottom of the Sleep screen reads sleep, and a separate Save nights I type to Apple Health switch writes it. Nothing is asked of Health until one of them is used, and writing is off to begin with.
+- **Apple Health.** A Bring in nights from Apple Health switch at the bottom of the Sleep screen reads sleep, and a separate Save nights I type to Apple Health switch writes it. Nothing is asked of Health until one of them is used, and writing is off to begin with.
 
 ## What session prep and export show
 - **Session prep card.** Appears only when at least one night has something written down since the last session (or since a typical gap before now when there is no past session). It shows the count of nights, the shortest and longest time asleep, and the usual bedtime: the middle of the bed times, from three nights up, rounded to a quarter of an hour, the same rule as the usual range on the Sleep screen. It says nothing about whether it was enough and has no average. Nothing goes into the prep notes unless Add to prep notes is tapped. There is no switch, because the card shows only for someone who is already keeping the journal and does nothing on its own.
@@ -19,7 +19,7 @@ An optional, quiet record of nights. It has no score, no target hours, no streak
 - **Typed wins.** If a night has an entry that was typed, Health never adds or changes it. If an imported night is changed in the sheet, it becomes a typed night.
 - Anything Anchor itself writes to Health is ignored on import.
 - **Denied looks like empty.** HealthKit does not say whether read access was refused, so the screen says "No sleep found in Apple Health yet." and nothing more.
-- **Controls.** Bring in new nights (off stops further imports). Remove imported sleep deletes only the nights that came from Health and were not changed, and switches importing off. Access itself is changed in the Health app, under Sharing. Clear everything switches importing off.
+- **Controls.** Bring in nights from Apple Health (switching it off stops further imports, and switching it on asks Health and brings in the last 30 days). Remove imported sleep deletes only the nights that came from Health and were not changed, and switches importing off. Access itself is changed in the Health app, under Sharing. Clear everything switches importing off.
 - The Health section is hidden where Health data is not available. Demo mode and showcase mode never touch Health.
 
 ## How writing back works

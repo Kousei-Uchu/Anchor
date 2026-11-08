@@ -244,8 +244,9 @@ extension Guide {
             howToUse: "Add a night with when you went to bed and when you woke, and the time asleep is worked out. If you do not know the times, type how long you slept instead. Pick how it felt from three words you can rename, and write a note if you want one. The screen shows a dot for each of the last 30 nights and a plain line on the usual range. There is no score, no target and no streak. Settings has switches for a Last night card on Now, a small row for each night in the Journal, one more question in a check-in, and a morning reminder. All of them are off until you turn them on.",
             tips: [
                 "Sleep starts hidden on Plan. Turn it on under Customise.",
-                "Apple Health is optional and sits at the bottom of this screen. Nothing is asked of Health until you tap Connect, and a night you typed is never replaced.",
-                "Remove imported sleep takes out the nights that came from Health, and leaves Health itself alone."
+                "Apple Health is optional and sits at the bottom of this screen, with one switch for bringing nights in and one for saving the nights you type. Nothing is asked of Health until you switch one on, and a night you typed is never replaced.",
+                "Bringing nights in only reads sleep. To stop Anchor asking at all, change Sleep under Sharing in the Health app. Remove imported sleep takes out the nights that came from Health and leaves Health itself alone.",
+                "Saving writes only nights with both a bed time and a wake time, marked as coming from Anchor. A night Health already has from somewhere else is left alone, and deleting a night here removes the one Anchor saved. Remove what Anchor saved takes out only that."
             ]
         ),
         GuideEntry(
