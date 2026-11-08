@@ -1,6 +1,6 @@
 # Showcase mode
 
-Point 17 of the plan: show someone the app without showing them your own content. It comes in three steps. Patch 39 is the machinery. Patch 40a (this one) clears what lives outside the store and leaves out the share and export controls. Patch 40b adds a passcode of its own, an exit flow and opens the switch to everyone. Until then it is only in test builds (Settings, Your data and help, Showcase mode (test build)).
+Point 17 of the plan: show someone the app without showing them your own content. It came in three steps. Patch 39 is the machinery. Patch 40a clears what lives outside the store and leaves out the share and export controls. Patch 40b (the last) adds a passcode of its own and an exit flow, and opens the switch to everyone in Settings, Your data and help, Showcase mode.
 
 ## What it does while it is on
 
@@ -27,13 +27,22 @@ Point 17 of the plan: show someone the app without showing them your own content
 
 - **On:** only on a phone that has Face ID, Touch ID or a passcode (`ShowcaseMode.canTurnOn`), so there is always a way back. It asks first, and says that the widgets and reminders are cleared.
 - **Off:** asks for the phone's own Face ID or passcode, directly (`ShowcaseMode.confirmOwner`), not through Anchor's lock, which is not asked for while showcase mode is on. If it is not confirmed, showcase mode stays on.
-- **Forgetting Anchor's own showcase passcode** is not a case yet, because there is none until Patch 40b. The phone's authentication always works, and will go on working after the passcode is added.
+- **Forgetting the showcase passcode** never locks anyone in. The phone's own Face ID or passcode always turns showcase mode off, with or without a showcase passcode.
 
-## Not done yet (Patch 40b)
+## What 40b adds
 
-- A showcase passcode of its own, kept as a salted hash in the Keychain, as another way to turn it off.
-- Opening the switch to everyone, in Settings, with its own screen and Help, and the privacy page updated.
+- **A switch for everyone.** Settings, Your data and help, Showcase mode is no longer a test-build screen. It has its own screen with a "?" help sheet (`ShowcaseHelp`, shown by `HelpNoteSheet`). While showcase mode is on, that screen only offers to turn it off.
+- **A showcase passcode of its own** (`ShowcasePasscode`, in `AppLock.swift`). Optional, at least four characters, typed twice. Only a salted PBKDF2-SHA256 hash is kept (200,000 rounds, 16-byte salt), never the passcode, in the Keychain with the same protection class as the data key (after first unlock, this device only). It reuses `BackupFormat.deriveKey`, so there is one key-derivation routine. Turning showcase mode on without one is allowed: the confirmation says that only the phone's Face ID or passcode will turn it off, and offers Set a passcode first.
+- **Changing or removing the passcode** asks for the phone's own Face ID or passcode first, so someone holding the phone in a showcase cannot swap it. Those two buttons only show while showcase mode is off.
+- **The exit flow** (`ShowcaseExitView`, a sheet): the showcase passcode if one is set, and always Use Face ID or the phone's passcode (`ShowcaseMode.confirmOwner`, asked directly, not through Anchor's lock).
+- **Slowing down guesses.** After four wrong tries in a row the fifth starts a wait of 30 seconds, and each wrong try after that doubles it, up to 15 minutes. The wait only applies to the showcase passcode, never to the phone's own Face ID or passcode, so it cannot lock anyone in. A right passcode, or setting or removing the passcode, clears the count. The count is kept in the standard defaults.
+- **Clear all data** also removes the showcase passcode (it is a stored secret). It is switched off while showcase mode is on, so it cannot be used to remove the passcode from inside a showcase.
+- **The privacy page** has a Showcase mode section and a new effective date (8 November 2026).
+
+## Not done
+
 - A way to put content in the demo that the screenshot tests do not need.
+- A guide entry for showcase mode. The guide registry (Patches 41 to 43) does not exist yet, so for now the "?" sheet on the screen is the help.
 
 ## Known gaps
 
@@ -54,3 +63,14 @@ Before you start, have a real contact and a real trigger window set up, with the
 6. Turn it off: it asks for Face ID or the passcode. Cancel it once: it should still be on. Then confirm: your own content should be back, the widgets should fill in again within a few seconds with your contact and counters, and the trigger window reminder should be scheduled again (move its time a few minutes ahead and wait for it).
 7. Do 5 and 6 starting from a cold launch in showcase mode (turn it on, force close, open, turn it off): the Safety plan should have its sections straight away.
 8. On a phone with no passcode, the switch should refuse and say why.
+
+Checks for 40b (it is in release builds now, so use any build):
+
+9. Settings, Your data and help, Showcase mode is there, without "(test build)". The "?" opens a sheet that scrolls and ends with Got it.
+10. Set a passcode (Set a passcode, typed twice). Try a different second entry and one under four characters: each should say so and not save. Then set it properly. The screen should now say Set, with Change passcode and Remove passcode.
+11. Change passcode and Remove passcode should each ask for Face ID or the phone's passcode first. Cancel it: nothing should change and it should say so.
+12. Turn on showcase mode. Open Settings, Showcase mode: it should only offer Turn off showcase mode. Tap it. Type a wrong passcode: it should say so and clear the field. Type the right one: your own content should come back, with the widgets and reminders as in step 6.
+13. Do 12 again, this time with Use Face ID or the phone's passcode instead of the passcode. Cancel it once: showcase mode should still be on.
+14. Type a wrong passcode five times in a row: the fifth should say to wait about 30 seconds. While it waits, the right passcode should say to wait as well, and Use Face ID or the phone's passcode should still work.
+15. With no passcode set, turn on showcase mode: the dialog should say only the phone's Face ID or passcode will turn it off, and offer Set a passcode first. In the showcase, Turn off should offer only the phone's Face ID or passcode.
+16. Set a passcode, then Your data, Clear all data (on a test copy, not your real data): afterwards Showcase mode should say Not set.

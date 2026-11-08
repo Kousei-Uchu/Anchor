@@ -106,3 +106,74 @@ struct HelpToolbarButton: View {
         }
     }
 }
+
+/// A help sheet for something that is not one of the five tabs, such as Showcase mode in Settings.
+/// It looks like HelpSheetView, with room for several short paragraphs.
+struct HelpNoteSheet: View {
+    let icon: String
+    let title: String
+    let paragraphs: [String]
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+                    ZStack {
+                        Circle().fill(Anchor.Theme.accentSoft).frame(width: 64, height: 64)
+                        Image(systemName: icon)
+                            .font(.system(size: 26, weight: .medium))
+                            .foregroundStyle(Anchor.Theme.accent)
+                    }
+                    .padding(.top, 32)
+                    Text(title)
+                        .font(.system(.title3, design: .rounded).weight(.semibold))
+                    ForEach(paragraphs, id: \.self) { paragraph in
+                        Text(paragraph)
+                            .font(.system(.body, design: .rounded))
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                }
+                .padding(.horizontal, 28)
+                .padding(.bottom, 32)
+                .frame(maxWidth: .infinity)
+            }
+            .anchorBackground()
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Got it") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
+/// The "?" button for a screen that is not a tab. It opens a HelpNoteSheet.
+struct HelpNoteToolbarButton: View {
+    let icon: String
+    let title: String
+    let paragraphs: [String]
+    @State private var showHelp = false
+
+    var body: some View {
+        Button {
+            showHelp = true
+        } label: {
+            Image(systemName: "questionmark.circle")
+        }
+        .sheet(isPresented: $showHelp) {
+            HelpNoteSheet(icon: icon, title: title, paragraphs: paragraphs)
+        }
+    }
+}
+
+enum ShowcaseHelp {
+    static let paragraphs: [String] = [
+        "Showcase mode lets you show someone Anchor without showing them your own things. While it is on, Anchor shows made-up people, entries and plans, and your real data is not opened.",
+        "Your widgets are emptied and your waiting reminders are taken off the phone, so nothing of yours turns up on the lock screen or as a notification. Both come back when you turn it off.",
+        "Anything you add while it is on is made up too, and is gone when you close the app. The buttons for sharing and exporting are left out, and Your data is switched off, so nothing can be sent from a showcase.",
+        "Anchor does not ask for Face ID while it is on, and it stays on if you close the app. To turn it off, type the showcase passcode if you set one, or use your phone's own Face ID or passcode. The phone's own always works, so forgetting the showcase passcode never locks you out.",
+        "It needs a phone with Face ID, Touch ID or a passcode, so there is always a way out."
+    ]
+}

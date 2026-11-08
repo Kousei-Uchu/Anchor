@@ -4,7 +4,7 @@ import { SUPPORT_EMAIL } from '../content/meta';
 
 export default function Privacy() {
   return (
-    <Page route="/privacy" title="Privacy Policy" meta="Effective 5 November 2026">
+    <Page route="/privacy" title="Privacy Policy" meta="Effective 8 November 2026">
       <div className="panel">
         <p>
           <strong>The short version.</strong> Anchor keeps what you put into it on your own device. There are no accounts, no servers that receive your data, no analytics, no advertising, and no tracking. I (the developer) cannot see anything you write or save in the app.
@@ -53,6 +53,14 @@ export default function Privacy() {
       <h2>Your control</h2>
       <p>
         In the app, go to Plan, then Your data, to see what is stored, export it, import a previous export, or clear everything. Deleting the app from your device removes its data from the device. Because I do not hold a copy, I cannot recover data for you if it is deleted, so keep your own exports if the content matters to you.
+      </p>
+
+      <h2>Showcase mode</h2>
+      <p>
+        Showcase mode is an optional setting for showing the app to someone without showing them your own content. While it is on, Anchor runs on made-up content that exists only in memory and is gone when the app closes, and your real data is not opened. The widgets are emptied and waiting reminders are removed from the phone, and both are put back when you turn it off. The buttons for sharing and exporting are left out.
+      </p>
+      <p>
+        If you set a showcase passcode, Anchor keeps a salted hash of it in your device&rsquo;s Keychain, never the passcode itself, and it stays on this device. Your phone&rsquo;s own Face ID or passcode can always turn showcase mode off, so forgetting the showcase passcode does not lock you out. None of this is sent anywhere.
       </p>
 
       <h2>Children</h2>

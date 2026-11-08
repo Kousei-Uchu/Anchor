@@ -220,9 +220,9 @@ private struct AppLockScreenView: View {
 // store, the real store is not opened on that launch, and the app lock is not asked for
 // (the setting itself is left as it was and applies again afterwards). Patch 40a clears what
 // could still show real data outside the store (see ShowcaseSweep in AnchorApp.swift) and
-// leaves out the share and export controls. Patch 40b adds a passcode of its own and opens
-// this to everyone. Until then it is only in test builds (Settings, Your data and help,
-// Showcase mode (test build)).
+// leaves out the share and export controls. Patch 40b adds a passcode of its own (see
+// ShowcasePasscode below), the exit flow, and opens it to everyone in Settings, Your data and
+// help, Showcase mode.
 
 enum ShowcaseMode {
     private static let defaultsKey = "anchor.showcaseOn"
@@ -251,6 +251,141 @@ enum ShowcaseMode {
         } catch {
             return false
         }
+    }
+}
+
+enum ShowcasePasscodeError: Error, Equatable {
+    case tooShort
+    case storage
+}
+
+/// A passcode of its own for showing the app (Patch 40b). It is only one more way to turn showcase
+/// mode off. The phone's own Face ID or passcode always works as well, so forgetting this one never
+/// leaves anyone stuck. Only a salted PBKDF2 hash is kept, never the passcode itself, in this
+/// device's Keychain (after first unlock, this device only), so it stays out of backups.
+///
+/// Wrong tries are slowed down: after four wrong ones in a row the fifth starts a wait of 30 seconds,
+/// and each wrong try after that doubles it, up to 15 minutes. The wait never applies to the phone's
+/// own Face ID or passcode.
+enum ShowcasePasscode {
+    enum Check: Equatable {
+        case correct
+        case wrong
+        /// Too many wrong tries for now.
+        case wait(seconds: Int)
+        /// The Keychain cannot be read or holds something unexpected. The phone's own Face ID or
+        /// passcode is still there.
+        case unavailable
+    }
+
+    static let minimumLength = 4
+
+    private static let service = "page.aspens.anchor.showcasepasscode"
+    private static let account = "passcode"
+    private static let formatVersion: UInt8 = 1
+    private static let iterations: UInt32 = 200_000
+    private static let blobLength = 1 + 4 + 16 + 32
+    private static let freeTries = 4
+    private static let failsKey = "anchor.showcasePasscodeFails"
+    private static let waitUntilKey = "anchor.showcasePasscodeWaitUntil"
+
+    private static func query() -> [String: Any] {
+        [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account
+        ]
+    }
+
+    private static func stored() -> Data? {
+        var request = query()
+        request[kSecReturnData as String] = true
+        request[kSecMatchLimit as String] = kSecMatchLimitOne
+        var result: CFTypeRef?
+        guard SecItemCopyMatching(request as CFDictionary, &result) == errSecSuccess else { return nil }
+        return result as? Data
+    }
+
+    static var isSet: Bool { stored() != nil }
+
+    /// Seconds left of a wait after too many wrong tries, or 0.
+    static var waitRemaining: Int {
+        let until = UserDefaults.standard.double(forKey: waitUntilKey)
+        let left = until - Date().timeIntervalSince1970
+        return left > 0 ? Int(left.rounded(.up)) : 0
+    }
+
+    /// Sets the passcode, or replaces the one there.
+    static func set(_ passcode: String) throws {
+        guard passcode.count >= minimumLength else { throw ShowcasePasscodeError.tooShort }
+        let salt = Data((0..<16).map { _ in UInt8.random(in: 0...255) })
+        guard let key = BackupFormat.deriveKey(password: passcode, salt: salt, iterations: iterations) else {
+            throw ShowcasePasscodeError.storage
+        }
+        var blob = Data([formatVersion])
+        blob.append(BackupFormat.bigEndian(UInt64(iterations), bytes: 4))
+        blob.append(salt)
+        blob.append(key.withUnsafeBytes { Data($0) })
+
+        var attributes = query()
+        attributes[kSecValueData as String] = blob
+        attributes[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        var status = SecItemAdd(attributes as CFDictionary, nil)
+        if status == errSecDuplicateItem {
+            let change: [String: Any] = [kSecValueData as String: blob]
+            status = SecItemUpdate(query() as CFDictionary, change as CFDictionary)
+        }
+        guard status == errSecSuccess else { throw ShowcasePasscodeError.storage }
+        clearFailures()
+    }
+
+    static func remove() {
+        SecItemDelete(query() as CFDictionary)
+        clearFailures()
+    }
+
+    static func check(_ attempt: String) -> Check {
+        let waiting = waitRemaining
+        if waiting > 0 { return .wait(seconds: waiting) }
+        guard let blob = stored(), blob.count == blobLength, blob[0] == formatVersion else { return .unavailable }
+        let rounds = UInt32(truncatingIfNeeded: BackupFormat.number(blob.subdata(in: 1..<5)))
+        guard rounds >= 10_000, rounds <= 5_000_000 else { return .unavailable }
+        let salt = blob.subdata(in: 5..<21)
+        let expected = blob.subdata(in: 21..<53)
+        guard let key = BackupFormat.deriveKey(password: attempt, salt: salt, iterations: rounds) else {
+            return .wrong
+        }
+        let actual = key.withUnsafeBytes { Data($0) }
+        if sameBytes(actual, expected) {
+            clearFailures()
+            return .correct
+        }
+        registerFailure()
+        let nowWaiting = waitRemaining
+        return nowWaiting > 0 ? .wait(seconds: nowWaiting) : .wrong
+    }
+
+    private static func sameBytes(_ a: Data, _ b: Data) -> Bool {
+        guard a.count == b.count else { return false }
+        var difference: UInt8 = 0
+        for (x, y) in zip(a, b) { difference |= x ^ y }
+        return difference == 0
+    }
+
+    private static func registerFailure() {
+        let defaults = UserDefaults.standard
+        let fails = defaults.integer(forKey: failsKey) + 1
+        defaults.set(fails, forKey: failsKey)
+        if fails > freeTries {
+            let doublings = min(fails - freeTries - 1, 5)
+            let seconds = min(30 * (1 << doublings), 900)
+            defaults.set(Date().timeIntervalSince1970 + Double(seconds), forKey: waitUntilKey)
+        }
+    }
+
+    private static func clearFailures() {
+        UserDefaults.standard.removeObject(forKey: failsKey)
+        UserDefaults.standard.removeObject(forKey: waitUntilKey)
     }
 }
 

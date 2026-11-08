@@ -189,16 +189,16 @@ struct SettingsView: View {
                     } label: {
                         Text("About Anchor").font(.system(.subheadline, design: .rounded))
                     }
+                    NavigationLink {
+                        ShowcaseSettingsView()
+                    } label: {
+                        Text("Showcase mode").font(.system(.subheadline, design: .rounded))
+                    }
                     #if DEBUG
                     NavigationLink {
                         EncryptionSettingsView()
                     } label: {
                         Text("Encryption (test build)").font(.system(.subheadline, design: .rounded))
-                    }
-                    NavigationLink {
-                        ShowcaseTestView()
-                    } label: {
-                        Text("Showcase mode (test build)").font(.system(.subheadline, design: .rounded))
                     }
                     #endif
                 }
@@ -797,33 +797,38 @@ private struct RecoveryKeyEntrySheet: View {
     }
 }
 
-#if DEBUG
-/// Test-build screen for showcase mode (Patch 39). Turning it on swaps the app to the made-up
-/// demo content and makes the window again, which closes this screen; turning it off asks for the
-/// phone's own Face ID or passcode first. The public version, with its own passcode, is Patch 40.
-struct ShowcaseTestView: View {
+/// Showcase mode in Settings (Patch 40b). Turning it on swaps the app to made-up content and makes the
+/// window again, which closes this screen. While it is on, the same screen only offers to turn it off,
+/// with the showcase passcode if one is set or with the phone's own Face ID or passcode, which always
+/// works. What it does is explained in the help sheet and in docs/SHOWCASE.md.
+struct ShowcaseSettingsView: View {
     @ObservedObject private var holder = ContainerHolder.shared
     @State private var confirmOn = false
+    @State private var showExit = false
+    @State private var showSetPasscode = false
+    @State private var passcodeIsSet = ShowcasePasscode.isSet
     @State private var message: String?
-    @State private var isWorking = false
 
     var body: some View {
         Form {
-            Anchor.SettingsSection(
-                title: "Showcase mode",
-                footer: "Shows made-up content in place of yours, and does not ask for Face ID while it is on. The widgets are emptied and waiting reminders are taken off the phone, and both come back when you turn it off. Turning it off asks for the phone's Face ID or passcode. Test build only for now."
-            ) {
-                Text(ShowcaseMode.isOn ? "On. You are looking at made-up content." : "Off.")
-                    .font(.system(.subheadline, design: .rounded))
-                if ShowcaseMode.isOn {
+            if ShowcaseMode.isOn {
+                Anchor.SettingsSection(title: "Showcase mode") {
+                    Text("On. You are looking at made-up content.")
+                        .font(.system(.subheadline, design: .rounded))
                     Button {
-                        turnOff()
+                        showExit = true
                     } label: {
                         Text("Turn off showcase mode")
                             .font(.system(.subheadline, design: .rounded))
                     }
-                    .disabled(isWorking)
-                } else {
+                }
+            } else {
+                Anchor.SettingsSection(
+                    title: "Showcase mode",
+                    footer: "Shows made-up content in place of yours, so you can show someone the app."
+                ) {
+                    Text("Off.")
+                        .font(.system(.subheadline, design: .rounded))
                     Button {
                         if ShowcaseMode.canTurnOn {
                             confirmOn = true
@@ -835,29 +840,231 @@ struct ShowcaseTestView: View {
                             .font(.system(.subheadline, design: .rounded))
                     }
                 }
-                if let message {
-                    Text(message)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                Anchor.SettingsSection(
+                    title: "Showcase passcode",
+                    footer: "A passcode only for showing the app. Your phone's Face ID or passcode turns showcase mode off as well."
+                ) {
+                    if passcodeIsSet {
+                        Text("Set")
+                            .font(.system(.subheadline, design: .rounded))
+                        Button {
+                            changePasscode()
+                        } label: {
+                            Text("Change passcode")
+                                .font(.system(.subheadline, design: .rounded))
+                        }
+                        Button(role: .destructive) {
+                            removePasscode()
+                        } label: {
+                            Text("Remove passcode")
+                                .font(.system(.subheadline, design: .rounded))
+                        }
+                    } else {
+                        Text("Not set")
+                            .font(.system(.subheadline, design: .rounded))
+                        Button {
+                            showSetPasscode = true
+                        } label: {
+                            Text("Set a passcode")
+                                .font(.system(.subheadline, design: .rounded))
+                        }
+                    }
                 }
+            }
+            if let message {
+                Text(message)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
         }
         .anchorSettingsStyle()
         .navigationTitle("Showcase mode")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                HelpNoteToolbarButton(icon: "rectangle.on.rectangle", title: "About showcase mode", paragraphs: ShowcaseHelp.paragraphs)
+            }
+        }
         .confirmationDialog("Turn on showcase mode?", isPresented: $confirmOn, titleVisibility: .visible) {
             Button("Turn on") {
                 if !holder.enterShowcase() {
                     message = "Showcase mode could not start, so nothing was changed."
                 }
             }
+            if !passcodeIsSet {
+                Button("Set a passcode first") { showSetPasscode = true }
+            }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Anchor will show made-up content, with the widgets emptied and waiting reminders removed, until you turn this off with your phone's Face ID or passcode.")
+            Text(passcodeIsSet
+                 ? "Anchor will show made-up content until you turn this off with your showcase passcode or your phone's Face ID or passcode."
+                 : "Anchor will show made-up content until you turn this off with your phone's Face ID or passcode. You can set a showcase passcode first.")
+        }
+        .sheet(isPresented: $showSetPasscode) {
+            ShowcasePasscodeSetView {
+                passcodeIsSet = ShowcasePasscode.isSet
+            }
+        }
+        .sheet(isPresented: $showExit) {
+            ShowcaseExitView()
         }
     }
 
-    private func turnOff() {
+    /// Changing or removing the passcode asks for the phone's own Face ID or passcode first, so
+    /// someone holding the phone in a showcase cannot swap it.
+    private func changePasscode() {
+        message = nil
+        Task {
+            let confirmed = await ShowcaseMode.confirmOwner(reason: "Change the passcode for showcase mode.")
+            if confirmed {
+                showSetPasscode = true
+            } else {
+                message = "Nothing was changed."
+            }
+        }
+    }
+
+    private func removePasscode() {
+        message = nil
+        Task {
+            let confirmed = await ShowcaseMode.confirmOwner(reason: "Remove the passcode for showcase mode.")
+            if confirmed {
+                ShowcasePasscode.remove()
+                passcodeIsSet = ShowcasePasscode.isSet
+            } else {
+                message = "Nothing was changed."
+            }
+        }
+    }
+}
+
+/// Setting or changing the showcase passcode: typed twice, at least four characters.
+struct ShowcasePasscodeSetView: View {
+    @Environment(\.dismiss) private var dismiss
+    let onSaved: () -> Void
+    @State private var first = ""
+    @State private var second = ""
+    @State private var error: String?
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Anchor.SettingsSection(title: "New passcode", footer: "At least 4 characters.") {
+                    SecureField("Passcode", text: $first)
+                    SecureField("Type it again", text: $second)
+                }
+                if let error {
+                    Text(error)
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                }
+            }
+            .anchorSettingsStyle()
+            .navigationTitle("Showcase passcode")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { save() }
+                        .disabled(first.isEmpty || second.isEmpty)
+                }
+            }
+        }
+    }
+
+    private func save() {
+        guard first.count >= ShowcasePasscode.minimumLength else {
+            error = "Use at least 4 characters."
+            return
+        }
+        guard first == second else {
+            error = "The two did not match."
+            return
+        }
+        do {
+            try ShowcasePasscode.set(first)
+            onSaved()
+            dismiss()
+        } catch {
+            self.error = "The passcode could not be saved."
+        }
+    }
+}
+
+/// The way out of showcase mode: the showcase passcode if one is set, or always the phone's own
+/// Face ID or passcode. The phone's one is asked directly, not through Anchor's own lock, which is
+/// not asked for while showcase mode is on.
+struct ShowcaseExitView: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var holder = ContainerHolder.shared
+    @State private var attempt = ""
+    @State private var message: String?
+    @State private var isWorking = false
+    private let hasPasscode = ShowcasePasscode.isSet
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                if hasPasscode {
+                    Anchor.SettingsSection(title: "Showcase passcode") {
+                        SecureField("Passcode", text: $attempt)
+                            .submitLabel(.go)
+                            .onSubmit { tryPasscode() }
+                        Button {
+                            tryPasscode()
+                        } label: {
+                            Text("Turn off showcase mode")
+                                .font(.system(.subheadline, design: .rounded))
+                        }
+                        .disabled(attempt.isEmpty || isWorking)
+                    }
+                }
+                Anchor.SettingsSection(title: hasPasscode ? "Or use your phone" : "Turn off showcase mode") {
+                    Button {
+                        useDevice()
+                    } label: {
+                        Text("Use Face ID or the phone's passcode")
+                            .font(.system(.subheadline, design: .rounded))
+                    }
+                    .disabled(isWorking)
+                }
+                if let message {
+                    Text(message)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .anchorSettingsStyle()
+            .navigationTitle("Turn off")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private func tryPasscode() {
+        guard !attempt.isEmpty, !isWorking else { return }
+        switch ShowcasePasscode.check(attempt) {
+        case .correct:
+            holder.leaveShowcase()
+        case .wrong:
+            attempt = ""
+            message = "That is not the passcode."
+        case .wait(let seconds):
+            attempt = ""
+            message = "Too many tries. Wait \(Self.waitText(seconds)), or use Face ID or the phone's passcode."
+        case .unavailable:
+            attempt = ""
+            message = "The passcode could not be read. Use Face ID or the phone's passcode."
+        }
+    }
+
+    private func useDevice() {
         isWorking = true
         message = nil
         Task {
@@ -870,5 +1077,8 @@ struct ShowcaseTestView: View {
             }
         }
     }
+
+    private static func waitText(_ seconds: Int) -> String {
+        seconds < 90 ? "\(seconds) seconds" : "\((seconds + 59) / 60) minutes"
+    }
 }
-#endif

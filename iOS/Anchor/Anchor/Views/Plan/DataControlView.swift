@@ -668,6 +668,7 @@ struct DataControlView: View {
         RoutineReminders.refresh(routines: [])
         RecoveryWidgetSync.refresh(counters: [])
         WidgetSealing.removeEverything()
+        ShowcasePasscode.remove()
         WidgetCenter.shared.reloadAllTimelines()
         clearJournalAttachments()
         showClearedAlert = true
