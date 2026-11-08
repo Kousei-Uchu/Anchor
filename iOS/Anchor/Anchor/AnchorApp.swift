@@ -298,6 +298,10 @@ enum DemoMode {
         context.insert(JournalEntry(createdAt: ago(3), text: "Felt tense before the call, but it went better than I expected."))
         context.insert(CheckIn(timestamp: ago(1, hour: 5), physicalExhaustion: 0.4, cognitiveBurnout: 0.5,
                                mentalLoad: 0.45, physicalEnergy: 0.5, socialEnergy: 0.35))
+        context.insert(CheckIn(timestamp: ago(3, hour: 6), physicalExhaustion: 0.75, cognitiveBurnout: 0.7,
+                               mentalLoad: 0.8, physicalEnergy: 0.2, socialEnergy: 0.15))
+        context.insert(CheckIn(timestamp: ago(5, hour: 4), physicalExhaustion: 0.2, cognitiveBurnout: 0.3,
+                               mentalLoad: 0.35, physicalEnergy: 0.8, socialEnergy: 0.7))
 
         context.insert(BridgeDraftItem(text: "Sleep has been off"))
         context.insert(BridgeDraftItem(text: "Medication question", providerID: patel.id))

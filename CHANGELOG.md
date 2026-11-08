@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch RV5: each check-in on the Journal timeline now shows its five sliders as small bars, exactly where they were left, without opening it. No numbers, no colour change, nothing added up or described. The check-in sheet names the sliders as the check-in did, with both ends; before, three of its five names were attached to the wrong sliders.
 - Patch RV4: a goal can use the SMART frame, a switch that is off unless you turn it on. Every part is optional, Relevant is the existing why box, and Time-bound is your own words with no date to pass.
 - Patches RV1 and RV2: task cards are a title and one quiet line, steps start folded, the task editor keeps the common things up front, and Add several at once takes a pasted list. Steps can now sit inside steps to any depth, each opening its own details, and deleting a task removes everything under it.
 - Patch RV10: the mascot in a check-in keeps one calm face instead of following the sliders. One switch in the code brings it back.

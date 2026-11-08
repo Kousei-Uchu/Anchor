@@ -377,8 +377,9 @@ struct JournalView: View {
     }
 
     /// Check-ins get a lighter-weight row than journal entries: a small
-    /// dot on the spine and a plain label. Nothing is rated or coloured by how
-    /// the sliders were set. Tapping opens CheckInDetailSheet with the five sliders.
+    /// dot on the spine, a plain label and the five sliders exactly as they
+    /// were set. Nothing is rated, summed or coloured by how they were set,
+    /// and there are no numbers. Tapping opens CheckInDetailSheet.
     private func checkInRow(_ checkIn: CheckIn) -> some View {
         HStack(alignment: .top, spacing: 0) {
             timelineConnector(color: Anchor.Theme.accent, checkIn: true)
@@ -386,27 +387,35 @@ struct JournalView: View {
             Button {
                 checkInToView = checkIn
             } label: {
-                HStack(spacing: 6) {
-                    Text(checkIn.timestamp.formatted(date: .omitted, time: .shortened))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 6) {
+                        Text(checkIn.timestamp.formatted(date: .omitted, time: .shortened))
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
 
-                    Text("Check-in")
-                        .font(.system(.caption, design: .rounded).weight(.medium))
-                        .foregroundStyle(Anchor.Theme.accent)
+                        Text("Check-in")
+                            .font(.system(.caption, design: .rounded).weight(.medium))
+                            .foregroundStyle(Anchor.Theme.accent)
 
-                    Image(systemName: "chevron.right")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                        Image(systemName: "chevron.right")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+
+                    CheckInReadingsStrip(readings: checkIn.readings)
                 }
                 .padding(.vertical, 6)
                 .padding(.bottom, 10)
                 .padding(.leading, 10)
+                .padding(.trailing, 16)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Check-in, \(checkIn.timestamp.formatted(date: .omitted, time: .shortened)). \(checkIn.readings.map(\.spoken).joined(separator: ". "))")
+            .accessibilityHint("Opens the check-in")
 
-            Spacer()
+            Spacer(minLength: 0)
         }
         .padding(.leading, 5)
     }
@@ -799,16 +808,6 @@ private struct CheckInDetailSheet: View {
     let checkIn: CheckIn
     @Environment(\.dismiss) private var dismiss
 
-    private var metrics: [(label: String, value: Double)] {
-        [
-            ("Physical energy", checkIn.physicalEnergy),
-            ("Social energy", checkIn.socialEnergy),
-            ("Physical exhaustion", 1 - checkIn.physicalExhaustion),
-            ("Cognitive burnout", 1 - checkIn.cognitiveBurnout),
-            ("Mental load", 1 - checkIn.mentalLoad),
-        ]
-    }
-
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -817,24 +816,25 @@ private struct CheckInDetailSheet: View {
                         .font(.system(.subheadline, design: .rounded))
                         .foregroundStyle(.secondary)
 
-                    VStack(alignment: .leading, spacing: 14) {
-                        ForEach(metrics, id: \.label) { metric in
+                    VStack(alignment: .leading, spacing: 16) {
+                        ForEach(checkIn.readings) { reading in
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(metric.label)
+                                Label(reading.title, systemImage: reading.icon)
                                     .font(.system(.caption, design: .rounded))
                                     .foregroundStyle(.secondary)
 
-                                GeometryReader { geo in
-                                    ZStack(alignment: .leading) {
-                                        RoundedRectangle(cornerRadius: 4)
-                                            .fill(Anchor.Theme.accentSoft)
-                                        RoundedRectangle(cornerRadius: 4)
-                                            .fill(Anchor.Theme.accent)
-                                            .frame(width: geo.size.width * CGFloat(metric.value))
-                                    }
+                                CheckInBar(value: reading.value, height: 8)
+
+                                HStack(alignment: .firstTextBaseline) {
+                                    Text(reading.low)
+                                    Spacer(minLength: 12)
+                                    Text(reading.high).multilineTextAlignment(.trailing)
                                 }
-                                .frame(height: 8)
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
                             }
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel(reading.spoken)
                         }
                     }
 
@@ -851,7 +851,105 @@ private struct CheckInDetailSheet: View {
                 }
             }
         }
-        .presentationDetents([.medium])
+        .presentationDetents([.medium, .large])
+    }
+}
+
+/// One slider of a check-in as it was set, in the words the check-in used.
+/// `value` is 0 to 1 with more always the better direction, the same way the
+/// sliders on Now are drawn. It is never turned into a number on screen.
+private struct CheckInReading: Identifiable {
+    let id: String
+    let title: String
+    let short: String
+    let icon: String
+    let low: String
+    let high: String
+    let value: Double
+
+    /// Position along the slider, in words for VoiceOver. Stated as where the
+    /// slider was left, not as a verdict.
+    var spoken: String {
+        "\(title), the slider was left \(Int((value * 100).rounded())) percent of the way from \(low) to \(high)"
+    }
+}
+
+private extension CheckIn {
+    /// The five sliders in the order the check-in asks them. Three are stored
+    /// the other way round (as exhaustion, burnout and load), so they are
+    /// turned back here to what the person actually moved.
+    var readings: [CheckInReading] {
+        func clamp(_ v: Double) -> Double { min(max(v, 0), 1) }
+        return [
+            CheckInReading(id: "energy", title: "Physical energy", short: "Energy", icon: "bolt.fill",
+                           low: "running on empty", high: "fully charged", value: clamp(1 - physicalExhaustion)),
+            CheckInReading(id: "clarity", title: "Mental clarity", short: "Clarity", icon: "lightbulb.fill",
+                           low: "foggy", high: "clear", value: clamp(1 - cognitiveBurnout)),
+            CheckInReading(id: "room", title: "Room in your head", short: "Room", icon: "cloud.fill",
+                           low: "crowded", high: "plenty of space", value: clamp(1 - mentalLoad)),
+            CheckInReading(id: "move", title: "Physical energy to move", short: "Moving", icon: "figure.walk",
+                           low: "hard to move", high: "ready to move", value: clamp(physicalEnergy)),
+            CheckInReading(id: "social", title: "Social energy", short: "Social", icon: "person.2.fill",
+                           low: "need space", high: "up for company", value: clamp(socialEnergy))
+        ]
+    }
+}
+
+/// A plain filled bar, the same colour for every value and every check-in.
+private struct CheckInBar: View {
+    let value: Double
+    var height: CGFloat = 5
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule().fill(Anchor.Theme.accentSoft)
+                Capsule().fill(Anchor.Theme.accent)
+                    .frame(width: geo.size.width * CGFloat(value))
+            }
+        }
+        .frame(height: height)
+    }
+}
+
+/// The five readings on a Journal row. Side by side on a normal text size;
+/// one under another, with the full names, at accessibility sizes so nothing
+/// is cut off. Hidden from VoiceOver because the row reads them itself.
+private struct CheckInReadingsStrip: View {
+    let readings: [CheckInReading]
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    var body: some View {
+        Group {
+            if typeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(readings) { reading in
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(reading.title)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                            CheckInBar(value: reading.value)
+                        }
+                    }
+                }
+            } else {
+                HStack(alignment: .top, spacing: 8) {
+                    ForEach(readings) { reading in
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(reading.short)
+                                .font(.system(.caption2, design: .rounded))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
+                            CheckInBar(value: reading.value)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: 320, alignment: .leading)
+        .accessibilityHidden(true)
     }
 }
 

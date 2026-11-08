@@ -221,7 +221,7 @@ enum ReviewStops {
          "Settings, Session reminders. (Not scheduled in demo mode.)", 1, .settings),
         ("45b", "Suggestions ask when tapped", "Calendar, photos and music are asked for only when each button is tapped.",
          "Journal, new entry, Add, Journaling Suggestions.", 2, nil),
-        ("45c", "No scoring of check-ins", "A check-in row only says Check-in.",
+        ("45c", "No scoring of check-ins", "A check-in row only says Check-in, with no rating or colour (RV5 added the sliders as plain bars).",
          "Look at the check-in row in the Journal timeline.", 2, nil),
         ("46a", "Docs and privacy page", "The privacy page covers Recovery, widget, reminders and Live Activity.",
          "Settings, privacy page, read the Recovery and reminders sections.", 1, .settings),
@@ -230,7 +230,9 @@ enum ReviewStops {
         ("RV2", "Steps inside steps", "Steps nest to any depth, and each step opens its own details and steps.",
          "Open Get ready for the weekend away, open its arrow, then open the step Pack and its arrow. Press and hold a step for Open details.", 1, .tasks),
         ("RV4", "Goals: an optional SMART frame", "A switch inside a goal, off by default, adds Specific, Measurable, Achievable and Time-bound boxes; Relevant is the existing why box. Nothing is required or dated.",
-         "Open Personal goals. The walking goal has it on; open the pottery goal, turn the switch on and off, and leave boxes blank.", 3, .goals)
+         "Open Personal goals. The walking goal has it on; open the pottery goal, turn the switch on and off, and leave boxes blank.", 3, .goals),
+        ("RV5", "Check-ins on the Journal rows", "Each check-in row shows its own five sliders as small bars, one colour, no numbers, nothing added up. The detail sheet now names each slider as the check-in did, with both ends.",
+         "Open the Journal. Compare the three check-ins (five, three and one day ago): the bars differ, nothing else does. Tap one and check the names match Now. Try large text.", 2, nil)
     ])
 }
 
