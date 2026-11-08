@@ -2,7 +2,7 @@
 
 An optional area for day counters, motivations, a daily pledge and evening review, and a craving tool. It is free, local, and has no account or community. Its home is under Plan, in the Recovery row, and its reminders (daily pledge, evening review, milestones) are switched on in Settings (the gear on Plan or on Recovery home), under Recovery, which only appears once a counter exists. Counter-level options (name, savings, lock-screen label) are in the counter's own settings gear. Once a counter exists, Recovery also shows up on Now and in Bridge's session prep (see "Where it shows up").
 
-Ship this after v1 is approved. It adds data the v1 privacy policy does not describe, so keep it on its own branch (for example `v2-recovery`) and do not merge it into the release you submit first.
+It adds data an older privacy policy did not describe, so the privacy page on the website now covers it: the counters and their start dates, the counter widget and the Recovery reminders. Update the Effective date there when this ships.
 
 ## What it does
 - **Counters.** Several at once, each with its own name, start date and day-count mode: "current run and total days" (a slip starts a new run, the total stays) or "classic streak" (a slip resets to zero). Milestones at 1, 3, 7, 14, 21, 30, 60, 90, 120, 180, 270 days, then every year.
@@ -15,8 +15,8 @@ Ship this after v1 is approved. It adds data the v1 privacy policy does not desc
 ## The counter screen
 Each counter opens in tabs: **Summary, Savings, Calendar, Urges, Reasons, Today**.
 - **Summary** is six swipeable pages: live time on this run (a solid centre circle with the counter's name inside concentric rings for days, hours, minutes and seconds, each labelled and driven by continuous elapsed time so the arcs glide rather than step; the days ring fills toward the next milestone), progress this month (a dot for every day), total days with whole weekends, fresh starts and first start date, the streak record against your personal best, your current streak, and your start date. Share, Log urge and Start again sit underneath.
-- **Calendar** shows a month at a time. Sober days are joined pills, a day you started again is a circled cross, and a "Streaks" row opens the history.
-- **Streaks and Times.** The streak list shows every run with a bar against the longest one and a star on the best. Times lists how many times it happened on each slip day, and has a "before tracking" reference number.
+- **Calendar** shows a month at a time. Counted days are joined pills, a day you started again is a circled cross, and a "Streaks" row opens the history.
+- **Streaks and Times.** The streak list shows every run with a bar against the longest one and a star on the best. Times lists how many times it happened on each slip day, and has a "before tracking" reference number. On the counter's Streak record page, the longest run and the Personal best bar stay hidden until Show my longest run is switched on in Settings, under Recovery.
 - **Urges.** Log an urge with when, how strong it felt and a note, then optionally go straight into "riding out an urge". The tab shows this week, this month and the last 14 days.
 - **Days are whole elapsed days** (24 hour periods from the start time), like a stopwatch, so "My streak is 0 days" means less than 24 hours.
 
@@ -66,7 +66,7 @@ Recovery only appears outside its own pages once the user has added a counter. N
    - Log five urges around the same hour (edit the time in the log sheet). The trigger window card should appear, "Add a trigger window" should open the editor prefilled, and after Done the card should go away and the reminder should exist without opening Plan. Check "Not now" keeps it away.
    - Reach a milestone with one contact and with several: "Tell someone" goes straight to Messages, or asks who first. The text must not contain the counter's name.
    - Cancel the "Start again" sheet: no check-in offer. Save it: the offer appears, and "Check in" opens the normal check-in as a sheet. Finish an urge timer and confirm the same offer.
-2. **Website.** Apply `anchor-v2-website.patch` when v2 ships, not before. It adds the Recovery sections to the privacy policy and a Support question. Update the "Effective" date on the privacy page to the release date.
+2. **Website.** The privacy page already describes Recovery. Check its Effective date on the privacy page is the release date, and add a Support question about Recovery if you want one.
 3. **App Store Connect.** The App Privacy answer stays "Data not collected". Re-answer the age-rating questionnaire, since the app now references substance use and recovery. Add a line to the review notes saying Recovery is optional, on-device and has no community or accounts. Update the description and screenshots if you want to feature it.
 4. **Crisis wording.** The craving tool tells users that their crisis numbers are in Plan. Confirm that is still where they live.
 

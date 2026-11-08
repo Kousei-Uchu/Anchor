@@ -4,7 +4,7 @@ import { SUPPORT_EMAIL } from '../content/meta';
 
 export default function Privacy() {
   return (
-    <Page route="/privacy" title="Privacy Policy" meta="Effective 8 November 2026">
+    <Page route="/privacy" title="Privacy Policy" meta="Effective 9 November 2026">
       <div className="panel">
         <p>
           <strong>The short version.</strong> Anchor keeps what you put into it on your own device. There are no accounts, no servers that receive your data, no analytics, no advertising, and no tracking. I (the developer) cannot see anything you write or save in the app.
@@ -13,13 +13,16 @@ export default function Privacy() {
 
       <h2>What Anchor stores</h2>
       <p>
-        Everything you add is saved locally on your iPhone or iPad. That can include your safety plan, trusted contacts and their phone numbers, journal entries, check-ins, grounding tools, trigger windows, appointment details, messages and notes you write inside the app, and your settings. This data is stored in an on-device database that uses Apple&rsquo;s Data Protection, so it is encrypted by your device and tied to your passcode.
+        Everything you add is saved locally on your iPhone or iPad. That can include your safety plan, trusted contacts and their phone numbers, journal entries, check-ins, sleep notes, tasks, routines and lists, Recovery counters with their start dates, urges and reasons, grounding tools, trigger windows, appointment details, messages and notes you write inside the app, and your settings. This data is stored in an on-device database that uses Apple&rsquo;s Data Protection, so it is encrypted by your device and tied to your passcode.
       </p>
       <p>None of it is sent to me or to any third party by the app.</p>
 
       <h2>Information shared with the home screen and lock screen widgets</h2>
       <p>
         To let the widgets work, Anchor shares a small summary with its own widget extension through an Apple app group on your device: the names and phone numbers of your top two contacts, whether a safety plan exists, the label of your next trigger window, and one de-escalation phrase and one affirmation that you wrote yourself. None of this leaves your device. The summary is stored locked, with a key that stays on your phone and is left out of phone backups. Your journal entries, safety plan text and everything else are never shared with the widget.
+      </p>
+      <p>
+        If you add the Recovery counter widget, it is given the same kind of summary for up to two counters: a label, when the current run started, the days from earlier runs and how that counter counts. The label is a generic one, such as &ldquo;Your counter&rdquo;, unless you turn on showing that counter&rsquo;s name outside the app. It is stored locked in the same way.
       </p>
       <p>
         Widgets on your lock screen can be seen without unlocking your phone, and Anchor&rsquo;s own Face ID lock does not cover them. Only add a widget if you are comfortable with that information being visible.
@@ -31,7 +34,8 @@ export default function Privacy() {
       </p>
       <ul>
         <li><strong>Face ID or passcode.</strong> Anchor can lock itself using Face ID, Touch ID or your passcode. This is handled entirely by iOS. Anchor never receives your biometric data.</li>
-        <li><strong>Notifications.</strong> Used for the reminders you set up: trigger windows, the daily check-in, and the optional reminder to reach out to a contact you chose. Anchor asks the first time you turn one of these on. They are scheduled on your device, and no push notification server is involved.</li>
+        <li><strong>Notifications.</strong> Used for the reminders you set up: trigger windows, the daily check-in, the optional reminder to reach out to a contact you chose, reminders for sessions, routine reminders, the sleep morning reminder, the Recovery pledge, evening review and milestones, and the focus timer&rsquo;s alert. All of them are optional: none is on until you set it up or switch it on, and Anchor asks the first time you do. They are scheduled on your device, and no push notification server is involved. The words on the lock screen are short and generic. The exceptions are ones you control: a trigger window reminder shows the label you gave the window and can quote a line you wrote in your own safety plan, and a Recovery milestone shows a counter&rsquo;s name only if you turned that on for that counter.</li>
+        <li><strong>Live Activities.</strong> The focus timer can show on your lock screen and in the Dynamic Island while it runs, if you switch that on. It shows only the phase and the time left, never the task. It is created on your device and nothing is sent to any server.</li>
         <li><strong>Calendar and Reminders.</strong> Used to suggest events for a journal day, to import reminders you choose into your task list, and to tick them off in Reminders when you finish them in Anchor. This information is read on your device and is only saved in Anchor if you tap to add it.</li>
         <li><strong>Microphone.</strong> Used only when you choose to record a voice note on a message. Anchor asks the first time you do. The recording is saved on your device and goes nowhere unless you send or share it yourself.</li>
         <li><strong>Apple Health (sleep).</strong> Used only if you choose to connect it from the Sleep screen. If you connect it, Anchor reads your sleep so the nights Apple Health already has can appear in your sleep journal, and keeps its own copy of one summary per night on your device. If you separately turn on saving, Anchor writes the nights you type to Apple Health, marked as coming from Anchor, and can remove them again. None of it is sent anywhere, used for advertising or stored in iCloud by Anchor. Remove imported sleep deletes the copy in Anchor, and Remove what Anchor saved deletes what Anchor wrote to Health.</li>

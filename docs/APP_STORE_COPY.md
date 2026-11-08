@@ -21,19 +21,22 @@ NOW
 Your quick access tab. Crisis numbers for your region, your check-in, your people, and grounding tools you wrote yourself, one step at a time.
 
 PLAN
-Your safety plan, trusted contacts, trigger windows, appointments, decision presets, de-escalation scripts and affirmations, all editable.
+Your safety plan, trusted contacts, trigger windows, appointments, tasks, routines and lists, decision presets, de-escalation scripts, affirmations and an optional sleep journal that can use Apple Health if you want it. All of it is editable, and nothing is written for you.
 
 JOURNAL
 A private timeline with a Markdown editor, photos and drawings. Optional suggestions from your calendar, photos, music and Apple's journaling suggestions.
 
 BRIDGE
-Prepare for and reflect on appointments, keep a running list of things to raise, and export notes to share if you choose.
+Prepare for and reflect on appointments with one or more providers, keep a running list of things to raise, write goals of your own, map a pattern as a feedback loop, and make an export for someone as a PDF or a web page, with a password if you like.
 
 THREAD
-Message log, notes to your future self, things you have not said yet, and a support calendar you can share as a file.
+A message log with voice notes, message starters of your own, a page for each person, notes to your future self, things you have not said yet, a boundaries list, and a support calendar you can share as a file.
+
+RECOVERY
+Optional day counters for something you are stepping away from, with reasons you write yourself, a daily pledge and a timer for riding out an urge. No accounts, no community, and nothing is scored or compared.
 
 PRIVATE BY DESIGN
-No account. No ads. No tracking. Your data stays on your device, protected with an optional Face ID lock. Lock screen and home screen widgets give you a call shortcut without opening the app.
+No account. No ads. No tracking. Your data stays on your device, protected with an optional Face ID lock, and you can make an encrypted backup with a password you choose. Lock screen and home screen widgets give you a call shortcut without opening the app.
 
 Anchor is a personal organisation tool. It is not a medical device, does not give medical advice, and cannot contact anyone or emergency services for you. If you are in immediate danger, call your local emergency number.
 
@@ -41,16 +44,18 @@ Anchor is a personal organisation tool. It is not a medical device, does not giv
 First release.
 
 ## TestFlight "What to test"
-Thanks for testing Anchor. Please try: setting up contacts and a safety plan, adding the lock screen widget and tapping it, creating a trigger window and checking the notification arrives, writing a journal entry, trying the journal suggestions, changing the crisis region on the Now tab, and using it on iPad if you have one. Tell me anything confusing, broken, or unsettling.
+Thanks for testing Anchor. Please try: setting up contacts and a safety plan, adding the lock screen widget and tapping it, creating a trigger window and checking the notification arrives, writing a journal entry, trying the journal suggestions, adding a task, logging a night of sleep, making an export for someone and an encrypted backup, changing the crisis region on the Now tab, and using it on iPad if you have one. Tell me anything confusing, broken, or unsettling.
 
 ## App Review notes
 Anchor is a fully on-device personal planning and journaling app. There are no accounts, no login, and the app does not talk to any developer server, so no demo account is needed.
 
-On first launch a short tour is shown. The app has its own optional Face ID lock (Plan, Settings) which is on by default and uses the standard system prompt. Permissions (Calendar, Reminders, Photos, Apple Music, notifications, Journaling Suggestions) are requested only when the related feature is used (notifications: the first time the user saves an active trigger window, turns on the daily check-in, or turns on contact escalation), and all are optional.
+On first launch a short tour is shown. The app has its own optional Face ID lock (Plan, Settings) which is on by default and uses the standard system prompt. Permissions (Calendar, Reminders, Photos, Apple Music, Apple Health for sleep, Microphone for voice notes, Contacts, notifications, Journaling Suggestions) are requested only when the related feature is used, and all are optional. In Journaling Suggestions, calendar, photos and music each ask only when their own button is tapped. Every reminder is off until the user switches it on, and notifications are requested the first time one is switched on. Apple Health is read only after the user taps Connect on the Sleep screen, and typed nights are written to Health only if a separate switch is turned on. Nothing is shared or used for advertising.
 
 Crisis numbers on the Now tab are shown for the user's region (changeable from the card). The app makes no diagnosis or treatment claims and states that it is not a medical device or emergency service.
 
-Widgets share only contact names and numbers, whether a safety plan exists, the next trigger window label, and one de-escalation phrase and one affirmation the user wrote, through an App Group, stored locked with a key that is kept out of backups. Widgets are optional. Lock screen widgets are visible without unlocking the phone, which the privacy policy explains.
+Widgets share only contact names and numbers, whether a safety plan exists, the next trigger window label, and one de-escalation phrase and one affirmation the user wrote, through an App Group, stored locked with a key that is kept out of backups. A Recovery counter widget shows a generic label unless the user turns on showing that counter's name. The focus timer can show on the lock screen and in the Dynamic Island if the user switches that on, and it never shows the task. Widgets are optional. Lock screen widgets are visible without unlocking the phone, which the privacy policy explains.
+
+Showcase mode (Settings, Your data and help) runs the app on made-up content held only in memory, for showing it to someone, and the user's own data is not opened while it is on.
 
 ## Support URL
 https://anchor.aspens.page/support

@@ -13,6 +13,7 @@ You need: a Mac with **Xcode 26 or later** (Apple requires current-SDK builds fo
 3. On the Anchor target, check these capabilities are listed. If one is missing, press **+ Capability** and add it:
    - **App Groups** with `group.page.aspens.anchor` ticked
    - **Journaling Suggestions**
+   - **HealthKit** (the sleep journal's Apple Health connection; the entitlements file already has it, and the full checklist is in `docs/SLEEP.md`)
 4. On the widget target, check **App Groups** has the same `group.page.aspens.anchor` ticked.
 5. If Xcode shows a red error about a provisioning profile and an entitlement, that is the Journaling Suggestions entitlement. Add the capability by hand (step 3) and it will resolve.
 6. MusicKit: go to developer.apple.com, Account, Certificates, Identifiers and Profiles, Identifiers, click `page.aspens.anchor`, tick **MusicKit** under App Services (it may be under the "App Services" tab), and Save. Only needed if you keep the "recent music" suggestion.
@@ -22,7 +23,8 @@ You need: a Mac with **Xcode 26 or later** (Apple requires current-SDK builds fo
    - Face ID lock opens and relocks
    - Lock screen widget shows a contact and tapping it reaches the call confirmation (widgets only show data after you open Plan once)
    - Add a trigger window, confirm a notification arrives
-   - Journal, then the sparkles "journaling suggestions" button, calendar, photos, music
+   - Journal, then the sparkles "journaling suggestions" button: no permission question should appear until you tap Show events, Show photos or Show songs, and each should ask once
+   - Focus timer with the lock screen switch on: the timer shows on the lock screen and in the Dynamic Island, and never shows the task
    - Crisis card on Now, tap the region line at the bottom, change region
    - Rotate the iPad, check nothing looks broken
 10. Check that `SUPPORT_EMAIL` in `website/src/content/meta.ts` is the address you want to be public. It appears on the privacy and support pages, and Apple may use it to contact you.
@@ -69,7 +71,7 @@ You need: a Mac with **Xcode 26 or later** (Apple requires current-SDK builds fo
    - **Privacy Policy URL**: `https://anchor.aspens.page/privacy`
    - **Support URL**: `https://anchor.aspens.page/support`
 2. **App Privacy**: choose **No, we do not collect data from this app**. This is accurate because everything stays on device (check this stays true if you ever add analytics or sync).
-3. **Age Rating**: answer the questionnaire honestly. Mental health content means you will answer yes to the medical or wellness information questions. Expect a rating around 13+.
+3. **Age Rating**: answer the questionnaire honestly. Mental health content means you will answer yes to the medical or wellness information questions. The Recovery counters reference substance use, so answer those questions honestly too (see `RECOVERY_V2.md`). Expect a rating around 13+.
 4. **Category**: Health & Fitness (primary). Avoid "Medical", which draws stricter review.
 5. **Price**: Free. **Availability**: all countries is fine now that crisis numbers are region aware. Leave Mac (Designed for iPad) availability on if you want it.
 6. **App Review Information**: your contact details, and paste the review notes from `APP_STORE_COPY.md`. No demo account is needed (there are no accounts).
@@ -98,4 +100,4 @@ Once real users have data, **every SwiftData model change must be migration-safe
 - Journaling Suggestions: added the entitlement and an "Apple's journaling suggestions" picker at the top of the journal suggestions sheet.
 - Fixed a launch-crash risk: the app used to `fatalError` if the database could not open. It now falls back to a temporary store with a visible red banner, and never deletes your real data.
 - Changed data protection from `complete` to `completeUntilFirstUserAuthentication`. Still encrypted at rest, but the app can now open its database when iOS launches it in the background while the phone is locked (for example a notification action). With `complete` that case would have failed.
-- Privacy and support pages in `web/`.
+- Privacy and support pages in `website/`.

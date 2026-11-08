@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 46a: the privacy page now describes Recovery counters, the counter widget, every optional reminder and the focus timer on the lock screen, which it left out, and says which lock screen words are fixed and which you control. The Recovery, release and App Store notes are brought up to date with what the app does now.
 - Patch 45c: the Journal timeline no longer rates a check-in from how its sliders were set. It used to turn the five sliders into one hidden score and call the row Rough, Mixed or Good in red, orange or green; every check-in row now just says Check-in, and the Bridge help no longer describes a law reference the public app does not have.
 - Patch 45b: Journaling Suggestions no longer asks for your calendar, photos and music the moment it opens; each has a button and asks only when you tap it, or just loads if it was allowed before. The reminder about an unanswered check-in no longer names the window or the person on the lock screen and no longer says you did not respond, and one that falls after midnight now arrives on the right day.
 - Patch 44b: a counter's longest run and the Personal best bar are hidden until you switch on Show my longest run (Settings, Recovery); until then its Streak record page is a plain Current run page with the start date and the history.
