@@ -357,7 +357,10 @@ struct SleepView: View {
         }
         .listStyle(.plain)
         .anchorBackground()
-        .task { await SleepHealthReader.shared.sync(context: modelContext) }
+        .task {
+            await SleepHealthReader.shared.sync(context: modelContext)
+            await SleepHealthWriter.shared.reconcile(context: modelContext)
+        }
         .navigationTitle("Sleep")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -692,6 +695,12 @@ private struct SleepEntrySheet: View {
         }
         .onAppear { if openedAs == nil { openedAs = fingerprint } }
         .onDisappear {
+            // Once the screen that opened this has finished with the night, bring Health in line.
+            let context = modelContext
+            Task {
+                try? await Task.sleep(for: .seconds(1))
+                await SleepHealthWriter.shared.reconcile(context: context)
+            }
             // A night from Apple Health that was changed here is now the
             // person's own, so a later import never touches it.
             if entry.sourceRaw == SleepHealthSettings.sourceHealth, let openedAs, openedAs != fingerprint {
@@ -755,6 +764,13 @@ enum SleepHealthSettings {
     static let lastSyncKey = "anchor.sleep.health.lastSync"
     /// The `sourceRaw` of a night that came from Apple Health.
     static let sourceHealth = "health"
+    /// On while typed nights are saved to Apple Health.
+    static let writeKey = "anchor.sleep.health.write"
+    /// Nights typed since this moment are eligible to be saved, as seconds since 1970.
+    static let writeSinceKey = "anchor.sleep.health.writeSince"
+    /// What Anchor has saved: the night's id, and the version saved (negative when
+    /// the night was left alone because Health already held it).
+    static let writtenKey = "anchor.sleep.health.written"
 }
 
 /// Reads sleep from Apple Health and keeps one summary per night in Anchor's
@@ -947,17 +963,175 @@ final class SleepHealthReader {
     }
 }
 
+/// Saves typed nights to Apple Health, as Anchor's own samples. Off until the
+/// person turns it on. A night Health already holds from another source is
+/// left alone, nothing Anchor saved is ever read back as an imported night,
+/// and removing a night here removes the samples Anchor saved for it.
+@MainActor
+@Observable
+final class SleepHealthWriter {
+    static let shared = SleepHealthWriter()
+
+    var isWorking = false
+    /// One quiet line after saving the recent nights.
+    var message: String?
+
+    @ObservationIgnored private let store = HKHealthStore()
+
+    private var available: Bool { HKHealthStore.isHealthDataAvailable() && !DemoMode.isOn }
+    private var sleepType: HKCategoryType? { HKObjectType.categoryType(forIdentifier: .sleepAnalysis) }
+
+    private var tracked: [String: Int] {
+        get { (UserDefaults.standard.dictionary(forKey: SleepHealthSettings.writtenKey) as? [String: Int]) ?? [:] }
+        set { UserDefaults.standard.set(newValue, forKey: SleepHealthSettings.writtenKey) }
+    }
+
+    /// How many nights Anchor has samples saved for.
+    var savedCount: Int { tracked.values.filter { $0 > 0 }.count }
+
+    private func sampleIDs(_ id: String) -> [String] {
+        ["anchor.sleep.\(id).bed", "anchor.sleep.\(id).asleep"]
+    }
+
+    /// Asks for permission to save sleep (and to look at what Health already
+    /// holds for the night), which is when iOS shows its own question.
+    func enable(context: ModelContext) async {
+        guard available, let type = sleepType else { return }
+        do {
+            try await store.requestAuthorization(toShare: [type], read: [type])
+        } catch {
+            return
+        }
+        let defaults = UserDefaults.standard
+        defaults.set(true, forKey: SleepHealthSettings.writeKey)
+        defaults.set(Date.now.timeIntervalSince1970, forKey: SleepHealthSettings.writeSinceKey)
+        message = nil
+        await reconcile(context: context)
+    }
+
+    func disable() {
+        UserDefaults.standard.set(false, forKey: SleepHealthSettings.writeKey)
+        message = nil
+    }
+
+    /// Makes the nights typed in the last 30 days eligible, then saves them.
+    func saveRecent(context: ModelContext) async {
+        guard let from = Calendar.current.date(byAdding: .day, value: -30, to: .now) else { return }
+        let defaults = UserDefaults.standard
+        let current = defaults.double(forKey: SleepHealthSettings.writeSinceKey)
+        defaults.set(min(current > 0 ? current : from.timeIntervalSince1970, from.timeIntervalSince1970),
+                     forKey: SleepHealthSettings.writeSinceKey)
+        let before = savedCount
+        await reconcile(context: context)
+        let added = max(0, savedCount - before)
+        message = added == 0 ? "Nothing new to save." : (added == 1 ? "Saved 1 night." : "Saved \(added) nights.")
+    }
+
+    /// Removes everything Anchor has saved to Health and switches saving off.
+    /// Only samples Anchor itself saved can be removed, never anyone else's.
+    func removeAllSaved() async {
+        disable()
+        guard available, let type = sleepType else { return }
+        do {
+            _ = try await store.deleteObjects(of: type, predicate: HKQuery.predicateForObjects(from: HKSource.default()))
+            tracked = [:]
+        } catch {
+            return
+        }
+    }
+
+    /// Brings Health in line with the journal: saves typed nights that have both
+    /// times, saves them again when they change, and removes the samples for
+    /// a night that is gone. Safe to run often.
+    func reconcile(context: ModelContext) async {
+        guard available, let type = sleepType, !isWorking else { return }
+        let defaults = UserDefaults.standard
+        let writing = defaults.bool(forKey: SleepHealthSettings.writeKey)
+        var written = tracked
+        if !writing && written.isEmpty { return }
+        isWorking = true
+        defer { isWorking = false }
+
+        let since = Date(timeIntervalSince1970: defaults.double(forKey: SleepHealthSettings.writeSinceKey))
+        let entries = (try? context.fetch(FetchDescriptor<SleepEntry>())) ?? []
+        var wanted: [String: (entry: SleepEntry, bed: Date, wake: Date, version: Int)] = [:]
+        for entry in entries where entry.sourceRaw == "typed" && !entry.isBlank {
+            guard let bed = entry.bedTime, let wake = entry.wakeTime, wake > bed,
+                  wake.timeIntervalSince(bed) <= 24 * 3600 else { continue }
+            let id = entry.id.uuidString
+            if written[id] != nil || (writing && entry.lastEditedAt >= since) {
+                wanted[id] = (entry, bed, wake, Int(entry.lastEditedAt.timeIntervalSince1970))
+            }
+        }
+
+        // Nights that are gone, or no longer have both times: take back what was saved.
+        for id in written.keys where wanted[id] == nil {
+            if (written[id] ?? 0) > 0 {
+                let predicate = HKQuery.predicateForObjects(withMetadataKey: HKMetadataKeySyncIdentifier, allowedValues: sampleIDs(id))
+                do { _ = try await store.deleteObjects(of: type, predicate: predicate) } catch { continue }
+            }
+            written[id] = nil
+        }
+        guard writing else {
+            tracked = written
+            return
+        }
+
+        for (id, night) in wanted {
+            if let done = written[id], abs(done) >= night.version { continue }
+            // Health is the source of truth: leave a night it already holds from elsewhere.
+            if (written[id] ?? 0) <= 0 {
+                let predicate = HKQuery.predicateForSamples(withStart: night.bed, end: night.wake, options: [])
+                let descriptor = HKSampleQueryDescriptor(predicates: [.categorySample(type: type, predicate: predicate)], sortDescriptors: [])
+                let found = (try? await descriptor.result(for: store)) ?? []
+                if found.contains(where: { $0.sourceRevision.source.bundleIdentifier != Bundle.main.bundleIdentifier }) {
+                    written[id] = -night.version
+                    continue
+                }
+            }
+            let span = Int(night.wake.timeIntervalSince(night.bed) / 60)
+            let minutes = min(night.entry.shownMinutes ?? span, span)
+            let ids = sampleIDs(id)
+            func metadata(_ key: String) -> [String: Any] {
+                [HKMetadataKeySyncIdentifier: key, HKMetadataKeySyncVersion: night.version]
+            }
+            var samples = [HKCategorySample(
+                type: type, value: HKCategoryValueSleepAnalysis.inBed.rawValue,
+                start: night.bed, end: night.wake, metadata: metadata(ids[0])
+            )]
+            if minutes > 0 {
+                // The time asleep is placed so it ends when you got up.
+                let asleepStart = max(night.bed, night.wake.addingTimeInterval(-Double(minutes) * 60))
+                samples.append(HKCategorySample(
+                    type: type, value: HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue,
+                    start: asleepStart, end: night.wake, metadata: metadata(ids[1])
+                ))
+            }
+            do {
+                try await store.save(samples)
+                written[id] = night.version
+            } catch {
+                continue
+            }
+        }
+        tracked = written
+    }
+}
+
 /// The Apple Health section at the bottom of the Sleep screen. Nothing is
 /// asked of Apple Health until Connect is tapped.
 private struct SleepHealthCard: View {
     @Environment(\.modelContext) private var modelContext
     @AppStorage(SleepHealthSettings.connectedKey) private var connected = false
     @AppStorage(SleepHealthSettings.lastSyncKey) private var lastSync = 0.0
+    @AppStorage(SleepHealthSettings.writeKey) private var writing = false
     @Query private var entries: [SleepEntry]
     @State private var connecting = false
     @State private var confirmingRemove = false
+    @State private var confirmingRemoveSaved = false
 
     private let reader = SleepHealthReader.shared
+    private let writer = SleepHealthWriter.shared
 
     private var importedCount: Int {
         entries.filter { $0.sourceRaw == SleepHealthSettings.sourceHealth }.count
@@ -1015,8 +1189,47 @@ private struct SleepHealthCard: View {
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
+
+                Divider()
+
+                Toggle("Save nights I type to Apple Health", isOn: Binding(
+                    get: { writing },
+                    set: { on in
+                        if on { Task { await writer.enable(context: modelContext) } } else { writer.disable() }
+                    }
+                ))
+                if writing {
+                    Button("Save the last 30 nights I typed") {
+                        Task { await writer.saveRecent(context: modelContext) }
+                    }
+                    .disabled(writer.isWorking)
+                    if let message = writer.message {
+                        Text(message)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Text("Only nights with both a bed time and a wake time are saved, marked as coming from Anchor. A night Health already has from somewhere else is left alone. Deleting a night here removes the one Anchor saved. Anchor also looks at what Health holds for that night, so it never doubles one up.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if writing || writer.savedCount > 0 {
+                    Button("Remove what Anchor saved", role: .destructive) { confirmingRemoveSaved = true }
+                }
             }
             .buttonStyle(.borderless)
+        }
+        .confirmationDialog(
+            "Remove what Anchor saved to Apple Health?",
+            isPresented: $confirmingRemoveSaved,
+            titleVisibility: .visible
+        ) {
+            Button("Remove and stop saving", role: .destructive) {
+                Task { await writer.removeAllSaved() }
+            }
+            Button("Keep them", role: .cancel) {}
+        } message: {
+            Text("This takes out only the sleep Anchor saved. Your nights here stay, and nothing from any other source in Apple Health is touched.")
         }
         .confirmationDialog(
             "Remove imported sleep?",

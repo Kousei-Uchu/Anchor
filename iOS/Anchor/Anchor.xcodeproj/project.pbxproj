@@ -725,7 +725,8 @@
 				INFOPLIST_KEY_NSAppleMusicUsageDescription = "Anchor can suggest recently played music as journal context, if you choose to look.";
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Anchor can suggest calendar events from the day you're journaling about, if you choose to look.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Anchor uses Face ID to keep your safety plan and journal private, independent of your phone's own lock.";
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "Anchor can read your sleep from Apple Health, only if you choose to connect it, and show it in your sleep journal. It is kept on your device.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Anchor can read your sleep from Apple Health, only if you choose to connect it or to save nights to it. It is used for your sleep journal, and to avoid saving a night Health already has. It is kept on your device.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Anchor can save the nights you type in your sleep journal to Apple Health, only if you turn that on. They are marked as coming from Anchor, and you can remove them.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Anchor uses the microphone to record voice notes you choose to attach to a message. Recordings stay on your device.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Anchor can suggest photos from the day you're journaling about, if you choose to look. Only that day's photos are ever read.";
 				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Anchor can import reminders you choose into your task list, and tick them off in Reminders when you finish them here.";
@@ -902,7 +903,8 @@
 				INFOPLIST_KEY_NSAppleMusicUsageDescription = "Anchor can suggest recently played music as journal context, if you choose to look.";
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Anchor can suggest calendar events from the day you're journaling about, if you choose to look.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Anchor uses Face ID to keep your safety plan and journal private, independent of your phone's own lock.";
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "Anchor can read your sleep from Apple Health, only if you choose to connect it, and show it in your sleep journal. It is kept on your device.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Anchor can read your sleep from Apple Health, only if you choose to connect it or to save nights to it. It is used for your sleep journal, and to avoid saving a night Health already has. It is kept on your device.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Anchor can save the nights you type in your sleep journal to Apple Health, only if you turn that on. They are marked as coming from Anchor, and you can remove them.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Anchor uses the microphone to record voice notes you choose to attach to a message. Recordings stay on your device.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Anchor can suggest photos from the day you're journaling about, if you choose to look. Only that day's photos are ever read.";
 				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Anchor can import reminders you choose into your task list, and tick them off in Reminders when you finish them here.";

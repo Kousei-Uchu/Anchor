@@ -33,9 +33,12 @@ struct AnchorApp: App {
         }
         .modelContainer(container)
         .onChange(of: scenePhase) { _, phase in
-            // Brings in new nights from Apple Health, only if it was connected.
+            // Brings in new nights from Apple Health and keeps what Anchor saved there in line, only if either was turned on.
             if phase == .active {
-                Task { await SleepHealthReader.shared.sync(context: container.mainContext) }
+                Task {
+                    await SleepHealthReader.shared.sync(context: container.mainContext)
+                    await SleepHealthWriter.shared.reconcile(context: container.mainContext)
+                }
             }
         }
     }
