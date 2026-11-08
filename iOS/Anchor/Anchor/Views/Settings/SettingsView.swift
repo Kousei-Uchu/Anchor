@@ -10,6 +10,7 @@
 
 import SwiftUI
 import SwiftData
+import UIKit
 
 /// Daily check-in preferences, shared by Settings (which edits them) and Plan
 /// (which re-applies the schedule when it appears, so the notification never
@@ -183,6 +184,11 @@ struct SettingsView: View {
                             .font(.system(.subheadline, design: .rounded))
                             .foregroundStyle(.primary)
                     }
+                    NavigationLink {
+                        AboutView()
+                    } label: {
+                        Text("About Anchor").font(.system(.subheadline, design: .rounded))
+                    }
                 }
             }
             .anchorSettingsStyle()
@@ -287,5 +293,184 @@ private struct RoutineReminderSettingsRow: View {
         }
         .onChange(of: routine.reminderHour) { _, _ in RoutineReminders.refresh(using: modelContext) }
         .onChange(of: routine.reminderMinute) { _, _ in RoutineReminders.refresh(using: modelContext) }
+    }
+}
+
+// MARK: - About
+
+/// One entry in What's new.
+struct AboutNote: Identifiable {
+    let title: String
+    let body: String
+    var id: String { title }
+}
+
+/// The words on the About screen. The same copy is in
+/// website/src/content/about.ts, and scripts/check-about-content.mjs fails if
+/// the two stop matching, so the app and the website say the same thing.
+/// Keep the string literals here in the same order as in that file.
+enum AboutContent {
+    static let websiteURL = "https://anchor.aspens.page"
+    static let privacyURL = "https://anchor.aspens.page/privacy"
+    static let sourceURL = "https://github.com/Kousei-Uchu/Anchor"
+    static let supportEmail = "anchor@aspens.page"
+
+    static let purpose = "Anchor is a private place for your safety plan, your people and your journal, for the hard days and the ordinary ones. It is an early build and parts of it will change."
+
+    static let principles: [String] = [
+        "No scores and no streak pressure. Anchor does not grade how you are doing.",
+        "Local first. What you write stays on your phone, with no account, no ads and no tracking.",
+        "Nothing is shared unless you share it. Messages and exports go only where you send them.",
+    ]
+
+    static let licences = "Anchor is built with Apple's own frameworks. It contains no third-party code or fonts."
+
+    static let contactNote = "I can't reply in real time. If you are in danger right now, call your local emergency number or a crisis line."
+
+    static let whatsNew: [AboutNote] = [
+        AboutNote(title: "Sleep journal", body: "An optional sleep journal under Plan, with Apple Health if you want it. Nothing is scored."),
+        AboutNote(title: "Export for someone", body: "Choose who it is for and what goes in, then make a PDF or a web page to share."),
+        AboutNote(title: "Look at what's stored", body: "See everything Anchor holds, behind Face ID or your passcode, in plain language."),
+        AboutNote(title: "Tasks and routines", body: "Tasks with steps, a focus timer, Plan my day, quick lists, routines and checklists."),
+        AboutNote(title: "People and providers", body: "A page for each person in Thread, and more than one provider in Bridge."),
+        AboutNote(title: "Sections of your own", body: "The safety plan and the Boundaries list are sections you rename, reorder and hide."),
+        AboutNote(title: "A new Journal page", body: "The page works like Apple's Journal, with bookmarks and a month and year view."),
+        AboutNote(title: "Feedback loops", body: "Draw a loop or a free map from a template, and share it as a picture or a PDF."),
+    ]
+
+    /// For example "Version 1.0 (1)". Falls back to the version alone.
+    static var versionLine: String {
+        let info = Bundle.main.infoDictionary
+        let version = info?["CFBundleShortVersionString"] as? String ?? ""
+        let build = info?["CFBundleVersion"] as? String ?? ""
+        if version.isEmpty { return "Version not available" }
+        return build.isEmpty ? "Version \(version)" : "Version \(version) (\(build))"
+    }
+
+    /// The device model as the system names it, such as iPhone15,2.
+    static var deviceModel: String {
+        var system = utsname()
+        uname(&system)
+        return Mirror(reflecting: system.machine).children.reduce("") { text, element in
+            guard let value = element.value as? Int8, value != 0 else { return text }
+            return text + String(UnicodeScalar(UInt8(truncatingIfNeeded: value)))
+        }
+    }
+
+    /// A mail link that starts with the app version, the iOS version and the
+    /// device model, and nothing else about the person.
+    static var supportMailURL: URL? {
+        let body = "\n\n\nAnchor \(versionLine.replacingOccurrences(of: "Version ", with: ""))\n"
+            + "iOS \(UIDevice.current.systemVersion)\n"
+            + "\(deviceModel)\n"
+        var parts = URLComponents()
+        parts.scheme = "mailto"
+        parts.path = supportEmail
+        parts.queryItems = [
+            URLQueryItem(name: "subject", value: "Anchor support"),
+            URLQueryItem(name: "body", value: body),
+        ]
+        return parts.url
+    }
+}
+
+struct AboutView: View {
+    @State private var copiedEmail = false
+
+    var body: some View {
+        Form {
+            Anchor.SettingsSection(title: nil) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Anchor").font(.system(.title2, design: .rounded).weight(.semibold))
+                    Text(AboutContent.versionLine).font(.footnote).foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 4)
+                .accessibilityElement(children: .combine)
+            }
+
+            Anchor.SettingsSection(title: "About Anchor") {
+                Text(AboutContent.purpose).font(.system(.subheadline, design: .rounded))
+                ForEach(AboutContent.principles, id: \.self) { line in
+                    Text(line).font(.system(.subheadline, design: .rounded))
+                }
+            }
+
+            Anchor.SettingsSection(title: "Get in touch", footer: AboutContent.contactNote) {
+                if let url = AboutContent.supportMailURL {
+                    Link(destination: url) {
+                        aboutRowLabel("Email support", systemImage: "envelope")
+                    }
+                }
+                Button {
+                    UIPasteboard.general.string = AboutContent.supportEmail
+                    copiedEmail = true
+                } label: {
+                    aboutRowLabel(copiedEmail ? "Copied" : "Copy \(AboutContent.supportEmail)", systemImage: "doc.on.doc")
+                }
+                .foregroundStyle(.primary)
+            }
+
+            Anchor.SettingsSection(title: "Links") {
+                aboutLink("Website", AboutContent.websiteURL)
+                aboutLink("Privacy policy", AboutContent.privacyURL)
+                aboutLink("Source code on GitHub", AboutContent.sourceURL)
+            }
+
+            Anchor.SettingsSection(title: "Licences") {
+                Text(AboutContent.licences).font(.system(.subheadline, design: .rounded))
+            }
+
+            Anchor.SettingsSection(title: nil) {
+                NavigationLink {
+                    WhatsNewView()
+                } label: {
+                    Text("What's new").font(.system(.subheadline, design: .rounded))
+                }
+            }
+        }
+        .anchorSettingsStyle()
+        .navigationTitle("About")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    @ViewBuilder
+    private func aboutLink(_ title: String, _ address: String) -> some View {
+        if let url = URL(string: address) {
+            Link(destination: url) {
+                aboutRowLabel(title, systemImage: "arrow.up.right")
+            }
+        }
+    }
+
+    private func aboutRowLabel(_ title: String, systemImage: String) -> some View {
+        HStack {
+            Text(title).font(.system(.subheadline, design: .rounded))
+            Spacer(minLength: 12)
+            Image(systemName: systemImage)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+        }
+        .contentShape(Rectangle())
+    }
+}
+
+struct WhatsNewView: View {
+    var body: some View {
+        Form {
+            Anchor.SettingsSection(title: nil) {
+                ForEach(AboutContent.whatsNew) { item in
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(item.title).font(.system(.subheadline, design: .rounded).weight(.medium))
+                        Text(item.body).font(.footnote).foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 2)
+                    .accessibilityElement(children: .combine)
+                }
+            }
+        }
+        .anchorSettingsStyle()
+        .navigationTitle("What's new")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }

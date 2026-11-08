@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 32: Settings has an About Anchor screen: the version and build, a link to email support that starts the message with the app version, iOS version and device model and nothing else, links to the website, the privacy policy and the source code, a short note on what Anchor is, a licences line, and a What's new list. The words are kept in one place the website can reuse, with a check that the two copies match.
 - Patch SL5: session prep has a Sleep since your last session card when you keep a sleep journal: how many nights are written down, the shortest and longest time asleep and your usual bedtime, added to your notes only when you tap. The web page from Export for someone draws a plain chart of time asleep, with no target line.
 - Patch 38a: the web page made by Export for someone now has a Download Word file button next to Download CSV. It makes a .docx in the browser with the name, the note and every kind and entry in order, in plain text with headings. Nothing is sent anywhere, and it needs no library.
 - Patch 37: Export for someone can now make a web page: one .html file that opens in any browser with search, a timeline, check-in charts and buttons to print or save a PDF and download a CSV. It can have a password (AES-256 with a key from PBKDF2), has no network access, and never runs what was written in it.
