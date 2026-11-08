@@ -477,7 +477,9 @@ private struct SleepEntrySheet: View {
     let onDelete: () -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
     @Query private var allEntries: [SleepEntry]
+    @State private var addedToJournal = false
 
     private var cal: Calendar { .current }
 
@@ -570,6 +572,16 @@ private struct SleepEntrySheet: View {
         Binding(get: { entry.feel ?? -1 }, set: { entry.feel = $0 < 0 ? nil : $0 })
     }
 
+    /// Adds the note as an ordinary journal entry, dated when you woke. The
+    /// note stays here as well, and nothing links the two afterwards.
+    private func putNoteInJournal() {
+        let text = entry.note.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        let morning = entry.wakeTime ?? (cal.date(byAdding: .hour, value: 8, to: entry.nightDate) ?? entry.nightDate)
+        modelContext.insert(JournalEntry(createdAt: min(morning, .now), text: text, linkedContext: .manualOpen))
+        addedToJournal = true
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -620,6 +632,12 @@ private struct SleepEntrySheet: View {
                 Section("A note") {
                     TextField("Anything you want to remember", text: $entry.note, axis: .vertical)
                         .lineLimit(3...8)
+                    if !entry.note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Button(addedToJournal ? "Added to your journal" : "Put this note in my journal") {
+                            putNoteInJournal()
+                        }
+                        .disabled(addedToJournal)
+                    }
                 }
 
                 Section {
@@ -690,6 +708,8 @@ private struct SleepWordsSheet: View {
 enum SleepSettings {
     /// Show a small "Last night" card on Now in the morning.
     static let nowCardKey = "anchor.sleep.nowCard"
+    /// Show a small row for each night in the Journal, and a mark on its month view.
+    static let journalKey = "anchor.sleep.journal"
     /// The day, as year-month-day text, that the card was put away with Not now.
     static let nowDismissedKey = "anchor.sleep.nowDismissedDay"
 
@@ -780,5 +800,27 @@ struct SleepMorningCard: View {
                 SleepLogSheetHost()
             }
         }
+    }
+}
+
+/// Opens one night that already exists, from the Journal. A night left with
+/// nothing in it, or deleted from inside the sheet, is removed once it closes.
+struct SleepEntryEditor: View {
+    let entry: SleepEntry
+    @Environment(\.modelContext) private var modelContext
+    @AppStorage(SleepFeelWords.storageKey) private var wordsRaw = ""
+    @State private var deleting = false
+
+    init(entry: SleepEntry) { self.entry = entry }
+
+    var body: some View {
+        SleepEntrySheet(entry: entry, words: SleepFeelWords.words(from: wordsRaw)) { deleting = true }
+            .onDisappear {
+                if deleting || entry.isBlank {
+                    modelContext.delete(entry)
+                } else {
+                    entry.lastEditedAt = .now
+                }
+            }
     }
 }

@@ -55,6 +55,7 @@ struct SettingsView: View {
     @AppStorage(RecoverySettings.reviewMinute) private var reviewMinute = 30
     @AppStorage(RecoverySettings.milestonesEnabled) private var milestonesEnabled = false
     @AppStorage(SleepSettings.nowCardKey) private var sleepNowCard = false
+    @AppStorage(SleepSettings.journalKey) private var sleepInJournal = false
     @AppStorage(WidgetTab.plan.hiddenKey) private var planHiddenRaw = WidgetTab.plan.defaultHiddenRaw
     @Query private var sleepEntries: [SleepEntry]
 
@@ -69,7 +70,7 @@ struct SettingsView: View {
     /// Sleep widget has been turned on or a night has been written down (or
     /// the card is already on, so it can always be turned back off).
     private var showsSleep: Bool {
-        !sleepEntries.isEmpty || sleepNowCard || !WidgetLayoutStore.decode(planHiddenRaw).contains(.sleep)
+        !sleepEntries.isEmpty || sleepNowCard || sleepInJournal || !WidgetLayoutStore.decode(planHiddenRaw).contains(.sleep)
     }
 
     var body: some View {
@@ -127,9 +128,10 @@ struct SettingsView: View {
                 if showsSleep {
                     Anchor.SettingsSection(
                         title: "Sleep",
-                        footer: "Off until you switch it on. A small card on Now in the morning, until you write down last night or tap Not now."
+                        footer: "Both are off until you switch them on. Last night is a small card on Now in the morning, until you write down last night or tap Not now. In the Journal, each night gets a small row on its morning and a mark on the month."
                     ) {
                         Anchor.SettingsToggle(title: "Show Last night on Now", isOn: $sleepNowCard)
+                        Anchor.SettingsToggle(title: "Show sleep in the Journal", isOn: $sleepInJournal)
                     }
                 }
 

@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch SL2b: an optional Show sleep in the Journal switch in Settings (off until you turn it on). Each night gets a small row on its morning and a moon mark on the month view, and a note on a night can be copied into your journal as an ordinary entry.
 - Patch SL2a: an optional Last night card on Now in the morning, with a Show Last night on Now switch in Settings (off until you turn it on, and the Sleep section only appears once Sleep is in use). Not now puts it away for the day.
 - Patch SL1: a Sleep journal in Plan, added hidden (turn it on under Customise). One quiet entry per night: when you went to bed and woke, time asleep (worked out or typed), how it felt in three words you can rename, and a note. A month of dots and one plain line on the usual range. No score, no target hours, no streak.
 - Patch 30l: Thread has People: each of your contacts gets a page of their own, with sections you write and arrange yourself, the last few messages in your log with them, and the support calendar days you have shared with them. Nothing on a page is counted or scored, and deleting a contact deletes their page.

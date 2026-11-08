@@ -30,6 +30,9 @@ enum JournalLayout: String, CaseIterable, Identifiable {
 struct JournalDayCount {
     var entries = 0
     var checkIns = 0
+    /// 1 when a night of sleep is written down for this day and the person has
+    /// chosen to see sleep in the Journal. Only ever a mark, never a number.
+    var sleepNights = 0
 }
 
 struct JournalView: View {
@@ -37,6 +40,9 @@ struct JournalView: View {
     @Query(sort: \JournalEntry.createdAt) private var entries: [JournalEntry]
     @Query(sort: \CheckIn.timestamp) private var checkIns: [CheckIn]
     @Query(sort: \RecoveryCounter.sortOrder) private var recoveryCounters: [RecoveryCounter]
+    @Query(sort: \SleepEntry.nightDate) private var sleepEntries: [SleepEntry]
+    @AppStorage(SleepSettings.journalKey) private var showsSleep = false
+    @State private var sleepToEdit: SleepEntry?
     @State private var searchText = ""
     @State private var entryToEdit: JournalEntry?
     @State private var entryToRead: JournalEntry?
@@ -91,11 +97,27 @@ struct JournalView: View {
         return (entryItems + checkInItems).sorted { $0.timestamp > $1.timestamp }
     }
 
+    /// The nights to show, by the day they belong to. Only with the switch on
+    /// in Settings, and like check-ins, not while searching or showing
+    /// bookmarks. A night with nothing in it is never shown.
+    private var sleepByDay: [Date: SleepEntry] {
+        guard showsSleep, searchText.isEmpty, !bookmarksOnly else { return [:] }
+        let calendar = Calendar.current
+        var result: [Date: SleepEntry] = [:]
+        for entry in sleepEntries where !entry.isBlank {
+            let day = calendar.startOfDay(for: entry.nightDate)
+            if result[day] == nil { result[day] = entry }
+        }
+        return result
+    }
+
     /// Newest day first, and newest item first within each day, so the
-    /// most recent thing is always at the top.
+    /// most recent thing is always at the top. A day with only a night of
+    /// sleep still gets its place.
     private var groupedByDay: [(day: Date, items: [TimelineItem])] {
         let calendar = Calendar.current
-        let grouped = Dictionary(grouping: timelineItems) { calendar.startOfDay(for: $0.timestamp) }
+        var grouped = Dictionary(grouping: timelineItems) { calendar.startOfDay(for: $0.timestamp) }
+        for day in sleepByDay.keys where grouped[day] == nil { grouped[day] = [] }
         return grouped.keys.sorted(by: >).map { day in
             (day, grouped[day]!.sorted { $0.timestamp > $1.timestamp })
         }
@@ -113,6 +135,11 @@ struct JournalView: View {
             case .entry: count.entries += 1
             case .checkIn: count.checkIns += 1
             }
+            result[day] = count
+        }
+        for day in sleepByDay.keys {
+            var count = result[day] ?? JournalDayCount()
+            count.sleepNights = 1
             result[day] = count
         }
         return result
@@ -174,6 +201,10 @@ struct JournalView: View {
                     ForEach(groupedByDay, id: \.day) { group in
                         VStack(alignment: .leading, spacing: 0) {
                             dayMarker(group.day)
+
+                            if let night = sleepByDay[group.day] {
+                                sleepRow(night)
+                            }
 
                             ForEach(group.items) { item in
                                 switch item {
@@ -246,6 +277,9 @@ struct JournalView: View {
             }
             .sheet(item: $checkInToView) { checkIn in
                 CheckInDetailSheet(checkIn: checkIn)
+            }
+            .sheet(item: $sleepToEdit) { night in
+                SleepEntryEditor(entry: night)
             }
             .alert("Added to Things to raise", isPresented: $addedToBridge) {
                 Button("OK", role: .cancel) {}
@@ -371,6 +405,40 @@ struct JournalView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+
+            Spacer()
+        }
+        .padding(.leading, 5)
+    }
+
+    /// A small, quiet row at the top of the morning a night belongs to. It
+    /// says how long, if that is known, and nothing about whether it was
+    /// enough. Tapping opens the night.
+    private func sleepRow(_ night: SleepEntry) -> some View {
+        HStack(alignment: .top, spacing: 0) {
+            timelineConnector(color: Anchor.Theme.sage, checkIn: true)
+
+            Button {
+                sleepToEdit = night
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "moon.zzz.fill")
+                        .font(.caption)
+                        .foregroundStyle(Anchor.Theme.sage)
+                    Text(night.shownMinutes.map { "Slept \(SleepEntry.describe(minutes: $0))" } ?? "A night noted")
+                        .font(.system(.caption, design: .rounded).weight(.medium))
+                        .foregroundStyle(.secondary)
+                    Image(systemName: "chevron.right")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(.vertical, 6)
+                .padding(.bottom, 10)
+                .padding(.leading, 10)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Opens the night")
 
             Spacer()
         }
@@ -533,6 +601,9 @@ struct JournalMonthView: View {
             HStack(spacing: 16) {
                 legend(shape: AnyView(Circle().fill(Anchor.Theme.accent)), label: "Entry")
                 legend(shape: AnyView(RoundedRectangle(cornerRadius: 1).fill(Anchor.Theme.sage)), label: "Check-in")
+                if counts.values.contains(where: { $0.sleepNights > 0 }) {
+                    legend(shape: AnyView(Image(systemName: "moon.fill").resizable().scaledToFit().foregroundStyle(Anchor.Theme.sage)), label: "Sleep")
+                }
             }
             .font(.caption)
             .foregroundStyle(.secondary)
@@ -556,7 +627,7 @@ struct JournalMonthView: View {
     @ViewBuilder
     private func cell(for day: Date) -> some View {
         let count = counts[calendar.startOfDay(for: day)]
-        let hasItems = (count?.entries ?? 0) + (count?.checkIns ?? 0) > 0
+        let hasItems = (count?.entries ?? 0) + (count?.checkIns ?? 0) + (count?.sleepNights ?? 0) > 0
         let isToday = calendar.isDateInToday(day)
 
         let content = VStack(spacing: 3) {
@@ -569,6 +640,9 @@ struct JournalMonthView: View {
                 }
                 if (count?.checkIns ?? 0) > 0 {
                     RoundedRectangle(cornerRadius: 1).fill(Anchor.Theme.sage).frame(width: 6, height: 6)
+                }
+                if (count?.sleepNights ?? 0) > 0 {
+                    Image(systemName: "moon.fill").font(.system(size: 6)).foregroundStyle(Anchor.Theme.sage)
                 }
             }
             .frame(height: 6)
@@ -593,6 +667,7 @@ struct JournalMonthView: View {
         var parts = [day.formatted(.dateTime.day().month(.wide))]
         if let n = count?.entries, n > 0 { parts.append(n == 1 ? "1 entry" : "\(n) entries") }
         if let c = count?.checkIns, c > 0 { parts.append(c == 1 ? "1 check-in" : "\(c) check-ins") }
+        if let s = count?.sleepNights, s > 0 { parts.append("sleep noted") }
         return parts.joined(separator: ", ")
     }
 }
