@@ -195,6 +195,11 @@ struct SettingsView: View {
                     } label: {
                         Text("Encryption (test build)").font(.system(.subheadline, design: .rounded))
                     }
+                    NavigationLink {
+                        ShowcaseTestView()
+                    } label: {
+                        Text("Showcase mode (test build)").font(.system(.subheadline, design: .rounded))
+                    }
                     #endif
                 }
             }
@@ -791,3 +796,75 @@ private struct RecoveryKeyEntrySheet: View {
         }
     }
 }
+
+#if DEBUG
+/// Test-build screen for showcase mode (Patch 39). Turning it on swaps the app to the made-up
+/// demo content and makes the window again, which closes this screen; turning it off asks for the
+/// phone's own Face ID or passcode first. The public version, with its own passcode, is Patch 40.
+struct ShowcaseTestView: View {
+    @ObservedObject private var holder = ContainerHolder.shared
+    @State private var confirmOn = false
+    @State private var message: String?
+    @State private var isWorking = false
+
+    var body: some View {
+        Form {
+            Anchor.SettingsSection(
+                title: "Showcase mode",
+                footer: "Shows made-up content in place of yours, and does not ask for Face ID while it is on. Turning it off asks for the phone's Face ID or passcode. Test build only: the widgets and reminders can still show real things until Patch 40."
+            ) {
+                Text(ShowcaseMode.isOn ? "On. You are looking at made-up content." : "Off.")
+                    .font(.system(.subheadline, design: .rounded))
+                if ShowcaseMode.isOn {
+                    Button {
+                        turnOff()
+                    } label: {
+                        Text("Turn off showcase mode")
+                            .font(.system(.subheadline, design: .rounded))
+                    }
+                    .disabled(isWorking)
+                } else {
+                    Button {
+                        if ShowcaseMode.canTurnOn {
+                            confirmOn = true
+                        } else {
+                            message = "This phone has no passcode or Face ID, so there would be no way back out. Set one first."
+                        }
+                    } label: {
+                        Text("Turn on showcase mode")
+                            .font(.system(.subheadline, design: .rounded))
+                    }
+                }
+                if let message {
+                    Text(message)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .anchorSettingsStyle()
+        .navigationTitle("Showcase mode")
+        .navigationBarTitleDisplayMode(.inline)
+        .confirmationDialog("Turn on showcase mode?", isPresented: $confirmOn, titleVisibility: .visible) {
+            Button("Turn on") { holder.enterShowcase() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Anchor will show made-up content until you turn this off with your phone's Face ID or passcode.")
+        }
+    }
+
+    private func turnOff() {
+        isWorking = true
+        message = nil
+        Task {
+            let confirmed = await ShowcaseMode.confirmOwner(reason: "Turn off showcase mode and go back to your own content.")
+            isWorking = false
+            if confirmed {
+                holder.leaveShowcase()
+            } else {
+                message = "Showcase mode is still on."
+            }
+        }
+    }
+}
+#endif

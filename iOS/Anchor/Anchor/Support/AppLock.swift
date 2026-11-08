@@ -66,7 +66,7 @@ final class AppLock: ObservableObject {
 
     /// Called once at launch and whenever the app returns to foreground.
     func lock() {
-        guard isEnabled else { return }
+        guard isEnabled, !ShowcaseMode.isOn else { return }
         // If a Face ID prompt was mid-flight when this fired (e.g. the app
         // was backgrounded while the system sheet was up), cancel it
         // cleanly instead of leaving a stale evaluation dangling.
@@ -79,7 +79,7 @@ final class AppLock: ObservableObject {
     /// If the lock is turned off, or the device genuinely has no
     /// authentication configured, don't block access at all.
     func bypassIfNotApplicable() {
-        if !isEnabled || !canAuthenticate() {
+        if !isEnabled || ShowcaseMode.isOn || !canAuthenticate() {
             isUnlocked = true
         }
     }
@@ -88,7 +88,7 @@ final class AppLock: ObservableObject {
     /// more than the rest of the app. Returns true straight away when the lock
     /// is switched off or the phone has nothing to ask with, so nobody is shut out.
     func confirmPresence(reason: String) async -> Bool {
-        guard isEnabled, canAuthenticate() else { return true }
+        guard isEnabled, !ShowcaseMode.isOn, canAuthenticate() else { return true }
         let context = LAContext()
         context.localizedFallbackTitle = "Use Passcode"
         do {
@@ -211,6 +211,44 @@ private struct AppLockScreenView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .anchorBackground()
+    }
+}
+
+// MARK: - Showcase mode
+//
+// Patch 39 is the machinery: while showcase mode is on the app runs on the made-up demo
+// store, the real store is not opened on that launch, and the app lock is not asked for
+// (the setting itself is left as it was and applies again afterwards). Patch 40 adds the
+// passcode, clears what could still show real data, and opens this to everyone. Until then
+// it is only in test builds (Settings, Your data and help, Showcase mode (test build)).
+
+enum ShowcaseMode {
+    private static let defaultsKey = "anchor.showcaseOn"
+
+    /// Kept in the standard defaults, so it survives closing the app: a showcase that
+    /// started stays one until it is turned off with the phone's own authentication.
+    static var isOn: Bool { UserDefaults.standard.bool(forKey: defaultsKey) }
+
+    static func setOn(_ on: Bool) {
+        UserDefaults.standard.set(on, forKey: defaultsKey)
+    }
+
+    /// Showcase mode can only be turned on where there is a way back out: Face ID, Touch ID or a
+    /// phone passcode.
+    static var canTurnOn: Bool { AppLock.shared.canAuthenticate() }
+
+    /// The phone's own Face ID or passcode, asked directly. It does not depend on Anchor's lock
+    /// setting, which is not asked for while showcase mode is on, so it cannot be turned off by that.
+    static func confirmOwner(reason: String) async -> Bool {
+        let context = LAContext()
+        context.localizedFallbackTitle = "Use Passcode"
+        var error: NSError?
+        guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) else { return false }
+        do {
+            return try await context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: reason)
+        } catch {
+            return false
+        }
     }
 }
 

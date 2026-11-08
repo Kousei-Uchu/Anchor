@@ -9,7 +9,6 @@ import UserNotifications
 
 @main
 struct AnchorApp: App {
-    let container = DemoMode.isOn ? DemoMode.makeContainer() : AnchorSchema.makeContainer()
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
@@ -18,6 +17,7 @@ struct AnchorApp: App {
         WidgetSealSelfTest.run()
         #endif
         if !DemoMode.isOn {
+            let container = ContainerHolder.shared.container
             WidgetSealing.sealLeftovers()
             TaskMigration.migrateNextHourItemsIfNeeded(container: container)
             SafetyPlanMigration.migrateIfNeeded(container: container)
@@ -26,25 +26,79 @@ struct AnchorApp: App {
 
     var body: some Scene {
         WindowGroup {
-            AppLockGateView {
-                ContentView()
-            }
-            .safeAreaInset(edge: .top, spacing: 0) {
-                if !AnchorSchema.openedPersistentStore {
-                    StoreWarningBanner()
-                }
-            }
+            AnchorRootView()
         }
-        .modelContainer(container)
         .onChange(of: scenePhase) { _, phase in
             // Brings in new nights from Apple Health and keeps what Anchor saved there in line, only if either was turned on.
+            // Showcase and demo runs never reach Health (the readers check DemoMode.isOn).
             if phase == .active {
                 Task {
-                    await SleepHealthReader.shared.sync(context: container.mainContext)
-                    await SleepHealthWriter.shared.reconcile(context: container.mainContext)
+                    let context = ContainerHolder.shared.container.mainContext
+                    await SleepHealthReader.shared.sync(context: context)
+                    await SleepHealthWriter.shared.reconcile(context: context)
                 }
             }
         }
+    }
+}
+
+/// The app's one window. It reads the container from `ContainerHolder`, and when that changes
+/// (showcase mode turned on or off) the whole tree is made again, so no screen, sheet or
+/// query is left holding something from the other store.
+struct AnchorRootView: View {
+    @ObservedObject private var holder = ContainerHolder.shared
+
+    var body: some View {
+        AppLockGateView {
+            ContentView()
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if !AnchorSchema.openedPersistentStore {
+                StoreWarningBanner()
+            }
+        }
+        .modelContainer(holder.container)
+        .id(holder.generation)
+    }
+}
+
+/// Holds the container the app is using. On a normal launch it is the real store. While
+/// showcase mode is on it is the in-memory demo store, and the real store file is not
+/// opened at all on that launch. Turning showcase mode on or off swaps it while the app
+/// is running and makes the window again.
+final class ContainerHolder: ObservableObject {
+    static let shared = ContainerHolder()
+
+    @Published private(set) var container: ModelContainer
+    @Published private(set) var generation = 0
+    /// Kept when the real store was already open, so leaving showcase mode does not open it a second time.
+    private var realContainer: ModelContainer?
+
+    private init() {
+        if DemoMode.isOn {
+            container = DemoMode.makeContainer()
+        } else {
+            let real = AnchorSchema.makeContainer()
+            realContainer = real
+            container = real
+        }
+    }
+
+    func enterShowcase() {
+        ShowcaseMode.setOn(true)
+        container = DemoMode.makeContainer()
+        generation += 1
+    }
+
+    func leaveShowcase() {
+        ShowcaseMode.setOn(false)
+        if realContainer == nil {
+            realContainer = AnchorSchema.makeContainer()
+        }
+        if let real = realContainer {
+            container = real
+        }
+        generation += 1
     }
 }
 
@@ -69,9 +123,10 @@ struct StoreWarningBanner: View {
 /// Launch with `-AnchorDemo` (the screenshot tests do) to run on a throwaway
 /// in-memory store filled with made-up content. Nothing is written to disk,
 /// so a real store on the same device or simulator is never touched. Normal
-/// launches never reach this code.
+/// launches never reach this code, unless showcase mode is on (see `ShowcaseMode`),
+/// which uses the same store and the same content, so there is one set of made-up data.
 enum DemoMode {
-    static var isOn: Bool { CommandLine.arguments.contains("-AnchorDemo") }
+    static var isOn: Bool { CommandLine.arguments.contains("-AnchorDemo") || ShowcaseMode.isOn }
 
     static func makeContainer() -> ModelContainer {
         let schema = Schema(AnchorSchema.models)
