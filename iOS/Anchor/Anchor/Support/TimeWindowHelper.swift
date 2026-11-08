@@ -70,4 +70,15 @@ enum TimeWindowHelper {
             .compactMap { window in nextOccurrence(of: window, after: now, calendar: calendar).map { (window, $0) } }
             .min { $0.1 < $1.1 }
     }
+
+    /// A short glance-friendly label like "Weekday mornings · Mon 7:30 AM" for the soonest upcoming
+    /// active window: never the window's detail, just enough for a widget.
+    static func nextWindowLabel(among windows: [TriggerWindow]) -> String? {
+        guard let soonest = soonestUpcoming(among: windows) else { return nil }
+        let formatter = DateFormatter()
+        formatter.setLocalizedDateFormatFromTemplate("EEE h:mm a")
+        let timeLabel = formatter.string(from: soonest.date)
+        let name = soonest.window.label.isEmpty ? "Trigger window" : soonest.window.label
+        return "\(name) · \(timeLabel)"
+    }
 }

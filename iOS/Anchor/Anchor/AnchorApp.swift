@@ -6,6 +6,7 @@
 import SwiftUI
 import SwiftData
 import UserNotifications
+import WidgetKit
 
 @main
 struct AnchorApp: App {
@@ -17,10 +18,11 @@ struct AnchorApp: App {
         WidgetSealSelfTest.run()
         #endif
         if !DemoMode.isOn {
-            let container = ContainerHolder.shared.container
-            WidgetSealing.sealLeftovers()
-            TaskMigration.migrateNextHourItemsIfNeeded(container: container)
-            SafetyPlanMigration.migrateIfNeeded(container: container)
+            ContainerHolder.prepareRealStore(ContainerHolder.shared.container)
+        } else if ShowcaseMode.isOn {
+            // A launch that starts in showcase mode opens nothing from the real store, and leaves
+            // nothing waiting or delivered that could show your own words.
+            ShowcaseSweep.begin()
         }
     }
 
@@ -47,6 +49,7 @@ struct AnchorApp: App {
 /// query is left holding something from the other store.
 struct AnchorRootView: View {
     @ObservedObject private var holder = ContainerHolder.shared
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         AppLockGateView {
@@ -59,6 +62,12 @@ struct AnchorRootView: View {
         }
         .modelContainer(holder.container)
         .id(holder.generation)
+        .overlay {
+            // The app switcher takes its picture while the app is not the one in front.
+            if ShowcaseMode.isOn && scenePhase != .active {
+                ShowcaseCover()
+            }
+        }
     }
 }
 
@@ -75,8 +84,22 @@ final class ContainerHolder: ObservableObject {
     private var realContainer: ModelContainer?
 
     private init() {
+        var demo: ModelContainer?
         if DemoMode.isOn {
-            container = DemoMode.makeContainer()
+            demo = DemoMode.makeContainer()
+            if demo == nil {
+                // Made-up content could not be made. A launch for the screenshot tests promises never to
+                // touch the real store, so it stops. Showcase mode turns itself off instead, which leaves
+                // the real store behind Anchor's own lock, as on any other launch, and never shows it
+                // as if it were the showcase.
+                if CommandLine.arguments.contains("-AnchorDemo") || !ShowcaseMode.isOn {
+                    fatalError("Could not make the in-memory store for made-up content")
+                }
+                ShowcaseMode.setOn(false)
+            }
+        }
+        if let demo {
+            container = demo
         } else {
             let real = AnchorSchema.makeContainer()
             realContainer = real
@@ -84,21 +107,42 @@ final class ContainerHolder: ObservableObject {
         }
     }
 
-    func enterShowcase() {
+    /// What a normal launch does with the real store once it is open: locks a plain widget copy left
+    /// by an earlier version and moves older data into the newer models. Each step keeps its own flag,
+    /// so running it again is harmless. A launch that started in showcase mode skips it, so it also
+    /// runs when showcase mode is turned off and the real store is opened for the first time.
+    @MainActor
+    static func prepareRealStore(_ container: ModelContainer) {
+        WidgetSealing.sealLeftovers()
+        TaskMigration.migrateNextHourItemsIfNeeded(container: container)
+        SafetyPlanMigration.migrateIfNeeded(container: container)
+    }
+
+    /// Returns false, and changes nothing, when the made-up store cannot be made. The real store is never
+    /// shown as a stand-in for it.
+    @discardableResult
+    func enterShowcase() -> Bool {
+        guard let demo = DemoMode.makeContainer() else { return false }
         ShowcaseMode.setOn(true)
-        container = DemoMode.makeContainer()
+        ShowcaseSweep.begin()
+        container = demo
         generation += 1
+        return true
     }
 
     func leaveShowcase() {
         ShowcaseMode.setOn(false)
-        if realContainer == nil {
+        let openedNow = (realContainer == nil)
+        if openedNow {
             realContainer = AnchorSchema.makeContainer()
         }
-        if let real = realContainer {
-            container = real
-        }
+        guard let real = realContainer else { return }
+        container = real
         generation += 1
+        Task { @MainActor in
+            if openedNow { Self.prepareRealStore(real) }
+            ShowcaseSweep.end(container: real)
+        }
     }
 }
 
@@ -128,11 +172,13 @@ struct StoreWarningBanner: View {
 enum DemoMode {
     static var isOn: Bool { CommandLine.arguments.contains("-AnchorDemo") || ShowcaseMode.isOn }
 
-    static func makeContainer() -> ModelContainer {
+    /// Nil when an in-memory store cannot be made. It never stands in with the real store: a showcase
+    /// that fell back to your own data would show it to the person the phone was handed to.
+    static func makeContainer() -> ModelContainer? {
         let schema = Schema(AnchorSchema.models)
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         guard let container = try? ModelContainer(for: schema, configurations: [configuration]) else {
-            return AnchorSchema.makeContainer()
+            return nil
         }
         let context = ModelContext(container)
         let now = Date.now
@@ -299,5 +345,64 @@ enum DemoMode {
 
         try? context.save()
         return container
+    }
+}
+
+// MARK: - Showcase mode: what is cleared outside the store
+
+/// The store is swapped by `ContainerHolder`. This is the rest: what lives outside the store and
+/// could still show someone else your own content. `begin` takes it off the phone when showcase
+/// mode starts, and `end` puts it back from the real store when it stops.
+///
+/// What is taken: the widget summaries (your top contacts and the Recovery counters, which the lock
+/// screen shows), and every reminder that is waiting or already delivered, because the trigger window
+/// reminders quote a line from your own plan. While showcase mode is on nothing writes them again:
+/// the widget writers and the reminder schedulers do nothing.
+enum ShowcaseSweep {
+    static func begin() {
+        let center = UNUserNotificationCenter.current()
+        center.removeAllPendingNotificationRequests()
+        center.removeAllDeliveredNotifications()
+        WidgetDataStore.clear()
+        CounterWidgetStore.clear()
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    /// Runs after the flag is already off, so the writers and schedulers work again.
+    @MainActor
+    static func end(container: ModelContainer) {
+        let context = container.mainContext
+
+        // The widget summary, the same one Plan writes when it appears.
+        let contacts = (try? context.fetch(FetchDescriptor<TrustedContact>(sortBy: [SortDescriptor(\.sortOrder)]))) ?? []
+        let sections = (try? context.fetch(FetchDescriptor<SafetyPlanSection>(sortBy: [SortDescriptor(\.sortOrder)]))) ?? []
+        let scripts = (try? context.fetch(FetchDescriptor<DeEscalationScript>(sortBy: [SortDescriptor(\.sortOrder)]))) ?? []
+        let affirmations = (try? context.fetch(FetchDescriptor<Affirmation>(sortBy: [SortDescriptor(\.sortOrder)]))) ?? []
+        let windows = (try? context.fetch(FetchDescriptor<TriggerWindow>())) ?? []
+        WidgetDataStore.refresh(
+            contacts: contacts,
+            hasSafetyPlan: SafetyPlanSections.hasContent(sections),
+            deEscalationScriptLine: scripts.first?.text ?? "I need 10 minutes, then we can talk.",
+            nextTriggerWindowLabel: TimeWindowHelper.nextWindowLabel(among: windows),
+            currentAffirmation: affirmations.first?.text
+        )
+
+        // The reminders and the counter widget, the same ones Plan refreshes when it appears.
+        RecoveryNotifications.refresh(using: context)
+        RoutineReminders.refresh(using: context)
+        SleepReminder.refresh()
+        NotificationScheduler.resyncTriggerWindows(using: context)
+        DailyCheckInSettings.reapplyIfEnabled(using: context)
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+}
+
+/// Laid over the window while showcase mode is on and the app is not the one in front, so the app
+/// switcher shows a plain screen. It covers the main window only, not a sheet that happens to be open.
+struct ShowcaseCover: View {
+    var body: some View {
+        Color(.systemBackground)
+            .ignoresSafeArea()
+            .accessibilityHidden(true)
     }
 }

@@ -89,61 +89,69 @@ struct DataControlView: View {
                 Text("What's stored")
             }
 
-            Section {
-                Button {
-                    exportFullJSON()
-                } label: {
-                    Anchor.MenuRow(icon: "doc.zipper", title: "Export everything (JSON)",
-                                   subtitle: "Plain text, without photos or voice notes. Anyone with the file can read it", tint: Anchor.Theme.accent)
-                }
-                Button {
-                    showBackupSheet = true
-                } label: {
-                    Anchor.MenuRow(icon: "lock.doc", title: "Make an encrypted backup",
-                                   subtitle: "Everything, with photos and voice notes, locked with a password you choose", tint: Anchor.Theme.accent)
-                }
-                Button {
-                    showDateRangeSheet = .csv
-                } label: {
-                    Anchor.MenuRow(icon: "tablecells", title: "Export Journal & Check-ins (CSV)",
-                                   subtitle: "For spreadsheets, or to hand to your psych", tint: Anchor.Theme.accent)
-                }
-                Button {
-                    showDateRangeSheet = .pdf
-                } label: {
-                    Anchor.MenuRow(icon: "doc.richtext", title: "Export Journal & Check-ins (PDF)",
-                                   subtitle: "Readable printout, all-time or a date range", tint: Anchor.Theme.accent)
-                }
-            } header: {
-                Text("Export")
-            }
-
-            Section {
-                Button {
-                    showImporter = true
-                } label: {
-                    Anchor.MenuRow(icon: "square.and.arrow.down", title: "Import from a previous export",
-                                   subtitle: "Encrypted backups and JSON exports, including ones from earlier versions", tint: Anchor.Theme.sage)
-                }
-                if let importResultMessage {
-                    Text(importResultMessage)
+            if ShowcaseMode.isOn {
+                Section {
+                    Text("Exporting, importing and clearing are switched off while showcase mode is on.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-            } header: {
-                Text("Import")
-            }
-
-            Section {
-                Button(role: .destructive) {
-                    showClearConfirm = true
-                } label: {
-                    Anchor.MenuRow(icon: "trash.fill", title: "Clear all data", tint: .red)
+            } else {
+                Section {
+                    Button {
+                        exportFullJSON()
+                    } label: {
+                        Anchor.MenuRow(icon: "doc.zipper", title: "Export everything (JSON)",
+                                       subtitle: "Plain text, without photos or voice notes. Anyone with the file can read it", tint: Anchor.Theme.accent)
+                    }
+                    Button {
+                        showBackupSheet = true
+                    } label: {
+                        Anchor.MenuRow(icon: "lock.doc", title: "Make an encrypted backup",
+                                       subtitle: "Everything, with photos and voice notes, locked with a password you choose", tint: Anchor.Theme.accent)
+                    }
+                    Button {
+                        showDateRangeSheet = .csv
+                    } label: {
+                        Anchor.MenuRow(icon: "tablecells", title: "Export Journal & Check-ins (CSV)",
+                                       subtitle: "For spreadsheets, or to hand to your psych", tint: Anchor.Theme.accent)
+                    }
+                    Button {
+                        showDateRangeSheet = .pdf
+                    } label: {
+                        Anchor.MenuRow(icon: "doc.richtext", title: "Export Journal & Check-ins (PDF)",
+                                       subtitle: "Readable printout, all-time or a date range", tint: Anchor.Theme.accent)
+                    }
+                } header: {
+                    Text("Export")
                 }
-            } header: {
-                Text("Danger zone")
-            } footer: {
-                Text("Deletes everything Anchor stores from this device. This can't be undone, so export first if you want a copy.")
+
+                Section {
+                    Button {
+                        showImporter = true
+                    } label: {
+                        Anchor.MenuRow(icon: "square.and.arrow.down", title: "Import from a previous export",
+                                       subtitle: "Encrypted backups and JSON exports, including ones from earlier versions", tint: Anchor.Theme.sage)
+                    }
+                    if let importResultMessage {
+                        Text(importResultMessage)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                } header: {
+                    Text("Import")
+                }
+
+                Section {
+                    Button(role: .destructive) {
+                        showClearConfirm = true
+                    } label: {
+                        Anchor.MenuRow(icon: "trash.fill", title: "Clear all data", tint: .red)
+                    }
+                } header: {
+                    Text("Danger zone")
+                } footer: {
+                    Text("Deletes everything Anchor stores from this device. This can't be undone, so export first if you want a copy.")
+                }
             }
         }
         .anchorSettingsStyle()

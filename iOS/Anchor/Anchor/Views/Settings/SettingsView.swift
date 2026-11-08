@@ -811,7 +811,7 @@ struct ShowcaseTestView: View {
         Form {
             Anchor.SettingsSection(
                 title: "Showcase mode",
-                footer: "Shows made-up content in place of yours, and does not ask for Face ID while it is on. Turning it off asks for the phone's Face ID or passcode. Test build only: the widgets and reminders can still show real things until Patch 40."
+                footer: "Shows made-up content in place of yours, and does not ask for Face ID while it is on. The widgets are emptied and waiting reminders are taken off the phone, and both come back when you turn it off. Turning it off asks for the phone's Face ID or passcode. Test build only for now."
             ) {
                 Text(ShowcaseMode.isOn ? "On. You are looking at made-up content." : "Off.")
                     .font(.system(.subheadline, design: .rounded))
@@ -846,10 +846,14 @@ struct ShowcaseTestView: View {
         .navigationTitle("Showcase mode")
         .navigationBarTitleDisplayMode(.inline)
         .confirmationDialog("Turn on showcase mode?", isPresented: $confirmOn, titleVisibility: .visible) {
-            Button("Turn on") { holder.enterShowcase() }
+            Button("Turn on") {
+                if !holder.enterShowcase() {
+                    message = "Showcase mode could not start, so nothing was changed."
+                }
+            }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Anchor will show made-up content until you turn this off with your phone's Face ID or passcode.")
+            Text("Anchor will show made-up content, with the widgets emptied and waiting reminders removed, until you turn this off with your phone's Face ID or passcode.")
         }
     }
 

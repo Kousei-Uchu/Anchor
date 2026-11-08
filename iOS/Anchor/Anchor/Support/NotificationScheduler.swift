@@ -73,6 +73,7 @@ struct NotificationScheduler {
     /// "opt-in per contact, not automatic."
     func scheduleTriggerWindow(_ window: TriggerWindow, reasonsPool: [String],
                                 escalationContacts: [TrustedContact], primaryContact: TrustedContact?) {
+        guard !DemoMode.isOn else { return }
         guard window.isActive, let startHour = window.startTime.hour, let startMinute = window.startTime.minute else { return }
         // Safety net: scheduling means the user has a reminder set up, so make sure we've asked.
         Self.askForPermissionIfNeeded()
@@ -193,6 +194,7 @@ struct NotificationScheduler {
     /// out — appointments getting missed or arrived at unprepared were
     /// both real risks a single 20-hours-out reminder didn't cover well.
     func scheduleAppointmentReminder(for occurrence: AppointmentOccurrence, clinicianLabel: String) {
+        guard !DemoMode.isOn else { return }
         Self.askForPermissionIfNeeded()
         scheduleSingleAppointmentReminder(
             for: occurrence, clinicianLabel: clinicianLabel,
@@ -232,6 +234,7 @@ struct NotificationScheduler {
     /// "want to check in today?" at a time the user picks in Plan, so
     /// Anchor is proactive even on days nothing's scheduled to fire.
     func scheduleDailyCheckIn(hour: Int, minute: Int) {
+        guard !DemoMode.isOn else { return }
         Self.askForPermissionIfNeeded()   // the user just turned the daily check-in on
         cancelDailyCheckIn()
         let content = UNMutableNotificationContent()

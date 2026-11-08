@@ -34,6 +34,7 @@ struct BridgeView: View {
                             Image(systemName: "square.and.arrow.up")
                         }
                         .accessibilityLabel("Export for someone")
+                        .hiddenInShowcase()
                         HelpToolbarButton(topic: .bridge)
                     }
                 }

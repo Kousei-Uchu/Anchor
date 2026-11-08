@@ -1,6 +1,6 @@
 # Showcase mode
 
-Point 17 of the plan: show someone the app without showing them your own content. It is in two patches. Patch 39 (this one) is the machinery. Patch 40 adds a passcode of its own, clears what could still show real things, and opens the switch to everyone. Until then it is only in test builds (Settings, Your data and help, Showcase mode (test build)).
+Point 17 of the plan: show someone the app without showing them your own content. It comes in three steps. Patch 39 is the machinery. Patch 40a (this one) clears what lives outside the store and leaves out the share and export controls. Patch 40b adds a passcode of its own, an exit flow and opens the switch to everyone. Until then it is only in test builds (Settings, Your data and help, Showcase mode (test build)).
 
 ## What it does while it is on
 
@@ -8,31 +8,49 @@ Point 17 of the plan: show someone the app without showing them your own content
 - **The real store is not opened.** The setting is kept in the standard defaults, so it survives closing the app. A launch with showcase mode on never calls `AnchorSchema.makeContainer`, so the store file is not opened at all. (If the app was already running with the real store open when showcase mode was turned on, that store stays open in memory until the app closes, and is reused when showcase mode is turned off.)
 - **The window is made again** when the mode changes, with a new identity (`ContainerHolder.generation`), so no screen, sheet or query is left holding something from the other store.
 - **The app lock is not asked for.** `AppLock` treats showcase mode as the lock being off (when it starts, when the app comes back, and for the screens that ask again). The lock setting itself is not changed, so it applies again after showcase mode is turned off.
-- **It counts as demo mode** for the things demo mode already leaves alone: Apple Health is never read or written, and no reminders are scheduled.
+- **It counts as demo mode** for the things demo mode already leaves alone: no reminders are scheduled and no permission question is asked.
+
+## What 40a adds: the sweep
+
+`ShowcaseSweep` (in `AnchorApp.swift`) takes things off the phone when showcase mode starts and puts them back when it stops.
+
+- **Widgets.** The contact and plan summary and the Recovery counters, which the lock screen and home screen show, are removed and the widgets reload, so they show their empty state. While showcase mode is on nothing writes them again (Plan's refresh and the Recovery widget sync do nothing). They are empty, not filled with made-up content, on purpose: the widgets are part of how someone reaches help, and a made-up phone number there would be worse than none.
+- **Reminders.** Every pending and every delivered notification is removed, because the trigger window reminders quote a line from your own safety plan. While showcase mode is on the schedulers do nothing, so a trigger window or a daily check-in made in the showcase does not put a real reminder on the phone.
+- **Putting it back.** When showcase mode is turned off, `ShowcaseSweep.end` rebuilds the widget summary from the real store (the same fields Plan writes), refreshes the Recovery reminders and counter widget, the routine reminders, the sleep reminder, the trigger window reminders and the daily check-in, and reloads the widgets. Nothing waits for Plan to be opened.
+- **A launch that started in showcase mode** skips the one-time steps a normal launch runs on the real store (locking an old plain widget copy, moving the old Next hour list into tasks, copying the safety plan into sections). They now run when showcase mode is turned off and the real store is opened for the first time, so the plan is there straight away and not after the next launch.
+- **Fails closed.** If the made-up store cannot be made, turning showcase mode on does nothing and says so. On a launch that was already in showcase mode, showcase mode turns itself off and the real store opens behind Anchor's own lock, as on any other launch. It never shows the real store as if it were the showcase.
+- **Share and export.** Controls that open the system share sheet are left out while it is on: Share on a Recovery counter, Share as picture or PDF on a diagram, the Boundaries share button, Share with on the support calendar, Share voice note, and the export button on Bridge and on Bridge draft. The share sheet lists the phone's own people and recent contacts. On Your data, Export, Import and Clear all data are replaced by one line saying they are switched off; Clear all data in particular would reach outside the store (photo files, Apple Health samples, the widget key).
+- **Apple Health.** The Apple Health card on the Sleep screen is hidden, so nothing there can disconnect Health or remove what Anchor saved.
+- **App switcher.** While the app is not the one in front, a plain screen is laid over the main window, so the app switcher does not show whichever made-up page was open. It does not cover a sheet that is open.
 
 ## Turning it on and off
 
-- **On:** only on a phone that has Face ID, Touch ID or a passcode (`ShowcaseMode.canTurnOn`), so there is always a way back. It asks first.
+- **On:** only on a phone that has Face ID, Touch ID or a passcode (`ShowcaseMode.canTurnOn`), so there is always a way back. It asks first, and says that the widgets and reminders are cleared.
 - **Off:** asks for the phone's own Face ID or passcode, directly (`ShowcaseMode.confirmOwner`), not through Anchor's lock, which is not asked for while showcase mode is on. If it is not confirmed, showcase mode stays on.
-- **Forgetting Anchor's own showcase passcode** is not a case yet, because there is none until Patch 40. The phone's authentication always works, and it will go on working after the passcode is added.
+- **Forgetting Anchor's own showcase passcode** is not a case yet, because there is none until Patch 40b. The phone's authentication always works, and will go on working after the passcode is added.
 
-## Not done yet (Patch 40)
+## Not done yet (Patch 40b)
 
 - A showcase passcode of its own, kept as a salted hash in the Keychain, as another way to turn it off.
-- Clearing what could still show your real content outside the store: the widget summaries (the two sealed values from Patch 35a would be removed and the widgets reloaded), reminders that are already scheduled and their wording, the picture the phone takes of the app for the app switcher, and the share and export buttons.
-- Opening the switch to everyone, in Settings, with its own screen and help.
+- Opening the switch to everyone, in Settings, with its own screen and Help, and the privacy page updated.
 - A way to put content in the demo that the screenshot tests do not need.
 
-## Known gaps in this patch
+## Known gaps
 
-- While it is on in a test build, the widgets still show your real contacts and counter, and reminders that were already scheduled still arrive. That is why it is test builds only.
-- `DemoMode.makeContainer` falls back to the real store if an in-memory store cannot be made. That does not happen in practice, but a showcase that fell back would show real content. Patch 40 makes showcase mode stop instead.
+- Settings that are stored as settings (reminder times, switches, layout) are not swapped or hidden. They are not content, and a change made while showcase mode is on stays.
+- The widgets are empty while it is on (see above).
+- The Encryption test screen in a debug build can still remove the real data key. It is test-build only and goes before release.
 - The JSON seed in the plan (one definition shared with the website demo) is not built. The seed is Swift code and the website demo is parked (Patches 49 and 50), so there is nothing to share it with yet.
 
 ## Checking a test build on a device
 
-1. Settings, Your data and help, Showcase mode (test build). It says Off. Turn it on: the app should come back on Now with made-up content (Sam, Alex and Jordan as contacts, and so on), and nothing from your own store anywhere.
-2. Close Anchor from the app switcher and open it again: it should still be in showcase mode, and go straight in without asking for Face ID.
-3. Open Plan, Journal and Bridge and add something. It should be there until you close the app, and gone when you do.
-4. Turn it off: it asks for Face ID or the passcode. Cancel it once: it should still be on. Then confirm: your own content should be back, and Anchor's lock should ask again the next time you leave and come back.
-5. On a phone with no passcode, the switch should refuse and say why.
+Before you start, have a real contact and a real trigger window set up, with the widgets on your home screen, and set the trigger window to start a few minutes ahead.
+
+1. Settings, Your data and help, Showcase mode (test build). It says Off. Turn it on. The dialog should say the widgets and reminders will be cleared. The app should come back on Now with made-up content (Sam, Alex and Jordan as contacts, and so on).
+2. The widgets should go to their empty state within a few seconds. The trigger window reminder should not arrive. Settings, Notifications, Anchor should show nothing waiting if your phone lists it.
+3. Open Plan, Journal and Bridge and add something. It should be there until you close the app, and gone when you do. Open Your data: Export, Import and Clear all data should be replaced by one line. Look for share buttons on Bridge, Boundaries, a Recovery counter and a diagram: they should not be there. Open the Sleep screen: no Apple Health card.
+4. Press the home button and open the app switcher: Anchor should show a plain screen.
+5. Close Anchor from the app switcher and open it again: it should still be in showcase mode and go straight in without asking for Face ID.
+6. Turn it off: it asks for Face ID or the passcode. Cancel it once: it should still be on. Then confirm: your own content should be back, the widgets should fill in again within a few seconds with your contact and counters, and the trigger window reminder should be scheduled again (move its time a few minutes ahead and wait for it).
+7. Do 5 and 6 starting from a cold launch in showcase mode (turn it on, force close, open, turn it off): the Safety plan should have its sections straight away.
+8. On a phone with no passcode, the switch should refuse and say why.

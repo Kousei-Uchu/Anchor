@@ -402,6 +402,7 @@ struct FeedbackLoopDiagramView: View {
                         } label: {
                             Label("Share as picture or PDF", systemImage: "square.and.arrow.up")
                         }
+                        .hiddenInShowcase()
                         if graph.kind == .loop {
                             Button("Open as a free map") { confirmingMap = true }
                         }

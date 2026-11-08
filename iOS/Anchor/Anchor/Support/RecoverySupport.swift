@@ -117,6 +117,7 @@ enum RecoveryNotifications {
 
 enum RecoveryWidgetSync {
     static func refresh(counters: [RecoveryCounter]) {
+        guard !ShowcaseMode.isOn else { return }
         let items: [CounterWidgetItem] = counters
             .filter { !$0.isArchived }
             .sorted { $0.sortOrder < $1.sortOrder }

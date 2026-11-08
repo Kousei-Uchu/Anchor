@@ -181,6 +181,7 @@ struct PlanView: View {
     }
 
     private func refreshWidgetSnapshot() {
+        guard !ShowcaseMode.isOn else { return }
         WidgetDataStore.refresh(
             contacts: contacts,
             hasSafetyPlan: SafetyPlanSections.hasContent(planSections),
@@ -194,12 +195,7 @@ struct PlanView: View {
     /// for the soonest upcoming active window — never the full window
     /// detail, just enough for a widget.
     private var nextTriggerWindowLabel: String? {
-        guard let soonest = TimeWindowHelper.soonestUpcoming(among: triggerWindows) else { return nil }
-        let formatter = DateFormatter()
-        formatter.setLocalizedDateFormatFromTemplate("EEE h:mm a")
-        let timeLabel = formatter.string(from: soonest.date)
-        let name = soonest.window.label.isEmpty ? "Trigger window" : soonest.window.label
-        return "\(name) · \(timeLabel)"
+        TimeWindowHelper.nextWindowLabel(among: triggerWindows)
     }
 }
 
@@ -789,7 +785,7 @@ final class SleepHealthReader {
 
     @ObservationIgnored private let store = HKHealthStore()
 
-    var isAvailable: Bool { HKHealthStore.isHealthDataAvailable() }
+    var isAvailable: Bool { HKHealthStore.isHealthDataAvailable() && !ShowcaseMode.isOn }
 
     private var sleepType: HKCategoryType? { HKObjectType.categoryType(forIdentifier: .sleepAnalysis) }
 
