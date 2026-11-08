@@ -297,7 +297,12 @@ struct CheckInSliderView: View {
     /// the picture: nothing is stored, shown as a number, or compared with
     /// earlier check-ins, and the words it says still come from the reviewed
     /// line pool.
+    /// Switched off for now: the mascot keeps one calm face while the sliders move.
+    /// Set this to true to bring the following back.
+    private static let mascotFollowsSliders = false
+
     private var sliderMood: MascotMood {
+        guard Self.mascotFollowsSliders else { return .gentle }
         let level = (physicalEnergyLevel + mentalClarityLevel + mentalSpaceLevel + physicalEnergy + socialEnergy) / 5
         if level < 0.34 { return .quietDay }
         if level > 0.66 { return .encouragingNotPerformative }

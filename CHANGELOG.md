@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch RV10: the mascot in a check-in keeps one calm face instead of following the sliders. One switch in the code brings it back.
 - Patch R2: the review run now shows the Last night card and the sleep question in a check-in, which the demo data had been hiding.
 - Patch R1a: the review script passes the app launch arguments after a double dash, so the device tool no longer reads them as its own options.
 - Patch R1: a review walkthrough for test builds. scripts/review-on-device.sh installs the app on your connected iPhone (or a simulator) on made-up content, with a numbered bar that goes through every change, opens the screen for each, and keeps your notes so you can copy them out. The two widget writers now also skip in any demo run, not only showcase mode.
