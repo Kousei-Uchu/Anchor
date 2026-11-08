@@ -63,6 +63,7 @@
 		C7C09E0130173A6300F9144F /* DataControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7C09E0030173A6300F9144F /* DataControlView.swift */; };
 		C7C09E03301877CA00F9144F /* WidgetAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7C09E02301877CA00F9144F /* WidgetAction.swift */; };
 		C7C09E05301AA21400F9144F /* HelpContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7C09E04301AA21400F9144F /* HelpContent.swift */; };
+		C7C09E0A301AA21400F9144F /* ReviewWalkthrough.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7C09E0B301AA21400F9144F /* ReviewWalkthrough.swift */; };
 		C7C09E07301AA24800F9144F /* OnboardingTourView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7C09E06301AA24800F9144F /* OnboardingTourView.swift */; };
 		C7C09E0C301AB10100F9144F /* SafetyPlanShortcutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7C09E0A301AB10100F9144F /* SafetyPlanShortcutView.swift */; };
 		C7C09E0D301AB10100F9144F /* NextAppointmentCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7C09E09301AB10100F9144F /* NextAppointmentCardView.swift */; };
@@ -169,6 +170,7 @@
 		C7C09E0030173A6300F9144F /* DataControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataControlView.swift; sourceTree = "<group>"; };
 		C7C09E02301877CA00F9144F /* WidgetAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetAction.swift; sourceTree = "<group>"; };
 		C7C09E04301AA21400F9144F /* HelpContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpContent.swift; sourceTree = "<group>"; };
+		C7C09E0B301AA21400F9144F /* ReviewWalkthrough.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewWalkthrough.swift; sourceTree = "<group>"; };
 		C7C09E06301AA24800F9144F /* OnboardingTourView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingTourView.swift; sourceTree = "<group>"; };
 		C7C09E08301AB10100F9144F /* DecisionPresetsQuickView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DecisionPresetsQuickView.swift; sourceTree = "<group>"; };
 		C7C09E09301AB10100F9144F /* NextAppointmentCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextAppointmentCardView.swift; sourceTree = "<group>"; };
@@ -289,6 +291,7 @@
 			isa = PBXGroup;
 			children = (
 				C7C09E04301AA21400F9144F /* HelpContent.swift */,
+				C7C09E0B301AA21400F9144F /* ReviewWalkthrough.swift */,
 				C7C09E02301877CA00F9144F /* WidgetAction.swift */,
 				C7C09DF9301739F300F9144F /* AppLock.swift */,
 				DD369A82E48F44D58404DEF7 /* NotificationScheduler.swift */,
@@ -659,6 +662,7 @@
 				EB41D8990918488D90943B85 /* ReframingPromptView.swift in Sources */,
 				71E18F614D6541CCB7BA35ED /* FeedbackLoopDiagramView.swift in Sources */,
 				C7C09E05301AA21400F9144F /* HelpContent.swift in Sources */,
+				C7C09E0A301AA21400F9144F /* ReviewWalkthrough.swift in Sources */,
 				B439DF6878564058BCC2A5B7 /* AppointmentPrepView.swift in Sources */,
 				F97B43EDFD29430297FD99F4 /* BridgeView.swift in Sources */,
 				101E6026706848118362FF1F /* ThreadMessagesView.swift in Sources */,

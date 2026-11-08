@@ -182,7 +182,7 @@ struct PlanView: View {
     }
 
     private func refreshWidgetSnapshot() {
-        guard !ShowcaseMode.isOn else { return }
+        guard !DemoMode.isOn else { return }
         WidgetDataStore.refresh(
             contacts: contacts,
             hasSafetyPlan: SafetyPlanSections.hasContent(planSections),

@@ -589,6 +589,7 @@ struct ContentView: View {
                 .tag(4)
         }
         .tint(Anchor.Theme.accent)
+        .reviewWalkthrough(selectedTab: $selectedTab)
         .onOpenURL { url in
             // Widget deep links: anchor://plan/... , anchor://now,
             // anchor://action/... (an action that needs confirming inside

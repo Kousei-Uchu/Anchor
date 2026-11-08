@@ -87,6 +87,9 @@ final class ContainerHolder: ObservableObject {
         var demo: ModelContainer?
         if DemoMode.isOn {
             demo = DemoMode.makeContainer()
+            #if DEBUG
+            if ReviewMode.isOn, let demo { ReviewSeed.apply(to: demo) }
+            #endif
             if demo == nil {
                 // Made-up content could not be made. A launch for the screenshot tests promises never to
                 // touch the real store, so it stops. Showcase mode turns itself off instead, which leaves
