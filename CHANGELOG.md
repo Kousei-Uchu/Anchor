@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch SL2c: an optional Ask about sleep in check-ins switch in Settings (off until you turn it on). A check-in gets one more optional question, How did you sleep?, with sentence starters. The answer is kept as the note on last night, and it is not asked when last night is already written down.
 - Patch SL2b: an optional Show sleep in the Journal switch in Settings (off until you turn it on). Each night gets a small row on its morning and a moon mark on the month view, and a note on a night can be copied into your journal as an ordinary entry.
 - Patch SL2a: an optional Last night card on Now in the morning, with a Show Last night on Now switch in Settings (off until you turn it on, and the Sleep section only appears once Sleep is in use). Not now puts it away for the day.
 - Patch SL1: a Sleep journal in Plan, added hidden (turn it on under Customise). One quiet entry per night: when you went to bed and woke, time asleep (worked out or typed), how it felt in three words you can rename, and a note. A month of dots and one plain line on the usual range. No score, no target hours, no streak.

@@ -710,6 +710,8 @@ enum SleepSettings {
     static let nowCardKey = "anchor.sleep.nowCard"
     /// Show a small row for each night in the Journal, and a mark on its month view.
     static let journalKey = "anchor.sleep.journal"
+    /// Ask "How did you sleep?" as an extra optional question in a check-in.
+    static let checkInKey = "anchor.sleep.checkIn"
     /// The day, as year-month-day text, that the card was put away with Not now.
     static let nowDismissedKey = "anchor.sleep.nowDismissedDay"
 

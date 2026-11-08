@@ -27,6 +27,8 @@ struct CheckInSliderView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     var onExpandToJournal: (CheckIn) -> Void
+    @AppStorage(SleepSettings.checkInKey) private var askAboutSleep = false
+    @Query private var sleepEntries: [SleepEntry]
 
     // Stored here already flipped to "more = better." Converted to the
     // model's original direction only at save time.
@@ -50,6 +52,9 @@ struct CheckInSliderView: View {
         let starters: [String]
         /// A different mood per question, so the mascot isn't a fixed face.
         let mood: MascotMood
+        /// The sleep question. Its answer becomes the note on last night in the
+        /// sleep journal and is not copied into the journal entry.
+        var isSleep = false
     }
 
     /// Fixed, reviewed set, deliberately short so answering all of them
@@ -87,6 +92,26 @@ struct CheckInSliderView: View {
             mood: .gentle
         )
     ]
+
+    /// Only offered when the person has switched it on in Settings, and never
+    /// when last night already has something written down, so it is not asked twice.
+    private static let sleepPrompt = CheckInPrompt(
+        text: "How did you sleep?",
+        detail: "However it went is fine. A few words are enough, or skip it.",
+        starters: ["I got to sleep around\u{2026}", "I woke up\u{2026}", "I slept through, and\u{2026}", "It was hard to switch off, so\u{2026}"],
+        mood: .gentle,
+        isSleep: true
+    )
+
+    private var lastNightLogged: Bool {
+        let today = Calendar.current.startOfDay(for: .now)
+        return sleepEntries.contains { Calendar.current.startOfDay(for: $0.nightDate) == today && !$0.isBlank }
+    }
+
+    /// The fixed questions, plus the sleep one at the end when it applies.
+    private var activePrompts: [CheckInPrompt] {
+        askAboutSleep && !lastNightLogged ? Self.prompts + [Self.sleepPrompt] : Self.prompts
+    }
 
     var body: some View {
         NavigationStack {
@@ -175,18 +200,18 @@ struct CheckInSliderView: View {
     }
 
     private var promptStage: some View {
-        let current = Self.prompts[promptIndex]
+        let current = activePrompts[promptIndex]
         return ScrollView {
             VStack(spacing: 16) {
                 MascotPresenceView(line: nil, mood: current.mood)
                     .padding(.horizontal, 24)
                     .id(promptIndex)
 
-                ProgressView(value: Double(promptIndex + 1), total: Double(Self.prompts.count))
+                ProgressView(value: Double(promptIndex + 1), total: Double(activePrompts.count))
                     .tint(Anchor.Theme.accent)
                     .padding(.horizontal)
 
-                Text("Question \(promptIndex + 1) of \(Self.prompts.count), skip any of these")
+                Text("Question \(promptIndex + 1) of \(activePrompts.count), skip any of these")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
@@ -237,8 +262,8 @@ struct CheckInSliderView: View {
                         Button("Back") { withAnimation { promptIndex -= 1 } }
                             .buttonStyle(Anchor.SecondaryButtonStyle())
                     }
-                    Button(promptIndex == Self.prompts.count - 1 ? "Finish" : "Next") {
-                        if promptIndex == Self.prompts.count - 1 {
+                    Button(promptIndex == activePrompts.count - 1 ? "Finish" : "Next") {
+                        if promptIndex == activePrompts.count - 1 {
                             finishWithPrompts()
                         } else {
                             withAnimation { promptIndex += 1 }
@@ -317,10 +342,15 @@ struct CheckInSliderView: View {
     /// created and the caller isn't asked to open anything.
     private func finishWithPrompts() {
         let checkIn = save()
-        let answered = Self.prompts.compactMap { prompt -> String? in
+        let answered = activePrompts.filter { !$0.isSleep }.compactMap { prompt -> String? in
             guard let answer = promptAnswers[prompt.text]?.trimmingCharacters(in: .whitespacesAndNewlines),
                   !answer.isEmpty else { return nil }
             return "\(prompt.text)\n\(answer)"
+        }
+        if let sleepPrompt = activePrompts.first(where: \.isSleep),
+           let sleepAnswer = promptAnswers[sleepPrompt.text]?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !sleepAnswer.isEmpty {
+            modelContext.insert(SleepEntry(nightDate: Calendar.current.startOfDay(for: .now), note: sleepAnswer))
         }
         if !answered.isEmpty {
             let entry = JournalEntry(text: answered.joined(separator: "\n\n"), linkedContext: .checkInSlider)
