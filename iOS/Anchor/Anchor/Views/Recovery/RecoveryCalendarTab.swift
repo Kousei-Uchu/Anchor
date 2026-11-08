@@ -2,7 +2,7 @@
 //  RecoveryCalendarTab.swift
 //  Anchor
 //
-//  A month calendar: sober days are joined pills, a day with a slip is a
+//  A month calendar: counted days are joined pills, a day with a slip is a
 //  circled cross, and a link leads to the full streak history.
 //
 
@@ -59,11 +59,13 @@ struct RecoveryCalendarTab: View {
     private var header: some View {
         HStack {
             Button { shift(-1) } label: { Image(systemName: "chevron.left").padding(8) }
+                .accessibilityLabel("Previous month")
             Spacer()
             Text(month.formatted(.dateTime.month(.wide).year()))
                 .font(.system(.headline, design: .rounded))
             Spacer()
             Button { shift(1) } label: { Image(systemName: "chevron.right").padding(8) }
+                .accessibilityLabel("Next month")
                 .disabled(isCurrentMonth)
         }
         .tint(.primary)
@@ -130,8 +132,19 @@ struct RecoveryCalendarTab: View {
             }
             .frame(maxWidth: .infinity)
             .frame(height: 38)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(dayDescription(day, status: status))
         } else {
             Color.clear.frame(maxWidth: .infinity).frame(height: 38)
+        }
+    }
+
+    private func dayDescription(_ day: Date, status: RecoveryDayStatus) -> String {
+        let date = day.formatted(.dateTime.weekday(.wide).day().month(.wide))
+        switch status {
+        case .sober: return "\(date), counted"
+        case .slip: return "\(date), started again"
+        case .untracked: return date
         }
     }
 
@@ -140,7 +153,8 @@ struct RecoveryCalendarTab: View {
     private func summaryPill(timeline: RecoveryTimeline) -> some View {
         let count = timeline.soberDayCount(inMonthOf: month)
         let when = isCurrentMonth ? "this month" : "in \(month.formatted(.dateTime.month(.wide)))"
-        return Text("\(count) sober \(count == 1 ? "day" : "days") \(when)")
+        let words = count == 0 ? "No days counted \(when)" : "\(count) \(count == 1 ? "day" : "days") \(when)"
+        return Text(words)
             .font(.system(.footnote, design: .rounded).weight(.medium))
             .padding(.horizontal, 14)
             .padding(.vertical, 7)
@@ -151,7 +165,7 @@ struct RecoveryCalendarTab: View {
         HStack(spacing: 18) {
             HStack(spacing: 6) {
                 Circle().fill(Anchor.Theme.sage).frame(width: 8, height: 8)
-                Text("Sober")
+                Text("Day counted")
             }
             HStack(spacing: 6) {
                 Circle().stroke(Anchor.Theme.accent, lineWidth: 1.5).frame(width: 8, height: 8)

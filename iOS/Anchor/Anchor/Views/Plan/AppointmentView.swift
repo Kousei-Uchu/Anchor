@@ -195,6 +195,7 @@ struct AppointmentView: View {
             } label: {
                 Image(systemName: "chevron.left")
             }
+            .accessibilityLabel("Previous month")
             Spacer()
             Text(displayedMonth.formatted(.dateTime.month(.wide).year()))
                 .font(.system(.headline, design: .rounded))
@@ -204,12 +205,13 @@ struct AppointmentView: View {
             } label: {
                 Image(systemName: "chevron.right")
             }
+            .accessibilityLabel("Next month")
         }
         .tint(Anchor.Theme.accent)
     }
 
     private func daysUntil(_ date: Date) -> String {
-        let days = calendar.dateComponents([.day], from: .now, to: date).day ?? 0
+        let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: .now), to: calendar.startOfDay(for: date)).day ?? 0
         if days <= 0 { return "Today" }
         if days == 1 { return "Tomorrow" }
         return "In \(days) days"
