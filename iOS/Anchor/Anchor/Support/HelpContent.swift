@@ -77,7 +77,8 @@ enum HelpTopic: String, CaseIterable, Identifiable {
 struct GuideEntry: Identifiable, Hashable {
     let id: String
     /// The tab it belongs to. The tour goes tab by tab, a tab's own entry first.
-    let tab: HelpTopic
+    /// Settings is not one of the five tabs, so its entries have no tab.
+    let tab: HelpTopic?
     let title: String
     let icon: String
     /// One or two sentences on what this is.
@@ -86,12 +87,14 @@ struct GuideEntry: Identifiable, Hashable {
     let howToUse: String
     /// Short extras, listed under the text when there are any.
     let tips: [String]
+    /// False for an entry that only the "?" on its own screen should open, so the tour stays short.
+    var inTour: Bool = true
 }
 
 enum Guide {
     /// Entries for individual screens. They are written tab by tab, and each
     /// one is looked up by the id a screen passes to `guideButton`.
-    static let screenEntries: [GuideEntry] = planEntries + bridgeEntries + threadEntries + recoveryEntries
+    static let screenEntries: [GuideEntry] = planEntries + journalEntries + bridgeEntries + threadEntries + recoveryEntries + settingsEntries
 
     /// The entry for a tab itself, built from its topic so the text lives in one place.
     static func tabEntry(_ topic: HelpTopic) -> GuideEntry {
@@ -100,15 +103,20 @@ enum Guide {
     }
 
     /// The entry a screen should show: its own if it has one, otherwise its tab's.
-    static func entry(for id: String, tab: HelpTopic) -> GuideEntry {
-        screenEntries.first { $0.id == id } ?? tabEntry(tab)
+    /// A screen in Settings has no tab, so it falls back to the Settings entry.
+    static func entry(for id: String, tab: HelpTopic?) -> GuideEntry {
+        if let found = screenEntries.first(where: { $0.id == id }) { return found }
+        if let tab { return tabEntry(tab) }
+        return screenEntries.first { $0.id == "settings" } ?? tabEntry(.now)
     }
 
-    /// Everything in tour order: each tab's own entry, then that tab's screens.
+    /// Everything in tour order: each tab's own entry, then that tab's screens,
+    /// and Settings last. Entries marked `inTour: false` are left out.
     static var tourEntries: [GuideEntry] {
-        HelpTopic.allCases.flatMap { topic in
-            [tabEntry(topic)] + screenEntries.filter { $0.tab == topic }
+        let tabs = HelpTopic.allCases.flatMap { topic in
+            [tabEntry(topic)] + screenEntries.filter { $0.tab == topic && $0.inTour }
         }
+        return tabs + screenEntries.filter { $0.tab == nil && $0.inTour }
     }
 }
 
@@ -402,6 +410,97 @@ extension Guide {
     ]
 }
 
+// MARK: - Guide entries: Journal and Settings
+
+// Patch 43b. The Journal tab's own page is the tab entry, so only the two screens opened from
+// it are here: the page you write on, and Journaling Suggestions. Settings is not a tab, so its
+// entries have no tab and come last in the tour. Showcase mode keeps its own help sheet, and
+// the Encryption screen is a test build screen, so its entry is only compiled into test builds.
+// The words are plain and fixed, and nothing here is scored or counted.
+
+extension Guide {
+    static let journalEntries: [GuideEntry] = [
+        GuideEntry(
+            id: "journal.editor", tab: .journal, title: "Writing a page", icon: "square.and.pencil",
+            whatItIs: "One calm page for what you want to write down. Your words go in paragraphs, and photos, drawings and cards sit between them as blocks.",
+            howToUse: "Start typing. The row of tools at the bottom has Journaling Suggestions, Photos, Drawing, Writing prompt and Formatting. A photo, drawing or card becomes a block on the page. Hold a block, or use its menu, to move it up or down or remove it. The three dots at the top left can bookmark the entry or copy its first line into Things to raise for your next session, and Done at the top right closes the page.",
+            tips: [
+                "What you write is saved as you go. An entry with nothing written in it is removed when you tap Done.",
+                "A writing prompt is one of a fixed set of lines. Use this adds it to your page, Another one shows a different line, and the cross puts it away. Nothing is made up on the spot.",
+                "Formatting opens a row of buttons for the look of your words. Tap it again to put the row away.",
+                "Copying a line into Things to raise leaves the entry as it was."
+            ]
+        ),
+        GuideEntry(
+            id: "journal.suggestions", tab: .journal, title: "Journaling Suggestions", icon: "sparkles",
+            whatItIs: "Things from the day of the entry that you can add to the page: Apple's own suggestions, calendar events, photos and songs you played recently.",
+            howToUse: "Browse suggestions opens Apple's picker, where you choose what to share with Anchor. Below it are the events and photos from that day and your recently played songs. Tap one to add it to the page as a block, and this screen closes. Anchor asks for access to your calendar, photos and music when the screen opens. If you say no, that part stays empty and the rest still works.",
+            tips: [
+                "Nothing is added until you tap it, and nothing leaves your phone.",
+                "A photo you add is copied into Anchor and kept with the entry.",
+                "You can change what Anchor may see later, in the phone's own Settings under Anchor."
+            ],
+            inTour: false
+        )
+    ]
+
+    static let settingsEntries: [GuideEntry] = settingsScreenEntries + settingsTestBuildEntries
+
+    private static let settingsScreenEntries: [GuideEntry] = [
+        GuideEntry(
+            id: "settings", tab: nil, title: "Settings", icon: "gearshape.fill",
+            whatItIs: "The switches, reminders and controls for the whole app. You can use Anchor without changing any of them.",
+            howToUse: "Privacy has Require Face ID, which locks Anchor on its own, separately from your phone's lock. Reminders has the daily check-in, with a time you choose, and the focus timer's alerts and lock screen timer. Layout switches Plan, Bridge and Thread between widgets and a grid of icons, and opens Customise widgets. Your data and help has Your data, Take the tour, About Anchor and Showcase mode.",
+            tips: [
+                "The reminders and the optional extras are off until you switch them on.",
+                "Routine reminders, Recovery and Sleep only show here once you have a routine, a Recovery counter, or have started using Sleep, so Settings stays short until you need them.",
+                "Recovery has a Daily pledge, an Evening review and Milestones, each with its own switch.",
+                "What shows on the lock screen is plain wording. Routine, Recovery and Sleep reminders never say what they are about.",
+                "Require Face ID needs Face ID, Touch ID or a passcode on the phone. Without one, the switch cannot be used."
+            ]
+        ),
+        GuideEntry(
+            id: "settings.about", tab: nil, title: "About Anchor", icon: "info.circle",
+            whatItIs: "The version and build, a short note on what Anchor is, and how to reach the person who makes it.",
+            howToUse: "Email support opens a message that starts with the app version, the iOS version and the phone model, and nothing else, so you can write about a problem without looking those up. Copy puts the address on the clipboard instead. Links opens the website, the privacy policy and the source code, and What's new lists what changed in the latest version.",
+            tips: [
+                "Nothing is sent unless you send the email yourself.",
+                "Replies are not instant. If you are in danger right now, call your local emergency number or a crisis line."
+            ],
+            inTour: false
+        ),
+        GuideEntry(
+            id: "settings.customise", tab: nil, title: "Customise widgets", icon: "slider.horizontal.3",
+            whatItIs: "Choose which widgets show on Plan, Bridge and Thread, and in what order.",
+            howToUse: "Pick a tab at the top. Drag a row by its handle to reorder, and use the switch to hide or show a widget. Hidden widgets move to a More row at the bottom of the tab, so nothing is lost. Reset puts that tab back the way it started.",
+            tips: [
+                "Sleep starts hidden. Turn it on here when you want it.",
+                "On Plan, Bridge and Thread you can also customise from the tab itself, and make a half-width widget full width there."
+            ],
+            inTour: false
+        )
+    ]
+
+    private static var settingsTestBuildEntries: [GuideEntry] {
+        #if DEBUG
+        return [
+            GuideEntry(
+                id: "settings.encryption", tab: nil, title: "Encryption (test build)", icon: "key.fill",
+                whatItIs: "The keys that will lock what Anchor stores. Nothing is locked with them yet.",
+                howToUse: "Make a key and a recovery key creates a key on this phone and shows the recovery key once, so write it down then. Check my recovery key asks you to type it back, and Make a new recovery key replaces it. Restore with your recovery key is for a phone where the key is missing.",
+                tips: [
+                    "If the key is lost and there is no recovery key, locked data cannot be opened by anyone.",
+                    "The recovery file is kept with your data so a restored phone can get the key back."
+                ],
+                inTour: false
+            )
+        ]
+        #else
+        return []
+        #endif
+    }
+}
+
 /// The page for one entry, shared by the "?" sheet and the tour.
 struct GuideEntryBody: View {
     let entry: GuideEntry
@@ -483,7 +582,7 @@ struct HelpSheetView: View {
 /// while the screen has none of its own yet.
 struct GuideToolbarButton: View {
     let entryID: String
-    let tab: HelpTopic
+    let tab: HelpTopic?
     @State private var showing = false
 
     var body: some View {
@@ -501,9 +600,12 @@ struct GuideToolbarButton: View {
 
 extension View {
     /// Puts the "?" button in a screen's toolbar. Pass the screen's guide id and its tab.
-    func guideButton(_ id: String, tab: HelpTopic) -> some View {
+    /// A screen in Settings has no tab, so it leaves the tab out. A screen that already has
+    /// a button on its right, such as Done, can ask for the left.
+    func guideButton(_ id: String, tab: HelpTopic? = nil,
+                     placement: ToolbarItemPlacement = .topBarTrailing) -> some View {
         toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(placement: placement) {
                 GuideToolbarButton(entryID: id, tab: tab)
             }
         }

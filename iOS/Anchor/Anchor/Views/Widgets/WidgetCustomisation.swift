@@ -492,6 +492,7 @@ struct CustomiseWidgetsView: View {
         .background(Anchor.Theme.settingsBackground(scheme).ignoresSafeArea())
         .navigationTitle("Customise widgets")
         .navigationBarTitleDisplayMode(.inline)
+        .guideButton("settings.customise")
     }
 
     @Environment(\.colorScheme) private var scheme

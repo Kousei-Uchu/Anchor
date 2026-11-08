@@ -150,6 +150,7 @@ struct JournalContextSuggestionsView: View {
             }
             .navigationTitle("Journaling Suggestions")
             .navigationBarTitleDisplayMode(.inline)
+            .guideButton("journal.suggestions", tab: .journal)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { dismiss() }

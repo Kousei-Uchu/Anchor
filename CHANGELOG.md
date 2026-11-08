@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 43b: the ? button now explains itself on the Journal page you write on and on Journaling Suggestions, and Settings has one too, with About Anchor and Customise widgets. The tour ends with a short page on Settings. The Journal page has Help for this page in its three-dot menu.
 - Patch 43a: the ? button on 15 more screens now explains that screen itself: Things to raise, Session prep, Post-session notes, Personal goals, Feedback-loop diagrams, Message log, Message starters, People, Support calendar, To future me, Things I haven't said, Boundaries, Recovery, a counter and Who I'm doing this for. The tour includes them. Journal and Settings follow.
 - Patch 42: the ? button on 14 Plan screens now explains that screen itself: Contacts, Safety plan, Trigger windows, Appointments, Grounding tools, Tasks, Quick list, Decision presets, Routines, Lists, De-escalation scripts, Affirmations, Sleep and Your data. Each says what the screen is, how to use it, and a few things worth knowing, and the tour includes them. The entries for the other tabs follow.
 - Patch 41: most screens now have a ? button in the corner, and Settings, Your data and help, Take the tour is a full walkthrough, tab by tab, with pages that scroll on small phones. For now the ? opens the explanation of the tab the screen is in; the screen-by-screen explanations follow.

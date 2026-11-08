@@ -206,6 +206,7 @@ struct SettingsView: View {
             .anchorSettingsStyle()
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
+            .guideButton("settings", placement: .topBarLeading)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
@@ -443,6 +444,7 @@ struct AboutView: View {
         .anchorSettingsStyle()
         .navigationTitle("About")
         .navigationBarTitleDisplayMode(.inline)
+        .guideButton("settings.about")
     }
 
     @ViewBuilder
@@ -592,6 +594,7 @@ struct EncryptionSettingsView: View {
         .anchorSettingsStyle()
         .navigationTitle("Encryption")
         .navigationBarTitleDisplayMode(.inline)
+        .guideButton("settings.encryption")
         .onAppear {
             keys.refresh()
             #if DEBUG

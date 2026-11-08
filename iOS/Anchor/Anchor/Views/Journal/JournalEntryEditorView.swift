@@ -378,6 +378,7 @@ struct JournalEntryEditorView: View {
     @State private var showDrawingCanvas = false
     @State private var showContextSuggestions = false
     @State private var addedToBridge = false
+    @State private var showGuide = false
     @Query(sort: \RecoveryCounter.sortOrder) private var recoveryCounters: [RecoveryCounter]
 
     init(entry: JournalEntry, onFinish: (() -> Void)? = nil) {
@@ -443,6 +444,11 @@ struct JournalEntryEditorView: View {
                             Label("Add to things to raise", systemImage: "doc.text")
                         }
                         .disabled(BridgeDraftItem.raising(fromJournal: entry.text) == nil)
+                        Button {
+                            showGuide = true
+                        } label: {
+                            Label("Help for this page", systemImage: "questionmark.circle")
+                        }
                     } label: {
                         Image(systemName: "ellipsis.circle")
                     }
@@ -494,6 +500,9 @@ struct JournalEntryEditorView: View {
                 JournalContextSuggestionsView(day: entry.createdAt) { kinds in
                     insert(kinds)
                 }
+            }
+            .sheet(isPresented: $showGuide) {
+                GuideSheetView(entry: Guide.entry(for: "journal.editor", tab: .journal))
             }
             .alert("Added to Things to raise", isPresented: $addedToBridge) {
                 Button("OK", role: .cancel) {}
