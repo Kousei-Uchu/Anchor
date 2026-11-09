@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch DOC18: the plan now records that the AI tools consent sheet and provider screen (AI1) is pushed and waiting for a build.
 - Patch AI1: AI tools now ask first, every time. A consent sheet shows the exact text, what goes with it, where it goes and what happens to it, with Send and Cancel, and Don't ask again for each tool. Apple's on-device model is the first place it can run. Settings, AI tools lists where it runs and the tools that no longer ask. Still test builds only, and no real tool uses it yet.
 - Patch DOC17: the plan now records that locking voice notes and Journal photos (35d) is pushed and waiting for a build.
 - Patch 35d: voice notes and Journal photos can be locked too, as a second step on the test-build Lock my data screen once your text is locked. Each file is locked and checked on its own after a new safety copy, so a run that stops loses nothing. New recordings and photos are locked as they are saved, and a backup still holds them in a form that opens on any phone.
