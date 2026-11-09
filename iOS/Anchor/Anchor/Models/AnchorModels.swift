@@ -29,7 +29,9 @@ import SwiftUI
 final class JournalEntry {
     @Attribute(.unique) var id: UUID
     var createdAt: Date
-    var text: String
+    @Attribute(originalName: "text") var textPlain: String
+    /// The locked form of `text`, empty until locking is turned on. Read and written through `text` only.
+    var textSealed: String? = nil
 
     /// Free-text search; no mood score, no numeric field of any kind.
     var isFavorited: Bool
@@ -47,10 +49,30 @@ final class JournalEntry {
     init(id: UUID = UUID(), createdAt: Date = .now, text: String, linkedContext: EntryOrigin? = nil, audioFileName: String? = nil) {
         self.id = id
         self.createdAt = createdAt
-        self.text = text
+        self.textPlain = text
         self.isFavorited = false
         self.linkedContext = linkedContext
         self.audioFileName = audioFileName
+        lockNewValues()
+    }
+}
+
+// Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
+extension JournalEntry {
+    var text: String {
+        get { FieldLock.read(plain: textPlain, sealed: textSealed, context: "JournalEntry.text") }
+        set {
+            let kept = FieldLock.store(newValue, context: "JournalEntry.text")
+            textPlain = kept.plain
+            textSealed = kept.sealed
+        }
+    }
+
+    /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
+    /// nothing sealed yet, and does nothing while locking is off.
+    func lockNewValues() {
+        guard FieldLock.isOn else { return }
+        text = textPlain
     }
 }
 
@@ -113,8 +135,12 @@ final class CheckIn {
 @Model
 final class TrustedContact {
     @Attribute(.unique) var id: UUID
-    var name: String
-    var phoneNumber: String   // routes to native Messages, not a custom backend
+    @Attribute(originalName: "name") var namePlain: String
+    /// The locked form of `name`, empty until locking is turned on. Read and written through `name` only.
+    var nameSealed: String? = nil
+    @Attribute(originalName: "phoneNumber") var phoneNumberPlain: String   // routes to native Messages, not a custom backend
+    /// The locked form of `phoneNumber`, empty until locking is turned on. Read and written through `phoneNumber` only.
+    var phoneNumberSealed: String? = nil
     var sortOrder: Int
 
     /// `URL(string: "tel:0412 345 678")` returns nil because of the spaces
@@ -140,13 +166,17 @@ final class TrustedContact {
     /// contact is notified. Only used if escalationEnabled == true.
     var escalationWindowMinutes: Int?
 
-    var messageTemplates: [MessageTemplate]
+    @Attribute(originalName: "messageTemplates") var messageTemplatesPlain: [MessageTemplate]
+    /// The locked form of `messageTemplates`, empty until locking is turned on. Read and written through `messageTemplates` only.
+    var messageTemplatesSealed: String? = nil
 
     /// How reaching this person actually works. Phone (SMS/call) is the
     /// default and always available; Discord needs their numeric user ID
     /// — Discord's URL scheme can't resolve a DM from a username alone.
     var contactMethod: ContactMethod
-    var discordUserID: String?
+    @Attribute(originalName: "discordUserID") var discordUserIDPlain: String?
+    /// The locked form of `discordUserID`, empty until locking is turned on. Read and written through `discordUserID` only.
+    var discordUserIDSealed: String? = nil
 
     /// Optional — powers the "who's awake" screen. All nil means "unknown,
     /// don't show a status for this person."
@@ -179,14 +209,14 @@ final class TrustedContact {
          helloHour: Int = 17, helloMinute: Int = 0,
          supportDaysEnabled: Bool = false, supportDaysDayBefore: Bool = false) {
         self.id = id
-        self.name = name
-        self.phoneNumber = phoneNumber
+        self.namePlain = name
+        self.phoneNumberPlain = phoneNumber
         self.sortOrder = sortOrder
         self.escalationEnabled = escalationEnabled
         self.escalationWindowMinutes = escalationWindowMinutes
-        self.messageTemplates = messageTemplates
+        self.messageTemplatesPlain = messageTemplates
         self.contactMethod = contactMethod
-        self.discordUserID = discordUserID
+        self.discordUserIDPlain = discordUserID
         self.timeZoneIdentifier = timeZoneIdentifier
         self.availableFromHour = availableFromHour
         self.availableFromMinute = availableFromMinute
@@ -198,6 +228,53 @@ final class TrustedContact {
         self.helloMinute = helloMinute
         self.supportDaysEnabled = supportDaysEnabled
         self.supportDaysDayBefore = supportDaysDayBefore
+        lockNewValues()
+    }
+}
+
+// Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
+extension TrustedContact {
+    var name: String {
+        get { FieldLock.read(plain: namePlain, sealed: nameSealed, context: "TrustedContact.name") }
+        set {
+            let kept = FieldLock.store(newValue, context: "TrustedContact.name")
+            namePlain = kept.plain
+            nameSealed = kept.sealed
+        }
+    }
+    var phoneNumber: String {
+        get { FieldLock.read(plain: phoneNumberPlain, sealed: phoneNumberSealed, context: "TrustedContact.phoneNumber") }
+        set {
+            let kept = FieldLock.store(newValue, context: "TrustedContact.phoneNumber")
+            phoneNumberPlain = kept.plain
+            phoneNumberSealed = kept.sealed
+        }
+    }
+    var messageTemplates: [MessageTemplate] {
+        get { FieldLock.readCoded(messageTemplatesPlain, sealed: messageTemplatesSealed, context: "TrustedContact.messageTemplates") }
+        set {
+            let kept = FieldLock.storeCoded(newValue, empty: [], context: "TrustedContact.messageTemplates")
+            messageTemplatesPlain = kept.plain
+            messageTemplatesSealed = kept.sealed
+        }
+    }
+    var discordUserID: String? {
+        get { FieldLock.readOptional(plain: discordUserIDPlain, sealed: discordUserIDSealed, context: "TrustedContact.discordUserID") }
+        set {
+            let kept = FieldLock.storeOptional(newValue, context: "TrustedContact.discordUserID")
+            discordUserIDPlain = kept.plain
+            discordUserIDSealed = kept.sealed
+        }
+    }
+
+    /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
+    /// nothing sealed yet, and does nothing while locking is off.
+    func lockNewValues() {
+        guard FieldLock.isOn else { return }
+        name = namePlain
+        phoneNumber = phoneNumberPlain
+        messageTemplates = messageTemplatesPlain
+        discordUserID = discordUserIDPlain
     }
 }
 
@@ -247,9 +324,13 @@ enum DeepLinkDestination: Codable {
 @Model
 final class GroundingTool {
     @Attribute(.unique) var id: UUID
-    var title: String
+    @Attribute(originalName: "title") var titlePlain: String
+    /// The locked form of `title`, empty until locking is turned on. Read and written through `title` only.
+    var titleSealed: String? = nil
     var kind: GroundingToolKind
-    var steps: String?                 // for .physicalAction
+    @Attribute(originalName: "steps") var stepsPlain: String?                 // for .physicalAction
+    /// The locked form of `steps`, empty until locking is turned on. Read and written through `steps` only.
+    var stepsSealed: String? = nil
     var deepLink: DeepLinkDestination? // for .deepLink
     var sortOrder: Int
 
@@ -262,12 +343,41 @@ final class GroundingTool {
          steps: String? = nil, deepLink: DeepLinkDestination? = nil,
          sortOrder: Int, relevantTimeWindows: [TimeWindowTag] = []) {
         self.id = id
-        self.title = title
+        self.titlePlain = title
         self.kind = kind
-        self.steps = steps
+        self.stepsPlain = steps
         self.deepLink = deepLink
         self.sortOrder = sortOrder
         self.relevantTimeWindows = relevantTimeWindows
+        lockNewValues()
+    }
+}
+
+// Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
+extension GroundingTool {
+    var title: String {
+        get { FieldLock.read(plain: titlePlain, sealed: titleSealed, context: "GroundingTool.title") }
+        set {
+            let kept = FieldLock.store(newValue, context: "GroundingTool.title")
+            titlePlain = kept.plain
+            titleSealed = kept.sealed
+        }
+    }
+    var steps: String? {
+        get { FieldLock.readOptional(plain: stepsPlain, sealed: stepsSealed, context: "GroundingTool.steps") }
+        set {
+            let kept = FieldLock.storeOptional(newValue, context: "GroundingTool.steps")
+            stepsPlain = kept.plain
+            stepsSealed = kept.sealed
+        }
+    }
+
+    /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
+    /// nothing sealed yet, and does nothing while locking is off.
+    func lockNewValues() {
+        guard FieldLock.isOn else { return }
+        title = titlePlain
+        steps = stepsPlain
     }
 }
 
@@ -281,20 +391,75 @@ enum TimeWindowTag: String, Codable {
 final class SafetyPlan {
     @Attribute(.unique) var id: UUID
     var lastEditedAt: Date
-    var warningSignsText: String
-    var copingStrategiesText: String
-    var reasonsToKeepGoingText: String   // source pool for templated notification quotes
-    var environmentSafetyStepsText: String
+    @Attribute(originalName: "warningSignsText") var warningSignsTextPlain: String
+    /// The locked form of `warningSignsText`, empty until locking is turned on. Read and written through `warningSignsText` only.
+    var warningSignsTextSealed: String? = nil
+    @Attribute(originalName: "copingStrategiesText") var copingStrategiesTextPlain: String
+    /// The locked form of `copingStrategiesText`, empty until locking is turned on. Read and written through `copingStrategiesText` only.
+    var copingStrategiesTextSealed: String? = nil
+    @Attribute(originalName: "reasonsToKeepGoingText") var reasonsToKeepGoingTextPlain: String   // source pool for templated notification quotes
+    /// The locked form of `reasonsToKeepGoingText`, empty until locking is turned on. Read and written through `reasonsToKeepGoingText` only.
+    var reasonsToKeepGoingTextSealed: String? = nil
+    @Attribute(originalName: "environmentSafetyStepsText") var environmentSafetyStepsTextPlain: String
+    /// The locked form of `environmentSafetyStepsText`, empty until locking is turned on. Read and written through `environmentSafetyStepsText` only.
+    var environmentSafetyStepsTextSealed: String? = nil
 
     init(id: UUID = UUID(), lastEditedAt: Date = .now,
          warningSignsText: String = "", copingStrategiesText: String = "",
          reasonsToKeepGoingText: String = "", environmentSafetyStepsText: String = "") {
         self.id = id
         self.lastEditedAt = lastEditedAt
-        self.warningSignsText = warningSignsText
-        self.copingStrategiesText = copingStrategiesText
-        self.reasonsToKeepGoingText = reasonsToKeepGoingText
-        self.environmentSafetyStepsText = environmentSafetyStepsText
+        self.warningSignsTextPlain = warningSignsText
+        self.copingStrategiesTextPlain = copingStrategiesText
+        self.reasonsToKeepGoingTextPlain = reasonsToKeepGoingText
+        self.environmentSafetyStepsTextPlain = environmentSafetyStepsText
+        lockNewValues()
+    }
+}
+
+// Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
+extension SafetyPlan {
+    var warningSignsText: String {
+        get { FieldLock.read(plain: warningSignsTextPlain, sealed: warningSignsTextSealed, context: "SafetyPlan.warningSignsText") }
+        set {
+            let kept = FieldLock.store(newValue, context: "SafetyPlan.warningSignsText")
+            warningSignsTextPlain = kept.plain
+            warningSignsTextSealed = kept.sealed
+        }
+    }
+    var copingStrategiesText: String {
+        get { FieldLock.read(plain: copingStrategiesTextPlain, sealed: copingStrategiesTextSealed, context: "SafetyPlan.copingStrategiesText") }
+        set {
+            let kept = FieldLock.store(newValue, context: "SafetyPlan.copingStrategiesText")
+            copingStrategiesTextPlain = kept.plain
+            copingStrategiesTextSealed = kept.sealed
+        }
+    }
+    var reasonsToKeepGoingText: String {
+        get { FieldLock.read(plain: reasonsToKeepGoingTextPlain, sealed: reasonsToKeepGoingTextSealed, context: "SafetyPlan.reasonsToKeepGoingText") }
+        set {
+            let kept = FieldLock.store(newValue, context: "SafetyPlan.reasonsToKeepGoingText")
+            reasonsToKeepGoingTextPlain = kept.plain
+            reasonsToKeepGoingTextSealed = kept.sealed
+        }
+    }
+    var environmentSafetyStepsText: String {
+        get { FieldLock.read(plain: environmentSafetyStepsTextPlain, sealed: environmentSafetyStepsTextSealed, context: "SafetyPlan.environmentSafetyStepsText") }
+        set {
+            let kept = FieldLock.store(newValue, context: "SafetyPlan.environmentSafetyStepsText")
+            environmentSafetyStepsTextPlain = kept.plain
+            environmentSafetyStepsTextSealed = kept.sealed
+        }
+    }
+
+    /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
+    /// nothing sealed yet, and does nothing while locking is off.
+    func lockNewValues() {
+        guard FieldLock.isOn else { return }
+        warningSignsText = warningSignsTextPlain
+        copingStrategiesText = copingStrategiesTextPlain
+        reasonsToKeepGoingText = reasonsToKeepGoingTextPlain
+        environmentSafetyStepsText = environmentSafetyStepsTextPlain
     }
 }
 
@@ -305,8 +470,12 @@ final class SafetyPlan {
 @Model
 final class SafetyPlanSection {
     @Attribute(.unique) var id: UUID
-    var title: String
-    var text: String
+    @Attribute(originalName: "title") var titlePlain: String
+    /// The locked form of `title`, empty until locking is turned on. Read and written through `title` only.
+    var titleSealed: String? = nil
+    @Attribute(originalName: "text") var textPlain: String
+    /// The locked form of `text`, empty until locking is turned on. Read and written through `text` only.
+    var textSealed: String? = nil
     var iconName: String
     var tintName: String
     var sortOrder: Int
@@ -323,14 +492,43 @@ final class SafetyPlanSection {
          sortOrder: Int = 0, isHidden: Bool = false, role: String = "",
          lastEditedAt: Date = .now) {
         self.id = id
-        self.title = title
-        self.text = text
+        self.titlePlain = title
+        self.textPlain = text
         self.iconName = iconName
         self.tintName = tintName
         self.sortOrder = sortOrder
         self.isHidden = isHidden
         self.role = role
         self.lastEditedAt = lastEditedAt
+        lockNewValues()
+    }
+}
+
+// Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
+extension SafetyPlanSection {
+    var title: String {
+        get { FieldLock.read(plain: titlePlain, sealed: titleSealed, context: "SafetyPlanSection.title") }
+        set {
+            let kept = FieldLock.store(newValue, context: "SafetyPlanSection.title")
+            titlePlain = kept.plain
+            titleSealed = kept.sealed
+        }
+    }
+    var text: String {
+        get { FieldLock.read(plain: textPlain, sealed: textSealed, context: "SafetyPlanSection.text") }
+        set {
+            let kept = FieldLock.store(newValue, context: "SafetyPlanSection.text")
+            textPlain = kept.plain
+            textSealed = kept.sealed
+        }
+    }
+
+    /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
+    /// nothing sealed yet, and does nothing while locking is off.
+    func lockNewValues() {
+        guard FieldLock.isOn else { return }
+        title = titlePlain
+        text = textPlain
     }
 }
 
@@ -341,8 +539,12 @@ final class SafetyPlanSection {
 @Model
 final class BoundarySection {
     @Attribute(.unique) var id: UUID
-    var title: String
-    var text: String
+    @Attribute(originalName: "title") var titlePlain: String
+    /// The locked form of `title`, empty until locking is turned on. Read and written through `title` only.
+    var titleSealed: String? = nil
+    @Attribute(originalName: "text") var textPlain: String
+    /// The locked form of `text`, empty until locking is turned on. Read and written through `text` only.
+    var textSealed: String? = nil
     var iconName: String
     var tintName: String
     var sortOrder: Int
@@ -355,14 +557,15 @@ final class BoundarySection {
          sortOrder: Int = 0, isHidden: Bool = false, isShareable: Bool = false,
          lastEditedAt: Date = .now) {
         self.id = id
-        self.title = title
-        self.text = text
+        self.titlePlain = title
+        self.textPlain = text
         self.iconName = iconName
         self.tintName = tintName
         self.sortOrder = sortOrder
         self.isHidden = isHidden
         self.isShareable = isShareable
         self.lastEditedAt = lastEditedAt
+        lockNewValues()
     }
 
     /// The three headings suggested for a new list, all blank, none shareable.
@@ -391,6 +594,34 @@ final class BoundarySection {
     }
 }
 
+// Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
+extension BoundarySection {
+    var title: String {
+        get { FieldLock.read(plain: titlePlain, sealed: titleSealed, context: "BoundarySection.title") }
+        set {
+            let kept = FieldLock.store(newValue, context: "BoundarySection.title")
+            titlePlain = kept.plain
+            titleSealed = kept.sealed
+        }
+    }
+    var text: String {
+        get { FieldLock.read(plain: textPlain, sealed: textSealed, context: "BoundarySection.text") }
+        set {
+            let kept = FieldLock.store(newValue, context: "BoundarySection.text")
+            textPlain = kept.plain
+            textSealed = kept.sealed
+        }
+    }
+
+    /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
+    /// nothing sealed yet, and does nothing while locking is off.
+    func lockNewValues() {
+        guard FieldLock.isOn else { return }
+        title = titlePlain
+        text = textPlain
+    }
+}
+
 /// One night in the sleep journal. A quiet record and nothing more: there is
 /// no score, no target, no streak and no word for a "bad" night. Every field
 /// is optional or defaulted, so a night can hold just a note, or just a time.
@@ -406,7 +637,9 @@ final class SleepEntry {
     var minutesAsleep: Int? = nil
     /// Which of the three feel words, 0 to 2. Nil means nothing was chosen.
     var feel: Int? = nil
-    var note: String = ""
+    @Attribute(originalName: "note") var notePlain: String = ""
+    /// The locked form of `note`, empty until locking is turned on. Read and written through `note` only.
+    var noteSealed: String? = nil
     /// "typed" for now. Later versions may add other sources.
     var sourceRaw: String = "typed"
     /// For a night that came from somewhere else, that source's own id, so
@@ -425,11 +658,12 @@ final class SleepEntry {
         self.wakeTime = wakeTime
         self.minutesAsleep = minutesAsleep
         self.feel = feel
-        self.note = note
+        self.notePlain = note
         self.sourceRaw = sourceRaw
         self.externalID = externalID
         self.createdAt = createdAt
         self.lastEditedAt = lastEditedAt
+        lockNewValues()
     }
 
     /// Minutes between going to bed and waking, when both are known and make sense.
@@ -474,6 +708,25 @@ final class SleepEntry {
     }
 }
 
+// Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
+extension SleepEntry {
+    var note: String {
+        get { FieldLock.read(plain: notePlain, sealed: noteSealed, context: "SleepEntry.note") }
+        set {
+            let kept = FieldLock.store(newValue, context: "SleepEntry.note")
+            notePlain = kept.plain
+            noteSealed = kept.sealed
+        }
+    }
+
+    /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
+    /// nothing sealed yet, and does nothing while locking is off.
+    func lockNewValues() {
+        guard FieldLock.isOn else { return }
+        note = notePlain
+    }
+}
+
 /// The three words for how a night felt. They start as plain, neutral words
 /// and the person can rename them. Nothing is coloured or ranked.
 enum SleepFeelWords {
@@ -505,8 +758,12 @@ final class PersonSection {
     @Attribute(.unique) var id: UUID
     /// The `TrustedContact` this page belongs to.
     var contactID: UUID
-    var title: String
-    var text: String
+    @Attribute(originalName: "title") var titlePlain: String
+    /// The locked form of `title`, empty until locking is turned on. Read and written through `title` only.
+    var titleSealed: String? = nil
+    @Attribute(originalName: "text") var textPlain: String
+    /// The locked form of `text`, empty until locking is turned on. Read and written through `text` only.
+    var textSealed: String? = nil
     var iconName: String
     var tintName: String
     var sortOrder: Int
@@ -518,13 +775,14 @@ final class PersonSection {
          sortOrder: Int = 0, isHidden: Bool = false, lastEditedAt: Date = .now) {
         self.id = id
         self.contactID = contactID
-        self.title = title
-        self.text = text
+        self.titlePlain = title
+        self.textPlain = text
         self.iconName = iconName
         self.tintName = tintName
         self.sortOrder = sortOrder
         self.isHidden = isHidden
         self.lastEditedAt = lastEditedAt
+        lockNewValues()
     }
 
     /// Removes every section on one person's page. Called when the person is
@@ -532,6 +790,34 @@ final class PersonSection {
     static func removeAll(for contactID: UUID, in context: ModelContext) {
         guard let all = try? context.fetch(FetchDescriptor<PersonSection>()) else { return }
         for section in all where section.contactID == contactID { context.delete(section) }
+    }
+}
+
+// Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
+extension PersonSection {
+    var title: String {
+        get { FieldLock.read(plain: titlePlain, sealed: titleSealed, context: "PersonSection.title") }
+        set {
+            let kept = FieldLock.store(newValue, context: "PersonSection.title")
+            titlePlain = kept.plain
+            titleSealed = kept.sealed
+        }
+    }
+    var text: String {
+        get { FieldLock.read(plain: textPlain, sealed: textSealed, context: "PersonSection.text") }
+        set {
+            let kept = FieldLock.store(newValue, context: "PersonSection.text")
+            textPlain = kept.plain
+            textSealed = kept.sealed
+        }
+    }
+
+    /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
+    /// nothing sealed yet, and does nothing while locking is off.
+    func lockNewValues() {
+        guard FieldLock.isOn else { return }
+        title = titlePlain
+        text = textPlain
     }
 }
 
@@ -563,10 +849,16 @@ enum GoalStatus: String, CaseIterable, Identifiable {
 @Model
 final class PersonalGoal {
     @Attribute(.unique) var id: UUID
-    var title: String
-    var why: String = ""
+    @Attribute(originalName: "title") var titlePlain: String
+    /// The locked form of `title`, empty until locking is turned on. Read and written through `title` only.
+    var titleSealed: String? = nil
+    @Attribute(originalName: "why") var whyPlain: String = ""
+    /// The locked form of `why`, empty until locking is turned on. Read and written through `why` only.
+    var whySealed: String? = nil
     var statusRaw: String = "active"
-    var notes: [GoalNote] = []
+    @Attribute(originalName: "notes") var notesPlain: [GoalNote] = []
+    /// The locked form of `notes`, empty until locking is turned on. Read and written through `notes` only.
+    var notesSealed: String? = nil
     var sortOrder: Int = 0
     var createdAt: Date = Date.now
     var lastEditedAt: Date = Date.now
@@ -574,33 +866,115 @@ final class PersonalGoal {
     /// blank. Nothing here is required, scored or dated. "Relevant" is the goal's own `why`, so it is not
     /// stored twice, and Time-bound is the person's own words, never a date that can pass.
     var usesSMART: Bool = false
-    var smartSpecific: String = ""
-    var smartMeasurable: String = ""
-    var smartAchievable: String = ""
-    var smartTimeBound: String = ""
+    @Attribute(originalName: "smartSpecific") var smartSpecificPlain: String = ""
+    /// The locked form of `smartSpecific`, empty until locking is turned on. Read and written through `smartSpecific` only.
+    var smartSpecificSealed: String? = nil
+    @Attribute(originalName: "smartMeasurable") var smartMeasurablePlain: String = ""
+    /// The locked form of `smartMeasurable`, empty until locking is turned on. Read and written through `smartMeasurable` only.
+    var smartMeasurableSealed: String? = nil
+    @Attribute(originalName: "smartAchievable") var smartAchievablePlain: String = ""
+    /// The locked form of `smartAchievable`, empty until locking is turned on. Read and written through `smartAchievable` only.
+    var smartAchievableSealed: String? = nil
+    @Attribute(originalName: "smartTimeBound") var smartTimeBoundPlain: String = ""
+    /// The locked form of `smartTimeBound`, empty until locking is turned on. Read and written through `smartTimeBound` only.
+    var smartTimeBoundSealed: String? = nil
 
     init(id: UUID = UUID(), title: String = "", why: String = "", status: GoalStatus = .active,
          notes: [GoalNote] = [], sortOrder: Int = 0, createdAt: Date = .now, lastEditedAt: Date = .now,
          usesSMART: Bool = false, smartSpecific: String = "", smartMeasurable: String = "",
          smartAchievable: String = "", smartTimeBound: String = "") {
         self.id = id
-        self.title = title
-        self.why = why
+        self.titlePlain = title
+        self.whyPlain = why
         self.statusRaw = status.rawValue
-        self.notes = notes
+        self.notesPlain = notes
         self.sortOrder = sortOrder
         self.createdAt = createdAt
         self.lastEditedAt = lastEditedAt
         self.usesSMART = usesSMART
-        self.smartSpecific = smartSpecific
-        self.smartMeasurable = smartMeasurable
-        self.smartAchievable = smartAchievable
-        self.smartTimeBound = smartTimeBound
+        self.smartSpecificPlain = smartSpecific
+        self.smartMeasurablePlain = smartMeasurable
+        self.smartAchievablePlain = smartAchievable
+        self.smartTimeBoundPlain = smartTimeBound
+        lockNewValues()
     }
 
     var status: GoalStatus {
         get { GoalStatus(rawValue: statusRaw) ?? .active }
         set { statusRaw = newValue.rawValue }
+    }
+}
+
+// Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
+extension PersonalGoal {
+    var title: String {
+        get { FieldLock.read(plain: titlePlain, sealed: titleSealed, context: "PersonalGoal.title") }
+        set {
+            let kept = FieldLock.store(newValue, context: "PersonalGoal.title")
+            titlePlain = kept.plain
+            titleSealed = kept.sealed
+        }
+    }
+    var why: String {
+        get { FieldLock.read(plain: whyPlain, sealed: whySealed, context: "PersonalGoal.why") }
+        set {
+            let kept = FieldLock.store(newValue, context: "PersonalGoal.why")
+            whyPlain = kept.plain
+            whySealed = kept.sealed
+        }
+    }
+    var notes: [GoalNote] {
+        get { FieldLock.readCoded(notesPlain, sealed: notesSealed, context: "PersonalGoal.notes") }
+        set {
+            let kept = FieldLock.storeCoded(newValue, empty: [], context: "PersonalGoal.notes")
+            notesPlain = kept.plain
+            notesSealed = kept.sealed
+        }
+    }
+    var smartSpecific: String {
+        get { FieldLock.read(plain: smartSpecificPlain, sealed: smartSpecificSealed, context: "PersonalGoal.smartSpecific") }
+        set {
+            let kept = FieldLock.store(newValue, context: "PersonalGoal.smartSpecific")
+            smartSpecificPlain = kept.plain
+            smartSpecificSealed = kept.sealed
+        }
+    }
+    var smartMeasurable: String {
+        get { FieldLock.read(plain: smartMeasurablePlain, sealed: smartMeasurableSealed, context: "PersonalGoal.smartMeasurable") }
+        set {
+            let kept = FieldLock.store(newValue, context: "PersonalGoal.smartMeasurable")
+            smartMeasurablePlain = kept.plain
+            smartMeasurableSealed = kept.sealed
+        }
+    }
+    var smartAchievable: String {
+        get { FieldLock.read(plain: smartAchievablePlain, sealed: smartAchievableSealed, context: "PersonalGoal.smartAchievable") }
+        set {
+            let kept = FieldLock.store(newValue, context: "PersonalGoal.smartAchievable")
+            smartAchievablePlain = kept.plain
+            smartAchievableSealed = kept.sealed
+        }
+    }
+    var smartTimeBound: String {
+        get { FieldLock.read(plain: smartTimeBoundPlain, sealed: smartTimeBoundSealed, context: "PersonalGoal.smartTimeBound") }
+        set {
+            let kept = FieldLock.store(newValue, context: "PersonalGoal.smartTimeBound")
+            smartTimeBoundPlain = kept.plain
+            smartTimeBoundSealed = kept.sealed
+        }
+    }
+
+    /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
+    /// nothing sealed yet, and does nothing while locking is off.
+    func lockNewValues() {
+        guard FieldLock.isOn else { return }
+        title = titlePlain
+        why = whyPlain
+        notes = notesPlain
+        smartSpecific = smartSpecificPlain
+        smartMeasurable = smartMeasurablePlain
+        smartAchievable = smartAchievablePlain
+        smartTimeBound = smartTimeBoundPlain
     }
 }
 
@@ -611,15 +985,18 @@ final class PersonalGoal {
 @Model
 final class MessageStarter {
     @Attribute(.unique) var id: UUID
-    var text: String
+    @Attribute(originalName: "text") var textPlain: String
+    /// The locked form of `text`, empty until locking is turned on. Read and written through `text` only.
+    var textSealed: String? = nil
     var sortOrder: Int
     var lastEditedAt: Date
 
     init(id: UUID = UUID(), text: String = "", sortOrder: Int = 0, lastEditedAt: Date = .now) {
         self.id = id
-        self.text = text
+        self.textPlain = text
         self.sortOrder = sortOrder
         self.lastEditedAt = lastEditedAt
+        lockNewValues()
     }
 
     /// `existing` with `starter` put in: it replaces nothing, so a message the
@@ -630,6 +1007,25 @@ final class MessageStarter {
         if existing.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return line }
         let separator = existing.last?.isWhitespace == true ? "" : " "
         return existing + separator + line
+    }
+}
+
+// Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
+extension MessageStarter {
+    var text: String {
+        get { FieldLock.read(plain: textPlain, sealed: textSealed, context: "MessageStarter.text") }
+        set {
+            let kept = FieldLock.store(newValue, context: "MessageStarter.text")
+            textPlain = kept.plain
+            textSealed = kept.sealed
+        }
+    }
+
+    /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
+    /// nothing sealed yet, and does nothing while locking is off.
+    func lockNewValues() {
+        guard FieldLock.isOn else { return }
+        text = textPlain
     }
 }
 
@@ -724,7 +1120,9 @@ enum SafetyPlanMigration {
 @Model
 final class TriggerWindow {
     @Attribute(.unique) var id: UUID
-    var label: String
+    @Attribute(originalName: "label") var labelPlain: String
+    /// The locked form of `label`, empty until locking is turned on. Read and written through `label` only.
+    var labelSealed: String? = nil
     var daysOfWeek: [Int]      // 1 = Sunday ... 7 = Saturday, Calendar-style
 
     // Stored separately because DateComponents contains Calendar internally,
@@ -745,7 +1143,7 @@ final class TriggerWindow {
         isActive: Bool = true
     ) {
         self.id = id
-        self.label = label
+        self.labelPlain = label
         self.daysOfWeek = daysOfWeek
 
         self.startHour = startTime.hour ?? 0
@@ -754,6 +1152,7 @@ final class TriggerWindow {
         self.endMinute = endTime.minute ?? 0
 
         self.isActive = isActive
+        lockNewValues()
     }
 
     var startTime: DateComponents {
@@ -777,13 +1176,34 @@ final class TriggerWindow {
     }
 }
 
+// Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
+extension TriggerWindow {
+    var label: String {
+        get { FieldLock.read(plain: labelPlain, sealed: labelSealed, context: "TriggerWindow.label") }
+        set {
+            let kept = FieldLock.store(newValue, context: "TriggerWindow.label")
+            labelPlain = kept.plain
+            labelSealed = kept.sealed
+        }
+    }
+
+    /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
+    /// nothing sealed yet, and does nothing while locking is off.
+    func lockNewValues() {
+        guard FieldLock.isOn else { return }
+        label = labelPlain
+    }
+}
+
 /// Appointments are a recurring RULE (e.g. "usually Tuesdays 4pm") plus
 /// individually-editable occurrences, because real life moves sessions
 /// around. Never a hardcoded fixed interval.
 @Model
 final class AppointmentSeries {
     @Attribute(.unique) var id: UUID
-    var clinicianLabel: String
+    @Attribute(originalName: "clinicianLabel") var clinicianLabelPlain: String
+    /// The locked form of `clinicianLabel`, empty until locking is turned on. Read and written through `clinicianLabel` only.
+    var clinicianLabelSealed: String? = nil
     var typicalDayOfWeek: Int?
 
     // Stored separately because DateComponents contains Calendar internally.
@@ -793,11 +1213,17 @@ final class AppointmentSeries {
     var typicalCadenceDays: Int
 
     /// What they do, in the person's own words ("GP", "Counsellor"). Optional.
-    var role: String = ""
+    @Attribute(originalName: "role") var rolePlain: String = ""
+    /// The locked form of `role`, empty until locking is turned on. Read and written through `role` only.
+    var roleSealed: String? = nil
     /// The name used on anything exported or shared. Empty means the name as shown.
-    var exportLabel: String = ""
+    @Attribute(originalName: "exportLabel") var exportLabelPlain: String = ""
+    /// The locked form of `exportLabel`, empty until locking is turned on. Read and written through `exportLabel` only.
+    var exportLabelSealed: String? = nil
     /// Anything the person wants to remember about them, in their own words.
-    var notes: String = ""
+    @Attribute(originalName: "notes") var notesPlain: String = ""
+    /// The locked form of `notes`, empty until locking is turned on. Read and written through `notes` only.
+    var notesSealed: String? = nil
     /// Position in the list of providers.
     var sortOrder: Int = 0
 
@@ -817,7 +1243,7 @@ final class AppointmentSeries {
         sortOrder: Int = 0
     ) {
         self.id = id
-        self.clinicianLabel = clinicianLabel
+        self.clinicianLabelPlain = clinicianLabel
         self.typicalDayOfWeek = typicalDayOfWeek
 
         self.typicalHour = typicalTime?.hour
@@ -825,10 +1251,11 @@ final class AppointmentSeries {
 
         self.typicalCadenceDays = typicalCadenceDays
         self.occurrences = occurrences
-        self.role = role
-        self.exportLabel = exportLabel
-        self.notes = notes
+        self.rolePlain = role
+        self.exportLabelPlain = exportLabel
+        self.notesPlain = notes
         self.sortOrder = sortOrder
+        lockNewValues()
     }
 
     /// The name shown in the app. Never empty, so a provider added and left
@@ -855,6 +1282,52 @@ final class AppointmentSeries {
     }
 }
 
+// Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
+extension AppointmentSeries {
+    var clinicianLabel: String {
+        get { FieldLock.read(plain: clinicianLabelPlain, sealed: clinicianLabelSealed, context: "AppointmentSeries.clinicianLabel") }
+        set {
+            let kept = FieldLock.store(newValue, context: "AppointmentSeries.clinicianLabel")
+            clinicianLabelPlain = kept.plain
+            clinicianLabelSealed = kept.sealed
+        }
+    }
+    var role: String {
+        get { FieldLock.read(plain: rolePlain, sealed: roleSealed, context: "AppointmentSeries.role") }
+        set {
+            let kept = FieldLock.store(newValue, context: "AppointmentSeries.role")
+            rolePlain = kept.plain
+            roleSealed = kept.sealed
+        }
+    }
+    var exportLabel: String {
+        get { FieldLock.read(plain: exportLabelPlain, sealed: exportLabelSealed, context: "AppointmentSeries.exportLabel") }
+        set {
+            let kept = FieldLock.store(newValue, context: "AppointmentSeries.exportLabel")
+            exportLabelPlain = kept.plain
+            exportLabelSealed = kept.sealed
+        }
+    }
+    var notes: String {
+        get { FieldLock.read(plain: notesPlain, sealed: notesSealed, context: "AppointmentSeries.notes") }
+        set {
+            let kept = FieldLock.store(newValue, context: "AppointmentSeries.notes")
+            notesPlain = kept.plain
+            notesSealed = kept.sealed
+        }
+    }
+
+    /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
+    /// nothing sealed yet, and does nothing while locking is off.
+    func lockNewValues() {
+        guard FieldLock.isOn else { return }
+        clinicianLabel = clinicianLabelPlain
+        role = rolePlain
+        exportLabel = exportLabelPlain
+        notes = notesPlain
+    }
+}
+
 @Model
 final class AppointmentOccurrence {
     @Attribute(.unique) var id: UUID
@@ -865,7 +1338,9 @@ final class AppointmentOccurrence {
     /// What the person wants to have with them for this one session, written
     /// and ticked by them. It reuses the small text-and-tick value that quick
     /// lists use, kept inside the occurrence so there is no new record.
-    var prepChecklist: [QuickListItem] = []
+    @Attribute(originalName: "prepChecklist") var prepChecklistPlain: [QuickListItem] = []
+    /// The locked form of `prepChecklist`, empty until locking is turned on. Read and written through `prepChecklist` only.
+    var prepChecklistSealed: String? = nil
 
     init(id: UUID = UUID(), scheduledDate: Date, wasMoved: Bool = false,
          prepNoteEntryID: UUID? = nil, postSessionNoteEntryID: UUID? = nil,
@@ -875,7 +1350,27 @@ final class AppointmentOccurrence {
         self.wasMoved = wasMoved
         self.prepNoteEntryID = prepNoteEntryID
         self.postSessionNoteEntryID = postSessionNoteEntryID
-        self.prepChecklist = prepChecklist
+        self.prepChecklistPlain = prepChecklist
+        lockNewValues()
+    }
+}
+
+// Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
+extension AppointmentOccurrence {
+    var prepChecklist: [QuickListItem] {
+        get { FieldLock.readCoded(prepChecklistPlain, sealed: prepChecklistSealed, context: "AppointmentOccurrence.prepChecklist") }
+        set {
+            let kept = FieldLock.storeCoded(newValue, empty: [], context: "AppointmentOccurrence.prepChecklist")
+            prepChecklistPlain = kept.plain
+            prepChecklistSealed = kept.sealed
+        }
+    }
+
+    /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
+    /// nothing sealed yet, and does nothing while locking is off.
+    func lockNewValues() {
+        guard FieldLock.isOn else { return }
+        prepChecklist = prepChecklistPlain
     }
 }
 
@@ -885,13 +1380,17 @@ final class AppointmentOccurrence {
 final class BridgeDraftItem {
     @Attribute(.unique) var id: UUID
     var createdAt: Date
-    var text: String
+    @Attribute(originalName: "text") var textPlain: String
+    /// The locked form of `text`, empty until locking is turned on. Read and written through `text` only.
+    var textSealed: String? = nil
     var isResolved: Bool   // "brought this up already" — not a score, just a checkbox
     /// True when the item is a question to ask rather than something to raise.
     var isQuestion: Bool = false
     /// What was said in answer, written by the person after the session.
     /// Only used when the item is a question.
-    var answer: String = ""
+    @Attribute(originalName: "answer") var answerPlain: String = ""
+    /// The locked form of `answer`, empty until locking is turned on. Read and written through `answer` only.
+    var answerSealed: String? = nil
     /// The provider (an `AppointmentSeries` id) this is for. Nil means it is
     /// for anyone. Kept as a plain id rather than a relationship, so removing
     /// a provider can never remove an item.
@@ -901,11 +1400,40 @@ final class BridgeDraftItem {
          isQuestion: Bool = false, answer: String = "", providerID: UUID? = nil) {
         self.id = id
         self.createdAt = createdAt
-        self.text = text
+        self.textPlain = text
         self.isResolved = isResolved
         self.isQuestion = isQuestion
-        self.answer = answer
+        self.answerPlain = answer
         self.providerID = providerID
+        lockNewValues()
+    }
+}
+
+// Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
+extension BridgeDraftItem {
+    var text: String {
+        get { FieldLock.read(plain: textPlain, sealed: textSealed, context: "BridgeDraftItem.text") }
+        set {
+            let kept = FieldLock.store(newValue, context: "BridgeDraftItem.text")
+            textPlain = kept.plain
+            textSealed = kept.sealed
+        }
+    }
+    var answer: String {
+        get { FieldLock.read(plain: answerPlain, sealed: answerSealed, context: "BridgeDraftItem.answer") }
+        set {
+            let kept = FieldLock.store(newValue, context: "BridgeDraftItem.answer")
+            answerPlain = kept.plain
+            answerSealed = kept.sealed
+        }
+    }
+
+    /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
+    /// nothing sealed yet, and does nothing while locking is off.
+    func lockNewValues() {
+        guard FieldLock.isOn else { return }
+        text = textPlain
+        answer = answerPlain
     }
 }
 
@@ -946,18 +1474,51 @@ extension BridgeDraftItem {
 @Model
 final class FeedbackLoopDiagram {
     @Attribute(.unique) var id: UUID
-    var title: String
+    @Attribute(originalName: "title") var titlePlain: String
+    /// The locked form of `title`, empty until locking is turned on. Read and written through `title` only.
+    var titleSealed: String? = nil
     var lastEditedAt: Date
     /// Serialized node/edge graph the user builds to externalize their own
     /// systems metaphors (e.g. the "like Cloudflare" defense model). Stored
     /// as JSON so the diagram editor can be swapped out without migrating data.
-    var graphJSON: Data
+    @Attribute(originalName: "graphJSON") var graphJSONPlain: Data
+    /// The locked form of `graphJSON`, empty until locking is turned on. Read and written through `graphJSON` only.
+    var graphJSONSealed: String? = nil
 
     init(id: UUID = UUID(), title: String, lastEditedAt: Date = .now, graphJSON: Data) {
         self.id = id
-        self.title = title
+        self.titlePlain = title
         self.lastEditedAt = lastEditedAt
-        self.graphJSON = graphJSON
+        self.graphJSONPlain = graphJSON
+        lockNewValues()
+    }
+}
+
+// Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
+extension FeedbackLoopDiagram {
+    var title: String {
+        get { FieldLock.read(plain: titlePlain, sealed: titleSealed, context: "FeedbackLoopDiagram.title") }
+        set {
+            let kept = FieldLock.store(newValue, context: "FeedbackLoopDiagram.title")
+            titlePlain = kept.plain
+            titleSealed = kept.sealed
+        }
+    }
+    var graphJSON: Data {
+        get { FieldLock.readData(graphJSONPlain, sealed: graphJSONSealed, context: "FeedbackLoopDiagram.graphJSON") }
+        set {
+            let kept = FieldLock.storeData(newValue, context: "FeedbackLoopDiagram.graphJSON")
+            graphJSONPlain = kept.plain
+            graphJSONSealed = kept.sealed
+        }
+    }
+
+    /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
+    /// nothing sealed yet, and does nothing while locking is off.
+    func lockNewValues() {
+        guard FieldLock.isOn else { return }
+        title = titlePlain
+        graphJSON = graphJSONPlain
     }
 }
 
@@ -967,7 +1528,9 @@ final class FeedbackLoopDiagram {
 final class ThreadMessage {
     @Attribute(.unique) var id: UUID
     var timestamp: Date
-    var text: String
+    @Attribute(originalName: "text") var textPlain: String
+    /// The locked form of `text`, empty until locking is turned on. Read and written through `text` only.
+    var textSealed: String? = nil
     var audioFileName: String?
     var withContactID: UUID?
     /// The day a follow-up reminder was asked for when this was written and sent, as the start of
@@ -978,10 +1541,30 @@ final class ThreadMessage {
          audioFileName: String? = nil, withContactID: UUID? = nil, followUpAt: Date? = nil) {
         self.id = id
         self.timestamp = timestamp
-        self.text = text
+        self.textPlain = text
         self.audioFileName = audioFileName
         self.withContactID = withContactID
         self.followUpAt = followUpAt
+        lockNewValues()
+    }
+}
+
+// Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
+extension ThreadMessage {
+    var text: String {
+        get { FieldLock.read(plain: textPlain, sealed: textSealed, context: "ThreadMessage.text") }
+        set {
+            let kept = FieldLock.store(newValue, context: "ThreadMessage.text")
+            textPlain = kept.plain
+            textSealed = kept.sealed
+        }
+    }
+
+    /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
+    /// nothing sealed yet, and does nothing while locking is off.
+    func lockNewValues() {
+        guard FieldLock.isOn else { return }
+        text = textPlain
     }
 }
 
@@ -989,14 +1572,36 @@ final class ThreadMessage {
 final class SupportCalendarEntry {
     @Attribute(.unique) var id: UUID
     var date: Date
-    var note: String
+    @Attribute(originalName: "note") var notePlain: String
+    /// The locked form of `note`, empty until locking is turned on. Read and written through `note` only.
+    var noteSealed: String? = nil
     var visibleToContactIDs: [UUID]   // explicit opt-in list, not "everyone"
 
     init(id: UUID = UUID(), date: Date, note: String, visibleToContactIDs: [UUID] = []) {
         self.id = id
         self.date = date
-        self.note = note
+        self.notePlain = note
         self.visibleToContactIDs = visibleToContactIDs
+        lockNewValues()
+    }
+}
+
+// Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
+extension SupportCalendarEntry {
+    var note: String {
+        get { FieldLock.read(plain: notePlain, sealed: noteSealed, context: "SupportCalendarEntry.note") }
+        set {
+            let kept = FieldLock.store(newValue, context: "SupportCalendarEntry.note")
+            notePlain = kept.plain
+            noteSealed = kept.sealed
+        }
+    }
+
+    /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
+    /// nothing sealed yet, and does nothing while locking is off.
+    func lockNewValues() {
+        guard FieldLock.isOn else { return }
+        note = notePlain
     }
 }
 
@@ -1005,20 +1610,25 @@ final class FutureNote {
     @Attribute(.unique) var id: UUID
     var writtenAt: Date
     var unlockDate: Date
-    var text: String
+    @Attribute(originalName: "text") var textPlain: String
+    /// The locked form of `text`, empty until locking is turned on. Read and written through `text` only.
+    var textSealed: String? = nil
     var isUnlocked: Bool   // derived at read-time from unlockDate, cached here for widget/UI convenience
     /// What the person wrote after "Open when", for a letter they open when
     /// they choose. Empty for a note sealed until a date. A letter has no
     /// date to wait for, and nothing opens it, counts it or reminds them of it.
-    var openWhen: String = ""
+    @Attribute(originalName: "openWhen") var openWhenPlain: String = ""
+    /// The locked form of `openWhen`, empty until locking is turned on. Read and written through `openWhen` only.
+    var openWhenSealed: String? = nil
 
     init(id: UUID = UUID(), writtenAt: Date = .now, unlockDate: Date, text: String, openWhen: String = "") {
         self.id = id
         self.writtenAt = writtenAt
         self.unlockDate = unlockDate
-        self.text = text
+        self.textPlain = text
         self.isUnlocked = false
-        self.openWhen = openWhen
+        self.openWhenPlain = openWhen
+        lockNewValues()
     }
 
     var isOpenWhenLetter: Bool {
@@ -1026,20 +1636,81 @@ final class FutureNote {
     }
 }
 
+// Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
+extension FutureNote {
+    var text: String {
+        get { FieldLock.read(plain: textPlain, sealed: textSealed, context: "FutureNote.text") }
+        set {
+            let kept = FieldLock.store(newValue, context: "FutureNote.text")
+            textPlain = kept.plain
+            textSealed = kept.sealed
+        }
+    }
+    var openWhen: String {
+        get { FieldLock.read(plain: openWhenPlain, sealed: openWhenSealed, context: "FutureNote.openWhen") }
+        set {
+            let kept = FieldLock.store(newValue, context: "FutureNote.openWhen")
+            openWhenPlain = kept.plain
+            openWhenSealed = kept.sealed
+        }
+    }
+
+    /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
+    /// nothing sealed yet, and does nothing while locking is off.
+    func lockNewValues() {
+        guard FieldLock.isOn else { return }
+        text = textPlain
+        openWhen = openWhenPlain
+    }
+}
+
 @Model
 final class UnsentDraft {
     @Attribute(.unique) var id: UUID
     var createdAt: Date
-    var recipientLabel: String   // "partner", "school friend", etc — no full identity required
-    var text: String
+    @Attribute(originalName: "recipientLabel") var recipientLabelPlain: String   // "partner", "school friend", etc — no full identity required
+    /// The locked form of `recipientLabel`, empty until locking is turned on. Read and written through `recipientLabel` only.
+    var recipientLabelSealed: String? = nil
+    @Attribute(originalName: "text") var textPlain: String
+    /// The locked form of `text`, empty until locking is turned on. Read and written through `text` only.
+    var textSealed: String? = nil
     var wasSent: Bool
 
     init(id: UUID = UUID(), createdAt: Date = .now, recipientLabel: String, text: String, wasSent: Bool = false) {
         self.id = id
         self.createdAt = createdAt
-        self.recipientLabel = recipientLabel
-        self.text = text
+        self.recipientLabelPlain = recipientLabel
+        self.textPlain = text
         self.wasSent = wasSent
+        lockNewValues()
+    }
+}
+
+// Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
+extension UnsentDraft {
+    var recipientLabel: String {
+        get { FieldLock.read(plain: recipientLabelPlain, sealed: recipientLabelSealed, context: "UnsentDraft.recipientLabel") }
+        set {
+            let kept = FieldLock.store(newValue, context: "UnsentDraft.recipientLabel")
+            recipientLabelPlain = kept.plain
+            recipientLabelSealed = kept.sealed
+        }
+    }
+    var text: String {
+        get { FieldLock.read(plain: textPlain, sealed: textSealed, context: "UnsentDraft.text") }
+        set {
+            let kept = FieldLock.store(newValue, context: "UnsentDraft.text")
+            textPlain = kept.plain
+            textSealed = kept.sealed
+        }
+    }
+
+    /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
+    /// nothing sealed yet, and does nothing while locking is off.
+    func lockNewValues() {
+        guard FieldLock.isOn else { return }
+        recipientLabel = recipientLabelPlain
+        text = textPlain
     }
 }
 
@@ -1057,35 +1728,90 @@ final class UnsentDraft {
 @Model
 final class DecisionPresetCategory {
     @Attribute(.unique) var id: UUID
-    var name: String
+    @Attribute(originalName: "name") var namePlain: String
+    /// The locked form of `name`, empty until locking is turned on. Read and written through `name` only.
+    var nameSealed: String? = nil
     var sortOrder: Int
     @Relationship(deleteRule: .cascade, inverse: \DecisionPresetChoice.category)
     var choices: [DecisionPresetChoice]
 
     init(id: UUID = UUID(), name: String, sortOrder: Int = 0, choices: [DecisionPresetChoice] = []) {
         self.id = id
-        self.name = name
+        self.namePlain = name
         self.sortOrder = sortOrder
         self.choices = choices
+        lockNewValues()
+    }
+}
+
+// Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
+extension DecisionPresetCategory {
+    var name: String {
+        get { FieldLock.read(plain: namePlain, sealed: nameSealed, context: "DecisionPresetCategory.name") }
+        set {
+            let kept = FieldLock.store(newValue, context: "DecisionPresetCategory.name")
+            namePlain = kept.plain
+            nameSealed = kept.sealed
+        }
+    }
+
+    /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
+    /// nothing sealed yet, and does nothing while locking is off.
+    func lockNewValues() {
+        guard FieldLock.isOn else { return }
+        name = namePlain
     }
 }
 
 @Model
 final class DecisionPresetChoice {
     @Attribute(.unique) var id: UUID
-    var name: String
+    @Attribute(originalName: "name") var namePlain: String
+    /// The locked form of `name`, empty until locking is turned on. Read and written through `name` only.
+    var nameSealed: String? = nil
     /// One step per line, same convention as GroundingTool.steps. Empty
     /// means this is just a flat option with no click-through sequence.
-    var steps: String
+    @Attribute(originalName: "steps") var stepsPlain: String
+    /// The locked form of `steps`, empty until locking is turned on. Read and written through `steps` only.
+    var stepsSealed: String? = nil
     var sortOrder: Int
     var category: DecisionPresetCategory?
 
     init(id: UUID = UUID(), name: String, steps: String = "", sortOrder: Int = 0, category: DecisionPresetCategory? = nil) {
         self.id = id
-        self.name = name
-        self.steps = steps
+        self.namePlain = name
+        self.stepsPlain = steps
         self.sortOrder = sortOrder
         self.category = category
+        lockNewValues()
+    }
+}
+
+// Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
+extension DecisionPresetChoice {
+    var name: String {
+        get { FieldLock.read(plain: namePlain, sealed: nameSealed, context: "DecisionPresetChoice.name") }
+        set {
+            let kept = FieldLock.store(newValue, context: "DecisionPresetChoice.name")
+            namePlain = kept.plain
+            nameSealed = kept.sealed
+        }
+    }
+    var steps: String {
+        get { FieldLock.read(plain: stepsPlain, sealed: stepsSealed, context: "DecisionPresetChoice.steps") }
+        set {
+            let kept = FieldLock.store(newValue, context: "DecisionPresetChoice.steps")
+            stepsPlain = kept.plain
+            stepsSealed = kept.sealed
+        }
+    }
+
+    /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
+    /// nothing sealed yet, and does nothing while locking is off.
+    func lockNewValues() {
+        guard FieldLock.isOn else { return }
+        name = namePlain
+        steps = stepsPlain
     }
 }
 
@@ -1100,13 +1826,35 @@ final class DecisionPresetChoice {
 @Model
 final class DeEscalationScript {
     @Attribute(.unique) var id: UUID
-    var text: String
+    @Attribute(originalName: "text") var textPlain: String
+    /// The locked form of `text`, empty until locking is turned on. Read and written through `text` only.
+    var textSealed: String? = nil
     var sortOrder: Int
 
     init(id: UUID = UUID(), text: String, sortOrder: Int = 0) {
         self.id = id
-        self.text = text
+        self.textPlain = text
         self.sortOrder = sortOrder
+        lockNewValues()
+    }
+}
+
+// Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
+extension DeEscalationScript {
+    var text: String {
+        get { FieldLock.read(plain: textPlain, sealed: textSealed, context: "DeEscalationScript.text") }
+        set {
+            let kept = FieldLock.store(newValue, context: "DeEscalationScript.text")
+            textPlain = kept.plain
+            textSealed = kept.sealed
+        }
+    }
+
+    /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
+    /// nothing sealed yet, and does nothing while locking is off.
+    func lockNewValues() {
+        guard FieldLock.isOn else { return }
+        text = textPlain
     }
 }
 
@@ -1119,13 +1867,35 @@ final class DeEscalationScript {
 @Model
 final class Affirmation {
     @Attribute(.unique) var id: UUID
-    var text: String
+    @Attribute(originalName: "text") var textPlain: String
+    /// The locked form of `text`, empty until locking is turned on. Read and written through `text` only.
+    var textSealed: String? = nil
     var sortOrder: Int
 
     init(id: UUID = UUID(), text: String, sortOrder: Int = 0) {
         self.id = id
-        self.text = text
+        self.textPlain = text
         self.sortOrder = sortOrder
+        lockNewValues()
+    }
+}
+
+// Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
+extension Affirmation {
+    var text: String {
+        get { FieldLock.read(plain: textPlain, sealed: textSealed, context: "Affirmation.text") }
+        set {
+            let kept = FieldLock.store(newValue, context: "Affirmation.text")
+            textPlain = kept.plain
+            textSealed = kept.sealed
+        }
+    }
+
+    /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
+    /// nothing sealed yet, and does nothing while locking is off.
+    func lockNewValues() {
+        guard FieldLock.isOn else { return }
+        text = textPlain
     }
 }
 
@@ -1141,17 +1911,39 @@ final class Affirmation {
 @Model
 final class NextHourItem {
     @Attribute(.unique) var id: UUID
-    var text: String
+    @Attribute(originalName: "text") var textPlain: String
+    /// The locked form of `text`, empty until locking is turned on. Read and written through `text` only.
+    var textSealed: String? = nil
     var isDone: Bool
     var createdAt: Date
     var reminderIdentifier: String?
 
     init(id: UUID = UUID(), text: String, isDone: Bool = false, createdAt: Date = .now, reminderIdentifier: String? = nil) {
         self.id = id
-        self.text = text
+        self.textPlain = text
         self.isDone = isDone
         self.createdAt = createdAt
         self.reminderIdentifier = reminderIdentifier
+        lockNewValues()
+    }
+}
+
+// Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
+extension NextHourItem {
+    var text: String {
+        get { FieldLock.read(plain: textPlain, sealed: textSealed, context: "NextHourItem.text") }
+        set {
+            let kept = FieldLock.store(newValue, context: "NextHourItem.text")
+            textPlain = kept.plain
+            textSealed = kept.sealed
+        }
+    }
+
+    /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
+    /// nothing sealed yet, and does nothing while locking is off.
+    func lockNewValues() {
+        guard FieldLock.isOn else { return }
+        text = textPlain
     }
 }
 
@@ -1164,8 +1956,12 @@ final class NextHourItem {
 @Model
 final class TaskItem {
     @Attribute(.unique) var id: UUID
-    var title: String
-    var notes: String = ""
+    @Attribute(originalName: "title") var titlePlain: String
+    /// The locked form of `title`, empty until locking is turned on. Read and written through `title` only.
+    var titleSealed: String? = nil
+    @Attribute(originalName: "notes") var notesPlain: String = ""
+    /// The locked form of `notes`, empty until locking is turned on. Read and written through `notes` only.
+    var notesSealed: String? = nil
     var isDone: Bool = false
     var completedAt: Date? = nil
     var createdAt: Date = Date.now
@@ -1195,7 +1991,9 @@ final class TaskItem {
     var energy: TaskEnergy = TaskEnergy.unset
     /// The smallest way to begin, in a few words. Separate from steps so it
     /// can be a single line.
-    var firstStep: String = ""
+    @Attribute(originalName: "firstStep") var firstStepPlain: String = ""
+    /// The locked form of `firstStep`, empty until locking is turned on. Read and written through `firstStep` only.
+    var firstStepSealed: String? = nil
     /// How many focus sessions have run to the end on this task, and the
     /// minutes they added up to. A plain record: nothing is scored, compared
     /// or shown against a goal.
@@ -1227,8 +2025,8 @@ final class TaskItem {
         estimateMinutes: Int = 0
     ) {
         self.id = id
-        self.title = title
-        self.notes = notes
+        self.titlePlain = title
+        self.notesPlain = notes
         self.isDone = isDone
         self.completedAt = completedAt
         self.createdAt = createdAt
@@ -1241,16 +2039,54 @@ final class TaskItem {
         self.blockedByIDs = blockedByIDs
         self.status = status
         self.energy = energy
-        self.firstStep = firstStep
+        self.firstStepPlain = firstStep
         self.focusSessions = focusSessions
         self.focusMinutes = focusMinutes
         self.estimateMinutes = estimateMinutes
+        lockNewValues()
     }
 
     /// Ticks the task off or back on, keeping `completedAt` in step.
     func setDone(_ done: Bool) {
         isDone = done
         completedAt = done ? Date.now : nil
+    }
+}
+
+// Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
+extension TaskItem {
+    var title: String {
+        get { FieldLock.read(plain: titlePlain, sealed: titleSealed, context: "TaskItem.title") }
+        set {
+            let kept = FieldLock.store(newValue, context: "TaskItem.title")
+            titlePlain = kept.plain
+            titleSealed = kept.sealed
+        }
+    }
+    var notes: String {
+        get { FieldLock.read(plain: notesPlain, sealed: notesSealed, context: "TaskItem.notes") }
+        set {
+            let kept = FieldLock.store(newValue, context: "TaskItem.notes")
+            notesPlain = kept.plain
+            notesSealed = kept.sealed
+        }
+    }
+    var firstStep: String {
+        get { FieldLock.read(plain: firstStepPlain, sealed: firstStepSealed, context: "TaskItem.firstStep") }
+        set {
+            let kept = FieldLock.store(newValue, context: "TaskItem.firstStep")
+            firstStepPlain = kept.plain
+            firstStepSealed = kept.sealed
+        }
+    }
+
+    /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
+    /// nothing sealed yet, and does nothing while locking is off.
+    func lockNewValues() {
+        guard FieldLock.isOn else { return }
+        title = titlePlain
+        notes = notesPlain
+        firstStep = firstStepPlain
     }
 }
 
@@ -1605,9 +2441,13 @@ struct QuickListItem: Codable, Identifiable, Hashable {
 @Model
 final class QuickList {
     @Attribute(.unique) var id: UUID
-    var title: String
+    @Attribute(originalName: "title") var titlePlain: String
+    /// The locked form of `title`, empty until locking is turned on. Read and written through `title` only.
+    var titleSealed: String? = nil
     var createdAt: Date = Date.now
-    var items: [QuickListItem] = []
+    @Attribute(originalName: "items") var itemsPlain: [QuickListItem] = []
+    /// The locked form of `items`, empty until locking is turned on. Read and written through `items` only.
+    var itemsSealed: String? = nil
     /// Set when the last open item is ticked, and cleared again when one is
     /// unticked or a new item is added. nil while the list is still in use.
     var archivedAt: Date? = nil
@@ -1615,10 +2455,39 @@ final class QuickList {
     init(id: UUID = UUID(), title: String, createdAt: Date = .now,
          items: [QuickListItem] = [], archivedAt: Date? = nil) {
         self.id = id
-        self.title = title
+        self.titlePlain = title
         self.createdAt = createdAt
-        self.items = items
+        self.itemsPlain = items
         self.archivedAt = archivedAt
+        lockNewValues()
+    }
+}
+
+// Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
+extension QuickList {
+    var title: String {
+        get { FieldLock.read(plain: titlePlain, sealed: titleSealed, context: "QuickList.title") }
+        set {
+            let kept = FieldLock.store(newValue, context: "QuickList.title")
+            titlePlain = kept.plain
+            titleSealed = kept.sealed
+        }
+    }
+    var items: [QuickListItem] {
+        get { FieldLock.readCoded(itemsPlain, sealed: itemsSealed, context: "QuickList.items") }
+        set {
+            let kept = FieldLock.storeCoded(newValue, empty: [], context: "QuickList.items")
+            itemsPlain = kept.plain
+            itemsSealed = kept.sealed
+        }
+    }
+
+    /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
+    /// nothing sealed yet, and does nothing while locking is off.
+    func lockNewValues() {
+        guard FieldLock.isOn else { return }
+        title = titlePlain
+        items = itemsPlain
     }
 }
 
@@ -1750,9 +2619,13 @@ struct RoutineStep: Codable, Identifiable, Hashable {
 @Model
 final class Routine {
     @Attribute(.unique) var id: UUID
-    var name: String
+    @Attribute(originalName: "name") var namePlain: String
+    /// The locked form of `name`, empty until locking is turned on. Read and written through `name` only.
+    var nameSealed: String? = nil
     var createdAt: Date = Date.now
-    var steps: [RoutineStep] = []
+    @Attribute(originalName: "steps") var stepsPlain: [RoutineStep] = []
+    /// The locked form of `steps`, empty until locking is turned on. Read and written through `steps` only.
+    var stepsSealed: String? = nil
     /// An optional reminder you set yourself. Off unless you switch it on.
     var reminderEnabled: Bool = false
     /// Calendar weekdays the reminder repeats on, 1 = Sunday to 7 = Saturday.
@@ -1764,13 +2637,42 @@ final class Routine {
          reminderEnabled: Bool = false, reminderDays: [Int] = [],
          reminderHour: Int = 8, reminderMinute: Int = 0) {
         self.id = id
-        self.name = name
+        self.namePlain = name
         self.createdAt = createdAt
-        self.steps = steps
+        self.stepsPlain = steps
         self.reminderEnabled = reminderEnabled
         self.reminderDays = reminderDays
         self.reminderHour = reminderHour
         self.reminderMinute = reminderMinute
+        lockNewValues()
+    }
+}
+
+// Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
+extension Routine {
+    var name: String {
+        get { FieldLock.read(plain: namePlain, sealed: nameSealed, context: "Routine.name") }
+        set {
+            let kept = FieldLock.store(newValue, context: "Routine.name")
+            namePlain = kept.plain
+            nameSealed = kept.sealed
+        }
+    }
+    var steps: [RoutineStep] {
+        get { FieldLock.readCoded(stepsPlain, sealed: stepsSealed, context: "Routine.steps") }
+        set {
+            let kept = FieldLock.storeCoded(newValue, empty: [], context: "Routine.steps")
+            stepsPlain = kept.plain
+            stepsSealed = kept.sealed
+        }
+    }
+
+    /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
+    /// nothing sealed yet, and does nothing while locking is off.
+    func lockNewValues() {
+        guard FieldLock.isOn else { return }
+        name = namePlain
+        steps = stepsPlain
     }
 }
 
@@ -1882,18 +2784,62 @@ struct ListItem: Codable, Identifiable, Hashable {
 @Model
 final class ItemList {
     @Attribute(.unique) var id: UUID
-    var name: String
+    @Attribute(originalName: "name") var namePlain: String
+    /// The locked form of `name`, empty until locking is turned on. Read and written through `name` only.
+    var nameSealed: String? = nil
     var createdAt: Date = Date.now
-    var variables: [ListVariable] = []
-    var items: [ListItem] = []
+    @Attribute(originalName: "variables") var variablesPlain: [ListVariable] = []
+    /// The locked form of `variables`, empty until locking is turned on. Read and written through `variables` only.
+    var variablesSealed: String? = nil
+    @Attribute(originalName: "items") var itemsPlain: [ListItem] = []
+    /// The locked form of `items`, empty until locking is turned on. Read and written through `items` only.
+    var itemsSealed: String? = nil
 
     init(id: UUID = UUID(), name: String, createdAt: Date = .now,
          variables: [ListVariable] = [], items: [ListItem] = []) {
         self.id = id
-        self.name = name
+        self.namePlain = name
         self.createdAt = createdAt
-        self.variables = variables
-        self.items = items
+        self.variablesPlain = variables
+        self.itemsPlain = items
+        lockNewValues()
+    }
+}
+
+// Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
+extension ItemList {
+    var name: String {
+        get { FieldLock.read(plain: namePlain, sealed: nameSealed, context: "ItemList.name") }
+        set {
+            let kept = FieldLock.store(newValue, context: "ItemList.name")
+            namePlain = kept.plain
+            nameSealed = kept.sealed
+        }
+    }
+    var variables: [ListVariable] {
+        get { FieldLock.readCoded(variablesPlain, sealed: variablesSealed, context: "ItemList.variables") }
+        set {
+            let kept = FieldLock.storeCoded(newValue, empty: [], context: "ItemList.variables")
+            variablesPlain = kept.plain
+            variablesSealed = kept.sealed
+        }
+    }
+    var items: [ListItem] {
+        get { FieldLock.readCoded(itemsPlain, sealed: itemsSealed, context: "ItemList.items") }
+        set {
+            let kept = FieldLock.storeCoded(newValue, empty: [], context: "ItemList.items")
+            itemsPlain = kept.plain
+            itemsSealed = kept.sealed
+        }
+    }
+
+    /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
+    /// nothing sealed yet, and does nothing while locking is off.
+    func lockNewValues() {
+        guard FieldLock.isOn else { return }
+        name = namePlain
+        variables = variablesPlain
+        items = itemsPlain
     }
 }
 

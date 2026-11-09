@@ -3,7 +3,7 @@
 # It is a syntax check and a set of content checks. It is not a build.
 cd "$(dirname "$0")/.." || exit 1
 status=0
-for check in check-about-content.mjs check-demo-coverage.mjs check-ai-gate.mjs; do
+for check in check-about-content.mjs check-demo-coverage.mjs check-ai-gate.mjs check-project-files.mjs check-locked-fields.mjs; do
   echo "=== $check ==="
   node "scripts/$check" || status=1
 done

@@ -127,16 +127,22 @@ final class RecoveryCounter {
     @Attribute(.unique) var id: UUID
 
     /// The user's own words, shown only inside the app unless they opt in below.
-    var name: String
+    @Attribute(originalName: "name") var namePlain: String
+    /// The locked form of `name`, empty until locking is turned on. Read and written through `name` only.
+    var nameSealed: String? = nil
 
     /// What widgets and notifications call this counter, e.g. "Your counter".
-    var discreetLabel: String
+    @Attribute(originalName: "discreetLabel") var discreetLabelPlain: String
+    /// The locked form of `discreetLabel`, empty until locking is turned on. Read and written through `discreetLabel` only.
+    var discreetLabelSealed: String? = nil
     var showNameOutsideApp: Bool
 
     var mode: DayCountMode
 
     /// JSON-encoded `[RecoveryRun]`. Stored as data so the schema stays simple.
-    var runsData: Data
+    @Attribute(originalName: "runsData") var runsDataPlain: Data
+    /// The locked form of `runsData`, empty until locking is turned on. Read and written through `runsData` only.
+    var runsDataSealed: String? = nil
 
     var savingsAmount: Double
     var savingsPeriod: SavingsPeriod
@@ -166,11 +172,11 @@ final class RecoveryCounter {
          sortOrder: Int = 0,
          createdAt: Date = .now) {
         self.id = id
-        self.name = name
-        self.discreetLabel = discreetLabel
+        self.namePlain = name
+        self.discreetLabelPlain = discreetLabel
         self.showNameOutsideApp = showNameOutsideApp
         self.mode = mode
-        self.runsData = (try? JSONEncoder().encode([RecoveryRun(start: startDate, end: nil)])) ?? Data()
+        self.runsDataPlain = (try? JSONEncoder().encode([RecoveryRun(start: startDate, end: nil)])) ?? Data()
         self.savingsAmount = savingsAmount
         self.savingsPeriod = savingsPeriod
         self.currencyCode = currencyCode
@@ -179,6 +185,7 @@ final class RecoveryCounter {
         self.createdAt = createdAt
         self.isArchived = false
         self.priorTimesPerDay = 0
+        lockNewValues()
     }
 
     // MARK: Runs
@@ -272,6 +279,43 @@ final class RecoveryCounter {
     }
 }
 
+// Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
+extension RecoveryCounter {
+    var name: String {
+        get { FieldLock.read(plain: namePlain, sealed: nameSealed, context: "RecoveryCounter.name") }
+        set {
+            let kept = FieldLock.store(newValue, context: "RecoveryCounter.name")
+            namePlain = kept.plain
+            nameSealed = kept.sealed
+        }
+    }
+    var discreetLabel: String {
+        get { FieldLock.read(plain: discreetLabelPlain, sealed: discreetLabelSealed, context: "RecoveryCounter.discreetLabel") }
+        set {
+            let kept = FieldLock.store(newValue, context: "RecoveryCounter.discreetLabel")
+            discreetLabelPlain = kept.plain
+            discreetLabelSealed = kept.sealed
+        }
+    }
+    var runsData: Data {
+        get { FieldLock.readData(runsDataPlain, sealed: runsDataSealed, context: "RecoveryCounter.runsData") }
+        set {
+            let kept = FieldLock.storeData(newValue, context: "RecoveryCounter.runsData")
+            runsDataPlain = kept.plain
+            runsDataSealed = kept.sealed
+        }
+    }
+
+    /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
+    /// nothing sealed yet, and does nothing while locking is off.
+    func lockNewValues() {
+        guard FieldLock.isOn else { return }
+        name = namePlain
+        discreetLabel = discreetLabelPlain
+        runsData = runsDataPlain
+    }
+}
+
 // MARK: - Motivations
 
 /// "Who I'm doing this for" and "why it matters", in the user's own words.
@@ -279,16 +323,38 @@ final class RecoveryCounter {
 final class RecoveryMotivation {
     @Attribute(.unique) var id: UUID
     var kind: MotivationKind
-    var text: String
+    @Attribute(originalName: "text") var textPlain: String
+    /// The locked form of `text`, empty until locking is turned on. Read and written through `text` only.
+    var textSealed: String? = nil
     var sortOrder: Int
     var createdAt: Date
 
     init(id: UUID = UUID(), kind: MotivationKind, text: String, sortOrder: Int = 0, createdAt: Date = .now) {
         self.id = id
         self.kind = kind
-        self.text = text
+        self.textPlain = text
         self.sortOrder = sortOrder
         self.createdAt = createdAt
+        lockNewValues()
+    }
+}
+
+// Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
+extension RecoveryMotivation {
+    var text: String {
+        get { FieldLock.read(plain: textPlain, sealed: textSealed, context: "RecoveryMotivation.text") }
+        set {
+            let kept = FieldLock.store(newValue, context: "RecoveryMotivation.text")
+            textPlain = kept.plain
+            textSealed = kept.sealed
+        }
+    }
+
+    /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
+    /// nothing sealed yet, and does nothing while locking is off.
+    func lockNewValues() {
+        guard FieldLock.isOn else { return }
+        text = textPlain
     }
 }
 
@@ -302,9 +368,15 @@ final class RecoveryDayEntry {
     var day: Date               // start of day
     var pledgedAt: Date?
     var reviewedAt: Date?
-    var helped: String
-    var hard: String
-    var tomorrow: String
+    @Attribute(originalName: "helped") var helpedPlain: String
+    /// The locked form of `helped`, empty until locking is turned on. Read and written through `helped` only.
+    var helpedSealed: String? = nil
+    @Attribute(originalName: "hard") var hardPlain: String
+    /// The locked form of `hard`, empty until locking is turned on. Read and written through `hard` only.
+    var hardSealed: String? = nil
+    @Attribute(originalName: "tomorrow") var tomorrowPlain: String
+    /// The locked form of `tomorrow`, empty until locking is turned on. Read and written through `tomorrow` only.
+    var tomorrowSealed: String? = nil
 
     /// How many times a slip happened on this day (0 = none). Powers the "Times" list.
     var slipTimes: Int = 0
@@ -316,10 +388,48 @@ final class RecoveryDayEntry {
         self.day = day
         self.pledgedAt = pledgedAt
         self.reviewedAt = reviewedAt
-        self.helped = helped
-        self.hard = hard
-        self.tomorrow = tomorrow
+        self.helpedPlain = helped
+        self.hardPlain = hard
+        self.tomorrowPlain = tomorrow
         self.slipTimes = slipTimes
+        lockNewValues()
+    }
+}
+
+// Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
+extension RecoveryDayEntry {
+    var helped: String {
+        get { FieldLock.read(plain: helpedPlain, sealed: helpedSealed, context: "RecoveryDayEntry.helped") }
+        set {
+            let kept = FieldLock.store(newValue, context: "RecoveryDayEntry.helped")
+            helpedPlain = kept.plain
+            helpedSealed = kept.sealed
+        }
+    }
+    var hard: String {
+        get { FieldLock.read(plain: hardPlain, sealed: hardSealed, context: "RecoveryDayEntry.hard") }
+        set {
+            let kept = FieldLock.store(newValue, context: "RecoveryDayEntry.hard")
+            hardPlain = kept.plain
+            hardSealed = kept.sealed
+        }
+    }
+    var tomorrow: String {
+        get { FieldLock.read(plain: tomorrowPlain, sealed: tomorrowSealed, context: "RecoveryDayEntry.tomorrow") }
+        set {
+            let kept = FieldLock.store(newValue, context: "RecoveryDayEntry.tomorrow")
+            tomorrowPlain = kept.plain
+            tomorrowSealed = kept.sealed
+        }
+    }
+
+    /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
+    /// nothing sealed yet, and does nothing while locking is off.
+    func lockNewValues() {
+        guard FieldLock.isOn else { return }
+        helped = helpedPlain
+        hard = hardPlain
+        tomorrow = tomorrowPlain
     }
 }
 
@@ -344,14 +454,36 @@ final class RecoveryUrge {
     var counterID: UUID
     var date: Date
     var strength: UrgeStrength
-    var note: String
+    @Attribute(originalName: "note") var notePlain: String
+    /// The locked form of `note`, empty until locking is turned on. Read and written through `note` only.
+    var noteSealed: String? = nil
 
     init(id: UUID = UUID(), counterID: UUID, date: Date = .now, strength: UrgeStrength = .strong, note: String = "") {
         self.id = id
         self.counterID = counterID
         self.date = date
         self.strength = strength
-        self.note = note
+        self.notePlain = note
+        lockNewValues()
+    }
+}
+
+// Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
+extension RecoveryUrge {
+    var note: String {
+        get { FieldLock.read(plain: notePlain, sealed: noteSealed, context: "RecoveryUrge.note") }
+        set {
+            let kept = FieldLock.store(newValue, context: "RecoveryUrge.note")
+            notePlain = kept.plain
+            noteSealed = kept.sealed
+        }
+    }
+
+    /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
+    /// nothing sealed yet, and does nothing while locking is off.
+    func lockNewValues() {
+        guard FieldLock.isOn else { return }
+        note = notePlain
     }
 }
 

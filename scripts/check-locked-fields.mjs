@@ -1,0 +1,102 @@
+// Checks the locked fields (Patch 35b2, docs/ENCRYPTION.md). A locked field is a stored plain property
+// (`textPlain`, with the old name as originalName so the stored values carry over), a sealed twin
+// (`textSealed`) and a computed property under the old name that goes through FieldLock.
+// 1. Every Plain property has a Sealed twin, an originalName that matches, and an accessor under the old name.
+// 2. Nothing outside the model files, the key code and the self-test reads or writes a Plain or Sealed property:
+//    everything else uses the old name, so a locked value always reads as its text.
+// 3. No init sets the old name before the object is whole, and every init ends with lockNewValues().
+// 4. Nothing queries or sorts on a locked field, because a stored value that is sealed cannot be compared.
+// Run it from anywhere:  node scripts/check-locked-fields.mjs
+
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join, relative } from "node:path";
+
+const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const swiftRoot = join(root, "iOS");
+const modelFiles = ["Models/AnchorModels.swift", "Models/RecoveryModels.swift"].map((f) => join(swiftRoot, "Anchor/Anchor", f));
+// Files allowed to touch the twins: the models, and the code that is about the locking itself.
+const allowed = (rel) => /Models\/(Anchor|Recovery)Models\.swift$/.test(rel) || /Support\/(AppLock|LockedFields)\.swift$/.test(rel);
+
+function swiftFiles(dir) {
+  const out = [];
+  for (const name of readdirSync(dir)) {
+    if (name.startsWith(".")) continue;
+    const path = join(dir, name);
+    if (statSync(path).isDirectory()) out.push(...swiftFiles(path));
+    else if (name.endsWith(".swift")) out.push(path);
+  }
+  return out;
+}
+
+const problems = [];
+const locked = []; // { cls, name }
+
+for (const file of modelFiles) {
+  const lines = readFileSync(file, "utf8").split("\n");
+  let cls = null;
+  let inInit = false;
+  const classFields = new Map();
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const c = line.match(/^final class (\w+)/);
+    if (c && /@Model/.test(lines[i - 1] || "")) { cls = c[1]; inInit = false; classFields.clear(); }
+    if (cls) {
+      const p = line.match(/^    @Attribute\(originalName: "(\w+)"\) var (\w+)Plain: /);
+      if (p) {
+        if (p[1] !== p[2]) problems.push(`${cls}: ${p[2]}Plain has originalName "${p[1]}".`);
+        classFields.set(p[2], true);
+        locked.push({ cls, name: p[2] });
+        if (!lines.some((l) => l.startsWith(`    var ${p[2]}Sealed: String? = nil`))) problems.push(`${cls}.${p[2]} has no Sealed twin.`);
+        const accessor = new RegExp(`^    var ${p[2]}: `);
+        if (!lines.some((l, j) => accessor.test(l) && /^extension /.test(lines.slice(0, j).reverse().find((x) => /^(extension|final class|@Model)/.test(x)) || ""))) {
+          problems.push(`${cls}.${p[2]} has no accessor under the old name.`);
+        }
+      }
+      if (/^    init\(/.test(line)) inInit = true;
+      if (inInit) {
+        for (const name of classFields.keys()) {
+          if (new RegExp(`^\\s+self\\.${name} = `).test(line)) problems.push(`${cls}: an init sets self.${name} before the object is whole (use ${name}Plain).`);
+        }
+      }
+      if (inInit && line === "    }") {
+        inInit = false;
+        if (lines[i - 1].trim() !== "lockNewValues()" && classFields.size) problems.push(`${cls}: an init does not end with lockNewValues().`);
+      }
+      if (line === "}") cls = null;
+    }
+  }
+}
+
+const twins = new Set(locked.flatMap((f) => [`${f.name}Plain`, `${f.name}Sealed`]));
+const names = new Set(locked.map((f) => f.name));
+for (const file of swiftFiles(swiftRoot)) {
+  const rel = relative(root, file);
+  const text = readFileSync(file, "utf8");
+  if (!allowed(rel)) {
+    for (const t of twins) {
+      if (new RegExp(`\\b${t}\\b`).test(text)) problems.push(`${rel} uses ${t}; use the old name so a locked value reads as its text.`);
+    }
+  }
+  // 4. Sorting or filtering on a locked field: a key path such as \\Class.field, an unqualified \\.field in a
+  // sort, or $0.field inside a predicate.
+  for (const line of text.split("\n")) {
+    if (/SortDescriptor|@Query\(|sortBy/.test(line)) {
+      for (const m of line.matchAll(/\\(\w*)\.(\w+)/g)) {
+        const hit = locked.some((f) => f.name === m[2] && (m[1] === "" || m[1] === f.cls));
+        if (hit) problems.push(`${rel}: sorts on the locked field ${m[1] ? m[1] + "." : ""}${m[2]}.`);
+      }
+    }
+    if (/#Predicate/.test(line)) {
+      for (const m of line.matchAll(/\$0\.(\w+)/g)) {
+        if (names.has(m[1])) problems.push(`${rel}: a predicate reads ${m[1]}, which is a locked field.`);
+      }
+    }
+  }
+}
+
+if (problems.length) {
+  console.log([...new Set(problems)].join("\n"));
+  process.exit(1);
+}
+console.log(`The locked fields check passed. ${locked.length} fields on ${new Set(locked.map((f) => f.cls)).size} models.`);

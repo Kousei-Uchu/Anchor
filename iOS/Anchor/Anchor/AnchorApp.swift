@@ -14,8 +14,10 @@ struct AnchorApp: App {
 
     init() {
         UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
+        FieldLockWiring.install()
         #if DEBUG
         WidgetSealSelfTest.run()
+        FieldLockSelfTest.run()
         #endif
         if !DemoMode.isOn {
             // A waiting safety copy job runs first, before anything opens the database.

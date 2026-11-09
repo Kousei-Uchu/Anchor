@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 35b2: every field that holds your own words is now ready to be locked, in the same place as before, and nothing is locked yet. Everything reads and saves as it did. Also adds three files to the Xcode project that earlier patches left out, and two new checks that catch that.
 - Patch 35b1: a safety copy of your database, voice notes and Journal photos, made when Anchor starts and checked against fingerprints, with Go back and Undo go back that never delete anything. In test builds only for now. Clear all data removes the copy too.
 - Patch CK1: one command, bash scripts/check-all.sh, runs every check that needs no Xcode, including a new one that reads all the Swift files and lists anything that does not parse. It is a syntax check only, not a build.
 - Patch AI0: a single switch for all AI tools, off to begin with, in Settings (test builds only for now, as nothing is behind it yet). While it is off nothing in Anchor can use AI, and it stays off in showcase mode. A script checks that every future AI feature goes through it.

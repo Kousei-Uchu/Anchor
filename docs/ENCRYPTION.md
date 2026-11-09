@@ -55,7 +55,18 @@ The widgets read two small summaries that the app writes into the App Group's de
 
 What this does and does not cover: it keeps the summaries out of a backup in a readable form, and out of a copy of the defaults file. It does not hide them from someone with the phone unlocked, and the widgets themselves can still show them on a lock screen (the privacy page says so). The key now sits in a shared Keychain item, which ties it to this device more tightly than a file does (Patch 35a2).
 
-## Not done yet (Patch 35b)
+## Locked fields (Patch 35b2)
+
+Each field that holds your own words is two stored properties on its model: the plain one (`textPlain`) and a sealed twin (`textSealed`, a string that is empty until locking is on). The field's old name (`text`) is a computed property that goes through `FieldLock`, so no screen, export or widget changed. The plain property keeps the old name as its `originalName`, so SwiftData carries the stored values over when the app first opens.
+
+- **Sealing.** The sealed value is the same format as sealed text above, with the context `Model.field` (for example `JournalEntry.text`) so a value cannot move to another field. Lists of small records are sealed as JSON and Data as base64, each as one value.
+- **Off for now.** `FieldLock.isOn` is false until Patch 35b3, so a write keeps the text plain and the sealed twin empty. A new item ends its init with `lockNewValues()`, which does nothing while it is off.
+- **A value that will not open** reads as empty and is never written back, so a missing key cannot overwrite your words.
+- **Who may touch the twins.** Only the models, `LockedFields.swift` and `AppLock.swift`; `scripts/check-locked-fields.mjs` enforces it, and also that nothing sorts or filters on a locked field.
+- **Locked:** the text and notes on every model, contact names, phone numbers, Discord ids and message templates, goal notes, list and routine items, diagram data, and the Recovery counter's name, label and start dates. **Left readable:** dates, numbers, switches, ids and the links between items, icon and colour names, and shipped Mascot lines (D44). Voice note and photo files wait for 35d.
+- **Widgets.** The extension builds the model files but holds no key, so it never opens a sealed value. It reads its own sealed summaries as before.
+
+## Not done yet (Patch 35b3)
 
 Locking the stored text and moving what is already there, in a way that can be undone and survives being stopped half way; a start-up check for a missing key that stops the store being opened over locked text; the voice note and photo files; and a way to turn it off. D15 is answered (option B, every model in one go, with a safety copy first), so 35b is three patches: 35b1 the safety copy and the way back, 35b2 the locked fields, and 35b3 the Lock my data flow. See the plan and `docs/DECISIONS_EXPLAINED.md`.
 

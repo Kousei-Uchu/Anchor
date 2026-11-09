@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		03341B23D1B41EB29A286F8D /* SafetyCopyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87A893C8C649E0DA82BF5434 /* SafetyCopyView.swift */; };
+		60A074630CC7C6188746A45F /* SafetyCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 905C4FDA487AB3F8365B7465 /* SafetyCopy.swift */; };
+		383D93D08A9CDB63AB066AD1 /* AIGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60E32204EBCB9844F599B451 /* AIGate.swift */; };
+		1A4FEEC54C9A2A6CC97357BE /* LockedFields.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8FC090AB9CDA60DC7E77AF2 /* LockedFields.swift */; };
+		07033D98FCBCC16228F86C85 /* LockedFields.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8FC090AB9CDA60DC7E77AF2 /* LockedFields.swift */; };
 		A1B2C3D4E5F60718293A4B5D /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5C /* SettingsView.swift */; };
 		035010293EE54573AECF8B65 /* CrisisNumbersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23872821DD004B2493E86D8F /* CrisisNumbersView.swift */; };
 		0B0624EF7B42476089C4C66E /* AnchorWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 628FFC908967443BAA51337B /* AnchorWidget.swift */; };
@@ -121,6 +126,10 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		87A893C8C649E0DA82BF5434 /* SafetyCopyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafetyCopyView.swift; sourceTree = "<group>"; };
+		905C4FDA487AB3F8365B7465 /* SafetyCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafetyCopy.swift; sourceTree = "<group>"; };
+		60E32204EBCB9844F599B451 /* AIGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIGate.swift; sourceTree = "<group>"; };
+		E8FC090AB9CDA60DC7E77AF2 /* LockedFields.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockedFields.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4B5C /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		0838913F4176466AB146AA58 /* AnchorApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnchorApp.swift; sourceTree = "<group>"; };
 		0E1B309040E54EB990628DD5 /* ThreadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThreadView.swift; sourceTree = "<group>"; };
@@ -240,6 +249,7 @@
 		A1B2C3D4E5F60718293A4B5E /* Settings */ = {
 			isa = PBXGroup;
 			children = (
+				87A893C8C649E0DA82BF5434 /* SafetyCopyView.swift */,
 				A1B2C3D4E5F60718293A4B5C /* SettingsView.swift */,
 			);
 			path = Settings;
@@ -290,6 +300,9 @@
 		5709D44B2F97484B8E02360C /* Support */ = {
 			isa = PBXGroup;
 			children = (
+				905C4FDA487AB3F8365B7465 /* SafetyCopy.swift */,
+				60E32204EBCB9844F599B451 /* AIGate.swift */,
+				E8FC090AB9CDA60DC7E77AF2 /* LockedFields.swift */,
 				C7C09E04301AA21400F9144F /* HelpContent.swift */,
 				C7C09E0B301AA21400F9144F /* ReviewWalkthrough.swift */,
 				C7C09E02301877CA00F9144F /* WidgetAction.swift */,
@@ -593,6 +606,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1A4FEEC54C9A2A6CC97357BE /* LockedFields.swift in Sources */,
 				C7633BF1301433480070EEA2 /* AnchorModels.swift in Sources */,
 				8A67639F74080F56C5AA328F /* RecoveryModels.swift in Sources */,
 				57EEA17235EA4D03B12B7C30 /* AnchorWidgetBundle.swift in Sources */,
@@ -605,6 +619,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				03341B23D1B41EB29A286F8D /* SafetyCopyView.swift in Sources */,
+				60A074630CC7C6188746A45F /* SafetyCopy.swift in Sources */,
+				383D93D08A9CDB63AB066AD1 /* AIGate.swift in Sources */,
+				07033D98FCBCC16228F86C85 /* LockedFields.swift in Sources */,
 				B82692F35F794738ADD35491 /* AnchorApp.swift in Sources */,
 				AA74372B37994ADDB2A03D5F /* ContentView.swift in Sources */,
 				81F6AAAE97E24DEEB87A18C1 /* PlaceholderViews.swift in Sources */,

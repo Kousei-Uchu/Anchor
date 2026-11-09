@@ -19,6 +19,7 @@ import CryptoKit
 import Foundation
 import LocalAuthentication
 import Security
+import SwiftData
 import SwiftUI
 
 @MainActor
@@ -661,6 +662,43 @@ enum DataKeyStore {
 
     static func remove() {
         SecItemDelete(query() as CFDictionary)
+        FieldLockWiring.forgetKey()
+    }
+}
+
+/// Gives `FieldLock` (Support/LockedFields.swift, which the widget builds too and so cannot hold key code) the
+/// two functions it needs, using the data key in the Keychain. The key is read once and kept in memory, not
+/// read from the Keychain for every field. Nothing is sealed until Patch 35b3 turns `FieldLock.isOn` on.
+enum FieldLockWiring {
+    private static let lock = NSLock()
+    private static var cached: SymmetricKey?
+
+    private static func key() -> SymmetricKey? {
+        lock.lock()
+        defer { lock.unlock() }
+        if let cached { return cached }
+        if case .found(let found) = DataKeyStore.lookup() {
+            cached = found
+            return found
+        }
+        return nil
+    }
+
+    static func forgetKey() {
+        lock.lock()
+        cached = nil
+        lock.unlock()
+    }
+
+    static func install() {
+        FieldLock.opener = { stored, context in
+            guard let key = key() else { return nil }
+            return FieldCipher.open(stored, context: context, key: key)
+        }
+        FieldLock.sealer = { text, context in
+            guard let key = key() else { return nil }
+            return try? FieldCipher.seal(text, context: context, key: key)
+        }
     }
 }
 
@@ -899,6 +937,89 @@ enum DataKeySelfTest {
         } catch {
             fatalError("Data key self-test: sealing failed: \(error)")
         }
+    }
+}
+#endif
+
+#if DEBUG
+/// Checks, in a test build, that a locked field reads and writes through its old name: sealed on write while
+/// locking is on, read back as the same text, plain again when it is off, and never lost when a value cannot
+/// be opened. Runs on a store that lives only in memory, with a made-up key and made-up text. Nothing real is
+/// touched, and the real key functions are put back afterwards. Patch 35b2.
+enum FieldLockSelfTest {
+    private static var hasRun = false
+
+    private static func check(_ condition: Bool, _ message: String) {
+        if !condition { fatalError("Locked field self-test: \(message)") }
+    }
+
+    static func run() {
+        if hasRun { return }
+        hasRun = true
+        let schema = Schema(AnchorSchema.models)
+        guard let container = try? ModelContainer(for: schema, configurations: [ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)]) else {
+            fatalError("Locked field self-test: could not make a store in memory.")
+        }
+        let context = ModelContext(container)
+        let key = SymmetricKey(data: Data((0..<32).map { UInt8($0) }))
+        let savedSealer = FieldLock.sealer, savedOpener = FieldLock.opener, savedOn = FieldLock.isOn
+        defer {
+            FieldLock.sealer = savedSealer
+            FieldLock.opener = savedOpener
+            FieldLock.isOn = savedOn
+        }
+        FieldLock.sealer = { text, ctx in try? FieldCipher.seal(text, context: ctx, key: key) }
+        FieldLock.opener = { stored, ctx in FieldCipher.open(stored, context: ctx, key: key) }
+
+        // Locking off: plain, as before.
+        FieldLock.isOn = false
+        let plainEntry = JournalEntry(text: "plain words")
+        context.insert(plainEntry)
+        check(plainEntry.text == "plain words" && plainEntry.textPlain == "plain words" && plainEntry.textSealed == nil,
+              "a value was not kept plain while locking was off.")
+
+        // Locking on: a new value is sealed, reads back, and the plain property is empty.
+        FieldLock.isOn = true
+        let sealedEntry = JournalEntry(text: "locked words")
+        context.insert(sealedEntry)
+        check(sealedEntry.text == "locked words", "a locked value did not read back.")
+        check(sealedEntry.textPlain.isEmpty, "the plain property still held the text.")
+        check(sealedEntry.textSealed?.hasPrefix(FieldCipher.prefix) == true, "the sealed property was not sealed.")
+        check(sealedEntry.textSealed?.contains("locked words") == false, "the sealed property held the text.")
+        sealedEntry.text = "changed words"
+        check(sealedEntry.text == "changed words" && sealedEntry.textPlain.isEmpty, "a changed value was not sealed.")
+
+        // A value cannot move to another field: a different context does not open it.
+        if let stored = sealedEntry.textSealed {
+            check(FieldCipher.open(stored, context: "SleepEntry.note", key: key) == nil, "a sealed value opened in another field.")
+        }
+
+        // Optional, list and data fields.
+        let contact = TrustedContact(name: "Sam", phoneNumber: "0400 000 000", sortOrder: 0, discordUserID: "123")
+        context.insert(contact)
+        check(contact.name == "Sam" && contact.phoneNumber == "0400 000 000" && contact.discordUserID == "123",
+              "a contact did not read back.")
+        check(contact.namePlain.isEmpty && contact.discordUserIDPlain == nil, "a contact kept plain text.")
+        contact.discordUserID = nil
+        check(contact.discordUserID == nil && contact.discordUserIDSealed == nil, "an optional value was not cleared.")
+        let list = QuickList(title: "Bag", items: [QuickListItem(text: "keys")])
+        context.insert(list)
+        check(list.items.count == 1 && list.items[0].text == "keys" && list.itemsPlain.isEmpty, "a list did not read back sealed.")
+        let counter = RecoveryCounter(name: "Mine")
+        context.insert(counter)
+        let runs = counter.runsData
+        check(counter.name == "Mine" && counter.runsData == runs, "a counter did not read back.")
+
+        // A sealed value that cannot be opened is read as it is stored, never as something made up, and
+        // turning locking off does not change what was already sealed.
+        let stored = sealedEntry.textSealed
+        FieldLock.opener = nil
+        check(sealedEntry.text == "", "a value that could not be opened read as something else.")
+        FieldLock.opener = { stored, ctx in FieldCipher.open(stored, context: ctx, key: key) }
+        FieldLock.isOn = false
+        check(sealedEntry.text == "changed words" && sealedEntry.textSealed == stored, "turning locking off changed a sealed value.")
+        sealedEntry.text = "back to plain"
+        check(sealedEntry.textPlain == "back to plain" && sealedEntry.textSealed == nil, "a new value was not plain once locking was off.")
     }
 }
 #endif
