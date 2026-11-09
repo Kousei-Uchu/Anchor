@@ -776,7 +776,7 @@ struct HelpNoteToolbarButton: View {
 enum ShowcaseHelp {
     static let paragraphs: [String] = [
         "Showcase mode lets you show someone Anchor without showing them your own things. While it is on, Anchor shows made-up people, entries and plans, and your real data is not opened.",
-        "Your widgets are emptied and your waiting reminders are taken off the phone, so nothing of yours turns up on the lock screen or as a notification. Both come back when you turn it off.",
+        "Your widgets show made-up content too, and your waiting reminders are taken off the phone, so nothing of yours turns up on the lock screen or as a notification. Your own widgets and reminders come back when you turn it off.",
         "Anything you add while it is on is made up too, and is gone when you close the app. The buttons for sharing and exporting are left out, and Your data is switched off, so nothing can be sent from a showcase.",
         "Anchor does not ask for Face ID while it is on, and it stays on if you close the app. To turn it off, type the showcase passcode if you set one, or use your phone's own Face ID or passcode. The phone's own always works, so forgetting the showcase passcode never locks you out.",
         "It needs a phone with Face ID, Touch ID or a passcode, so there is always a way out."

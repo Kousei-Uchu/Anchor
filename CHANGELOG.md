@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch SH2b: while showcase mode is on the widgets show made-up content (Sam and Alex, a plan, a window and a counter) instead of being empty, and your own come back when it is turned off.
 - Patch SH2a: the showcase passcode is 4 to 6 digits on the number pad, typed twice, and the exit screen asks for it on the number pad.
 - Patch 30q: in Post-session notes a line that starts with [ ] is a thing to do, and each one has an Add as task button under the note. Nothing is added until you tap, the task has no date, and the line stays in the note. Add a thing to do starts a marked line for you.
 - Patch AB2: What's new has a fold for each version of the app with what it added, changed and removed, the newest open and the older ones closed. There is one version so far, 1.0, and a group with nothing in it is not shown.

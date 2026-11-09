@@ -14,7 +14,7 @@ Point 17 of the plan: show someone the app without showing them your own content
 
 `ShowcaseSweep` (in `AnchorApp.swift`) takes things off the phone when showcase mode starts and puts them back when it stops.
 
-- **Widgets.** The contact and plan summary and the Recovery counters, which the lock screen and home screen show, are removed and the widgets reload, so they show their empty state. While showcase mode is on nothing writes them again (Plan's refresh and the Recovery widget sync do nothing). They are empty, not filled with made-up content, on purpose: the widgets are part of how someone reaches help, and a made-up phone number there would be worse than none.
+- **Widgets.** Your contact and plan summary and your Recovery counters, which the lock screen and home screen show, are replaced by made-up ones (Patch SH2b, your answer to D21 c) and the widgets reload. The made-up summary is Sam and Alex as the two contacts, a safety plan, the Sunday evenings window, one affirmation and a counter under its discreet label, matching the made-up store (`ShowcaseWidgetContent` in `AnchorApp.swift`). While showcase mode is on nothing writes your own again (Plan's refresh and the Recovery widget sync do nothing). The made-up contacts have made-up numbers, so a Call tap on the widget dials a number that is not anyone's; that is the cost of showing the widget as it really looks.
 - **Reminders.** Every pending and every delivered notification is removed, because the trigger window reminders carry your window's label and a line from your own safety plan inside them. While showcase mode is on the schedulers do nothing, so a trigger window or a daily check-in made in the showcase does not put a real reminder on the phone.
 - **Putting it back.** When showcase mode is turned off, `ShowcaseSweep.end` rebuilds the widget summary from the real store (the same fields Plan writes), refreshes the Recovery reminders and counter widget, the routine reminders, the sleep reminder, the trigger window reminders and the daily check-in, and reloads the widgets. Nothing waits for Plan to be opened.
 - **A launch that started in showcase mode** skips the one-time steps a normal launch runs on the real store (locking an old plain widget copy, moving the old Next hour list into tasks, copying the safety plan into sections). They now run when showcase mode is turned off and the real store is opened for the first time, so the plan is there straight away and not after the next launch.
@@ -25,7 +25,7 @@ Point 17 of the plan: show someone the app without showing them your own content
 
 ## Turning it on and off
 
-- **On:** only on a phone that has Face ID, Touch ID or a passcode (`ShowcaseMode.canTurnOn`), so there is always a way back. It asks first, and says that the widgets and reminders are cleared.
+- **On:** only on a phone that has Face ID, Touch ID or a passcode (`ShowcaseMode.canTurnOn`), so there is always a way back. It asks first, and takes your own widgets and reminders off the phone.
 - **Off:** asks for the phone's own Face ID or passcode, directly (`ShowcaseMode.confirmOwner`), not through Anchor's lock, which is not asked for while showcase mode is on. If it is not confirmed, showcase mode stays on.
 - **Forgetting the showcase passcode** never locks anyone in. The phone's own Face ID or passcode always turns showcase mode off, with or without a showcase passcode.
 
@@ -61,7 +61,6 @@ Left out on purpose: the older safety plan form and the older Next hour list (bo
 ## Known gaps
 
 - Settings that are stored as settings (reminder times, switches, layout) are not swapped or hidden. They are not content, and a change made while showcase mode is on stays.
-- The widgets are empty while it is on (see above).
 - The Encryption test screen in a debug build can still remove the real data key. It is test-build only and goes before release.
 - The JSON seed in the plan (one definition shared with the website demo) is not built. The seed is Swift code and the website demo is parked (Patches 49 and 50), so there is nothing to share it with yet.
 
@@ -69,8 +68,8 @@ Left out on purpose: the older safety plan form and the older Next hour list (bo
 
 Before you start, have a real contact and a real trigger window set up, with the widgets on your home screen, and set the trigger window to start a few minutes ahead.
 
-1. Settings, Your data and help, Showcase mode (test build). It says Off. Turn it on. The dialog should say the widgets and reminders will be cleared. The app should come back on Now with made-up content (Sam, Alex and Jordan as contacts, and so on).
-2. The widgets should go to their empty state within a few seconds. The trigger window reminder should not arrive. Settings, Notifications, Anchor should show nothing waiting if your phone lists it.
+1. Settings, Your data and help, Showcase mode (test build). It says Off. Turn it on. The app should come back on Now with made-up content (Sam, Alex and Jordan as contacts, and so on).
+2. The widgets should change within a few seconds to Sam and Alex, a plan, the Sunday evenings window and a counter at about 12 days, with none of your own content. The trigger window reminder should not arrive. Settings, Notifications, Anchor should show nothing waiting if your phone lists it.
 3. Open Plan, Journal and Bridge and add something. It should be there until you close the app, and gone when you do. Open Your data: Export, Import and Clear all data should be replaced by one line. Look for share buttons on Bridge, Boundaries, a Recovery counter and a diagram: they should not be there. Open the Sleep screen: no Apple Health card.
 4. Press the home button and open the app switcher: Anchor should show a plain screen.
 5. Close Anchor from the app switcher and open it again: it should still be in showcase mode and go straight in without asking for Face ID.

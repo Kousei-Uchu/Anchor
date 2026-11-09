@@ -513,17 +513,17 @@ enum DemoMode {
 /// could still show someone else your own content. `begin` takes it off the phone when showcase
 /// mode starts, and `end` puts it back from the real store when it stops.
 ///
-/// What is taken: the widget summaries (your top contacts and the Recovery counters, which the lock
-/// screen shows), and every reminder that is waiting or already delivered, because the trigger window
-/// reminders quote a line from your own plan. While showcase mode is on nothing writes them again:
-/// the widget writers and the reminder schedulers do nothing.
+/// What is taken: your own widget summaries (your top contacts and the Recovery counters, which the
+/// lock screen shows) are replaced by made-up ones (`ShowcaseWidgetContent`), and every reminder that
+/// is waiting or already delivered is removed, because the trigger window reminders quote a line from
+/// your own plan. While showcase mode is on nothing writes your own content again: the widget writers
+/// and the reminder schedulers do nothing.
 enum ShowcaseSweep {
     static func begin() {
         let center = UNUserNotificationCenter.current()
         center.removeAllPendingNotificationRequests()
         center.removeAllDeliveredNotifications()
-        WidgetDataStore.clear()
-        CounterWidgetStore.clear()
+        ShowcaseWidgetContent.write()
         WidgetCenter.shared.reloadAllTimelines()
     }
 
@@ -554,6 +554,32 @@ enum ShowcaseSweep {
         NotificationScheduler.resyncTriggerWindows(using: context)
         DailyCheckInSettings.reapplyIfEnabled(using: context)
         WidgetCenter.shared.reloadAllTimelines()
+    }
+}
+
+/// The made-up content the widgets show while showcase mode is on (Patch SH2b). It matches the made-up
+/// store: Sam and Alex as the two contacts, a safety plan, the Sunday evenings window and the Energy
+/// drinks counter, which shows under its discreet label as the widget always does. It replaces your own
+/// summaries in the same place, so turning showcase mode off puts yours back (`ShowcaseSweep.end`).
+enum ShowcaseWidgetContent {
+    static func write() {
+        let now = Date.now
+        let window = TriggerWindow(label: "Sunday evenings", daysOfWeek: [1],
+                                   startTime: DateComponents(hour: 17), endTime: DateComponents(hour: 20))
+        WidgetDataStore.write(AnchorWidgetSnapshot(
+            topContacts: [
+                ContactWidgetSummary(name: "Sam", phoneNumber: "0400 000 001"),
+                ContactWidgetSummary(name: "Alex", phoneNumber: "0400 000 002")
+            ],
+            hasSafetyPlan: true,
+            deEscalationScriptLine: "I need 10 minutes, then we can talk.",
+            nextTriggerWindowLabel: TimeWindowHelper.nextWindowLabel(among: [window]),
+            currentAffirmation: "I got through today. That counts."
+        ))
+        CounterWidgetStore.write([
+            CounterWidgetItem(label: "Your counter", runStart: now.addingTimeInterval(-12 * 86_400),
+                              priorDays: 39, mode: DayCountMode.runAndTotal.rawValue)
+        ])
     }
 }
 

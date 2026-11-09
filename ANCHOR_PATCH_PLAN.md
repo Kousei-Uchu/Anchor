@@ -1,6 +1,6 @@
 # Anchor — Patch Plan (v2-recovery)
 
-*Living document. Last updated: 9 Nov 2026, with patches SL6, AB2, 30q and SH2a written. Pushed through 30o (`f37cd3b`); written and waiting for you to push: SL6, AB2, 30q and SH2a, and none is confirmed building; the ones not started are marked ⬜. Questions are in 0.4. Still waiting on you: the words for the About screen's creator section and the licence files (both D23). Open but not blocking anything: D29a, the Apple Health sleep cleanup, which you cannot review yet. New and assumed as read: D32, D34 and D35. Held on purpose: medication notes (B5), recorded in Appendix D and no longer a decision or a to-do. Everything else in D16 to D31 is answered and either built or queued in the Progress table. D3 is parked until the end, just before the Android work. D15 is answered: option B, every model locked in one go, with a safety copy and an easy way back built first. Things I offered but did not build are in Appendix D. The history of updates is in `docs/PLAN_CHANGELOG.md`. Plain explanations of the decisions you asked about are in `docs/DECISIONS_EXPLAINED.md`.*
+*Living document. Last updated: 9 Nov 2026, with patch SH2b written. Pushed through SH2a (`30d7d17`); written and waiting for you to push: SH2b, which is not confirmed building; the ones not started are marked ⬜. Questions are in 0.4. Still waiting on you: the words for the About screen's creator section and the licence files (both D23). Open but not blocking anything: D29a, the Apple Health sleep cleanup, which you cannot review yet. New and assumed as read: D32, D34 and D35. Held on purpose: medication notes (B5), recorded in Appendix D and no longer a decision or a to-do. Everything else in D16 to D31 is answered and either built or queued in the Progress table. D3 is parked until the end, just before the Android work. D15 is answered: option B, every model locked in one go, with a safety copy and an easy way back built first. Things I offered but did not build are in Appendix D. The history of updates is in `docs/PLAN_CHANGELOG.md`. Plain explanations of the decisions you asked about are in `docs/DECISIONS_EXPLAINED.md`.*
 
 > ## READ THIS FIRST: THIS FILE IS THE PROMPT
 >
@@ -128,21 +128,21 @@ The source code repository is at <https://github.com/Kousei-Uchu/Anchor/tree/v2-
 | 45a: Audit 2, part 1: session reminders, optional and off by default, with generic lock-screen wording; the unused reminder code that named the provider is removed | 🟡 Pushed by you (`237e998`); build not yet confirmed |
 | 30n: Relationship reminders (T3, approved in Appendix C1): the first three types, regular hello, their dates and follow-up, off by default, generic lock-screen wording, one a day at most | ⬜ Not started; approved, not blocked |
 | 30p onward | The last two T3 types come after 30n; T2 is 30c, B3 is 30e, Personal goals is 30f and T7 was done in 14b (30o is the letters row above) |
-| 30q: Session actions offered as tasks (B4, D30): in Post-session notes, a line you mark as a thing to do gets an Add as task button; nothing is added until you tap, and the task has no date unless you give it one | 🟡 Written (change log 109), not yet pushed; build not yet confirmed |
+| 30q: Session actions offered as tasks (B4, D30): in Post-session notes, a line you mark as a thing to do gets an Add as task button; nothing is added until you tap, and the task has no date unless you give it one | 🟡 Pushed by you (`42a84d3`); build not yet confirmed |
 | 30r: One-page summary (B6, D30): a one-page layout inside Session prep and Export for someone, made only of your own words and plain facts in your order, with no scores, labels or readings | ⬜ Not started; answered, my reading is D32 |
 | 45d: Escalation and trigger-window reminders (change log 83): cancelling one escalation leaves the following weeks alone (D16), and the trigger-window lock-screen wording is plain (D17) | 🟡 Pushed by you (`0f0f311`); build not yet confirmed |
 | 45e: Appointment reminders, the things left out of 45a (D26): tap opens Session prep, a choice of evening time | 🟡 Pushed by you (`94d5e01`); build not yet confirmed |
 | 30o: Letters you open (T5), situational ones: never locked, contents hidden in the list until you open one (D25). In Look at what's stored a letter is listed by its Open when words, a search does not read it, and it no longer shows as locked | 🟡 Pushed by you (`f37cd3b`); build not yet confirmed |
-| SL6: Sleep in the CSV (its own columns) and in the PDF (a time-asleep chart), for Export for someone and for Your data (D29) | 🟡 Written (change log 107), not yet pushed; build not yet confirmed |
-| SH2a: Showcase mode, your changes, part 1 (D21 b): a 4 to 6 digit number pad passcode | 🟡 Written (change log 110), not yet pushed; build not yet confirmed |
-| SH2b: Showcase mode, part 2 (D21 c): made-up content in the widgets instead of empty ones | ⬜ Not started; answered |
+| SL6: Sleep in the CSV (its own columns) and in the PDF (a time-asleep chart), for Export for someone and for Your data (D29) | 🟡 Pushed by you (`36d541a`); build not yet confirmed |
+| SH2a: Showcase mode, your changes, part 1 (D21 b): a 4 to 6 digit number pad passcode | 🟡 Pushed by you (`30d7d17`); build not yet confirmed |
+| SH2b: Showcase mode, part 2 (D21 c): made-up content in the widgets instead of empty ones | 🟡 Written (change log 111), not yet pushed; build not yet confirmed |
 | SH2c: Showcase mode, part 3 (D21 d): share and export working on the made-up content | ⬜ Not started; answered |
-| AB2: What's new by version (D23, 3): one collapsible section per version, the latest open | 🟡 Written (change log 108), not yet pushed; build not yet confirmed. The creator section and the licence still wait on your words and files |
+| AB2: What's new by version (D23, 3): one collapsible section per version, the latest open | 🟡 Pushed by you (`c9dafc2`); build not yet confirmed. The creator section and the licence still wait on your words and files |
 | RV5a: Export check-in labels taken from the right sliders (change log 90) | 🟡 Pushed by you (`43b6a47`); build not yet confirmed |
 | 46b: `STATUS.md` in place of `BUILD_STATUS.md`, one terminology list, an in-app copy edit (point 23) | ⬜ Not started; answered (D20: yes, as long as no information is lost, so every part of the old file is carried somewhere before it goes) |
 | 35d: Voice notes and Journal photos locked too (D31) | ⬜ Not started; after 35b3 has been checked on your phone |
 
-**Order of work from 9 Nov 2026.** The small answered items first, because each is one clear change you asked for: SL6 and AB2 (written), SH2 (a written, b and c to do), 46b (RV5a and 30o are pushed). Then 35a2, the widgets' key in a shared Keychain item, before any locking, because the locking work uses the keys. Then the locking work, which is the part that can lose data and needs your phone to check: 35b1, 35b2, 35b3, then 35d. Then 30n (relationship reminders) and 30r (the one-page summary); 30q (session actions as tasks) is written. The website, demo and video patches stay last, with 55 at the very end.
+**Order of work from 9 Nov 2026.** The small answered items first, because each is one clear change you asked for: SL6 and AB2 (written), SH2 (a pushed, b written, c to do), 46b (RV5a and 30o are pushed). Then 35a2, the widgets' key in a shared Keychain item, before any locking, because the locking work uses the keys. Then the locking work, which is the part that can lose data and needs your phone to check: 35b1, 35b2, 35b3, then 35d. Then 30n (relationship reminders) and 30r (the one-page summary); 30q (session actions as tasks) is written. The website, demo and video patches stay last, with 55 at the very end.
 
 ## Change log of this plan
 
@@ -582,7 +582,7 @@ Decided (D10 to D14 closed, 7 Nov 2026) and part of the main release, Apple Heal
 | **40a** | Showcase mode 2a: the sweep (widgets, reminders, share and export, app switcher, fail closed) | 17 | M | 🟡 |
 | **40b** | Showcase mode 2b: passcode of its own, exit flow, the switch for everyone with its own screen and Help | 17 | M | 🟡 |
 | **SH2a** | Showcase mode, your changes, part 1: 4 to 6 digit number pad passcode (D21 b) | 17 | S | 🟡 |
-| **SH2b** | Showcase mode, part 2: made-up content in the widgets (D21 c) | 17 | S | ⬜ |
+| **SH2b** | Showcase mode, part 2: made-up content in the widgets (D21 c) | 17 | S | 🟡 |
 | **SH2c** | Showcase mode, part 3: share and export working on made-up content (D21 d) | 17 | S | ⬜ |
 | **35d** | Voice notes and Journal photos locked too, after 35b3 is checked on your phone (D31) | 20 | M | ⬜ |
 
