@@ -21,6 +21,7 @@ struct BridgeDraftListView: View {
     @State private var editing: BridgeDraftItem?
     @State private var toDelete: BridgeDraftItem?
     @State private var showingExport = false
+    @State private var showBraindump = false
     /// Whose things are shown. Nil shows everything. Not remembered.
     @State private var filterID: UUID?
 
@@ -89,6 +90,14 @@ struct BridgeDraftListView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
+                if AIGate.isEnabled {
+                    Button {
+                        showBraindump = true
+                    } label: {
+                        Image(systemName: "list.bullet.clipboard")
+                    }
+                    .accessibilityLabel("Tidy a braindump")
+                }
                 if providers.count > 1 {
                     Menu {
                         Picker("Show", selection: $filterID) {
@@ -118,6 +127,9 @@ struct BridgeDraftListView: View {
         }
         .sheet(item: $editing, onDismiss: finishEditing) { item in
             BridgeDraftItemEditorSheet(item: item) { toDelete = item }
+        }
+        .sheet(isPresented: $showBraindump) {
+            AIBraindumpSheet(text: "", canEdit: true, destinations: [.thingsToRaise], providerID: filterProvider?.id)
         }
     }
 
@@ -199,7 +211,9 @@ private struct BridgeDraftItemCard: View {
 private struct BridgeDraftItemEditorSheet: View {
     @Bindable var item: BridgeDraftItem
     let onDelete: () -> Void
+    @Environment(\.modelContext) private var modelContext
     @Query(sort: \AppointmentSeries.sortOrder) private var providers: [AppointmentSeries]
+    @State private var sourceLabel: String?
 
     /// Shown with two or more providers, or when the item is already for
     /// one, so a person with a single provider is never asked.
@@ -248,6 +262,16 @@ private struct BridgeDraftItemEditorSheet: View {
                 Section {
                     Toggle("Already brought up", isOn: $item.isResolved)
                 }
+                if let sourceLabel {
+                    Section {
+                        Label(sourceLabel, systemImage: "book.closed")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .onAppear {
+                sourceLabel = JournalSourceLine.text(for: item.sourceEntryID, in: modelContext)
             }
         }
     }

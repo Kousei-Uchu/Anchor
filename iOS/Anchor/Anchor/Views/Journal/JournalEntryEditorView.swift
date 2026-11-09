@@ -390,6 +390,7 @@ struct JournalEntryEditorView: View {
     @StateObject private var ask = AIAsk()
     @State private var assistDraft: JournalAssistDraft?
     @State private var assistMessage: String?
+    @State private var braindump: BraindumpDraft?
     @Query(sort: \RecoveryCounter.sortOrder) private var recoveryCounters: [RecoveryCounter]
 
     init(entry: JournalEntry, onFinish: (() -> Void)? = nil) {
@@ -502,6 +503,15 @@ struct JournalEntryEditorView: View {
                                 Label(AIFeature.makeShorter.title, systemImage: "text.alignleft")
                             }
                             .disabled(ask.isWorking)
+                            Menu {
+                                Button("This paragraph") { startBraindump(wholeEntry: false) }
+                                    .disabled(activeParagraph == nil)
+                                Button("Whole entry") { startBraindump(wholeEntry: true) }
+                                    .disabled(wholeEntryText == nil)
+                            } label: {
+                                Label("Tidy a braindump", systemImage: "list.bullet.clipboard")
+                            }
+                            .disabled(ask.isWorking)
                         }
                         Button {
                             showGuide = true
@@ -563,11 +573,16 @@ struct JournalEntryEditorView: View {
             .sheet(isPresented: $showGuide) {
                 GuideSheetView(entry: Guide.entry(for: "journal.editor", tab: .journal))
             }
+            .sheet(item: $braindump) { draft in
+                AIBraindumpSheet(text: draft.text, canEdit: false, destinations: BraindumpDestination.allCases,
+                                 sourceEntryID: entry.id)
+            }
             .aiAsk(ask)
             .onReceive(NotificationCenter.default.publisher(for: .aiToolsTurnedOff)) { _ in
                 // Anything half done is dropped. A block already kept stays, as the person's own entry.
                 assistDraft = nil
                 assistMessage = nil
+                braindump = nil
             }
             .alert("Added to Things to raise", isPresented: $addedToBridge) {
                 Button("OK", role: .cancel) {}
@@ -703,6 +718,15 @@ struct JournalEntryEditorView: View {
                 await MainActor.run { assistMessage = AIError.failed.plainText }
             }
         }
+    }
+
+    /// Opens Tidy a braindump on the chosen words. Nothing is sent until a button on that sheet is tapped, and
+    /// the entry is not changed by it.
+    private func startBraindump(wholeEntry: Bool) {
+        guard AIGate.isEnabled else { return }
+        let words: String? = wholeEntry ? wholeEntryText?.text : activeParagraph?.text
+        guard let words else { return }
+        braindump = BraindumpDraft(text: words)
     }
 
     /// Keep: only now does the block become part of the entry.

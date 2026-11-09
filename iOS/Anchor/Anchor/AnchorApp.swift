@@ -424,6 +424,7 @@ enum DemoMode {
         context.insert(BridgeDraftItem(text: "Sleep has been off"))
         context.insert(BridgeDraftItem(text: "Medication question", providerID: patel.id))
         context.insert(BridgeDraftItem(text: "Ask about next steps", isQuestion: true, providerID: lee.id))
+        context.insert(BridgeDraftItem(text: "Ask whether the evening routine can change", sourceEntryID: optimisedEntryID))
         context.insert(BridgeDraftItem(createdAt: ago(9), text: "Is it worth trying a different time of day?", isResolved: true,
                                        isQuestion: true, answer: "Worth a try for two weeks, then we look again."))
 

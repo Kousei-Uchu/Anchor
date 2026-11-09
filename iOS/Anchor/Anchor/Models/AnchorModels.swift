@@ -1740,9 +1740,13 @@ final class BridgeDraftItem {
     /// for anyone. Kept as a plain id rather than a relationship, so removing
     /// a provider can never remove an item.
     var providerID: UUID? = nil
+    /// The Journal entry this item was made from, when Tidy a braindump made it from one (Patch AI4). Only a trace
+    /// back to the words it came from: nothing reads the entry through it and the entry is never changed. A
+    /// deleted entry leaves it pointing at nothing.
+    var sourceEntryID: UUID? = nil
 
     init(id: UUID = UUID(), createdAt: Date = .now, text: String, isResolved: Bool = false,
-         isQuestion: Bool = false, answer: String = "", providerID: UUID? = nil) {
+         isQuestion: Bool = false, answer: String = "", providerID: UUID? = nil, sourceEntryID: UUID? = nil) {
         self.id = id
         self.createdAt = createdAt
         self.textPlain = text
@@ -1750,6 +1754,7 @@ final class BridgeDraftItem {
         self.isQuestion = isQuestion
         self.answerPlain = answer
         self.providerID = providerID
+        self.sourceEntryID = sourceEntryID
         lockNewValues()
     }
 }
@@ -2582,8 +2587,8 @@ final class TaskItem {
     /// A rough guess at how long the task takes, in minutes. 0 means no
     /// estimate. Only used to add up a day's plan; nothing is checked against it.
     var estimateMinutes: Int = 0
-    /// The Journal entry this task was made from, when a tool made it from one (Patch AI3). Nothing sets it
-    /// yet, and nothing reads the entry through it: it is only a trace back to the words the task came from,
+    /// The Journal entry this task was made from, when a tool made it from one (Patch AI3; Tidy a braindump sets it,
+    /// Patch AI4). Nothing reads the entry through it: it is only a trace back to the words the task came from,
     /// and the entry is never changed. A deleted entry leaves it pointing at nothing.
     var sourceEntryID: UUID? = nil
 

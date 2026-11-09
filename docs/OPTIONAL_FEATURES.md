@@ -1,6 +1,6 @@
 # Optional extras: iCloud sync, voice, and AI tools
 
-Written 9 Nov 2026 (change log 123). Built so far: the one switch (AI0) the consent sheet with the Apple on-device provider (AI1, change log 141), the AI Optimised block in the Journal (AI2, change log 143, D52), and Break into steps and Estimate time on a task (AI3, change log 144, D53); the rest is not built. Every claim about the code was checked in the repo; claims about Apple's frameworks are from memory and are marked **check** where a spike must confirm them before a patch promises anything. The patches are in Phase I of `ANCHOR_PATCH_PLAN.md`, the questions are D38 to D43 in section 0.4.
+Written 9 Nov 2026 (change log 123). Built so far: the one switch (AI0) the consent sheet with the Apple on-device provider (AI1, change log 141), the AI Optimised block in the Journal (AI2, change log 143, D52), Break into steps and Estimate time on a task (AI3, change log 144, D53), and Tidy a braindump (AI4, change log 146, D54); the rest is not built. Every claim about the code was checked in the repo; claims about Apple's frameworks are from memory and are marked **check** where a spike must confirm them before a patch promises anything. The patches are in Phase I of `ANCHOR_PATCH_PLAN.md`, the questions are D38 to D43 in section 0.4.
 
 ## The rules that apply to all of it
 
@@ -71,6 +71,8 @@ Written 9 Nov 2026 (change log 123). Built so far: the one switch (AI0) the cons
 **Linked and traceable.** Every task or item made this way carries a link back to the entry or text it came from, and the original is never changed. A task has no such field today (checked), so the first patch adds an optional source id to a task and to a Things to raise item, with the export, import and demo changes the Definition of Done asks for.
 
 **What it must not do.** Pick dates, set priorities or energy, decide what matters, summarise how the person has been, or add anything that is not in the text. Dates, priority and everything else stay as the person sets them.
+
+**As built in AI4.** Turn into tasks and Tidy a braindump became one sheet, `Views/Settings/AIBraindumpSheet.swift`, with two plain buttons, Turn into tasks and Turn into things to raise, so the person picks where the words go and the app never guesses. It opens from the Journal page's three dots (this paragraph or the whole entry, shown as it is and never changed), from the list button in Add several on Tasks (pasted words, editable in the box), and from a button at the top of Things to raise. Shortening is Make shorter in the Journal (AI2) and is not repeated here. A thing to raise now has the same optional source link as a task.
 
 **Where the buttons live.** On the screen they act on, as one ordinary button, shown only when AI tools are on and a provider is set up. Not on Now, not in a tab of its own, not in the tour.
 

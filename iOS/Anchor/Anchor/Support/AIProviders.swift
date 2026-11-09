@@ -10,6 +10,8 @@ enum AIFeature: String, CaseIterable {
     case makeShorter
     case breakIntoSteps
     case estimateTime
+    case turnIntoTasks
+    case turnIntoThingsToRaise
 
     /// The plain name of the button, and of the tool in the list of ones that no longer ask.
     var title: String {
@@ -17,6 +19,8 @@ enum AIFeature: String, CaseIterable {
         case .makeShorter: return "Make shorter"
         case .breakIntoSteps: return "Break into steps"
         case .estimateTime: return "Estimate time"
+        case .turnIntoTasks: return "Turn into tasks"
+        case .turnIntoThingsToRaise: return "Turn into things to raise"
         }
     }
 
@@ -29,6 +33,10 @@ enum AIFeature: String, CaseIterable {
             return "Break this task into a short list of small steps, in the order they would be done. Use only what the text says or plainly needs. Add no dates, no priorities, no advice and no comment on feelings. Write one step per line, with no numbers, bullets or other words, and at most 8 lines. Use the same language as the text."
         case .estimateTime:
             return "Guess how many minutes this task takes to do. Reply with one whole number of minutes and nothing else."
+        case .turnIntoTasks:
+            return "Turn this text into a short list of tasks the writer said they need to do or plainly meant to do. Use only what the text says. Add no tasks of your own, no dates, no priorities, no advice and no comment on feelings. Write one task per line, as a short action, with no numbers, bullets or other words, and at most 12 lines. If the text holds nothing to do, reply with nothing. Use the same language as the text."
+        case .turnIntoThingsToRaise:
+            return "Turn this text into a short list of things the writer wants to bring up in an appointment or session. Keep each one in the writer's own words as far as you can. Use only what the text says. Add nothing: no advice, no diagnosis, no comment on feelings, no new facts. Write one item per line, with no numbers, bullets or other words, at most 12 lines, and keep each under 160 characters. If the text holds nothing to bring up, reply with nothing. Use the same language as the text."
         }
     }
 }
@@ -197,6 +205,12 @@ enum AIAnswerReader {
         return result
     }
 
+    /// The lines of a list for Turn into tasks or Turn into things to raise: the same reading as steps, with room for
+    /// twelve. Each line is shown to be ticked before anything is made from it.
+    static func items(from answer: String, limit: Int = 12) -> [String] {
+        steps(from: answer, limit: limit)
+    }
+
     /// A guess in minutes, rounded to the nearest 5 and held between 5 and 480, or nil when the answer is not
     /// plainly a number of minutes (for instance, when it talks about hours).
     static func minutes(from answer: String) -> Int? {
@@ -225,6 +239,8 @@ enum AIAnswerReaderSelfTest {
         check(steps == ["Find the form", "Fill it in", "Post it"], "marks, blanks and repeats come off")
         check(AIAnswerReader.steps(from: (1...12).map { "Step \($0)" }.joined(separator: "\n")).count == 8, "at most eight")
         check(AIAnswerReader.steps(from: "  \n ").isEmpty, "nothing in, nothing out")
+        check(AIAnswerReader.items(from: (1...20).map { "Task \($0)" }.joined(separator: "\n")).count == 12, "at most twelve in a list")
+        check(AIAnswerReader.items(from: "- Ring the clinic\n2. Ring the clinic\n") == ["Ring the clinic"], "a list reads like steps")
         check(AIAnswerReader.minutes(from: "17") == 15 && AIAnswerReader.minutes(from: "About 20 minutes") == 20, "rounded to five")
         check(AIAnswerReader.minutes(from: "1") == 5 && AIAnswerReader.minutes(from: "9000") == 480, "held between 5 and 480")
         check(AIAnswerReader.minutes(from: "2 hours") == nil && AIAnswerReader.minutes(from: "no idea") == nil && AIAnswerReader.minutes(from: "0") == nil, "not plainly minutes is refused")

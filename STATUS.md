@@ -8,7 +8,7 @@ A private safety plan, contacts and journal app for iPhone and iPad, in SwiftUI 
 
 ## Branch and build
 
-- Work is on `v2-recovery`. Patches are written as `.sh` files and pasted into Terminal; the Progress table in `ANCHOR_PATCH_PLAN.md` says which are pushed and which are written and waiting. RV1a, 30p2, 35d, AI1, AI2 and AI3 are pushed and wait for you to build them.
+- Work is on `v2-recovery`. Patches are written as `.sh` files and pasted into Terminal; the Progress table in `ANCHOR_PATCH_PLAN.md` says which are pushed and which are written and waiting. RV1a, 30p2, 35d, AI1, AI2 and AI3 are pushed and wait for you to build them, and AI4 is written and waits to be pushed.
 - The code has never been compiled by the tool that writes the patches, which has no Xcode. It does run `bash scripts/check-all.sh`, which reads every Swift file with a parser and runs the content checks; that finds syntax slips, not compile errors. A patch is marked as building only after you have built it and told me so; on 9 Nov 2026 you confirmed everything pushed through R3 builds and works, and each newer patch stays "build not yet confirmed" until you do the same. A first build after several patches may need small fixes.
 - Open `iOS/Anchor/Anchor.xcodeproj` in Xcode 26 or later. Two targets: the app and `AnchorWidget` (the widget extension). App group `group.page.aspens.anchor`; a shared Keychain item for the widget key (Patch 35a2).
 

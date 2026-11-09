@@ -118,6 +118,7 @@ enum TaskListParser {
 private struct AddSeveralSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var text = ""
+    @State private var showBraindump = false
     let onAdd: (String) -> Void
 
     private var lines: [TaskListParser.Line] { TaskListParser.parse(text) }
@@ -132,6 +133,15 @@ private struct AddSeveralSheet: View {
                     Text("One task a line")
                 } footer: {
                     Text("Indent a line to make it a step of the one above, as deep as you like. Dashes, bullets and numbers are dropped, so you can paste a list from anywhere.")
+                }
+                if AIGate.isEnabled && !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Section {
+                        Button {
+                            showBraindump = true
+                        } label: {
+                            Label("Tidy a braindump", systemImage: "list.bullet.clipboard")
+                        }
+                    }
                 }
                 if !lines.isEmpty {
                     Section("Adds \(lines.count)") {
@@ -157,6 +167,9 @@ private struct AddSeveralSheet: View {
                     }
                     .disabled(lines.isEmpty)
                 }
+            }
+            .sheet(isPresented: $showBraindump) {
+                AIBraindumpSheet(text: text, canEdit: true, destinations: [.tasks], onAdded: { text = "" })
             }
         }
     }
