@@ -308,18 +308,35 @@ enum SleepReminder {
 /// of hours ahead. The lock screen never says who the session is with, or even
 /// that it is a session. Like the other reminders, every call clears what was
 /// scheduled and adds the current set again, so what is scheduled always
-/// matches the sessions as they are now.
+/// matches the sessions as they are now. The provider travels inside the
+/// reminder, out of sight, so opening one goes to that provider's Session prep.
 enum AppointmentReminders {
     static let prefix = "appointment-"
     static let dayBeforeKey = "reminders.appointment.dayBefore"
     static let sameDayKey = "reminders.appointment.sameDay"
+    static let eveningHourKey = "reminders.appointment.eveningHour"
+    static let eveningMinuteKey = "reminders.appointment.eveningMinute"
     static let dayBeforeBody = "Something you planned is coming up tomorrow."
     static let sameDayBody = "Something you planned is coming up in a couple of hours."
 
-    /// The evening before is always at 6 in the evening, whatever time the
-    /// session is, so a late session never gets a reminder that says tomorrow
-    /// on the day itself.
-    static let eveningHour = 18
+    /// The evening before comes at a time the person picks, 6 pm to begin with, whatever
+    /// time the session is. It is kept between 4 pm and 10:59 pm, so it is always the
+    /// evening of the day before and a late session never gets a reminder that says
+    /// tomorrow on the day itself.
+    static let defaultEveningHour = 18
+    static let earliestEveningHour = 16
+    static let latestEveningHour = 22
+
+    static func clampedEvening(hour: Int, minute: Int) -> (hour: Int, minute: Int) {
+        if hour < earliestEveningHour { return (earliestEveningHour, 0) }
+        if hour > latestEveningHour { return (latestEveningHour, 59) }
+        return (hour, min(max(minute, 0), 59))
+    }
+
+    static func eveningTime(defaults: UserDefaults = .standard) -> (hour: Int, minute: Int) {
+        clampedEvening(hour: defaults.object(forKey: eveningHourKey) as? Int ?? defaultEveningHour,
+                       minute: defaults.object(forKey: eveningMinuteKey) as? Int ?? 0)
+    }
     static let hoursAhead = 2
     /// iOS keeps only 64 waiting notifications for the whole app, so only the
     /// soonest few are scheduled; the rest are added as they come near.
@@ -329,39 +346,52 @@ enum AppointmentReminders {
         let id: String
         let date: Date
         let body: String
+        /// The provider the session is with, empty if it is not known.
+        let providerID: String
     }
 
     static func refresh(using context: ModelContext) {
-        let all = (try? context.fetch(FetchDescriptor<AppointmentOccurrence>())) ?? []
-        refresh(sessions: all.map { (id: $0.id, date: $0.scheduledDate) })
+        #if DEBUG
+        AppointmentReminderSelfTest.run()
+        #endif
+        let providers = (try? context.fetch(FetchDescriptor<AppointmentSeries>())) ?? []
+        refresh(sessions: providers.flatMap { provider in
+            provider.occurrences.map { (id: $0.id, date: $0.scheduledDate, providerID: Optional(provider.id)) }
+        })
     }
 
-    static func refresh(sessions: [(id: UUID, date: Date)], defaults: UserDefaults = .standard) {
+    static func refresh(sessions: [(id: UUID, date: Date, providerID: UUID?)], defaults: UserDefaults = .standard) {
         guard !DemoMode.isOn else { return }
+        let evening = eveningTime(defaults: defaults)
         let planned = plan(
             sessions: sessions,
             dayBefore: defaults.bool(forKey: dayBeforeKey),
             sameDay: defaults.bool(forKey: sameDayKey),
             now: .now,
-            calendar: .current
+            calendar: .current,
+            eveningHour: evening.hour,
+            eveningMinute: evening.minute
         )
         apply(planned)
     }
 
-    static func plan(sessions: [(id: UUID, date: Date)], dayBefore: Bool, sameDay: Bool,
-                     now: Date, calendar: Calendar) -> [Planned] {
+    static func plan(sessions: [(id: UUID, date: Date, providerID: UUID?)], dayBefore: Bool, sameDay: Bool,
+                     now: Date, calendar: Calendar,
+                     eveningHour: Int = defaultEveningHour, eveningMinute: Int = 0) -> [Planned] {
         var planned: [Planned] = []
         for session in sessions where session.date > now {
             if dayBefore,
                let previous = calendar.date(byAdding: .day, value: -1, to: calendar.startOfDay(for: session.date)),
-               let evening = calendar.date(bySettingHour: eveningHour, minute: 0, second: 0, of: previous),
+               let evening = calendar.date(bySettingHour: eveningHour, minute: eveningMinute, second: 0, of: previous),
                evening > now {
-                planned.append(Planned(id: "\(prefix)\(session.id.uuidString)-day-before", date: evening, body: dayBeforeBody))
+                planned.append(Planned(id: "\(prefix)\(session.id.uuidString)-day-before", date: evening, body: dayBeforeBody,
+                                       providerID: session.providerID?.uuidString ?? ""))
             }
             if sameDay,
                let ahead = calendar.date(byAdding: .hour, value: -hoursAhead, to: session.date),
                ahead > now {
-                planned.append(Planned(id: "\(prefix)\(session.id.uuidString)-same-day", date: ahead, body: sameDayBody))
+                planned.append(Planned(id: "\(prefix)\(session.id.uuidString)-same-day", date: ahead, body: sameDayBody,
+                                       providerID: session.providerID?.uuidString ?? ""))
             }
         }
         return Array(planned.sorted { $0.date < $1.date }.prefix(limit))
@@ -378,6 +408,7 @@ enum AppointmentReminders {
                 content.body = item.body
                 content.categoryIdentifier = NotificationCategory.appointmentReminder.rawValue
                 content.sound = .default
+                if !item.providerID.isEmpty { content.userInfo = ["providerID": item.providerID] }
                 let parts = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: item.date)
                 let trigger = UNCalendarNotificationTrigger(dateMatching: parts, repeats: false)
                 center.add(UNNotificationRequest(identifier: item.id, content: content, trigger: trigger))
@@ -574,6 +605,45 @@ enum TriggerReminderSelfTest {
         }
         guard escalations.allSatisfy({ $0.components.hour != nil && $0.components.day != nil }) else {
             fatalError("Trigger reminder self-test: a dated reminder has no date.")
+        }
+    }
+}
+#endif
+
+#if DEBUG
+/// Checks the session reminder plan against known answers the first time reminders are
+/// refreshed in a debug build, and stops the app with a message if it is wrong.
+enum AppointmentReminderSelfTest {
+    private static var hasRun = false
+
+    static func run() {
+        if hasRun { return }
+        hasRun = true
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        let now = calendar.date(from: DateComponents(year: 2026, month: 11, day: 11, hour: 12))!
+        let session = calendar.date(from: DateComponents(year: 2026, month: 11, day: 13, hour: 10))!
+        let provider = UUID()
+        let plan = AppointmentReminders.plan(
+            sessions: [(id: UUID(), date: session, providerID: provider)],
+            dayBefore: true, sameDay: true, now: now, calendar: calendar,
+            eveningHour: 19, eveningMinute: 30)
+        let evening = calendar.date(from: DateComponents(year: 2026, month: 11, day: 12, hour: 19, minute: 30))!
+        let ahead = calendar.date(from: DateComponents(year: 2026, month: 11, day: 13, hour: 8))!
+        guard plan.count == 2, plan[0].date == evening, plan[1].date == ahead else {
+            fatalError("Session reminder self-test: the evening before or the hours ahead is at the wrong time.")
+        }
+        guard plan.allSatisfy({ $0.providerID == provider.uuidString }) else {
+            fatalError("Session reminder self-test: the provider did not travel with the reminder.")
+        }
+        guard !plan.contains(where: { $0.body.contains("session") }) else {
+            fatalError("Session reminder self-test: the lock screen says it is a session.")
+        }
+        let early = AppointmentReminders.clampedEvening(hour: 2, minute: 30)
+        let late = AppointmentReminders.clampedEvening(hour: 23, minute: 10)
+        let odd = AppointmentReminders.clampedEvening(hour: 20, minute: 75)
+        guard early.hour == 16, early.minute == 0, late.hour == 22, late.minute == 59, odd.hour == 20, odd.minute == 59 else {
+            fatalError("Session reminder self-test: the evening time is not kept between 4 pm and 10:59 pm.")
         }
     }
 }

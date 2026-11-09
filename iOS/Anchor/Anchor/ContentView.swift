@@ -631,6 +631,16 @@ struct ContentView: View {
         .sheet(item: $notificationDelegate.windowReminder) { prompt in
             WindowReminderView(prompt: prompt)
         }
+        .sheet(item: $notificationDelegate.sessionPrep) { request in
+            NavigationStack {
+                ProviderPageHost(page: .prep, startingWith: request.providerID)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Close") { notificationDelegate.sessionPrep = nil }
+                        }
+                    }
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .anchorOpenContactsInPlan)) { _ in
             // Switches to the Plan tab. Doesn't drill into Contacts
             // specifically — PlanView's NavigationStack doesn't have a

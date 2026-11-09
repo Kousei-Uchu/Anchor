@@ -58,6 +58,8 @@ struct SettingsView: View {
     @AppStorage(RecoverySettings.showLongest) private var showLongest = false
     @AppStorage(AppointmentReminders.dayBeforeKey) private var remindDayBefore = false
     @AppStorage(AppointmentReminders.sameDayKey) private var remindSameDay = false
+    @AppStorage(AppointmentReminders.eveningHourKey) private var eveningHour = AppointmentReminders.defaultEveningHour
+    @AppStorage(AppointmentReminders.eveningMinuteKey) private var eveningMinute = 0
     @AppStorage(SleepSettings.nowCardKey) private var sleepNowCard = false
     @AppStorage(SleepSettings.journalKey) private var sleepInJournal = false
     @AppStorage(SleepSettings.checkInKey) private var sleepInCheckIn = false
@@ -118,9 +120,12 @@ struct SettingsView: View {
 
                 Anchor.SettingsSection(
                     title: "Session reminders",
-                    footer: "Off until you switch one on. The evening before comes at 6 pm. The lock screen only says something you planned is coming up, never who it is with."
+                    footer: "Off until you switch one on. The evening before comes at the time you choose, from 4 pm to 10:59 pm. The lock screen only says something you planned is coming up, never who it is with. Tap a reminder and Anchor opens Session prep for that person."
                 ) {
                     Anchor.SettingsToggle(title: "The evening before", isOn: $remindDayBefore)
+                    if remindDayBefore {
+                        Anchor.SettingsTimeRow(title: "Evening time", time: eveningBinding)
+                    }
                     Anchor.SettingsToggle(title: "A couple of hours before", isOn: $remindSameDay)
                 }
 
@@ -241,6 +246,8 @@ struct SettingsView: View {
                 if isOn { NotificationScheduler.askForPermissionIfNeeded() }
                 AppointmentReminders.refresh(using: modelContext)
             }
+            .onChange(of: eveningHour) { _, _ in AppointmentReminders.refresh(using: modelContext) }
+            .onChange(of: eveningMinute) { _, _ in AppointmentReminders.refresh(using: modelContext) }
             .onChange(of: sleepReminderHour) { _, _ in SleepReminder.refresh() }
             .onChange(of: sleepReminderMinute) { _, _ in SleepReminder.refresh() }
             .onChange(of: focusAlertsEnabled) { _, isOn in PomodoroSettings.alertsChanged(isOn) }
@@ -269,6 +276,22 @@ struct SettingsView: View {
     private func recoveryRemindersChanged(_ isOn: Bool) {
         if isOn { NotificationScheduler.askForPermissionIfNeeded() }
         RecoveryNotifications.refresh(using: modelContext)
+    }
+
+    /// The evening time, kept between 4 pm and 10:59 pm so it is always the evening of the day before.
+    private var eveningBinding: Binding<Date> {
+        Binding(
+            get: {
+                let time = AppointmentReminders.clampedEvening(hour: eveningHour, minute: eveningMinute)
+                return Calendar.current.date(bySettingHour: time.hour, minute: time.minute, second: 0, of: .now) ?? .now
+            },
+            set: { newValue in
+                let parts = Calendar.current.dateComponents([.hour, .minute], from: newValue)
+                let time = AppointmentReminders.clampedEvening(hour: parts.hour ?? eveningHour, minute: parts.minute ?? eveningMinute)
+                eveningHour = time.hour
+                eveningMinute = time.minute
+            }
+        )
     }
 
     private func timeBinding(_ hour: Binding<Int>, _ minute: Binding<Int>) -> Binding<Date> {

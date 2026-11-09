@@ -168,7 +168,7 @@ extension Guide {
             whatItIs: "Your sessions with each person you see, on a calendar you can change.",
             howToUse: "The sessions coming up are at the top, each with how far away it is. Tap an empty day on the calendar to schedule a session, or use the plus for any date. Tap a day with a session, or a session in the list, to move or cancel it. Switch Repeat on when you schedule to make a run of sessions. Earlier sessions are folded under the list. If you see more than one person, the person button at the top adds them and holds each one's details.",
             tips: [
-                "Reminders for sessions are off until you switch them on, from the line under the list or in Settings. One comes the evening before, at 6 pm, and one a couple of hours ahead. The lock screen only says something you planned is coming up.",
+                "Reminders for sessions are off until you switch them on, from the line under the list or in Settings. One comes the evening before, at 6 pm unless you pick another time in Settings, and one a couple of hours ahead. The lock screen only says something you planned is coming up. Tap a reminder and Anchor opens Session prep for that person.",
                 "The usual gap between sessions is in each person's details. It is only a starting point for a repeating run.",
                 "Remove all sessions is in the three dots menu.",
                 "Session prep and Things to raise in Bridge follow the person you pick.",

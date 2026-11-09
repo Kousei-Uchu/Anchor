@@ -18,6 +18,12 @@ struct ContactMessagePrompt: Identifiable {
     let phoneNumber: String
 }
 
+/// Set when a session reminder is opened, so Session prep opens for that provider.
+struct SessionPrepRequest: Identifiable {
+    let id = UUID()
+    let providerID: UUID?
+}
+
 /// What a trigger window reminder shows once it is opened. The lock screen never carries these;
 /// they travel inside the reminder and are read here.
 struct WindowReminderPrompt: Identifiable {
@@ -44,6 +50,10 @@ final class NotificationDelegate: NSObject, ObservableObject, UNUserNotification
     /// safety plan show inside the app instead of on the lock screen.
     @Published var windowReminder: WindowReminderPrompt?
 
+    /// Set when a session reminder is opened. ContentView shows Session prep for the provider
+    /// the session is with, which is carried inside the reminder and never on the lock screen.
+    @Published var sessionPrep: SessionPrepRequest?
+
     /// Set when a trigger-window/escalation notification arrives while the
     /// app is in the foreground, so it still shows as a banner.
     func userNotificationCenter(_ center: UNUserNotificationCenter,
@@ -66,6 +76,11 @@ final class NotificationDelegate: NSObject, ObservableObject, UNUserNotification
                response.notification.request.content.categoryIdentifier == NotificationCategory.triggerWindow.rawValue,
                let label = userInfo["windowLabel"] as? String, !label.isEmpty {
                 windowReminder = WindowReminderPrompt(label: label, line: userInfo["line"] as? String)
+            }
+            if response.actionIdentifier != "IM_OKAY",
+               response.notification.request.content.categoryIdentifier == NotificationCategory.appointmentReminder.rawValue {
+                let provider = (userInfo["providerID"] as? String).flatMap { UUID(uuidString: $0) }
+                sessionPrep = SessionPrepRequest(providerID: provider)
             }
             if response.notification.request.content.categoryIdentifier == NotificationCategory.dailyCheckIn.rawValue {
                 shouldOpenCheckIn = true
