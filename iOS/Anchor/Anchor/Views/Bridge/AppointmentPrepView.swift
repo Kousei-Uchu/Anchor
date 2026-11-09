@@ -15,6 +15,7 @@ struct AppointmentPrepView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var entry: JournalEntry?
     @State private var showingEditor = false
+    @State private var showingOnePage = false
 
     private var nextOccurrence: AppointmentOccurrence? {
         series.occurrences.filter { $0.scheduledDate > .now }.sorted { $0.scheduledDate < $1.scheduledDate }.first
@@ -109,6 +110,15 @@ struct AppointmentPrepView: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityHint("Opens the editor")
+
+                    // A one-page layout of the same things, to bring or to hand over. The
+                    // person chooses what goes on it; nothing is added for them.
+                    Button { showingOnePage = true } label: {
+                        Label("Make a one-page sheet", systemImage: "doc.plaintext")
+                    }
+                    .buttonStyle(Anchor.SecondaryButtonStyle(tint: Anchor.Theme.accent))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityHint("Choose what goes on it, then make a PDF")
                 } else {
                     Anchor.EmptyState(
                         icon: "calendar",
@@ -136,6 +146,20 @@ struct AppointmentPrepView: View {
                 } else {
                     ProgressView()
                 }
+            }
+        }
+        .sheet(isPresented: $showingOnePage) {
+            if let next = nextOccurrence {
+                SessionOnePageSheet(
+                    seriesName: series.displayName,
+                    providerID: series.id,
+                    sessionDate: next.scheduledDate,
+                    prepNotes: entry?.text ?? "",
+                    toBring: next.prepChecklist,
+                    since: summaryStart,
+                    sinceIsLastSession: lastSessionDate != nil,
+                    excluding: ownNoteIDs
+                )
             }
         }
         .onAppear {
@@ -246,7 +270,18 @@ struct JournalSessionSummaryCard: View {
 
     /// Bookmarked entries first, then the rest, newest first in each group.
     private var entries: [JournalEntry] {
-        let inRange = allEntries.filter {
+        Self.eligibleEntries(in: allEntries, since: since, excluding: excluding)
+    }
+
+    private var checkInCount: Int { Self.checkInTally(in: allCheckIns, since: since) }
+
+    private var countsLine: String { Self.countsText(entries: entries, checkIns: checkInCount) }
+
+    /// Entries with words in them, written since `since`, other than this series' own notes. Bookmarked
+    /// first, then the rest, newest first in each group. The one-page sheet reads the same list.
+    static func eligibleEntries(in all: [JournalEntry], since: Date, excluding: Set<UUID>) -> [JournalEntry] {
+        let sorted = all.sorted { $0.createdAt > $1.createdAt }
+        let inRange = sorted.filter {
             $0.createdAt >= since
                 && !excluding.contains($0.id)
                 && !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -254,24 +289,23 @@ struct JournalSessionSummaryCard: View {
         return inRange.filter { $0.isBookmarked } + inRange.filter { !$0.isBookmarked }
     }
 
-    private var bookmarkedCount: Int { entries.filter { $0.isBookmarked }.count }
-
-    private var checkInCount: Int {
-        allCheckIns.filter { $0.timestamp >= since }.count
+    static func checkInTally(in all: [CheckIn], since: Date) -> Int {
+        all.filter { $0.timestamp >= since }.count
     }
 
-    private func plural(_ n: Int, _ one: String, _ many: String) -> String {
-        n == 1 ? "1 \(one)" : "\(n) \(many)"
-    }
-
-    private var countsLine: String {
+    /// "4 journal entries (1 bookmarked) and 3 check-ins". Only counts.
+    static func countsText(entries: [JournalEntry], checkIns: Int) -> String {
+        func plural(_ n: Int, _ one: String, _ many: String) -> String {
+            n == 1 ? "1 \(one)" : "\(n) \(many)"
+        }
         var parts: [String] = []
         if !entries.isEmpty {
             var entryPart = plural(entries.count, "journal entry", "journal entries")
-            if bookmarkedCount > 0 { entryPart += " (\(bookmarkedCount) bookmarked)" }
+            let bookmarked = entries.filter { $0.isBookmarked }.count
+            if bookmarked > 0 { entryPart += " (\(bookmarked) bookmarked)" }
             parts.append(entryPart)
         }
-        if checkInCount > 0 { parts.append(plural(checkInCount, "check-in", "check-ins")) }
+        if checkIns > 0 { parts.append(plural(checkIns, "check-in", "check-ins")) }
         return parts.joined(separator: " and ")
     }
 
@@ -397,60 +431,70 @@ struct SleepSessionSummaryCard: View {
     @State private var added = false
 
     /// Nights with something written down, from the day of the last session on.
-    private var nights: [SleepEntry] {
-        let start = Calendar.current.startOfDay(for: since)
-        return allNights.filter { !$0.isBlank && $0.nightDate >= start && $0.nightDate <= .now }
-    }
+    private var nights: [SleepEntry] { Self.nightsWritten(in: allNights, since: since) }
 
     private func dayText(_ date: Date) -> String {
         date.formatted(date: .abbreviated, time: .omitted)
     }
 
-    private var countLine: String {
-        let n = nights.count
-        return (n == 1 ? "1 night" : "\(n) nights") + " written down since \(dayText(since))."
+    private var lines: [String] { Self.describingLines(nights: nights, since: since) }
+
+    /// Nights with something written down, from the day of the last session on. The one-page
+    /// sheet reads the same nights.
+    static func nightsWritten(in all: [SleepEntry], since: Date) -> [SleepEntry] {
+        let start = Calendar.current.startOfDay(for: since)
+        return all.filter { !$0.isBlank && $0.nightDate >= start && $0.nightDate <= .now }
     }
 
-    private var asleepLine: String? {
+    /// The lines the card shows: how many nights, the shortest and longest time asleep, and the
+    /// usual bedtime window. It only describes. There is no average, no target and no word for
+    /// whether it was enough.
+    static func describingLines(nights: [SleepEntry], since: Date) -> [String] {
+        let day = since.formatted(date: .abbreviated, time: .omitted)
+        let count = nights.count
+        let countLine = (count == 1 ? "1 night" : "\(count) nights") + " written down since \(day)."
+
+        var asleepLine: String?
         let minutes = nights.compactMap { $0.shownMinutes }
-        guard let low = minutes.min(), let high = minutes.max() else { return nil }
-        if minutes.count == 1 { return "Asleep about \(SleepEntry.describe(minutes: low)) on the night with a time." }
-        if low == high { return "Asleep about \(SleepEntry.describe(minutes: low)) each of those nights." }
-        return "Time asleep from \(SleepEntry.describe(minutes: low)) to \(SleepEntry.describe(minutes: high))."
-    }
+        if let low = minutes.min(), let high = minutes.max() {
+            if minutes.count == 1 {
+                asleepLine = "Asleep about \(SleepEntry.describe(minutes: low)) on the night with a time."
+            } else if low == high {
+                asleepLine = "Asleep about \(SleepEntry.describe(minutes: low)) each of those nights."
+            } else {
+                asleepLine = "Time asleep from \(SleepEntry.describe(minutes: low)) to \(SleepEntry.describe(minutes: high))."
+            }
+        }
 
-    /// Bed times as minutes after 6 pm, so a bedtime after midnight sorts after
-    /// one before it.
-    private var bedOffsets: [Int] {
+        // Bed times as minutes after 6 pm, so a bedtime after midnight sorts after one before it.
         let cal = Calendar.current
-        return nights.compactMap { $0.bedTime }.map { bed in
+        let offsets: [Int] = nights.compactMap { $0.bedTime }.map { bed in
             let parts = cal.dateComponents([.hour, .minute], from: bed)
             let clock = (parts.hour ?? 0) * 60 + (parts.minute ?? 0)
             return (clock - 18 * 60 + 24 * 60) % (24 * 60)
         }.sorted()
-    }
 
-    private func clockText(offset: Int) -> String {
-        let clock = (offset + 18 * 60) % (24 * 60)
-        let cal = Calendar.current
-        let date = cal.date(bySettingHour: clock / 60, minute: clock % 60, second: 0, of: .now) ?? .now
-        return date.formatted(date: .omitted, time: .shortened)
-    }
+        func clockText(offset: Int) -> String {
+            let clock = (offset + 18 * 60) % (24 * 60)
+            let date = cal.date(bySettingHour: clock / 60, minute: clock % 60, second: 0, of: .now) ?? .now
+            return date.formatted(date: .omitted, time: .shortened)
+        }
 
-    /// The middle of the bed times, rounded to a quarter of an hour, from three
-    /// nights up. The same rule as the usual range on the Sleep screen.
-    private var bedtimeLine: String? {
-        let offsets = bedOffsets
-        guard offsets.count >= 3 else { return nil }
-        func rounded(_ value: Int) -> Int { ((value + 7) / 15) * 15 }
-        let low = rounded(offsets[Int((Double(offsets.count - 1) * 0.2).rounded())])
-        let high = rounded(offsets[Int((Double(offsets.count - 1) * 0.8).rounded())])
-        if low == high { return "Usually in bed around \(clockText(offset: low))." }
-        return "Usually in bed between \(clockText(offset: low)) and \(clockText(offset: high))."
-    }
+        // The middle of the bed times, rounded to a quarter of an hour, from three nights up.
+        // The same rule as the usual range on the Sleep screen.
+        var bedtimeLine: String?
+        if offsets.count >= 3 {
+            func rounded(_ value: Int) -> Int { ((value + 7) / 15) * 15 }
+            let low = rounded(offsets[Int((Double(offsets.count - 1) * 0.2).rounded())])
+            let high = rounded(offsets[Int((Double(offsets.count - 1) * 0.8).rounded())])
+            if low == high {
+                bedtimeLine = "Usually in bed around \(clockText(offset: low))."
+            } else {
+                bedtimeLine = "Usually in bed between \(clockText(offset: low)) and \(clockText(offset: high))."
+            }
+        }
 
-    private var lines: [String] {
-        [countLine, asleepLine, bedtimeLine].compactMap { $0 }
+        return [countLine, asleepLine, bedtimeLine].compactMap { $0 }
     }
 
     var body: some View {
@@ -504,7 +548,12 @@ struct RaiseSessionCard: View {
     @State private var added = false
 
     private var items: [BridgeDraftItem] {
-        allItems.filter {
+        Self.waitingItems(in: allItems, providerID: providerID, providers: providers)
+    }
+
+    /// What is still waiting for this provider or for anyone. The one-page sheet reads the same list.
+    static func waitingItems(in all: [BridgeDraftItem], providerID: UUID, providers: [AppointmentSeries]) -> [BridgeDraftItem] {
+        all.sorted { $0.createdAt < $1.createdAt }.filter {
             !$0.isResolved
                 && !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 && $0.isFor(providerID, in: providers)

@@ -47,6 +47,7 @@
 		82713155BC20454493F504AF /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1D2143705EFB407FBDA6EE1D /* Preview Assets.xcassets */; };
 		88226887249B4A38BB57B954 /* MascotEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A0404FF100C4BE6AD94AF56 /* MascotEngine.swift */; };
 		8C400612E36D441C8EFAB66D /* BridgeExportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6EB259D670046848BB54BA4 /* BridgeExportView.swift */; };
+		74834F3FA0C4D96671A86D15 /* OnePageSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC91DABF2267094CC3DB0AD7 /* OnePageSummary.swift */; };
 		9F00D8283DC2466FA535DDF7 /* NextHourChecklistView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBB26C8470984C569FBB94F9 /* NextHourChecklistView.swift */; };
 		A1C0DE01AA0011BB22CC3302 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A1C0DE01AA0011BB22CC3301 /* PrivacyInfo.xcprivacy */; };
 		A1C0DE01AA0011BB22CC3304 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A1C0DE01AA0011BB22CC3303 /* PrivacyInfo.xcprivacy */; };
@@ -203,6 +204,7 @@
 		EBB26C8470984C569FBB94F9 /* NextHourChecklistView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextHourChecklistView.swift; sourceTree = "<group>"; };
 		EFD1EFDCD9DB49BC8F857812 /* AppointmentPrepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppointmentPrepView.swift; sourceTree = "<group>"; };
 		F6EB259D670046848BB54BA4 /* BridgeExportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeExportView.swift; sourceTree = "<group>"; };
+		FC91DABF2267094CC3DB0AD7 /* OnePageSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnePageSummary.swift; sourceTree = "<group>"; };
 		FAFB3180183348DF8F5E6251 /* NowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowView.swift; sourceTree = "<group>"; };
 		FDFFB2420D684494B43F882B /* PlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanView.swift; sourceTree = "<group>"; };
 		3A37DFE702393E0FA6C8BBC2 /* RecoveryModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryModels.swift; sourceTree = "<group>"; };
@@ -402,6 +404,7 @@
 			children = (
 				4B5E71C24DC54F12A11355E4 /* BridgeDraftListView.swift */,
 				F6EB259D670046848BB54BA4 /* BridgeExportView.swift */,
+				FC91DABF2267094CC3DB0AD7 /* OnePageSummary.swift */,
 				1F63F54283A74831A7A90583 /* PostSessionNotesView.swift */,
 				58818985BDB64C248C254C16 /* NSWMentalHealthReferenceView.swift */,
 				9FD53AB2A11E46FAABD602C7 /* ReframingPromptView.swift */,
@@ -682,6 +685,7 @@
 				C7C09E0130173A6300F9144F /* DataControlView.swift in Sources */,
 				C750DE2E2E8C45A9BD63856C /* BridgeDraftListView.swift in Sources */,
 				8C400612E36D441C8EFAB66D /* BridgeExportView.swift in Sources */,
+				74834F3FA0C4D96671A86D15 /* OnePageSummary.swift in Sources */,
 				C7C09DFD30173A3900F9144F /* AffirmationsView.swift in Sources */,
 				1A9242F9317D4AE99CA29492 /* PostSessionNotesView.swift in Sources */,
 				2358329EC59941F18340B28A /* NSWMentalHealthReferenceView.swift in Sources */,

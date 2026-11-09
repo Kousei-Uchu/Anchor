@@ -264,7 +264,9 @@ enum ReviewStops {
         ("SH2a", "Showcase passcode on the number pad", "The showcase passcode is 4 to 6 digits typed on the number pad, twice. Typing anything else is ignored, and the exit screen asks for it on the number pad.",
          "Settings, Your data and help, Showcase mode, Set a passcode. Try letters (they do not appear), 3 digits (it says to use 4 to 6), two different entries, then a good one. Showcase mode cannot be turned on in a review run, so check the exit screen on your own copy.", 1, .settings),
         ("30o2", "Sealed notes stay sealed in the viewer", "Look at what's stored lists a note that is sealed until a date by that date, not by what it says, and a search does not find its words. They show once the date has passed.",
-         "Your data, Look at what's stored, To future me. The note sealed for two weeks reads Sealed until and the date; search for got through and it is not found. The letter and the note whose day has passed still show their words.", 1, .yourData)
+         "Your data, Look at what's stored, To future me. The note sealed for two weeks reads Sealed until and the date; search for got through and it is not found. The letter and the note whose day has passed still show their words.", 1, .yourData),
+        ("30r", "One-page sheet", "Session prep and Export for someone can each make a one-page PDF of what they hold. The print gets smaller to fit and nothing is cut. If it still would not fit, it says so and makes nothing.",
+         "Open Session prep for Dr Lee and tap Make a one-page sheet at the bottom: prep notes, waiting to be raised and to bring are on, Recovery, journal and check-in counts and sleep are off. Switch them on, open Preview, make the PDF and look at it in the share sheet. Then the Bridge share button, Export for someone, switch on Journal entries and Check-ins and look at Make a one-page PDF. If it says it is too long the button is off and nothing is cut; narrow the dates or leave things out until it switches on.", 3, .prep)
     ])
 }
 

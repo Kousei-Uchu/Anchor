@@ -40,4 +40,4 @@ Tabs: Now, Plan, Journal, Bridge, Thread. The area for counters is Recovery. Mes
 
 ## Not done
 
-See the ⬜ rows in the Progress table of `ANCHOR_PATCH_PLAN.md`: the locking work (35d; 35b1, 35b2 and 35b3 are pushed), the last two relationship reminders (30p), the one-page summary (30r), the website pages and video (47 to 53), the optional extras (Phase I: the AI switch and tools, dictation with voice notes, iCloud sync), and the web demo and Android work at the end.
+See the ⬜ rows in the Progress table of `ANCHOR_PATCH_PLAN.md`: the locking work (35d; 35b1, 35b2 and 35b3 are pushed), the last two relationship reminders (30p), the website pages and video (47 to 53), the optional extras (Phase I: the AI switch and tools, dictation with voice notes, iCloud sync), and the web demo and Android work at the end.

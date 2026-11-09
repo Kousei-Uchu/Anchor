@@ -291,11 +291,12 @@ extension Guide {
         GuideEntry(
             id: "bridge.session-prep", tab: .bridge, title: "Session prep", icon: "calendar.badge.clock",
             whatItIs: "One place to get ready for your next session with a person.",
-            howToUse: "It shows the next session and a place for prep notes. Under that are cards that look back since your last session: your journal entries and check-ins, your sleep and your Recovery counters if you keep them, and what is still waiting in Things to raise. To bring is a short checklist of your own for that one session. You need an upcoming session, which you add in Plan under Appointments.",
+            howToUse: "It shows the next session and a place for prep notes. Under that are cards that look back since your last session: your journal entries and check-ins, your sleep and your Recovery counters if you keep them, and what is still waiting in Things to raise. To bring is a short checklist of your own for that one session. Make a one-page sheet, at the bottom, puts what you choose on a single page as a PDF. You need an upcoming session, which you add in Plan under Appointments.",
             tips: [
                 "Cards are only shown here. Nothing goes into your notes unless you add it.",
                 "Check-ins are only counted, never read out.",
-                "Nothing is suggested, and the next session starts with an empty To bring list."
+                "Nothing is suggested, and the next session starts with an empty To bring list.",
+                "On the one-page sheet, what you wrote is on to begin with and the looking back is off until you switch it on. If it will not fit, it says so and cuts nothing."
             ]
         ),
         GuideEntry(
@@ -329,10 +330,11 @@ extension Guide {
         GuideEntry(
             id: "bridge.export", tab: .bridge, title: "Export for someone", icon: "square.and.arrow.up",
             whatItIs: "A file for one person, with only what you choose to put in it.",
-            howToUse: "Write who it is for, and a note for the top if you like. Then choose what goes in. Only Things to raise is on to begin with, every time. Your journal, check-ins, sleep and a Recovery summary stay out unless you switch them on, and you can limit it to a date range or tick single items. A count and a preview show what it holds before anything is made. You can make a PDF, or a web page that opens in any browser with search, a timeline, charts of check-ins and buttons to print or to download a CSV or a Word file.",
+            howToUse: "Write who it is for, and a note for the top if you like. Then choose what goes in. Only Things to raise is on to begin with, every time. Your journal, check-ins, sleep and a Recovery summary stay out unless you switch them on, and you can limit it to a date range or tick single items. A count and a preview show what it holds before anything is made. You can make a PDF, or a web page that opens in any browser with search, a timeline, charts of check-ins and buttons to print or to download a CSV or a Word file. A one-page PDF puts the same words on a single page.",
             tips: [
                 "The web page can have a password. Anchor does not keep it and cannot get it back, so tell the person another way.",
                 "Some mail apps block web pages, so a PDF is the safer thing to send.",
+                "The one-page PDF makes the print smaller to fit. If it is still too long it says so and makes nothing, so leave some things out.",
                 "Choosing a provider fills in their name, and exporting for that person leaves out what was meant for someone else."
             ],
             inTour: false

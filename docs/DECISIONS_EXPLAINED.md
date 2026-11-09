@@ -227,6 +227,6 @@ Recorded in section 0.4 of the plan. What each one changes, in plain words.
 **D30.**
 
 - **B4, session actions into Tasks.** Built the safe way (patch 30q): a button on a line you marked as a thing to do, nothing added until you tap, no date unless you give one.
-- **B6, one-page summary.** Built as a re-formatting of Session prep and Export for someone (patch 30r), not as a new screen. It puts what those already hold on one page, in your order, in your own words and plain facts. How I read this is D32, so you can correct it.
+- **B6, one-page summary.** Built as a re-formatting of Session prep and Export for someone (patch 30r), not as a new screen. It puts what those already hold on one page, in your own words and plain facts. How I read this is D32, and the order, the print size and the page size are D47, so you can correct them.
 - **B5, medication notes.** Held. It is out of the decisions and out of the to-do list so it does not keep asking for an answer. The note on it is kept in Appendix D of the plan, with the reasons in the D30 section above, and it only comes back if you ask.
 

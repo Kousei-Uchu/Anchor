@@ -259,11 +259,12 @@ enum DemoMode {
         let leeNoteRecent = JournalEntry(createdAt: ago(14), text: "Talked about the sleep. Try the same wake-up time for two weeks and see.\n[ ] Pick a wake-up time\n[ ] Ask Sam to check in on Sunday")
         let leeNoteOlder = JournalEntry(createdAt: ago(28), text: "Went over the month. Dr Lee thought the walks were worth keeping.")
         let patelNote = JournalEntry(createdAt: ago(60), text: "Short visit. Booked the next one for the longer appointment.")
-        for note in [leePrepNote, leeNoteRecent, leeNoteOlder, patelNote] { context.insert(note) }
+        let leePrepNext = JournalEntry(createdAt: ago(1), text: "Ask whether the new wake-up time is helping, and whether the evening call is still worth keeping.")
+        for note in [leePrepNote, leeNoteRecent, leeNoteOlder, patelNote, leePrepNext] { context.insert(note) }
         let lee = AppointmentSeries(clinicianLabel: "Dr Lee", typicalDayOfWeek: 3,
             typicalTime: DateComponents(hour: 10, minute: 30), typicalCadenceDays: 14,
             occurrences: [
-                AppointmentOccurrence(scheduledDate: tuesday, prepChecklist: [
+                AppointmentOccurrence(scheduledDate: tuesday, prepNoteEntryID: leePrepNext.id, prepChecklist: [
                     QuickListItem(text: "Medicare card"),
                     QuickListItem(text: "My notes from this week", isDone: true)
                 ]),

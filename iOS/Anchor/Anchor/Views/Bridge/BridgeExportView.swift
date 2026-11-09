@@ -303,6 +303,9 @@ struct BridgeExportView: View {
     var body: some View {
         let builder = self.builder
         let document = builder.document()
+        // The same document laid out on one page. Measured only when there is something in it.
+        let onePage = OnePageSummary.from(document: document)
+        let onePageFit: OnePageFit = document.isEmpty ? .fits : OnePagePDF.fit(onePage)
         NavigationStack {
             Form {
                 Section {
@@ -386,6 +389,21 @@ struct BridgeExportView: View {
                     }
                     .disabled(document.isEmpty || makingPage)
                     Button {
+                        if let url = OnePagePDF.makePDF(onePage) {
+                            shareURL = IdentifiableURL(url: url)
+                        } else {
+                            failed = true
+                        }
+                    } label: {
+                        Label("Make a one-page PDF to share", systemImage: "doc.plaintext")
+                    }
+                    .disabled(document.isEmpty || makingPage || onePageFit != .fits)
+                    if case .tooLong(let pages) = onePageFit {
+                        Text(OnePagePDF.tooLongText(pages: pages))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Button {
                         makingPage = true
                         let secret: String? = password.isEmpty ? nil : password
                         Task {
@@ -402,7 +420,7 @@ struct BridgeExportView: View {
                 } header: {
                     Text("What it holds")
                 } footer: {
-                    Text("The web page opens in any browser, with search, a timeline and buttons to print or save a PDF, or to download a CSV or a Word file. It works on its own, and nothing in it is sent anywhere. Some mail apps block web page attachments, so a PDF is the safer thing to send.")
+                    Text("The web page opens in any browser, with search, a timeline and buttons to print or save a PDF, or to download a CSV or a Word file. It works on its own, and nothing in it is sent anywhere. Some mail apps block web page attachments, so a PDF is the safer thing to send. The one-page PDF has the same words and numbers on a single page, with the print made smaller to fit and no charts. Nothing is cut to make it fit.")
                 }
             }
             .navigationTitle("Export for someone")
