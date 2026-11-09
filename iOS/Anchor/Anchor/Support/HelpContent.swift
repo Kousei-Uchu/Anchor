@@ -459,7 +459,7 @@ extension Guide {
                 "A writing prompt is one of a fixed set of lines. Use this adds it to your page, Another one shows a different line, and the cross puts it away. Nothing is made up on the spot.",
                 "Formatting opens a row of buttons for the look of your words. Tap it again to put the row away.",
                 "Copying a line into Things to raise leaves the entry as it was.",
-                "If you switch on Dictate in Settings, Journal, a microphone button joins the row of tools. It turns what you say into text on this phone, after the words already in the paragraph, and the sound is not kept. If you type while it listens, it stops and leaves your typing alone."
+                "If you switch on Dictate in Settings, Journal, a microphone button joins the row of tools. It turns what you say into text on this phone, after the words already in the paragraph, and the sound is not kept. If you type while it listens, it stops and leaves your typing alone. If you also switch on Keep a voice note while dictating, the sound is saved as a voice note on the page, and you choose afterwards to keep the words, the voice note or both."
             ]
         ),
         GuideEntry(

@@ -679,7 +679,10 @@ struct DataControlView: View {
     // MARK: - Clear everything
 
     private func clearAllData() {
-        for entry in journalEntries { modelContext.delete(entry) }
+        for entry in journalEntries {
+            JournalBlocks.deleteVoiceFiles(in: entry.text)
+            modelContext.delete(entry)
+        }
         for item in checkIns { modelContext.delete(item) }
         for item in contacts { modelContext.delete(item) }
         for item in groundingTools { modelContext.delete(item) }

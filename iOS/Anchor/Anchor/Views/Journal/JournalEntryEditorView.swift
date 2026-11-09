@@ -12,6 +12,8 @@
 //    - a line that is only `[Title](anchorcard://kind?t=..&d=..&x=..)` is a card
 //      block. An older build, or any Markdown reader, shows it as a link with
 //      the card's title, so nothing is lost;
+//    - a line that is only `[Voice note](anchorvoice://v1?f=..)` is a voice note kept while dictating (the
+//      file's name; see JournalVoice.swift);
 //    - a line that is only `[AI Optimised](anchorassist://v1?r=..&o=..)` is an AI Optimised block (a shorter
 //      version and the original it came from, see JournalAssist.swift);
 //    - everything else is text, kept exactly as typed.
@@ -110,6 +112,7 @@ struct JournalBlock: Identifiable, Equatable {
         case image(String)
         case card(JournalCard)
         case assist(JournalAssist)
+        case voice(JournalVoice)
     }
 
     let id: UUID
@@ -160,6 +163,9 @@ enum JournalBlocks {
             } else if let assist = JournalAssist(line: line) {
                 flush()
                 blocks.append(JournalBlock(.assist(assist)))
+            } else if let voice = JournalVoice(line: line) {
+                flush()
+                blocks.append(JournalBlock(.voice(voice)))
             } else {
                 pending.append(line)
                 hasPending = true
@@ -176,6 +182,7 @@ enum JournalBlocks {
             case .image(let name): return "![](\(name))"
             case .card(let card): return card.markdownLine
             case .assist(let assist): return assist.markdownLine
+            case .voice(let voice): return voice.markdownLine
             }
         }
         .joined(separator: "\n")
@@ -229,8 +236,8 @@ enum JournalBlocks {
                 }
             case .card(let card):
                 if !card.title.isEmpty { return card.title }
-            case .image, .assist:
-                // A rewrite is never what stands for an entry in a list.
+            case .image, .assist, .voice:
+                // A rewrite is never what stands for an entry in a list, and a sound has no words to show.
                 break
             }
         }
@@ -238,7 +245,12 @@ enum JournalBlocks {
             if case .image = block.kind { return true }
             return false
         }
-        return hasImage ? "Photo" : nil
+        if hasImage { return "Photo" }
+        let hasVoice = blocks.contains { block in
+            if case .voice = block.kind { return true }
+            return false
+        }
+        return hasVoice ? "Voice note" : nil
     }
 
     static func imageNames(in text: String) -> [String] {
@@ -393,6 +405,7 @@ struct JournalEntryEditorView: View {
     @State private var braindump: BraindumpDraft?
     @StateObject private var dictation = DictationSession()
     @State private var dictationTarget: DictationTarget?
+    @State private var voiceKeep: DictationKeep?
     @AppStorage(DictationSettings.enabledKey) private var dictationChosen = false
     @Environment(\.scenePhase) private var scenePhase
     @Query(sort: \RecoveryCounter.sortOrder) private var recoveryCounters: [RecoveryCounter]
@@ -439,6 +452,9 @@ struct JournalEntryEditorView: View {
                                 if let draft = assistDraft, draft.after == block.id {
                                     JournalAssistDraftView(draft: draft, onKeep: { keep(draft) }, onDiscard: { assistDraft = nil })
                                         .id("assistDraft")
+                                }
+                                if let keep = voiceKeep, keep.voiceBlockID == block.id {
+                                    dictationKeepCard(keep)
                                 }
                             }
                             .id(block.id)
@@ -527,6 +543,7 @@ struct JournalEntryEditorView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
                         if entry.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            JournalBlocks.deleteVoiceFiles(in: entry.text)
                             modelContext.delete(entry)
                             dismiss()
                         } else if let onFinish {
@@ -580,7 +597,9 @@ struct JournalEntryEditorView: View {
             }
             .aiAsk(ask)
             .onChange(of: dictation.phase) { _, phase in
-                if phase == .idle { dictationTarget = nil }
+                guard phase == .idle else { return }
+                attachVoiceNote(after: dictationTarget)
+                dictationTarget = nil
             }
             .onChange(of: scenePhase) { _, phase in
                 // Dictate never keeps listening while Anchor is not on screen.
@@ -631,6 +650,10 @@ struct JournalEntryEditorView: View {
             JournalAssistView(assist: assist, reserveMenuSpace: true)
                 .overlay(alignment: .topTrailing) { menuButton(for: value.id) }
                 .contextMenu { blockActions(for: value.id) }
+        case .voice(let voice):
+            JournalVoiceView(voice: voice, reserveMenuSpace: true)
+                .overlay(alignment: .topTrailing) { menuButton(for: value.id) }
+                .contextMenu { blockActions(for: value.id) }
         }
     }
 
@@ -675,6 +698,8 @@ struct JournalEntryEditorView: View {
 
     private func remove(_ id: UUID) {
         guard let index = blocks.firstIndex(where: { $0.id == id }) else { return }
+        // Removing a voice note removes its sound too, because that is what the person asked for.
+        if case .voice(let voice) = blocks[index].kind { VoiceNoteStore.delete(voice.file) }
         withAnimation {
             blocks.remove(at: index)
             blocks = tidy(JournalBlocks.merged(blocks))
@@ -809,13 +834,71 @@ struct JournalEntryEditorView: View {
         guard let index = blocks.firstIndex(where: { $0.id == target.blockID }),
               blocks[index].text == target.lastWritten else {
             dictation.stop()
-            dictationTarget = nil
             return
         }
         let written = target.text(for: heard)
         blocks[index].text = written
         target.lastWritten = written
         dictationTarget = target
+    }
+
+    /// Puts the voice note kept by the go that just ended on the page, right after the paragraph the words
+    /// went into. When words were heard, the choice of what to keep is offered under it; until the person
+    /// chooses, both are kept, so nothing is lost by walking away.
+    private func attachVoiceNote(after target: DictationTarget?) {
+        guard let note = dictation.takeVoiceNote() else { return }
+        let paragraph = blocks.firstIndex(where: { $0.id == target?.blockID })
+        // If the paragraph has gone, the note goes at the end of the page rather than being lost.
+        let at = (paragraph ?? (blocks.count - 1)) + 1
+        let block = JournalBlock(.voice(JournalVoice(file: note.fileName)))
+        blocks.insert(block, at: min(at, blocks.count))
+        let after = min(at, blocks.count - 1) + 1
+        if after >= blocks.count || !blocks[after].isText {
+            blocks.insert(JournalBlock(.text("")), at: after)
+        }
+        if let target, paragraph != nil, target.lastWritten != target.base {
+            voiceKeep = DictationKeep(voiceBlockID: block.id, paragraphID: target.blockID,
+                                      base: target.base, written: target.lastWritten)
+        }
+    }
+
+    private func dictationKeepCard(_ keep: DictationKeep) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("The words are in your paragraph and the voice note is above. Both are kept unless you choose.")
+                .font(.subheadline)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 8) {
+                Button("Keep both") { voiceKeep = nil }
+                    .buttonStyle(.borderedProminent)
+                Button("Text only") { keepTextOnly(keep) }
+                    .buttonStyle(.bordered)
+                Button("Voice note only") { keepVoiceNoteOnly(keep) }
+                    .buttonStyle(.bordered)
+            }
+            .controlSize(.small)
+            .tint(Anchor.Theme.accent)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Anchor.Theme.accentSoft, in: RoundedRectangle(cornerRadius: 14))
+    }
+
+    /// Keeps the words and removes the voice note and its sound.
+    private func keepTextOnly(_ keep: DictationKeep) {
+        voiceKeep = nil
+        remove(keep.voiceBlockID)
+    }
+
+    /// Keeps the voice note and takes the dictated words back out, leaving what was in the paragraph before.
+    /// If the person has typed in the paragraph since, their words are left exactly as they are.
+    private func keepVoiceNoteOnly(_ keep: DictationKeep) {
+        voiceKeep = nil
+        guard let index = blocks.firstIndex(where: { $0.id == keep.paragraphID }) else { return }
+        if blocks[index].text == keep.written {
+            blocks[index].text = keep.base
+        } else {
+            dictation.message = "You have changed the words since, so they were left as they are."
+        }
     }
 
     private func noticeBanner(_ text: String, dismiss: @escaping () -> Void) -> some View {
@@ -1262,6 +1345,7 @@ struct MarkdownPreviewView<Header: View>: View {
         case images([String])
         case card(JournalCard)
         case assist(JournalAssist)
+        case voice(JournalVoice)
     }
 
     private var items: [Item] {
@@ -1290,6 +1374,9 @@ struct MarkdownPreviewView<Header: View>: View {
             case .assist(let assist):
                 flushImages()
                 result.append(.assist(assist))
+            case .voice(let voice):
+                flushImages()
+                result.append(.voice(voice))
             }
         }
         flushImages()
@@ -1328,6 +1415,8 @@ struct MarkdownPreviewView<Header: View>: View {
                         JournalCardView(card: card)
                     case .assist(let assist):
                         JournalAssistView(assist: assist)
+                    case .voice(let voice):
+                        JournalVoiceView(voice: voice)
                     }
                 }
                 if items.isEmpty {

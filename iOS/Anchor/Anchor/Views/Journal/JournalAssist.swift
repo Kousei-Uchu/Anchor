@@ -201,6 +201,9 @@ extension JournalBlocks {
                     lines.append("[AI Optimised: a shorter version made by a tool, not the writer's own words]")
                     lines.append(assist.rewrite)
                 }
+            } else if JournalVoice.isBlockLine(line) {
+                // Sound is never handed over in the words of an entry, only the file name would show.
+                continue
             } else {
                 lines.append(line)
             }

@@ -11,9 +11,14 @@ import Speech
 /// device only (`requiresOnDeviceRecognition`), and when the phone cannot do that for the person's language
 /// Dictate says so and does not start, instead of letting the words go to Apple's servers.
 /// `scripts/check-dictation.mjs` fails if anything weakens that. The sound is passed to the recogniser
-/// in memory and is never written to a file in this patch (keeping a voice note too is VN2).
+/// in memory. It is only kept as a voice note (Patch VN2) when the person has also switched on Keep a voice
+/// note while dictating, and the file itself is written by `DictationAudioSink`, never in this file.
 enum DictationSettings {
     static let enabledKey = "dictationEnabled"
+    static let keepVoiceNoteKey = "dictationKeepsVoiceNote"
+
+    /// Whether the person asked for a voice note to be kept while dictating. Off unless they turned it on.
+    static var keepsVoiceNote: Bool { isEnabled && UserDefaults.standard.bool(forKey: keepVoiceNoteKey) }
 
     /// What the person chose. Off unless they turned it on.
     static var isChosen: Bool { UserDefaults.standard.bool(forKey: enabledKey) }
@@ -45,7 +50,16 @@ final class DictationSession: ObservableObject {
     @Published private(set) var phase: Phase = .idle
     /// A plain line to show when something did not start or stopped. Never an error code.
     @Published var message: String?
+    /// The voice note kept by the go that just ended, if the person asked for one and it worked. The editor
+    /// takes it with `takeVoiceNote()`. A go that is cancelled keeps nothing.
+    @Published private(set) var keptVoiceNote: KeptVoiceNote?
 
+    struct KeptVoiceNote: Equatable {
+        let fileName: String
+        let seconds: TimeInterval
+    }
+
+    private var sink: DictationAudioSink?
     private var engine: AVAudioEngine?
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
@@ -100,18 +114,28 @@ final class DictationSession: ObservableObject {
         request.taskHint = .dictation
 
         do {
+            let keeping = DictationSettings.keepsVoiceNote
             let audio = AVAudioSession.sharedInstance()
-            try audio.setCategory(.record, mode: .measurement, options: [.duckOthers])
+            // Measurement mode turns off the phone's own voice processing, which is right for the
+            // recogniser but makes a recording quiet, so a kept voice note uses the ordinary mode.
+            try audio.setCategory(.record, mode: keeping ? .default : .measurement, options: [.duckOthers])
             try audio.setActive(true)
             let engine = AVAudioEngine()
             self.engine = engine
             let input = engine.inputNode
-            input.installTap(onBus: 0, bufferSize: 1024, format: input.outputFormat(forBus: 0),
-                             block: Self.tap(feeding: request))
+            let format = input.outputFormat(forBus: 0)
+            if keeping {
+                let name = VoiceNoteStore.newFileName()
+                sink = DictationAudioSink(url: VoiceNoteStore.url(for: name), fileName: name, format: format)
+                if sink == nil { message = Self.noteFailedMessage }
+            }
+            input.installTap(onBus: 0, bufferSize: 1024, format: format,
+                             block: Self.tap(feeding: request, sink: sink))
             engine.prepare()
             try engine.start()
         } catch {
             stopAudio()
+            closeSound(keeping: false)
             phase = .idle
             message = Self.failedMessage
             return
@@ -156,7 +180,14 @@ final class DictationSession: ObservableObject {
     /// Ends the go at once, dropping any words still being worked out. Used when the page goes away.
     func cancel() {
         guard phase != .idle else { return }
-        finish()
+        finish(keepingSound: false)
+    }
+
+    /// The editor takes the kept voice note once, when it has dealt with it.
+    func takeVoiceNote() -> KeptVoiceNote? {
+        let note = keptVoiceNote
+        keptVoiceNote = nil
+        return note
     }
 
     private func stopAtLimit() {
@@ -171,12 +202,13 @@ final class DictationSession: ObservableObject {
         if isFinal || didFail { finish() }
     }
 
-    private func finish() {
+    private func finish(keepingSound: Bool = true) {
         finishTimer?.invalidate()
         finishTimer = nil
         limitTimer?.invalidate()
         limitTimer = nil
         stopAudio()
+        closeSound(keeping: keepingSound)
         task?.cancel()
         task = nil
         request = nil
@@ -187,6 +219,21 @@ final class DictationSession: ObservableObject {
         }
         interruptionObserver = nil
         phase = .idle
+    }
+
+    /// Closes the file for a kept voice note. A note under half a second, one that went wrong, or one the
+    /// person walked away from is removed, so no stray file is left behind.
+    private func closeSound(keeping: Bool) {
+        guard let sink else { return }
+        self.sink = nil
+        let seconds = sink.finish()
+        if keeping, let seconds, seconds >= 0.5 {
+            StoredFiles.sealIfOn(.voiceNotes, sink.fileName)
+            keptVoiceNote = KeptVoiceNote(fileName: sink.fileName, seconds: seconds)
+        } else {
+            sink.discard()
+            if keeping { message = Self.noteFailedMessage }
+        }
     }
 
     private func stopAudio() {
@@ -203,9 +250,11 @@ final class DictationSession: ObservableObject {
     // These two are built here, outside the main actor, because the sound and the recogniser call them
     // from other threads. Everything they hand over is a plain value.
 
-    private nonisolated static func tap(feeding request: SFSpeechAudioBufferRecognitionRequest) -> AVAudioNodeTapBlock {
+    private nonisolated static func tap(feeding request: SFSpeechAudioBufferRecognitionRequest,
+                                        sink: DictationAudioSink?) -> AVAudioNodeTapBlock {
         return { buffer, _ in
             request.append(buffer)
+            sink?.append(buffer)
         }
     }
 
@@ -239,6 +288,7 @@ final class DictationSession: ObservableObject {
     private static let speechDeniedMessage = "Anchor does not have speech recognition, so Dictate has not started. You can allow it in the phone's Settings, under Anchor."
     private static let restrictedMessage = "Speech recognition is switched off for this phone, so Dictate has not started."
     private static let failedMessage = "Dictate could not start. Nothing was recorded."
+    private static let noteFailedMessage = "The words are still being turned into text, but the voice note could not be kept this time."
 }
 
 /// Where the words of one go are being put: one paragraph of the page. Each new version of what was heard

@@ -4,7 +4,9 @@
 // 2. That file tells the recogniser to work on the device only and never says otherwise, so a language the
 //    phone cannot do on its own is refused instead of sent to Apple's servers.
 // 3. It checks that the phone supports on-device recognition before it asks for any permission.
-// 4. It never writes sound to a file (keeping a voice note too is a later patch, VN2).
+// 4. Dictation.swift never writes sound to a file itself. A voice note kept while dictating (VN2) is written by
+//    Support/DictationAudio.swift only, which is made only when Keep a voice note while dictating is on, and
+//    that switch is off to begin with, needs Dictate to be on, and stays off in showcase mode.
 // 5. The switch is off to begin with and stays off in showcase mode and the demo store, and nothing defaults it on.
 // 6. The Journal editor shows the Dictate button only through that switch.
 
@@ -31,6 +33,8 @@ const code = (text) => text.split("\n").filter((line) => !line.trim().startsWith
 const problems = [];
 const files = swiftFiles(swiftRoot);
 let dictation = "";
+let audio = "";
+const audioPath = "Support/DictationAudio.swift";
 
 for (const file of files) {
   const rel = relative(root, file);
@@ -38,6 +42,13 @@ for (const file of files) {
   if (rel.endsWith(dictationPath)) {
     dictation = text;
     continue;
+  }
+  if (rel.endsWith(audioPath)) {
+    audio = text;
+    continue;
+  }
+  if (/\bDictationAudioSink\b/.test(text) && !rel.endsWith("Support/Dictation.swift")) {
+    problems.push(`${rel}: uses DictationAudioSink; only ${dictationPath} may`);
   }
   if (/import\s+Speech\b|\bSFSpeech\w*|\bSpeechAnalyzer\b|\bSpeechTranscriber\b|\bDictationTranscriber\b/.test(text)) {
     problems.push(`${rel}: uses speech recognition; only ${dictationPath} may`);
@@ -53,7 +64,11 @@ if (!dictation) {
   const asks = dictation.search(/requestAuthorization|requestRecordPermission/);
   if (supports < 0) problems.push("Dictation.swift no longer checks supportsOnDeviceRecognition");
   else if (asks >= 0 && supports > asks) problems.push("Dictation.swift asks for a permission before it checks the phone can do it on its own");
-  if (/\bAVAudioFile\b|\bAVAudioRecorder\b|\.write\(to:|\bFileHandle\b|createFile\(/.test(dictation)) problems.push("Dictation.swift writes sound to a file; saving a voice note with it is a later patch (VN2)");
+  if (/\bAVAudioFile\b|\bAVAudioRecorder\b|\.write\(to:|\bFileHandle\b|createFile\(/.test(dictation)) problems.push("Dictation.swift writes sound to a file itself; that belongs in DictationAudio.swift only");
+  if (!/static var keepsVoiceNote: Bool \{ isEnabled && UserDefaults\.standard\.bool\(forKey: keepVoiceNoteKey\) \}/.test(dictation)) problems.push("DictationSettings.keepsVoiceNote no longer needs Dictate on and an off-by-default switch");
+  const makes = [...dictation.matchAll(/DictationAudioSink\(/g)].length;
+  if (makes !== 1) problems.push(`Dictation.swift makes a voice note sink ${makes} times; it must be once, inside the keep switch`);
+  else if (!/if keeping \{[^}]*DictationAudioSink\(/s.test(dictation)) problems.push("Dictation.swift makes the voice note sink outside the keep switch");
   if (/\bURLSession\b|\bURLRequest\b|\bNWConnection\b/.test(dictation)) problems.push("Dictation.swift opens a network connection");
   if (!/DemoMode\.isOn/.test(dictation)) problems.push("DictationSettings.isEnabled no longer stays off in showcase mode and the demo store");
   if (!/UserDefaults\.standard\.bool\(forKey: enabledKey\)/.test(dictation)) problems.push("DictationSettings.isChosen no longer reads an off-by-default boolean");

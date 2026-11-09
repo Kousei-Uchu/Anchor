@@ -368,6 +368,7 @@ struct JournalView: View {
             }
             .disabled(BridgeDraftItem.raising(fromJournal: entry.text) == nil)
             Button(role: .destructive) {
+                JournalBlocks.deleteVoiceFiles(in: entry.text)
                 modelContext.delete(entry)
             } label: {
                 Label("Delete", systemImage: "trash")

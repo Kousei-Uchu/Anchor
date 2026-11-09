@@ -222,7 +222,7 @@ final class VoiceNotePlayer: NSObject, ObservableObject, AVAudioPlayerDelegate {
 }
 
 /// Play or stop one voice note, with its length.
-private struct VoiceNoteRow: View {
+struct VoiceNoteRow: View {
     let fileName: String
     @ObservedObject var player: VoiceNotePlayer
 

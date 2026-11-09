@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch VN2: Keep a voice note while dictating. A second switch in Settings, Journal, off to begin with. When it is on, Dictate also saves what you say as a voice note on the page, and afterwards you choose whether to keep the words, the voice note or both. Nothing leaves your phone.
 - Patch DOC22: the plan now records that Dictate in the Journal (VN1) is pushed and waiting for a build.
 - Patch VN1: Dictate in the Journal. Switch it on in Settings, Journal, and a microphone button joins the row of tools on a Journal page. It turns what you say into text on your phone, after the words already in the paragraph, and keeps no sound. If your phone cannot do your language on its own it says so and does not start. Typing while it listens stops it.
 - Patch DOC21: the plan now records that AI tools on your own computer with Ollama (AI5) is pushed and waiting for a build.

@@ -22,6 +22,7 @@ struct AnchorApp: App {
         LockMyFilesSelfTest.run()
         AIAskSelfTest.run()
         JournalAssistSelfTest.run()
+        JournalVoiceSelfTest.run()
         AIAnswerReaderSelfTest.run()
         OllamaSelfTest.run()
         #endif
