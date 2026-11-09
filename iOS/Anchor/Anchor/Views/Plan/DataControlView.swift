@@ -2212,7 +2212,7 @@ extension CheckIn: DataBrowsable {
 }
 
 extension TrustedContact: DataBrowsable {
-    static var browseTitle: String { "Trusted contacts" }
+    static var browseTitle: String { "Contacts" }
     static var browseSingular: String { "Contact" }
     static var browseIcon: String { "person.2.fill" }
     var browseHeadline: String { name.isEmpty ? "Unnamed contact" : name }
@@ -2475,7 +2475,7 @@ extension FeedbackLoopDiagram: DataBrowsable {
 }
 
 extension ThreadMessage: DataBrowsable {
-    static var browseTitle: String { "Thread messages" }
+    static var browseTitle: String { "Message log" }
     static var browseSingular: String { "Message" }
     static var browseIcon: String { "bubble.left.and.bubble.right.fill" }
     var browseHeadline: String { text.isEmpty ? "Voice note" : DataText.firstLine(text, "Message") }
@@ -2508,8 +2508,8 @@ extension SupportCalendarEntry: DataBrowsable {
 }
 
 extension FutureNote: DataBrowsable {
-    static var browseTitle: String { "Notes to future you" }
-    static var browseSingular: String { "Note to future you" }
+    static var browseTitle: String { "To future me" }
+    static var browseSingular: String { "Note to future me" }
     static var browseIcon: String { "envelope.open.badge.clock" }
     /// A letter that opens when the person chooses shows only the words they
     /// put after Open when. What it says is in the record, one tap away, and
@@ -2543,8 +2543,8 @@ extension FutureNote: DataBrowsable {
 }
 
 extension UnsentDraft: DataBrowsable {
-    static var browseTitle: String { "Unsent drafts" }
-    static var browseSingular: String { "Unsent draft" }
+    static var browseTitle: String { "Things I haven't said" }
+    static var browseSingular: String { "Draft" }
     static var browseIcon: String { "square.and.pencil" }
     var browseHeadline: String { recipientLabel.isEmpty ? "Draft" : recipientLabel }
     var browseSubtitle: String? { DataText.firstLine(text, "") }
@@ -2560,8 +2560,8 @@ extension UnsentDraft: DataBrowsable {
 }
 
 extension DecisionPresetCategory: DataBrowsable {
-    static var browseTitle: String { "Decision-preset categories" }
-    static var browseSingular: String { "Decision-preset category" }
+    static var browseTitle: String { "Decision presets" }
+    static var browseSingular: String { "Decision preset" }
     static var browseIcon: String { "checklist" }
     var browseHeadline: String { name.isEmpty ? "Category" : name }
     var browseSubtitle: String? { nil }
@@ -2674,8 +2674,8 @@ extension Routine: DataBrowsable {
 }
 
 extension ItemList: DataBrowsable {
-    static var browseTitle: String { "Item lists" }
-    static var browseSingular: String { "Item list" }
+    static var browseTitle: String { "Lists" }
+    static var browseSingular: String { "List" }
     static var browseIcon: String { "suitcase" }
     var browseHeadline: String { name.isEmpty ? "List" : name }
     var browseSubtitle: String? { nil }

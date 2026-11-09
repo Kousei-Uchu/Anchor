@@ -249,8 +249,8 @@ private struct NestedTimeRings: View {
                             .font(.system(size: 14, weight: .semibold, design: .rounded))
                             .foregroundStyle(.secondary.opacity(0.8))
                     }
-                    .fixedSize(horizontal: true, vertical: false) // 👈 Prevents the "s" from ever wrapping
-                    .minimumScaleFactor(0.85) // 👈 Safety scaling fallback for small screens
+                    .fixedSize(horizontal: true, vertical: false) // Keeps the "s" from ever wrapping
+                    .minimumScaleFactor(0.85) // Safety scaling fallback for small screens
                     .transition(.asymmetric(
                         insertion: .move(edge: .top).combined(with: .opacity).animation(.spring(response: 0.4, dampingFraction: 0.7)),
                         removal: .opacity.animation(.easeIn(duration: 0.2))

@@ -63,7 +63,7 @@ struct DecisionFatigueView: View {
             .padding()
         }
         .anchorBackground()
-        .navigationTitle("Decision-fatigue presets")
+        .navigationTitle("Decision presets")
         .guideButton("plan.presets", tab: .plan)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

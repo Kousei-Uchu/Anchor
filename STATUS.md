@@ -35,7 +35,7 @@ A private safety plan, contacts and journal app for iPhone and iPad, in SwiftUI 
 
 ## Words used in the app
 
-Tabs: Now, Plan, Journal, Bridge, Thread. The area for counters is Recovery. Message log is what you sent to people; Things I haven't said is the unsent drafts. A copy-edit of every screen against this list is still to do (Patch 46b2).
+Tabs: Now, Plan, Journal, Bridge, Thread. The area for counters is Recovery. Message log is what you sent to people; Things I haven't said is the unsent drafts. In the data viewer each kind is named as its screen is (Contacts, Message log, To future me, Things I haven't said, Decision presets, Lists). The copy edit of every screen against this list was done in Patch 46b2.
 
 ## Not done
 
