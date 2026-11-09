@@ -198,10 +198,11 @@ struct DataControlView: View {
             }
         }
         .sheet(item: $showDateRangeSheet) { kind in
-            DateRangeExportSheet(kind: kind, hasRecovery: recoveryCounters.contains { !$0.isArchived }) { range, includeRecovery in
+            DateRangeExportSheet(kind: kind, hasRecovery: recoveryCounters.contains { !$0.isArchived },
+                                 hasAssist: journalEntries.contains { JournalBlocks.hasAssist($0.text) }) { range, includeRecovery, includeAssist in
                 switch kind {
-                case .csv: exportCSV(range: range, includeRecovery: includeRecovery)
-                case .pdf: exportPDF(range: range, includeRecovery: includeRecovery)
+                case .csv: exportCSV(range: range, includeRecovery: includeRecovery, includeAssist: includeAssist)
+                case .pdf: exportPDF(range: range, includeRecovery: includeRecovery, includeAssist: includeAssist)
                 }
             }
         }
@@ -532,12 +533,12 @@ struct DataControlView: View {
 
     // MARK: - CSV / PDF (Journal + Check-ins only — the two things worth handing a psych)
 
-    private func exportCSV(range: ClosedRange<Date>?, includeRecovery: Bool) {
+    private func exportCSV(range: ClosedRange<Date>?, includeRecovery: Bool, includeAssist: Bool = false) {
         // Sleep has its own columns at the end, so the first three stay where they were.
         var lines = ["type,date,text_or_values,bed_time,wake_time,minutes_asleep,feel"]
         let noSleepColumns = ",,,,"
         for entry in filteredJournal(range) {
-            let escaped = entry.text.replacingOccurrences(of: "\"", with: "\"\"").replacingOccurrences(of: "\n", with: " ")
+            let escaped = JournalBlocks.sharedText(entry.text, includeAssist: includeAssist).replacingOccurrences(of: "\"", with: "\"\"").replacingOccurrences(of: "\n", with: " ")
             lines.append("journal,\(iso(entry.createdAt)),\"\(escaped)\"\(noSleepColumns)")
         }
         for checkIn in filteredCheckIns(range) {
@@ -565,7 +566,7 @@ struct DataControlView: View {
         writeAndShare(data: data, filename: "anchor-export-\(fileTimestamp()).csv")
     }
 
-    private func exportPDF(range: ClosedRange<Date>?, includeRecovery: Bool) {
+    private func exportPDF(range: ClosedRange<Date>?, includeRecovery: Bool, includeAssist: Bool = false) {
         let pageRect = CGRect(x: 0, y: 0, width: 612, height: 792) // US Letter
         let renderer = UIGraphicsPDFRenderer(bounds: pageRect)
         let data = renderer.pdfData { context in
@@ -593,7 +594,7 @@ struct DataControlView: View {
             draw("Anchor export", font: titleFont, indent: 40)
             draw("Journal entries", font: headingFont)
             for entry in filteredJournal(range) {
-                draw("\(entry.createdAt.formatted(date: .abbreviated, time: .shortened))\n\(entry.text)", font: bodyFont)
+                draw("\(entry.createdAt.formatted(date: .abbreviated, time: .shortened))\n\(JournalBlocks.sharedText(entry.text, includeAssist: includeAssist))", font: bodyFont)
             }
             draw("Check-ins", font: headingFont)
             for checkIn in filteredCheckIns(range) {
@@ -750,7 +751,8 @@ struct IdentifiableURL: Identifiable {
 private struct DateRangeExportSheet: View {
     let kind: DataControlView.DateRangeExportKind
     let hasRecovery: Bool
-    let onExport: (ClosedRange<Date>?, Bool) -> Void
+    var hasAssist: Bool = false
+    let onExport: (ClosedRange<Date>?, Bool, Bool) -> Void
     @Environment(\.dismiss) private var dismiss
 
     @State private var useRange = false
@@ -758,6 +760,8 @@ private struct DateRangeExportSheet: View {
     @State private var end: Date = .now
     /// Deliberately not remembered: Recovery is left out of every export unless it is switched on for that export.
     @State private var includeRecovery = false
+    /// Also not remembered: AI Optimised versions are left out unless ticked for that export.
+    @State private var includeAssist = false
 
     var body: some View {
         NavigationStack {
@@ -767,6 +771,14 @@ private struct DateRangeExportSheet: View {
                 if useRange {
                     DatePicker("From", selection: $start, displayedComponents: .date)
                     DatePicker("To", selection: $end, displayedComponents: .date)
+                }
+                if hasAssist {
+                    Section {
+                        Toggle("Include AI Optimised versions", isOn: $includeAssist)
+                            .tint(Anchor.Theme.accent)
+                    } footer: {
+                        Text("Off unless you switch it on, every time. They are shorter versions made by a tool, not your own words, so they are labelled when they are in.")
+                    }
                 }
                 if hasRecovery {
                     Section {
@@ -785,7 +797,7 @@ private struct DateRangeExportSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Export") {
-                        onExport(useRange ? min(start, end)...max(start, end) : nil, hasRecovery && includeRecovery)
+                        onExport(useRange ? min(start, end)...max(start, end) : nil, hasRecovery && includeRecovery, hasAssist && includeAssist)
                         dismiss()
                     }
                 }

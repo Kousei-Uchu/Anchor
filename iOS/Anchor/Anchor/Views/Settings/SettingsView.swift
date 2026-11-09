@@ -265,16 +265,16 @@ struct SettingsView: View {
                     } label: {
                         Text("Showcase mode").font(.system(.subheadline, design: .rounded))
                     }
+                    NavigationLink {
+                        AIToolsSettingsView()
+                    } label: {
+                        Text("AI tools").font(.system(.subheadline, design: .rounded))
+                    }
                     #if DEBUG
                     NavigationLink {
                         EncryptionSettingsView()
                     } label: {
                         Text("Encryption (test build)").font(.system(.subheadline, design: .rounded))
-                    }
-                    NavigationLink {
-                        AIToolsSettingsView()
-                    } label: {
-                        Text("AI tools (test build)").font(.system(.subheadline, design: .rounded))
                     }
                     NavigationLink {
                         SafetyCopyView()
@@ -1171,8 +1171,8 @@ struct RecoveryKeyEntrySheet: View {
 }
 
 /// AI tools in Settings (Patch AI0, AI1): the one switch for every AI feature, off to begin with, and, once it
-/// is on, where it runs and the list of tools that no longer ask first. No tool is built yet, so the row is in
-/// test builds only until the first one is; the rules it carries are in docs/OPTIONAL_FEATURES.md.
+/// is on, where it runs and the list of tools that no longer ask first. The row shows in every build from the
+/// first tool (AI2, Make shorter in the Journal); the rules it carries are in docs/OPTIONAL_FEATURES.md.
 struct AIToolsSettingsView: View {
     @State private var isOn = AIGate.isChosen
     @State private var status: AIProviderStatus?

@@ -4,7 +4,7 @@ import { SUPPORT_EMAIL } from '../content/meta';
 
 export default function Privacy() {
   return (
-    <Page route="/privacy" title="Privacy Policy" meta="Effective 9 November 2026">
+    <Page route="/privacy" title="Privacy Policy" meta="Effective 10 November 2026">
       <div className="panel">
         <p>
           <strong>The short version.</strong> Anchor keeps what you put into it on your own device. There are no accounts, no servers that receive your data, no analytics, no advertising, and no tracking. I (the developer) cannot see anything you write or save in the app.
@@ -44,6 +44,11 @@ export default function Privacy() {
         <li><strong>Journaling Suggestions.</strong> If you use Apple&rsquo;s suggestions picker, iOS shows you suggestions and passes back only the one you choose. Apple&rsquo;s own privacy terms apply to that feature: see <a href="https://www.apple.com/legal/privacy/" target="_blank" rel="noopener noreferrer">Apple&rsquo;s Privacy Policy</a>.</li>
         <li><strong>Contacts.</strong> When you pick a trusted contact, iOS shows a contact picker. Anchor receives only the contact you select.</li>
       </ul>
+
+      <h2>AI tools (optional)</h2>
+      <p>
+        AI tools are off unless you switch them on in Settings, and one switch turns all of them off. The only one so far is Make shorter in the Journal. Each time you use it, Anchor shows you the exact text it will send, where it goes and what happens to it, and nothing is sent until you tap Send. For now it runs only on Apple&rsquo;s on-device model on your phone, so the text does not leave it. Anchor keeps no log of what was sent. The shorter version is not added to your entry until you tap Keep, your original stays with it, and it is left out of exports unless you switch it on for that export.
+      </p>
 
       <h2>When data leaves your device</h2>
       <p>Only when you decide it should:</p>

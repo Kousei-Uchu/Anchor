@@ -111,6 +111,8 @@ struct ExportSelection {
     var range: ClosedRange<Date>?
     /// Individual items (or counters) left out, by id.
     var left: Set<UUID> = []
+    /// AI Optimised blocks in journal entries are left out unless this is switched on for that export (D43).
+    var includeAssist = false
 }
 
 /// One thing that could go in, with how it would read.
@@ -173,11 +175,11 @@ struct BridgeExportBuilder {
             }
         case .journal:
             return journal.filter { inRange($0.createdAt) }.sorted { $0.createdAt < $1.createdAt }.map { entry in
-                var lines = [entry.text]
+                var lines = [JournalBlocks.sharedText(entry.text, includeAssist: selection.includeAssist)]
                 if entry.audioFileName != nil { lines.append("(A voice note was recorded. It is not included.)") }
                 return ExportCandidate(
                     id: entry.id, category: category,
-                    headline: DataText.firstLine(entry.text, "Voice note"),
+                    headline: DataText.firstLine(JournalBlocks.sharedText(entry.text, includeAssist: false), "Voice note"),
                     entry: ExportEntry(id: entry.id, date: entry.createdAt, heading: nil, lines: lines, footnote: nil)
                 )
             }
@@ -464,6 +466,11 @@ struct BridgeExportView: View {
                 BridgeExportItemPicker(title: category.title, rows: available, left: $selection.left)
             }
             .font(.subheadline)
+        }
+        if on, category == .journal, journal.contains(where: { JournalBlocks.hasAssist($0.text) }) {
+            Toggle("Include AI Optimised versions", isOn: $selection.includeAssist)
+                .font(.subheadline)
+                .tint(Anchor.Theme.accent)
         }
     }
 }

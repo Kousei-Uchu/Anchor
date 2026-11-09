@@ -1828,10 +1828,10 @@ extension BridgeDraftItem {
     /// when the entry has no words. The entry itself is never changed or
     /// linked, so the item can be reworded freely.
     static func raising(fromJournal text: String) -> BridgeDraftItem? {
-        // Photo and card lines are blocks, not words, so they are skipped.
+        // Photo, card and AI Optimised lines are blocks, not words, so they are skipped.
         guard let first = text.split(separator: "\n")
             .map({ $0.trimmingCharacters(in: .whitespaces) })
-            .first(where: { !$0.isEmpty && !$0.hasPrefix("![") && !$0.contains("](anchorcard://") }) else { return nil }
+            .first(where: { !$0.isEmpty && !$0.hasPrefix("![") && !$0.contains("](anchorcard://") && !$0.contains("](anchorassist://") }) else { return nil }
         let marks = CharacterSet(charactersIn: "#-*>").union(.whitespaces)
         let cleaned = first.trimmingCharacters(in: marks)
         guard !cleaned.isEmpty else { return nil }

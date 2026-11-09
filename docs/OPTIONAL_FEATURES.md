@@ -1,6 +1,6 @@
 # Optional extras: iCloud sync, voice, and AI tools
 
-Written 9 Nov 2026 (change log 123). Built so far: the one switch (AI0) and the consent sheet with the Apple on-device provider (AI1, change log 141); everything else here is not built. Every claim about the code was checked in the repo; claims about Apple's frameworks are from memory and are marked **check** where a spike must confirm them before a patch promises anything. The patches are in Phase I of `ANCHOR_PATCH_PLAN.md`, the questions are D38 to D43 in section 0.4.
+Written 9 Nov 2026 (change log 123). Built so far: the one switch (AI0) the consent sheet with the Apple on-device provider (AI1, change log 141), and the AI Optimised block in the Journal (AI2, change log 143, D52); the rest is not built. Every claim about the code was checked in the repo; claims about Apple's frameworks are from memory and are marked **check** where a spike must confirm them before a patch promises anything. The patches are in Phase I of `ANCHOR_PATCH_PLAN.md`, the questions are D38 to D43 in section 0.4.
 
 ## The rules that apply to all of it
 

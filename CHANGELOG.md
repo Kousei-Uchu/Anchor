@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch AI2: Make shorter in a Journal page's three dots menu, for one paragraph or the whole entry. After the sheet that shows exactly what is sent, a shorter version waits on the page and is only added when you tap Keep, as a folded block called AI Optimised with your original one tap away. Exports leave it out unless you tick it. The AI tools row in Settings now shows in every build.
 - Patch DOC18: the plan now records that the AI tools consent sheet and provider screen (AI1) is pushed and waiting for a build.
 - Patch AI1: AI tools now ask first, every time. A consent sheet shows the exact text, what goes with it, where it goes and what happens to it, with Send and Cancel, and Don't ask again for each tool. Apple's on-device model is the first place it can run. Settings, AI tools lists where it runs and the tools that no longer ask. Still test builds only, and no real tool uses it yet.
 - Patch DOC17: the plan now records that locking voice notes and Journal photos (35d) is pushed and waiting for a build.

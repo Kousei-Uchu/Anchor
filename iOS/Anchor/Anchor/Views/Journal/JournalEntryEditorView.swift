@@ -12,6 +12,8 @@
 //    - a line that is only `[Title](anchorcard://kind?t=..&d=..&x=..)` is a card
 //      block. An older build, or any Markdown reader, shows it as a link with
 //      the card's title, so nothing is lost;
+//    - a line that is only `[AI Optimised](anchorassist://v1?r=..&o=..)` is an AI Optimised block (a shorter
+//      version and the original it came from, see JournalAssist.swift);
 //    - everything else is text, kept exactly as typed.
 //  Images stay as files in a local attachments folder, referenced by name.
 //
@@ -107,6 +109,7 @@ struct JournalBlock: Identifiable, Equatable {
         case text(String)
         case image(String)
         case card(JournalCard)
+        case assist(JournalAssist)
     }
 
     let id: UUID
@@ -154,6 +157,9 @@ enum JournalBlocks {
             } else if let card = JournalCard(line: line) {
                 flush()
                 blocks.append(JournalBlock(.card(card)))
+            } else if let assist = JournalAssist(line: line) {
+                flush()
+                blocks.append(JournalBlock(.assist(assist)))
             } else {
                 pending.append(line)
                 hasPending = true
@@ -169,6 +175,7 @@ enum JournalBlocks {
             case .text(let string): return string
             case .image(let name): return "![](\(name))"
             case .card(let card): return card.markdownLine
+            case .assist(let assist): return assist.markdownLine
             }
         }
         .joined(separator: "\n")
@@ -222,7 +229,8 @@ enum JournalBlocks {
                 }
             case .card(let card):
                 if !card.title.isEmpty { return card.title }
-            case .image:
+            case .image, .assist:
+                // A rewrite is never what stands for an entry in a list.
                 break
             }
         }
@@ -379,6 +387,9 @@ struct JournalEntryEditorView: View {
     @State private var showContextSuggestions = false
     @State private var addedToBridge = false
     @State private var showGuide = false
+    @StateObject private var ask = AIAsk()
+    @State private var assistDraft: JournalAssistDraft?
+    @State private var assistMessage: String?
     @Query(sort: \RecoveryCounter.sortOrder) private var recoveryCounters: [RecoveryCounter]
 
     init(entry: JournalEntry, onFinish: (() -> Void)? = nil) {
@@ -400,9 +411,41 @@ struct JournalEntryEditorView: View {
                             promptBlock(promptLine)
                         }
 
+                        if ask.isWorking && ask.pending == nil {
+                            HStack(spacing: 8) {
+                                ProgressView()
+                                Text("Making a shorter version")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
+                        if let assistMessage {
+                            HStack(alignment: .top, spacing: 10) {
+                                Text(assistMessage)
+                                    .font(.subheadline)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Spacer(minLength: 0)
+                                Button {
+                                    self.assistMessage = nil
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                                }
+                                .accessibilityLabel("Dismiss")
+                            }
+                            .padding(12)
+                            .background(Anchor.Theme.accentSoft, in: RoundedRectangle(cornerRadius: 14))
+                        }
+
                         ForEach($blocks) { $block in
-                            blockView($block)
-                                .id(block.id)
+                            VStack(alignment: .leading, spacing: 14) {
+                                blockView($block)
+                                if let draft = assistDraft, draft.after == block.id {
+                                    JournalAssistDraftView(draft: draft, onKeep: { keep(draft) }, onDiscard: { assistDraft = nil })
+                                        .id("assistDraft")
+                                }
+                            }
+                            .id(block.id)
                         }
 
                         // Tapping the empty space below the page carries on writing.
@@ -416,6 +459,11 @@ struct JournalEntryEditorView: View {
                     .padding(.top, 8)
                 }
                 .scrollDismissesKeyboard(.interactively)
+                .onChange(of: assistDraft?.id) { _, newValue in
+                    if newValue != nil {
+                        withAnimation { proxy.scrollTo("assistDraft", anchor: .center) }
+                    }
+                }
                 .onChange(of: blocks.count) { oldCount, newCount in
                     // A block added at the end (photo, card) scrolls into view.
                     if newCount > oldCount, let last = blocks.last {
@@ -444,6 +492,17 @@ struct JournalEntryEditorView: View {
                             Label("Add to things to raise", systemImage: "doc.text")
                         }
                         .disabled(BridgeDraftItem.raising(fromJournal: entry.text) == nil)
+                        if AIGate.isEnabled {
+                            Menu {
+                                Button("This paragraph") { makeShorter(wholeEntry: false) }
+                                    .disabled(activeParagraph == nil)
+                                Button("Whole entry") { makeShorter(wholeEntry: true) }
+                                    .disabled(wholeEntryText == nil)
+                            } label: {
+                                Label(AIFeature.makeShorter.title, systemImage: "text.alignleft")
+                            }
+                            .disabled(ask.isWorking)
+                        }
                         Button {
                             showGuide = true
                         } label: {
@@ -504,6 +563,12 @@ struct JournalEntryEditorView: View {
             .sheet(isPresented: $showGuide) {
                 GuideSheetView(entry: Guide.entry(for: "journal.editor", tab: .journal))
             }
+            .aiAsk(ask)
+            .onReceive(NotificationCenter.default.publisher(for: .aiToolsTurnedOff)) { _ in
+                // Anything half done is dropped. A block already kept stays, as the person's own entry.
+                assistDraft = nil
+                assistMessage = nil
+            }
             .alert("Added to Things to raise", isPresented: $addedToBridge) {
                 Button("OK", role: .cancel) {}
             } message: {
@@ -535,6 +600,10 @@ struct JournalEntryEditorView: View {
             JournalCardView(card: card, reserveMenuSpace: true)
                 .overlay(alignment: .topTrailing) { menuButton(for: value.id) }
                 .contextMenu { blockActions(for: value.id) }
+        case .assist(let assist):
+            JournalAssistView(assist: assist, reserveMenuSpace: true)
+                .overlay(alignment: .topTrailing) { menuButton(for: value.id) }
+                .contextMenu { blockActions(for: value.id) }
         }
     }
 
@@ -555,6 +624,9 @@ struct JournalEntryEditorView: View {
     private func blockActions(for id: UUID) -> some View {
         Button { move(id, by: -1) } label: { Label("Move up", systemImage: "arrow.up") }
         Button { move(id, by: 1) } label: { Label("Move down", systemImage: "arrow.down") }
+        if let index = blocks.firstIndex(where: { $0.id == id }), case .assist = blocks[index].kind {
+            Button { useOriginal(id) } label: { Label("Use the original text", systemImage: "arrow.uturn.backward") }
+        }
         Button(role: .destructive) { remove(id) } label: { Label("Remove", systemImage: "trash") }
     }
 
@@ -588,6 +660,66 @@ struct JournalEntryEditorView: View {
         guard blocks.indices.contains(target) else { return }
         withAnimation {
             blocks.swapAt(index, target)
+            blocks = tidy(JournalBlocks.merged(blocks))
+        }
+    }
+
+    // MARK: AI Optimised
+
+    /// The paragraph being written in, when it has words.
+    private var activeParagraph: (id: UUID, text: String)? {
+        guard let id = activeID, let block = blocks.first(where: { $0.id == id }), block.isText else { return nil }
+        let text = block.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return text.isEmpty ? nil : (id, text)
+    }
+
+    /// Every paragraph of the entry, with photos, cards and kept AI Optimised blocks left out.
+    private var wholeEntryText: (after: UUID, text: String)? {
+        let paragraphs = blocks.filter { $0.isText && !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        guard let last = paragraphs.last else { return nil }
+        let text = paragraphs.map { $0.text.trimmingCharacters(in: .whitespacesAndNewlines) }.joined(separator: "\n\n")
+        return (last.id, text)
+    }
+
+    /// Asks for a shorter version of the chosen words. It goes through `AIAsk`, so the switch is checked and the
+    /// person sees exactly what is sent first. The answer waits for Keep or Discard and is not in the entry yet.
+    private func makeShorter(wholeEntry: Bool) {
+        guard AIGate.isEnabled, !ask.isWorking else { return }
+        guard let source = wholeEntry ? wholeEntryText.map({ ($0.after, $0.text) }) : activeParagraph.map({ ($0.id, $0.text) }) else { return }
+        let (after, text) = source
+        assistMessage = nil
+        assistDraft = nil
+        Task {
+            do {
+                let answer = try await ask.run(.makeShorter, on: text)
+                let rewrite = answer.trimmingCharacters(in: .whitespacesAndNewlines)
+                await MainActor.run {
+                    guard AIGate.isEnabled else { return }
+                    assistDraft = JournalAssistDraft(after: after, assist: JournalAssist(rewrite: rewrite, original: text))
+                }
+            } catch let error as AIError {
+                await MainActor.run { assistMessage = error.plainText }
+            } catch {
+                await MainActor.run { assistMessage = AIError.failed.plainText }
+            }
+        }
+    }
+
+    /// Keep: only now does the block become part of the entry.
+    private func keep(_ draft: JournalAssistDraft) {
+        let index = blocks.firstIndex(where: { $0.id == draft.after }).map { $0 + 1 } ?? blocks.count
+        withAnimation {
+            blocks.insert(JournalBlock(.assist(draft.assist)), at: index)
+            blocks = tidy(blocks)
+            assistDraft = nil
+        }
+    }
+
+    /// Puts the words the block was made from back as an ordinary paragraph and removes the rewrite.
+    private func useOriginal(_ id: UUID) {
+        guard let index = blocks.firstIndex(where: { $0.id == id }), case .assist(let assist) = blocks[index].kind else { return }
+        withAnimation {
+            blocks[index].kind = .text(assist.original)
             blocks = tidy(JournalBlocks.merged(blocks))
         }
     }
@@ -1022,6 +1154,7 @@ struct MarkdownPreviewView<Header: View>: View {
         case text(String)
         case images([String])
         case card(JournalCard)
+        case assist(JournalAssist)
     }
 
     private var items: [Item] {
@@ -1047,6 +1180,9 @@ struct MarkdownPreviewView<Header: View>: View {
             case .card(let card):
                 flushImages()
                 result.append(.card(card))
+            case .assist(let assist):
+                flushImages()
+                result.append(.assist(assist))
             }
         }
         flushImages()
@@ -1083,6 +1219,8 @@ struct MarkdownPreviewView<Header: View>: View {
                         }
                     case .card(let card):
                         JournalCardView(card: card)
+                    case .assist(let assist):
+                        JournalAssistView(assist: assist)
                     }
                 }
                 if items.isEmpty {
