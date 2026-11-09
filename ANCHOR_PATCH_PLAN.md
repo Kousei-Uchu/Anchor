@@ -1,6 +1,6 @@
 # Anchor — Patch Plan (v2-recovery)
 
-*Living document. Last updated: 9 Nov 2026, with patch SL6 written. Pushed through 30o (`f37cd3b`); written and waiting for you to push: SL6, and none is confirmed building; the ones not started are marked ⬜. Questions are in 0.4. Still waiting on you: the words for the About screen's creator section and the licence files (both D23). Open but not blocking anything: D29a, the Apple Health sleep cleanup, which you cannot review yet. New and assumed as read: D32 and D34. Held on purpose: medication notes (B5), recorded in Appendix D and no longer a decision or a to-do. Everything else in D16 to D31 is answered and either built or queued in the Progress table. D3 is parked until the end, just before the Android work. D15 is answered: option B, every model locked in one go, with a safety copy and an easy way back built first. Things I offered but did not build are in Appendix D. The history of updates is in `docs/PLAN_CHANGELOG.md`. Plain explanations of the decisions you asked about are in `docs/DECISIONS_EXPLAINED.md`.*
+*Living document. Last updated: 9 Nov 2026, with patches SL6 and AB2 written. Pushed through 30o (`f37cd3b`); written and waiting for you to push: SL6 and AB2, and none is confirmed building; the ones not started are marked ⬜. Questions are in 0.4. Still waiting on you: the words for the About screen's creator section and the licence files (both D23). Open but not blocking anything: D29a, the Apple Health sleep cleanup, which you cannot review yet. New and assumed as read: D32 and D34. Held on purpose: medication notes (B5), recorded in Appendix D and no longer a decision or a to-do. Everything else in D16 to D31 is answered and either built or queued in the Progress table. D3 is parked until the end, just before the Android work. D15 is answered: option B, every model locked in one go, with a safety copy and an easy way back built first. Things I offered but did not build are in Appendix D. The history of updates is in `docs/PLAN_CHANGELOG.md`. Plain explanations of the decisions you asked about are in `docs/DECISIONS_EXPLAINED.md`.*
 
 > ## READ THIS FIRST: THIS FILE IS THE PROMPT
 >
@@ -135,12 +135,12 @@ The source code repository is at <https://github.com/Kousei-Uchu/Anchor/tree/v2-
 | 30o: Letters you open (T5), situational ones: never locked, contents hidden in the list until you open one (D25). In Look at what's stored a letter is listed by its Open when words, a search does not read it, and it no longer shows as locked | 🟡 Pushed by you (`f37cd3b`); build not yet confirmed |
 | SL6: Sleep in the CSV (its own columns) and in the PDF (a time-asleep chart), for Export for someone and for Your data (D29) | 🟡 Written (change log 107), not yet pushed; build not yet confirmed |
 | SH2: Showcase mode, your changes (D21): a 4 to 6 digit number pad passcode, made-up content in the widgets, share and export working on made-up content | ⬜ Not started; answered |
-| AB2: What's new by version (D23, 3): one collapsible section per version, the latest open | ⬜ Not started; answered. The creator section and the licence wait on your words and files |
+| AB2: What's new by version (D23, 3): one collapsible section per version, the latest open | 🟡 Written (change log 108), not yet pushed; build not yet confirmed. The creator section and the licence still wait on your words and files |
 | RV5a: Export check-in labels taken from the right sliders (change log 90) | 🟡 Pushed by you (`43b6a47`); build not yet confirmed |
 | 46b: `STATUS.md` in place of `BUILD_STATUS.md`, one terminology list, an in-app copy edit (point 23) | ⬜ Not started; answered (D20: yes, as long as no information is lost, so every part of the old file is carried somewhere before it goes) |
 | 35d: Voice notes and Journal photos locked too (D31) | ⬜ Not started; after 35b3 has been checked on your phone |
 
-**Order of work from 9 Nov 2026.** The small answered items first, because each is one clear change you asked for: SL6 (written), SH2, AB2, 46b (RV5a and 30o are pushed). Then 35a2, the widgets' key in a shared Keychain item, before any locking, because the locking work uses the keys. Then the locking work, which is the part that can lose data and needs your phone to check: 35b1, 35b2, 35b3, then 35d. Then 30n (relationship reminders), 30q (session actions as tasks) and 30r (the one-page summary). The website, demo and video patches stay last, with 55 at the very end.
+**Order of work from 9 Nov 2026.** The small answered items first, because each is one clear change you asked for: SL6 and AB2 (written), SH2, 46b (RV5a and 30o are pushed). Then 35a2, the widgets' key in a shared Keychain item, before any locking, because the locking work uses the keys. Then the locking work, which is the part that can lose data and needs your phone to check: 35b1, 35b2, 35b3, then 35d. Then 30n (relationship reminders), 30q (session actions as tasks) and 30r (the one-page summary). The website, demo and video patches stay last, with 55 at the very end.
 
 ## Change log of this plan
 
@@ -563,7 +563,7 @@ Decided (D10 to D14 closed, 7 Nov 2026) and part of the main release, Apple Heal
 | --- | --- | --- | --- | --- |
 | **31** | Data viewer: per-type lists, read-only detail, re-authentication | 21 | M | 🟡 |
 | **32** | About screen | 22 | S | 🟡 |
-| **AB2** | About: What's new by version, collapsible, latest open (D23). Creator section and licence wait on you | 22 | S | ⬜ |
+| **AB2** | About: What's new by version, collapsible, latest open (D23). Creator section and licence wait on you | 22 | S | 🟡 |
 | **33** | Encrypted export/import (`.anchorbackup`), plaintext import kept | 20 | M | 🟡 |
 | **34** | At-rest field encryption: keys, recovery key | 20 | M | 🟡 |
 | **35a** | Widget summaries sealed with their own key (the widget snapshot half of 35) | 20 | S | 🟡 |

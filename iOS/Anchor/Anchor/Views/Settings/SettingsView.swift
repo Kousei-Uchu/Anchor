@@ -361,6 +361,15 @@ struct AboutNote: Identifiable {
     var id: String { title }
 }
 
+/// What one version of the app added, changed and removed. A group with nothing in it is not shown.
+struct AboutVersion: Identifiable {
+    let version: String
+    var added: [AboutNote] = []
+    var changed: [AboutNote] = []
+    var removed: [AboutNote] = []
+    var id: String { version }
+}
+
 /// The words on the About screen. The same copy is in
 /// website/src/content/about.ts, and scripts/check-about-content.mjs fails if
 /// the two stop matching, so the app and the website say the same thing.
@@ -383,15 +392,19 @@ enum AboutContent {
 
     static let contactNote = "I can't reply in real time. If you are in danger right now, call your local emergency number or a crisis line."
 
-    static let whatsNew: [AboutNote] = [
-        AboutNote(title: "Sleep journal", body: "An optional sleep journal under Plan, with Apple Health if you want it. Nothing is scored."),
-        AboutNote(title: "Export for someone", body: "Choose who it is for and what goes in, then make a PDF or a web page to share."),
-        AboutNote(title: "Look at what's stored", body: "See everything Anchor holds, behind Face ID or your passcode, in plain language."),
-        AboutNote(title: "Tasks and routines", body: "Tasks with steps, a focus timer, Plan my day, quick lists, routines and checklists."),
-        AboutNote(title: "People and providers", body: "A page for each person in Thread, and more than one provider in Bridge."),
-        AboutNote(title: "Sections of your own", body: "The safety plan and the Boundaries list are sections you rename, reorder and hide."),
-        AboutNote(title: "A new Journal page", body: "The page works like Apple's Journal, with bookmarks and a month and year view."),
-        AboutNote(title: "Feedback loops", body: "Draw a loop or a free map from a template, and share it as a picture or a PDF."),
+    /// Newest version first. The first one is open in What's new and the others are folded.
+    /// To add a version, put it at the top with what it added, changed and removed.
+    static let versions: [AboutVersion] = [
+        AboutVersion(version: "1.0", added: [
+            AboutNote(title: "Sleep journal", body: "An optional sleep journal under Plan, with Apple Health if you want it. Nothing is scored."),
+            AboutNote(title: "Export for someone", body: "Choose who it is for and what goes in, then make a PDF or a web page to share."),
+            AboutNote(title: "Look at what's stored", body: "See everything Anchor holds, behind Face ID or your passcode, in plain language."),
+            AboutNote(title: "Tasks and routines", body: "Tasks with steps, a focus timer, Plan my day, quick lists, routines and checklists."),
+            AboutNote(title: "People and providers", body: "A page for each person in Thread, and more than one provider in Bridge."),
+            AboutNote(title: "Sections of your own", body: "The safety plan and the Boundaries list are sections you rename, reorder and hide."),
+            AboutNote(title: "A new Journal page", body: "The page works like Apple's Journal, with bookmarks and a month and year view."),
+            AboutNote(title: "Feedback loops", body: "Draw a loop or a free map from a template, and share it as a picture or a PDF."),
+        ]),
     ]
 
     /// For example "Version 1.0 (1)". Falls back to the version alone.
@@ -513,22 +526,54 @@ struct AboutView: View {
 }
 
 struct WhatsNewView: View {
+    /// The newest version starts open, the rest folded.
+    @State private var open: Set<String> = Set(AboutContent.versions.prefix(1).map(\.id))
+
     var body: some View {
         Form {
-            Anchor.SettingsSection(title: nil) {
-                ForEach(AboutContent.whatsNew) { item in
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(item.title).font(.system(.subheadline, design: .rounded).weight(.medium))
-                        Text(item.body).font(.footnote).foregroundStyle(.secondary)
+            ForEach(AboutContent.versions) { version in
+                Anchor.SettingsSection(title: nil) {
+                    DisclosureGroup(isExpanded: expanded(version.id)) {
+                        group("Added", version.added)
+                        group("Changed", version.changed)
+                        group("Removed", version.removed)
+                    } label: {
+                        Text("Version \(version.version)")
+                            .font(.system(.subheadline, design: .rounded).weight(.medium))
                     }
-                    .padding(.vertical, 2)
-                    .accessibilityElement(children: .combine)
                 }
             }
         }
         .anchorSettingsStyle()
         .navigationTitle("What's new")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func expanded(_ id: String) -> Binding<Bool> {
+        Binding(
+            get: { open.contains(id) },
+            set: { isOpen in
+                if isOpen { open.insert(id) } else { open.remove(id) }
+            }
+        )
+    }
+
+    @ViewBuilder
+    private func group(_ title: String, _ notes: [AboutNote]) -> some View {
+        if !notes.isEmpty {
+            Text(title)
+                .font(.system(.footnote, design: .rounded).weight(.semibold))
+                .foregroundStyle(.secondary)
+                .accessibilityAddTraits(.isHeader)
+            ForEach(notes) { item in
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(item.title).font(.system(.subheadline, design: .rounded).weight(.medium))
+                    Text(item.body).font(.footnote).foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 2)
+                .accessibilityElement(children: .combine)
+            }
+        }
     }
 }
 

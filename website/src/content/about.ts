@@ -20,13 +20,24 @@ export const ABOUT_LICENCES = "Anchor is built with Apple's own frameworks. It c
 
 export const ABOUT_CONTACT_NOTE = "I can't reply in real time. If you are in danger right now, call your local emergency number or a crisis line.";
 
-export const ABOUT_WHATS_NEW: { title: string; body: string }[] = [
-  { title: "Sleep journal", body: "An optional sleep journal under Plan, with Apple Health if you want it. Nothing is scored." },
-  { title: "Export for someone", body: "Choose who it is for and what goes in, then make a PDF or a web page to share." },
-  { title: "Look at what's stored", body: "See everything Anchor holds, behind Face ID or your passcode, in plain language." },
-  { title: "Tasks and routines", body: "Tasks with steps, a focus timer, Plan my day, quick lists, routines and checklists." },
-  { title: "People and providers", body: "A page for each person in Thread, and more than one provider in Bridge." },
-  { title: "Sections of your own", body: "The safety plan and the Boundaries list are sections you rename, reorder and hide." },
-  { title: "A new Journal page", body: "The page works like Apple's Journal, with bookmarks and a month and year view." },
-  { title: "Feedback loops", body: "Draw a loop or a free map from a template, and share it as a picture or a PDF." },
+export type AboutNote = { title: string; body: string };
+export type AboutVersion = { version: string; added: AboutNote[]; changed: AboutNote[]; removed: AboutNote[] };
+
+// Newest version first, as in the app. To add a version, put it at the top.
+export const ABOUT_VERSIONS: AboutVersion[] = [
+  {
+    version: "1.0",
+    added: [
+      { title: "Sleep journal", body: "An optional sleep journal under Plan, with Apple Health if you want it. Nothing is scored." },
+      { title: "Export for someone", body: "Choose who it is for and what goes in, then make a PDF or a web page to share." },
+      { title: "Look at what's stored", body: "See everything Anchor holds, behind Face ID or your passcode, in plain language." },
+      { title: "Tasks and routines", body: "Tasks with steps, a focus timer, Plan my day, quick lists, routines and checklists." },
+      { title: "People and providers", body: "A page for each person in Thread, and more than one provider in Bridge." },
+      { title: "Sections of your own", body: "The safety plan and the Boundaries list are sections you rename, reorder and hide." },
+      { title: "A new Journal page", body: "The page works like Apple's Journal, with bookmarks and a month and year view." },
+      { title: "Feedback loops", body: "Draw a loop or a free map from a template, and share it as a picture or a PDF." },
+    ],
+    changed: [],
+    removed: [],
+  },
 ];

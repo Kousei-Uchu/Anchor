@@ -250,7 +250,9 @@ enum ReviewStops {
         ("RV5a", "Export check-in names fixed", "In Export for someone and in the older CSV and PDF, a check-in's values are named from the right sliders: Energy, Clarity, Room in head, Moving and Social energy. Before, Moving was called Energy and the real Physical energy slider was missing. The data viewer names the five sliders as the check-in asks them.",
          "Open the Bridge share button, Export for someone, pick Check-ins and look at the preview and the web page: five values each, five small charts. Open Your data, Look at what's stored, Check-ins, and compare a check-in with the bars in the Journal.", 2, nil),
         ("SL6", "Sleep in the CSV and the PDFs", "The CSV from Your data has its own sleep columns (bed_time, wake_time, minutes_asleep, feel) at the end, and the PDFs from Your data and from Export for someone draw the same plain time-asleep line as the web page, with no target line. The web page's Download CSV has in_bed, up and minutes_asleep columns.",
-         "Open Your data, Export Journal, Check-ins and Sleep (PDF) and look for the Sleep heading with a line above the nights. Then Export for someone with Sleep switched on, make the PDF and the web page, and press Download CSV in the page. Export and Share are off in showcase and demo mode, so try this on your own copy.", 1, .yourData)
+         "Open Your data, Export Journal, Check-ins and Sleep (PDF) and look for the Sleep heading with a line above the nights. Then Export for someone with Sleep switched on, make the PDF and the web page, and press Download CSV in the page. Export and Share are off in showcase and demo mode, so try this on your own copy.", 1, .yourData),
+        ("AB2", "What's new by version", "What's new is a fold for each version with what it added, changed and removed. The newest is open, the others closed, and a group with nothing in it is not shown.",
+         "Open About, then What's new. There is one version so far, 1.0, open, with its eight additions. Fold and open it again and try large text.", 1, .about)
     ])
 }
 

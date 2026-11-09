@@ -483,7 +483,7 @@ extension Guide {
         GuideEntry(
             id: "settings.about", tab: nil, title: "About Anchor", icon: "info.circle",
             whatItIs: "The version and build, a short note on what Anchor is, and how to reach the person who makes it.",
-            howToUse: "Email support opens a message that starts with the app version, the iOS version and the phone model, and nothing else, so you can write about a problem without looking those up. Copy puts the address on the clipboard instead. Links opens the website, the privacy policy and the source code, and What's new lists what changed in the latest version.",
+            howToUse: "Email support opens a message that starts with the app version, the iOS version and the phone model, and nothing else, so you can write about a problem without looking those up. Copy puts the address on the clipboard instead. Links opens the website, the privacy policy and the source code, and What's new has a fold for each version of the app, with what it added, changed and removed. The newest is open and the older ones are closed until you tap them.",
             tips: [
                 "Nothing is sent unless you send the email yourself.",
                 "Replies are not instant. If you are in danger right now, call your local emergency number or a crisis line."

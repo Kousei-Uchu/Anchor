@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch AB2: What's new has a fold for each version of the app with what it added, changed and removed, the newest open and the older ones closed. There is one version so far, 1.0, and a group with nothing in it is not shown.
 - Patch SL6: sleep has its own columns in the CSV and a plain time-asleep line in the PDF. Your data's CSV adds bed_time, wake_time, minutes_asleep and feel after its first three columns, and its PDF gets a Sleep section with the line; Export for someone's PDF draws the same line and the web page's Download CSV adds in_bed, up and minutes_asleep. The line runs from 0 h to the next whole hour above the longest night, has no target, and is drawn only when two nights have a time.
 - Patch 30o: Look at what's stored lists a letter you open when you choose by its Open when words and no longer reads what it says, in the list or in a search, and no longer shows it as locked; a note whose date has passed now says Unlocked: Yes instead of No.
 - Patch 45e: a session reminder opens Session prep for that person when you tap it, and the evening before comes at a time you choose in Settings, from 4 pm to 10:59 pm, 6 pm to begin with. The lock screen still says only that something you planned is coming up.
