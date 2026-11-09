@@ -6,6 +6,7 @@ import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import Home from './pages/Home';
 import Demo from './pages/Demo';
+import About from './pages/About';
 import Features from './pages/Features';
 import Philosophy from './pages/Philosophy';
 import Privacy from './pages/Privacy';
@@ -37,6 +38,7 @@ export function App() {
       <div id="main">
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/about" element={<About />} />
           <Route path="/features" element={<Features />} />
           <Route path="/philosophy" element={<Philosophy />} />
           <Route path="/demo" element={<Demo />} />

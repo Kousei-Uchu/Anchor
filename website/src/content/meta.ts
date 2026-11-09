@@ -8,6 +8,10 @@ export const ROUTE_META: Record<string, { title: string; description: string }> 
     description:
       'Anchor is a private safety plan, contacts and journal app for iPhone and iPad. No accounts, no tracking. Early build.',
   },
+  '/about': {
+    title: 'About Anchor',
+    description: 'What Anchor is, what it holds to, what is new in each version, and how to reach me.',
+  },
   '/features': {
     title: 'Anchor features',
     description: 'What each part of Anchor is for, written the same as the guide inside the app.',

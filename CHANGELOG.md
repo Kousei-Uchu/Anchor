@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 48: the website has an About page with the same words as the About screen in the app and what is new in each version. The Support answers now point to the right places in Settings and Your data and there are four new ones, and the privacy page says Label who is speaking keeps nothing about a voice.
 - Patch 47: the website has a Features page, made from the guide inside the app so the two say the same thing, and a Philosophy page on what Anchor is trying to be and who it is and is not for.
 - Patch DOC23: the plan now records that Label who is speaking (VN3) is pushed and waiting for a build.
 - Patch VN3: Label who is speaking. A third switch in Settings, Journal, off to begin with. While Dictate listens, tap Speaker 1 or Speaker 2 when the speaker changes and the words that follow go on a new line with that label. Rename speakers, in a page's three dots, changes the names on that page only. Anchor does not tell voices apart and keeps nothing about a voice.

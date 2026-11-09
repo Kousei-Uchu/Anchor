@@ -21,7 +21,7 @@ export function Header() {
         <Link to="/features">Features</Link>
         <Link to="/philosophy">Philosophy</Link>
         <Link to="/demo">Demo</Link>
-        <Link to={{ pathname: '/', hash: '#about' }}>About</Link>
+        <Link to="/about">About</Link>
         <Link to="/privacy">Privacy</Link>
         <Link to="/support">Support</Link>
         <a href={GITHUB_URL}>GitHub</a>
