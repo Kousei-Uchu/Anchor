@@ -1762,6 +1762,17 @@ struct BrowseField: Identifiable {
     let label: String
     /// Empty means nothing is set, which the viewer says plainly.
     let value: String
+    /// False for a field that is shown when a record is opened but is never
+    /// matched by the viewer's search, so a search cannot find what a list
+    /// row does not show.
+    var inSearch = true
+
+    /// The same field, shown in the record but left out of the search.
+    func keptOutOfSearch() -> BrowseField {
+        var field = self
+        field.inSearch = false
+        return field
+    }
 
     static func text(_ label: String, _ value: String?) -> BrowseField {
         BrowseField(label: label, value: value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "")
@@ -1852,7 +1863,7 @@ struct DataRecord: Identifiable {
         subtitle = model.browseSubtitle
         date = model.browseDate
         fields = model.browseFields
-        searchText = ([model.browseHeadline] + model.browseFields.map { $0.label + " " + $0.value })
+        searchText = ([model.browseHeadline] + model.browseFields.filter(\.inSearch).map { $0.label + " " + $0.value })
             .joined(separator: "\n")
     }
 }
@@ -2455,16 +2466,33 @@ extension FutureNote: DataBrowsable {
     static var browseTitle: String { "Notes to future you" }
     static var browseSingular: String { "Note to future you" }
     static var browseIcon: String { "envelope.open.badge.clock" }
-    var browseHeadline: String { DataText.firstLine(text, "Empty note") }
-    var browseSubtitle: String? { openWhen.isEmpty ? "Opens " + unlockDate.formatted(date: .abbreviated, time: .omitted) : "Open when " + openWhen }
+    /// A letter that opens when the person chooses shows only the words they
+    /// put after Open when. What it says is in the record, one tap away, and
+    /// is not read by the list or the search.
+    var browseHeadline: String {
+        isOpenWhenLetter ? "Open when " + openWhen : DataText.firstLine(text, "Empty note")
+    }
+    var browseSubtitle: String? {
+        isOpenWhenLetter
+            ? "Letter, written " + writtenAt.formatted(date: .abbreviated, time: .omitted)
+            : "Opens " + unlockDate.formatted(date: .abbreviated, time: .omitted)
+    }
     var browseDate: Date? { writtenAt }
     var browseFields: [BrowseField] {
-        [
+        if isOpenWhenLetter {
+            // A letter has no date to wait for and is never locked.
+            return [
+                .date("Written", writtenAt),
+                .text("Open when", openWhen),
+                BrowseField.text("Text", text).keptOutOfSearch()
+            ]
+        }
+        // isUnlocked is a stored flag nothing updates, so the date decides.
+        return [
             .date("Written", writtenAt),
             .date("Unlock date", unlockDate),
             .text("Text", text),
-            .yesNo("Unlocked", isUnlocked),
-            .text("Open when", openWhen)
+            .yesNo("Unlocked", unlockDate <= .now)
         ]
     }
 }

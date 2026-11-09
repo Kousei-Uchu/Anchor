@@ -169,6 +169,8 @@ enum ReviewStops {
          "Open Message starters, then tap one while writing.", 4, .starters),
         ("30d", "Letters you open", "A note to future you that opens when you choose.",
          "Open To future me and the letter that says Open when it is a hard night.", 4, .futureNotes),
+        ("30o", "Letters stay closed in the viewer", "Look at what's stored lists a letter by its Open when words, not by what it says, and a search does not look inside it. A letter never shows as locked.",
+         "Your data, Look at what's stored, Notes to future you. Search for a word from the letter, such as gentle: it is not found. Tap the letter to read it.", 1, .yourData),
         ("30e", "Questions to ask", "An item can be a question with room for the answer after the session.",
          "Open Things to raise. Look at Ask about next steps and the answered one.", 3, .drafts),
         ("30f", "Personal goals", "Goals in your words with dated notes; reached or set aside.",

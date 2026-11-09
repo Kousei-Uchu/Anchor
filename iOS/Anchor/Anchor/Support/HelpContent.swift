@@ -378,7 +378,8 @@ extension Guide {
             whatItIs: "Notes to yourself that stay sealed until you are ready to read them.",
             howToUse: "Use the plus and choose how it opens. A note on a date stays sealed until that day, and until then only the date shows. A letter that opens when you choose has a few words after Open when, such as the kind of night it is for, and no date. You open it yourself when you need it.",
             tips: [
-                "A sealed note cannot be read early."
+                "A sealed note cannot be read early.",
+                "A letter is never locked. In Your data, Look at what's stored lists it by its Open when words, and a search does not look inside it."
             ]
         ),
         GuideEntry(
