@@ -150,7 +150,9 @@ enum ReviewStops {
         ("30p2", "After-session reminders", "After a session you have scheduled, a reminder to ask whether you want to tell a person you chose how it went: off until switched on, that evening or the next morning. The lock screen says only something for this evening or morning, naming no one. It takes the place of a hello that day, and a support day, a follow-up or a hard-time reminder keeps its day over it. Tapping it opens a message to that person.",
          "Settings, After-session reminders: Sam is on in demo. Switch Alex on and change When it comes. Appointments shows the sessions it follows. (Not scheduled in demo mode.)", 1, .settings),
         ("RV1a", "Task cards: short facts with icons", "A task card's quiet line is now a few small facts, each with an icon and a few words: the day, how long, started, the energy it needs, steps done and focus sessions. They move to a second row instead of being cut off, and the first step wraps to two lines.",
-         "Open Tasks, and try the largest text size too. Look at a task with a day, an estimate and steps: nothing should end in dots. VoiceOver reads each fact in full.", 1, .tasks)
+         "Open Tasks, and try the largest text size too. Look at a task with a day, an estimate and steps: nothing should end in dots. VoiceOver reads each fact in full.", 1, .tasks),
+        ("35d", "Lock voice notes and photos", "Once your text is locked, Lock my data has a second step that locks the voice notes and Journal photos one file at a time. Each file is checked before it replaces the original, so a run that stops leaves files that all still open. Test builds only.",
+         "A review run cannot lock files, because it has no real files and the text is not locked in it, so look at the screen only: Settings, Lock my data. On your own copy of your data, after the text is locked, tap Lock voice notes and photos, restart, and check that the count on that screen matches what you have. Then open a Journal photo, play a voice note and share one: all three should work as before. Make an encrypted backup afterwards and check it still holds them.", 1, .settings)
     ])
 }
 

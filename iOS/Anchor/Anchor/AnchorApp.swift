@@ -19,10 +19,12 @@ struct AnchorApp: App {
         WidgetSealSelfTest.run()
         FieldLockSelfTest.run()
         LockMyDataSelfTest.run()
+        LockMyFilesSelfTest.run()
         #endif
         if !DemoMode.isOn {
             // A lock run that was stopped in the middle asks for the safety copy to be put back.
             LockMyData.recoverInterruptedRun()
+            LockMyFiles.recoverInterruptedRun()
             // A waiting safety copy job runs first, before anything opens the database.
             SafetyCopy.runAtLaunch()
             // After a good lock, the database file is rebuilt while nothing has it open.
@@ -132,6 +134,10 @@ final class ContainerHolder: ObservableObject {
         SafetyPlanMigration.migrateIfNeeded(container: container)
         // The last step: a waiting Lock my data run, after the safety copy it asked for has been made.
         LockMyData.runIfWaiting(container: container)
+        // Then the voice notes and photos, in the background: a waiting Lock my files run (Patch 35d), and a
+        // sweep for any file that is still plain once files are locked.
+        LockMyFiles.runIfWaiting()
+        LockMyFiles.sweepAtLaunch()
     }
 
     /// Returns false, and changes nothing, when the made-up store cannot be made. The real store is never

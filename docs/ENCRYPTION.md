@@ -63,7 +63,7 @@ Each field that holds your own words is two stored properties on its model: the 
 - **Off until Lock my data has run.** `FieldLock.isOn` is false until a Lock my data run (Patch 35b3) has checked every item, so until then a write keeps the text plain and the sealed twin empty. A new item ends its init with `lockNewValues()`, which does nothing while it is off.
 - **A value that will not open** reads as empty and is never written back, so a missing key cannot overwrite your words.
 - **Who may touch the twins.** Only the models, `LockedFields.swift` and `AppLock.swift`; `scripts/check-locked-fields.mjs` enforces it, and also that nothing sorts or filters on a locked field.
-- **Locked:** the text and notes on every model, contact names, phone numbers, Discord ids and message templates, goal notes, list and routine items, diagram data, and the Recovery counter's name, label and start dates. **Left readable:** dates, numbers, switches, ids and the links between items, icon and colour names, and shipped Mascot lines (D44). Voice note and photo files wait for 35d.
+- **Locked:** the text and notes on every model, contact names, phone numbers, Discord ids and message templates, goal notes, list and routine items, diagram data, and the Recovery counter's name, label and start dates. **Left readable:** dates, numbers, switches, ids and the links between items, icon and colour names, and shipped Mascot lines (D44). Voice note and photo files are locked in a second step (Patch 35d, below).
 - **Widgets.** The extension builds the model files but holds no key, so it never opens a sealed value. It reads its own sealed summaries as before.
 
 ## Lock my data (Patch 35b3)
@@ -88,10 +88,43 @@ One flow that locks every field in the list above on every model, after the way 
 
 - **The safety copy is plain.** It was made before locking, so it holds your text unlocked until you delete it. It is kept out of phone backups. Delete it once you are happy (Settings, Safety copy). Clear all data deletes it too.
 - **Old backups.** A phone backup made before locking still holds your text readable, and so does any export made before.
-- **Voice notes and Journal photos** are files, not text, and are not locked yet (Patch 35d).
+- **Voice notes and Journal photos** are files, not text, and are locked in a second step (Patch 35d, below).
 - **After a failed run, until the next start.** Reading still works, because the key is here. Anything written before the app is closed and opened again is in the set-aside part after going back, and Undo go back brings it back.
 - **Turning it off.** There is no switch that unlocks in place. The way back is the safety copy (Go back), or an encrypted backup. If you would like an in-place unlock, say so.
 - **The tidy-up of the file** relies on SQLite's VACUUM on the store file before the app opens it. It has not been run on a real store.
+
+## Lock my files (Patch 35d)
+
+The second step of locking: the voice notes and Journal photos, which are files and not stored text (D31). It is on the Lock my data screen (test builds only), offered once the text is locked. The code is `LockMyFiles`, `StoredFiles` and `FileLock` in `Support/LockMyData.swift`, and `FileCipher` in `Support/AppLock.swift`.
+
+**The file format.** A sealed file is the nine bytes `ANCHFILE` and `01`, then the AES-GCM nonce, ciphertext and tag, made with the same data key as the text. The authenticated context is `File.VoiceNotes/<name>` or `File.JournalAttachments/<name>`, so a sealed file cannot be renamed into another file's place. A photo starts with `FF D8` and a voice note has `ftyp` near its start, so a plain file is never taken for a sealed one. Sealed files are written with file protection until first unlock, the same as the store.
+
+**The order.**
+
+1. The screen offers Lock voice notes and photos only when the text is locked, the key and recovery file are here, and the real store is open. The recovery key and the backup box were dealt with in the first step.
+2. Choosing it records a job and asks for a new safety copy, which holds the files as they are now.
+3. On the next start the copy is made first (Patch 35b1). Once the database is open, the run refuses and says why if the copy is older than the request, the key is missing or does not open what it seals, or the recovery file was made for a different key.
+4. The work then runs in the background, so a long list of photos never holds up the start. Each file is sealed, opened again in memory and compared with the plain bytes, written beside the file under a name that starts with a dot, read back from there, and only then put in the plain file's place in one step. The plain file is not touched before that. A file deleted while this runs stays deleted.
+5. Halfway, new files start to be sealed as they are saved, and a second pass takes any saved before that. Then every file is read again from its sealed form. Only if every one opens does the state become on, which is what turns `FileLock.isOn` on at every launch.
+6. A file changed in the last two minutes is left alone by the run and by the sweep, because a recording may still be writing to it. A recording is sealed when it stops, and the next start seals anything left.
+
+**Why there is no automatic way back here.** The text lock changes every row at once and has to be undone as a whole. Each file is changed by itself, and a file that is half done does not exist: it is the plain file or the sealed one. A run that stops, or a file that cannot be sealed, leaves some files sealed and some plain, and every one opens, because every read goes through `StoredFiles.read`, which takes both. The run can be asked for again. If the app is closed in the middle, the next start says so on the screen. The way back to the files as they were is the safety copy, as for the text.
+
+**Once files are locked.** A new recording is plain while it is being recorded, because the recorder writes straight to its file, and is sealed the moment it stops. A new photo or drawing is sealed as it is saved. A backup restored with Import is sealed as it is put in place. Every start looks for files still plain, such as a recording cut short or files put back by Go back, and seals them.
+
+**Reading and handing on.** A photo is read, opened and drawn; the picture is held in memory while the app runs, as before. A voice note is opened into memory to play, and its length is worked out once and kept. Share and Send through Messages need a file, so a locked voice note is opened into a copy in the phone's temporary folder at that moment only. The copy is removed when the sheet closes and at every start. Share uses a share item that makes the copy only when something is shared.
+
+**Backups.** The encrypted backup (Patch 33) opens each locked file and puts the plain bytes in the backup, one at a time. The backup has a password of its own and is opened on any phone, so it cannot depend on this phone's key; `scripts/anchorbackup.py` still reads it. If a locked file cannot be opened, the backup stops instead of leaving that file out.
+
+**What this does not cover.**
+
+- **The safety copy is plain.** It holds the files as they were, unlocked, until you delete it.
+- **Names, sizes and times.** The file names are random ids, but the size and time of each file, and that a file is a photo or a recording, are still visible to anyone with the files.
+- **The temporary copy** of a voice note exists for as long as a share or a send takes, and until the start after that if the app is closed first.
+- **A recording in progress** is plain until it stops.
+- **Old copies.** A phone backup or an export made before locking still holds the files readable.
+- **Turning it off.** There is no switch that unlocks files in place. The way back is the safety copy or an encrypted backup.
+- **It has not run on real files.** It is checked by a self-test on made-up bytes in a test build and by `scripts/check-locked-files.mjs`, which keeps every other file from reading or writing the two folders itself. Nothing has been compiled by the tool that wrote it.
 
 ## Checking a test build on a device
 
@@ -108,3 +141,15 @@ One flow that locks every field in the list above on every model, after the way 
 3. Optional, with a Mac: the sealed values are strings under `AnchorWidgetSnapshot.sealed` and `AnchorCounterWidgetItems.sealed` in the App Group defaults, and begin with `anchor.widget.v1:`. The plain keys should be gone.
 4. Restart the phone and look at the widget before unlocking: empty is expected. Unlock it: the widget should fill in within about 15 minutes, or at once when the app is opened.
 5. Clear everything in Your data: the widgets should empty.
+
+## Checking Lock my files on a device (Patch 35d)
+
+On a copy of your own data, with the text already locked, and an encrypted backup made first.
+
+1. Open Settings, Lock my data. Under Voice notes and photos it should show how many files there are now.
+2. Tap Lock voice notes and photos and confirm. It says it is waiting. Close Anchor from the app switcher and open it again.
+3. Open Lock my data again. It should say Locking, with a count that rises, then Voice notes and photos with a date and the number of files. Last time, voice notes and photos should say it locked and checked every file.
+4. Open a Journal entry with a photo, play a voice note, and share one voice note: all three work as before. Record a new voice note and add a new photo: both work, and the count of locked files goes up by two.
+5. Make an encrypted backup, restore it on a second phone or a simulator with Import, and check the photos and voice notes are there.
+6. Optional, with a Mac and a copy of the app's folder: a file in `VoiceNotes` or `JournalAttachments` should begin with the letters ANCHFILE.
+7. To check the way back, use Safety copy, Go back, and look: the files are as they were before step 2, and the app still shows them, and the next start locks them again.

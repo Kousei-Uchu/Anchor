@@ -21,12 +21,15 @@ import SwiftUI
 import SwiftData
 import MessageUI
 import AVFoundation
+import UniformTypeIdentifiers
 
 // MARK: - Voice note storage
 
 /// Voice notes live in Application Support/VoiceNotes, one .m4a per message.
 /// The message keeps only the file name, so a file that is missing (an
 /// imported backup, for example) is handled as "not on this device".
+/// Once voice notes are locked (Patch 35d) a file here is sealed, so it is read, played
+/// and handed to other apps only through `StoredFiles`.
 enum VoiceNoteStore {
     static var folder: URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -50,14 +53,46 @@ enum VoiceNoteStore {
     static func delete(_ name: String?) {
         guard let name else { return }
         try? FileManager.default.removeItem(at: url(for: name))
+        durationLock.lock()
+        durations[name] = nil
+        durationLock.unlock()
     }
+
+    /// Length is worked out once per file and kept, because a locked file has to be opened to be measured and a
+    /// row asks again every time it is drawn.
+    private static let durationLock = NSLock()
+    nonisolated(unsafe) private static var durations: [String: TimeInterval] = [:]
+
     static func duration(of name: String) -> TimeInterval {
-        guard let player = try? AVAudioPlayer(contentsOf: url(for: name)) else { return 0 }
+        durationLock.lock()
+        let known = durations[name]
+        durationLock.unlock()
+        if let known { return known }
+        guard let data = StoredFiles.read(.voiceNotes, name),
+              let player = try? AVAudioPlayer(data: data, fileTypeHint: AVFileType.m4a.rawValue) else { return 0 }
+        durationLock.lock()
+        durations[name] = player.duration
+        durationLock.unlock()
         return player.duration
     }
     static func clock(_ seconds: TimeInterval) -> String {
         let total = Int(seconds.rounded())
         return String(format: "%d:%02d", total / 60, total % 60)
+    }
+}
+
+/// A voice note handed to the share sheet. The file is made, opened if it is locked, only when something is
+/// actually shared, and the copy is removed when the sheet closes and at the next start.
+struct SharedVoiceNote: Transferable {
+    let name: String
+
+    static var transferRepresentation: some TransferRepresentation {
+        FileRepresentation(exportedContentType: .mpeg4Audio) { item in
+            guard let url = StoredFiles.sendableCopy(.voiceNotes, item.name) else {
+                throw CocoaError(.fileReadNoSuchFile)
+            }
+            return SentTransferredFile(url)
+        }
     }
 }
 
@@ -132,6 +167,9 @@ final class VoiceNoteRecorder: NSObject, ObservableObject {
         if let name = fileName, VoiceNoteStore.duration(of: name) < 0.5 {
             VoiceNoteStore.delete(name)
             fileName = nil
+        } else if let name = fileName {
+            // Once voice notes are locked, a finished recording is locked as soon as it is saved.
+            StoredFiles.sealIfOn(.voiceNotes, name)
         }
     }
 
@@ -161,7 +199,8 @@ final class VoiceNotePlayer: NSObject, ObservableObject, AVAudioPlayerDelegate {
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
             try AVAudioSession.sharedInstance().setActive(true)
-            let p = try AVAudioPlayer(contentsOf: VoiceNoteStore.url(for: name))
+            guard let data = StoredFiles.read(.voiceNotes, name) else { playingName = nil; return }
+            let p = try AVAudioPlayer(data: data, fileTypeHint: AVFileType.m4a.rawValue)
             p.delegate = self
             guard p.play() else { return }
             player = p
@@ -463,7 +502,7 @@ private struct ThreadMessageSheet: View {
                     Section("Voice note") {
                         VoiceNoteRow(fileName: audio, player: player)
                         if hasVoice {
-                            ShareLink(item: VoiceNoteStore.url(for: audio)) {
+                            ShareLink(item: SharedVoiceNote(name: audio), preview: SharePreview("Voice note")) {
                                 Label("Share voice note", systemImage: "square.and.arrow.up")
                             }
                         }
@@ -494,7 +533,7 @@ private struct ThreadMessageSheet: View {
                                 sendRequest = SendRequest(
                                     recipient: contact.phoneNumber,
                                     body: message.text,
-                                    attachment: hasVoice ? message.audioFileName.map(VoiceNoteStore.url(for:)) : nil
+                                    attachment: hasVoice ? message.audioFileName.flatMap { StoredFiles.sendableCopy(.voiceNotes, $0) } : nil
                                 )
                             }
                         case .discord:
@@ -511,7 +550,7 @@ private struct ThreadMessageSheet: View {
                     }
                 }
             }
-            .sheet(item: $sendRequest) { request in
+            .sheet(item: $sendRequest, onDismiss: { StoredFiles.clearSharedCopies() }) { request in
                 if MFMessageComposeViewController.canSendText() {
                     MessageComposeView(recipient: request.recipient, body: request.body, attachmentURL: request.attachment)
                 } else {
@@ -773,7 +812,7 @@ struct ThreadMessageComposer: View {
                         case .phone:
                             Button("Save & send via Messages") {
                                 let body = newMessageTrimmed
-                                let attachment = recorder.fileName.map(VoiceNoteStore.url(for:))
+                                let attachment = recorder.fileName.flatMap { StoredFiles.sendableCopy(.voiceNotes, $0) }
                                 _ = saveOnly(sending: true)
                                 sendRequest = SendRequest(recipient: contact.phoneNumber, body: body, attachment: attachment)
                             }
@@ -811,7 +850,10 @@ struct ThreadMessageComposer: View {
                 recorder.discard()
                 player.stop()
             }
-            .sheet(item: $sendRequest, onDismiss: { dismiss() }) { request in
+            .sheet(item: $sendRequest, onDismiss: {
+                StoredFiles.clearSharedCopies()
+                dismiss()
+            }) { request in
                 if MFMessageComposeViewController.canSendText() {
                     MessageComposeView(recipient: request.recipient, body: request.body, attachmentURL: request.attachment)
                 } else {

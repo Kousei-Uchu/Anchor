@@ -276,10 +276,399 @@ enum LockMyData {
         return report
     }
 
-    private static func keyWorks(_ key: SymmetricKey) -> Bool {
+    static func keyWorks(_ key: SymmetricKey) -> Bool {
         let probe = "anchor lock probe"
         guard let sealed = try? FieldCipher.seal(probe, context: "LockMyData.probe", key: key) else { return false }
         return FieldCipher.open(sealed, context: "LockMyData.probe", key: key) == probe
+    }
+}
+
+// MARK: - Voice notes and Journal photos (Patch 35d, D31)
+
+/// Whether a new voice note or photo is sealed as it is saved. False until Lock my files has checked every file,
+/// and then turned on at every launch (`FieldLockWiring.install`).
+enum FileLock {
+    nonisolated(unsafe) static var isOn = false
+}
+
+/// The one way in and out for the two folders of files: voice notes and Journal photos. A file in either folder is
+/// plain or sealed (`FileCipher`), and this reads both, so a folder that is part locked, part plain, which is what
+/// a run that was stopped leaves, always opens. `scripts/check-locked-files.mjs` keeps every other file from
+/// reading or writing these folders on its own.
+enum StoredFiles {
+    enum Folder: CaseIterable {
+        case voiceNotes, journalPhotos
+
+        /// The folder's name inside a safety copy, and inside the context a file is sealed for.
+        var label: String { self == .voiceNotes ? "VoiceNotes" : "JournalAttachments" }
+        var url: URL { self == .voiceNotes ? VoiceNoteStore.folder : JournalAttachmentStore.folderURL }
+    }
+
+    enum SealResult {
+        case sealed, alreadySealed, left, gone, failed
+    }
+
+    /// Files changed in the last two minutes are left alone by a lock run and a sweep, because a recording may
+    /// still be writing to one. The recording seals itself when it stops.
+    static let recentSeconds: TimeInterval = 120
+
+    static func context(_ folder: Folder, _ name: String) -> String {
+        "File." + folder.label + "/" + name
+    }
+
+    // MARK: Listing and looking
+
+    /// The files that belong to the app in a folder: regular files, and nothing that starts with a dot, which is
+    /// where a half-made lock copy lives.
+    static func names(in folder: Folder) -> [String] {
+        let keys: [URLResourceKey] = [.isRegularFileKey]
+        let urls = (try? FileManager.default.contentsOfDirectory(at: folder.url, includingPropertiesForKeys: keys)) ?? []
+        return urls.compactMap { url -> String? in
+            let name = url.lastPathComponent
+            guard !name.hasPrefix("."),
+                  (try? url.resourceValues(forKeys: Set(keys)))?.isRegularFile == true else { return nil }
+            return name
+        }.sorted()
+    }
+
+    static func isSealed(at url: URL) -> Bool {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return false }
+        defer { try? handle.close() }
+        guard let head = try? handle.read(upToCount: FileCipher.magic.count) else { return false }
+        return FileCipher.looksSealed(head)
+    }
+
+    static func isRecent(_ url: URL) -> Bool {
+        guard let changed = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate else { return false }
+        return Date().timeIntervalSince(changed) < recentSeconds
+    }
+
+    struct Counts {
+        var sealed = 0
+        var plain = 0
+        var total: Int { sealed + plain }
+    }
+
+    static func counts() -> Counts {
+        var counts = Counts()
+        for folder in Folder.allCases {
+            for name in names(in: folder) {
+                if isSealed(at: folder.url.appendingPathComponent(name)) { counts.sealed += 1 } else { counts.plain += 1 }
+            }
+        }
+        return counts
+    }
+
+    // MARK: Reading and writing one file, by its URL, with the key given
+
+    /// The file's own bytes. Plain bytes as they are; a sealed file opened with the key; nil if it is missing, or
+    /// sealed and the key is missing or wrong.
+    static func readFile(at url: URL, context: String, key: @autoclosure () -> SymmetricKey?) -> Data? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        guard FileCipher.looksSealed(data) else { return data }
+        guard let key = key() else { return nil }
+        return FileCipher.open(data, context: context, key: key)
+    }
+
+    /// Seals one plain file where it lies. The sealed bytes are made, opened again and compared with the plain
+    /// ones, written beside the file under a name that starts with a dot, read back from there, and only then put
+    /// in the plain file's place in one step. The plain file is never touched before that. A file that is already
+    /// sealed is left alone, but only counts as sealed if it opens.
+    static func sealFile(at url: URL, context: String, key: SymmetricKey, skipRecent: Bool = false) -> SealResult {
+        let manager = FileManager.default
+        guard manager.fileExists(atPath: url.path) else { return .gone }
+        guard let data = try? Data(contentsOf: url) else { return .failed }
+        if FileCipher.looksSealed(data) {
+            return FileCipher.open(data, context: context, key: key) == nil ? .failed : .alreadySealed
+        }
+        if skipRecent && isRecent(url) { return .left }
+        guard let sealed = try? FileCipher.seal(data, context: context, key: key),
+              FileCipher.open(sealed, context: context, key: key) == data else { return .failed }
+        let temp = url.deletingLastPathComponent().appendingPathComponent("." + url.lastPathComponent + ".locking")
+        try? manager.removeItem(at: temp)
+        do {
+            try sealed.write(to: temp, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+            guard try Data(contentsOf: temp) == sealed else {
+                try? manager.removeItem(at: temp)
+                return .failed
+            }
+            // A file deleted while this ran stays deleted.
+            guard manager.fileExists(atPath: url.path) else {
+                try? manager.removeItem(at: temp)
+                return .gone
+            }
+            _ = try manager.replaceItemAt(url, withItemAt: temp)
+        } catch {
+            try? manager.removeItem(at: temp)
+            return .failed
+        }
+        return readFile(at: url, context: context, key: key) == data ? .sealed : .failed
+    }
+
+    // MARK: The folders, with the data key
+
+    static func read(_ folder: Folder, _ name: String) -> Data? {
+        readFile(at: folder.url.appendingPathComponent(name), context: context(folder, name), key: FieldLockWiring.currentKey())
+    }
+
+    /// Saves a new file, sealed when locking files is on and the key is here. If sealing is wanted and cannot be
+    /// done the file is saved plain, so a photo is never lost; the next start seals it.
+    static func write(_ data: Data, _ folder: Folder, _ name: String) throws {
+        let url = folder.url.appendingPathComponent(name)
+        if FileLock.isOn, let key = FieldLockWiring.currentKey(),
+           let sealed = try? FileCipher.seal(data, context: context(folder, name), key: key) {
+            try sealed.write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+        } else {
+            try data.write(to: url)
+        }
+    }
+
+    /// For a file made some other way, a recording: seals it when it is finished, if locking files is on.
+    static func sealIfOn(_ folder: Folder, _ name: String) {
+        guard FileLock.isOn, let key = FieldLockWiring.currentKey() else { return }
+        _ = sealFile(at: folder.url.appendingPathComponent(name), context: context(folder, name), key: key)
+    }
+
+    // MARK: Handing a file to another app
+
+    private static var sharedFolder: URL {
+        FileManager.default.temporaryDirectory.appendingPathComponent("AnchorShared", isDirectory: true)
+    }
+
+    /// A plain file another app can be given (Share, Messages). A plain file is given as it is. A sealed one is
+    /// opened into a copy in the phone's temporary folder, which `clearSharedCopies` removes when the sheet closes
+    /// and at every start. Nil if the file is missing or cannot be opened.
+    static func sendableCopy(_ folder: Folder, _ name: String) -> URL? {
+        let url = folder.url.appendingPathComponent(name)
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        guard isSealed(at: url) else { return url }
+        guard let plain = read(folder, name) else { return nil }
+        let directory = sharedFolder.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let copy = directory.appendingPathComponent(name)
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try plain.write(to: copy, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+            return copy
+        } catch {
+            return nil
+        }
+    }
+
+    static func clearSharedCopies() {
+        try? FileManager.default.removeItem(at: sharedFolder)
+    }
+}
+
+/// Lock my files (Patch 35d, D31): the second step of locking. Lock my data (35b3) locks the words; this locks the
+/// voice notes and Journal photos, which are files and not stored text.
+///
+/// The order, and why it is not like Lock my data:
+/// 1. It is offered only once the text is locked, so the recovery key was checked and the backup box ticked there.
+/// 2. Choosing it records a job and asks for a new safety copy, which holds the files as they are now.
+/// 3. On the next start, after the copy is made and the database is open, the run refuses unless the copy is fresh
+///    and the key opens what it seals. Then it works through the files in the background, one at a time.
+/// 4. Each file is sealed, checked and swapped in by itself (`StoredFiles.sealFile`). A run that stops, or a file
+///    that cannot be sealed, leaves some files sealed and some plain, and every one of them still opens. That is
+///    why this needs no automatic way back: nothing is ever half done.
+/// 5. From the middle of the run, new files are sealed as they are saved, and a second pass takes any saved before.
+///    Only if every file then reads back from its sealed form does the state become on.
+/// 6. When it is on, every start looks for files still plain (a recording cut short, files put back by Go back) and
+///    seals them.
+enum LockMyFiles {
+    private enum Stored: String {
+        case off, running, on
+    }
+
+    private static let stateKey = "lockMyFiles.state"
+    private static let requestedKey = "lockMyFiles.requested"
+    private static let resultKey = "lockMyFiles.lastResult"
+    private static let lockedAtKey = "lockMyFiles.lockedAt"
+    private static let itemsKey = "lockMyFiles.items"
+    private static let defaults = UserDefaults.standard
+
+    private static var stored: Stored {
+        defaults.string(forKey: stateKey).flatMap(Stored.init(rawValue:)) ?? .off
+    }
+
+    /// True once a run has finished and every file has checked out. This is what turns `FileLock.isOn` on at launch.
+    static var isOn: Bool { stored == .on }
+
+    struct Status {
+        var isOn = false
+        var running = false
+        var waiting = false
+        var lockedAt: Date?
+        var files = 0
+        var lastResult: String?
+    }
+
+    static func status() -> Status {
+        var status = Status()
+        status.isOn = isOn
+        status.running = stored == .running
+        status.waiting = defaults.object(forKey: requestedKey) != nil
+        status.lockedAt = (defaults.object(forKey: lockedAtKey) as? Double).map(Date.init(timeIntervalSince1970:))
+        status.files = defaults.integer(forKey: itemsKey)
+        status.lastResult = defaults.string(forKey: resultKey)
+        return status
+    }
+
+    static func clearLastResult() {
+        defaults.removeObject(forKey: resultKey)
+    }
+
+    private static func setResult(_ text: String) {
+        defaults.set(text, forKey: resultKey)
+    }
+
+    // MARK: Asking for it
+
+    /// Records the job and asks for a safety copy. The run waits for the next start.
+    static func request() {
+        guard LockMyData.isOn, !isOn else { return }
+        defaults.set(Date().timeIntervalSince1970, forKey: requestedKey)
+        SafetyCopy.request(.make)
+    }
+
+    static func cancelRequest() {
+        defaults.removeObject(forKey: requestedKey)
+        if SafetyCopy.status().pending == .make { SafetyCopy.cancelRequest() }
+    }
+
+    // MARK: At launch
+
+    /// A run that was stopped, because the app was closed in the middle of it, is only part done. Nothing is lost:
+    /// the files already sealed open, the rest are plain. It says so, and the run can be asked for again.
+    static func recoverInterruptedRun() {
+        guard stored == .running else { return }
+        defaults.set(Stored.off.rawValue, forKey: stateKey)
+        FileLock.isOn = false
+        setResult("Locking the voice notes and photos was stopped before it finished. Nothing was lost: the ones already locked open as usual and the rest are as they were. Lock them again to finish.")
+    }
+
+    /// Runs the waiting job, if there is one, once the real database is open. The work itself runs in the
+    /// background, so a long list of photos never holds up the start.
+    @MainActor
+    static func runIfWaiting() {
+        StoredFiles.clearSharedCopies()
+        guard let asked = defaults.object(forKey: requestedKey) as? Double else { return }
+        defaults.removeObject(forKey: requestedKey)
+        let requested = Date(timeIntervalSince1970: asked)
+
+        guard !DemoMode.isOn, AnchorSchema.openedPersistentStore else {
+            setResult("Nothing was locked, because Anchor could not open your saved data this time.")
+            return
+        }
+        guard LockMyData.isOn else {
+            setResult("Nothing was locked, because your text is not locked yet. Lock my data comes first.")
+            return
+        }
+        guard !isOn else {
+            setResult("Your voice notes and photos were already locked, so nothing was done.")
+            return
+        }
+        let copy = SafetyCopy.status()
+        guard copy.exists, let made = copy.createdAt, made.addingTimeInterval(2) >= requested else {
+            setResult("Nothing was locked, because the safety copy was not made. Safety copy says why. Try again once it has been made.")
+            return
+        }
+        guard case .found(let key) = DataKeyStore.lookup(), LockMyData.keyWorks(key) else {
+            setResult("Nothing was locked, because the data key could not be read on this start. Close Anchor and open it again, then try once more.")
+            return
+        }
+        guard let blob = RecoveryFile.read(),
+              let fileID = RecoveryBlob.keyID(inBlob: blob),
+              fileID == RecoveryBlob.keyID(of: key) else {
+            setResult("Nothing was locked, because the recovery file is missing or was made for a different key. Make a new recovery key in Encryption first.")
+            return
+        }
+
+        defaults.set(Stored.running.rawValue, forKey: stateKey)
+        Task.detached(priority: .utility) { run(key: key) }
+    }
+
+    /// When files are locked, seals any that are still plain. Quiet, in the background, and it leaves a file that
+    /// changed in the last two minutes for the next start.
+    static func sweepAtLaunch() {
+        guard isOn, !DemoMode.isOn else { return }
+        Task.detached(priority: .utility) {
+            guard let key = FieldLockWiring.currentKey() else { return }
+            for folder in StoredFiles.Folder.allCases {
+                clearLeftovers(in: folder)
+                for name in StoredFiles.names(in: folder) {
+                    _ = StoredFiles.sealFile(at: folder.url.appendingPathComponent(name),
+                                             context: StoredFiles.context(folder, name), key: key, skipRecent: true)
+                }
+            }
+        }
+    }
+
+    // MARK: The run
+
+    /// Half-made copies from a run that was stopped. They start with a dot, so nothing else ever reads them.
+    private static func clearLeftovers(in folder: StoredFiles.Folder) {
+        let urls = (try? FileManager.default.contentsOfDirectory(at: folder.url, includingPropertiesForKeys: nil)) ?? []
+        for url in urls where url.lastPathComponent.hasPrefix(".") && url.lastPathComponent.hasSuffix(".locking") {
+            try? FileManager.default.removeItem(at: url)
+        }
+    }
+
+    private struct PassResult {
+        var failed = 0
+        var left = 0
+    }
+
+    private static func pass(key: SymmetricKey) -> PassResult {
+        var result = PassResult()
+        for folder in StoredFiles.Folder.allCases {
+            clearLeftovers(in: folder)
+            for name in StoredFiles.names(in: folder) {
+                switch StoredFiles.sealFile(at: folder.url.appendingPathComponent(name),
+                                            context: StoredFiles.context(folder, name), key: key, skipRecent: true) {
+                case .failed: result.failed += 1
+                case .left: result.left += 1
+                case .sealed, .alreadySealed, .gone: break
+                }
+            }
+        }
+        return result
+    }
+
+    /// Seals every file, turns on sealing for new ones, takes the ones saved in between, and reads every file back.
+    private static func run(key: SymmetricKey) {
+        _ = pass(key: key)
+        // From here a new file is sealed as it is saved.
+        FileLock.isOn = true
+        let second = pass(key: key)
+
+        // Read every file again, from its sealed form.
+        var total = 0, unreadable = 0, recent = 0
+        for folder in StoredFiles.Folder.allCases {
+            for name in StoredFiles.names(in: folder) {
+                let url = folder.url.appendingPathComponent(name)
+                total += 1
+                if StoredFiles.isSealed(at: url) {
+                    if StoredFiles.readFile(at: url, context: StoredFiles.context(folder, name), key: key) == nil { unreadable += 1 }
+                } else if StoredFiles.isRecent(url) {
+                    recent += 1
+                } else {
+                    unreadable += 1
+                }
+            }
+        }
+
+        if second.failed == 0 && unreadable == 0 {
+            defaults.set(Date().timeIntervalSince1970, forKey: lockedAtKey)
+            defaults.set(total - recent, forKey: itemsKey)
+            defaults.set(Stored.on.rawValue, forKey: stateKey)
+            let later = recent == 0 ? "" : " \(recent) saved in the last two minutes will be locked on the next start."
+            setResult("Locked \(total - recent) \(total - recent == 1 ? "file" : "files") and checked every one. From now on a new voice note or photo is locked as it is saved.\(later) The safety copy still holds them unlocked, so delete it when you are happy.")
+        } else {
+            FileLock.isOn = false
+            defaults.set(Stored.off.rawValue, forKey: stateKey)
+            let count = max(second.failed, unreadable)
+            setResult("\(count) \(count == 1 ? "file" : "files") could not be locked. Nothing was lost: every file still opens, the ones locked stay locked and the rest are as they were. Try again, and if it keeps happening, the safety copy has every file as it was.")
+        }
     }
 }
 
@@ -354,6 +743,69 @@ enum LockMyDataSelfTest {
         var refused = false
         do { _ = try LockMyData.lockAll(in: container) } catch { refused = true }
         check(refused, "locking went on although a value could not be sealed.")
+    }
+}
+#endif
+
+#if DEBUG
+/// Checks, in a test build and in a folder made for the purpose, with a made-up key and made-up bytes, that a
+/// file is sealed and opens again exactly, that sealing twice changes nothing, that a wrong key, a wrong name or a
+/// changed byte does not open, that a plain file still reads, and that no half-made copy is left. Nothing real is
+/// touched. Patch 35d.
+enum LockMyFilesSelfTest {
+    private static var hasRun = false
+
+    private static func check(_ condition: Bool, _ message: String) {
+        if !condition { fatalError("Lock my files self-test: \(message)") }
+    }
+
+    static func run() {
+        if hasRun { return }
+        hasRun = true
+        let manager = FileManager.default
+        let folder = manager.temporaryDirectory.appendingPathComponent("lockfiles-selftest-\(UUID().uuidString)", isDirectory: true)
+        defer { try? manager.removeItem(at: folder) }
+        guard (try? manager.createDirectory(at: folder, withIntermediateDirectories: true)) != nil else {
+            fatalError("Lock my files self-test: could not make a folder.")
+        }
+        let key = SymmetricKey(data: Data((0..<32).map { UInt8($0 &* 3) }))
+        let other = SymmetricKey(data: Data((0..<32).map { UInt8($0 &* 5 &+ 1) }))
+        let plain = Data([0xFF, 0xD8, 0xFF, 0xE0] + (0..<2000).map { UInt8($0 % 251) })
+        let url = folder.appendingPathComponent("a.jpg")
+        let context = "File.JournalAttachments/a.jpg"
+        check((try? plain.write(to: url)) != nil, "could not write a plain file.")
+
+        check(StoredFiles.readFile(at: url, context: context, key: nil) == plain, "a plain file did not read without a key.")
+        check(!StoredFiles.isSealed(at: url), "a plain file looked sealed.")
+        check(StoredFiles.sealFile(at: url, context: context, key: key) == .sealed, "a plain file was not sealed.")
+        check(StoredFiles.isSealed(at: url), "a sealed file did not look sealed.")
+        check(StoredFiles.readFile(at: url, context: context, key: key) == plain, "a sealed file did not open to the same bytes.")
+        check(StoredFiles.readFile(at: url, context: context, key: other) == nil, "a sealed file opened with the wrong key.")
+        check(StoredFiles.readFile(at: url, context: context, key: nil) == nil, "a sealed file opened with no key.")
+        check(StoredFiles.readFile(at: url, context: "File.JournalAttachments/b.jpg", key: key) == nil, "a sealed file opened for another name.")
+
+        let sealedBytes = try? Data(contentsOf: url)
+        check(StoredFiles.sealFile(at: url, context: context, key: key) == .alreadySealed, "a sealed file was sealed twice.")
+        check((try? Data(contentsOf: url)) == sealedBytes, "sealing twice changed the file.")
+        check(StoredFiles.sealFile(at: url, context: context, key: other) == .failed, "a sealed file that does not open was called fine.")
+
+        let names = (try? manager.contentsOfDirectory(atPath: folder.path)) ?? []
+        check(names == ["a.jpg"], "a half-made copy was left behind: \(names).")
+
+        if var changed = sealedBytes, changed.count > 40 {
+            changed[changed.count - 20] ^= 0x01
+            let damaged = folder.appendingPathComponent("c.jpg")
+            check((try? changed.write(to: damaged)) != nil, "could not write a damaged file.")
+            check(StoredFiles.readFile(at: damaged, context: context, key: key) == nil, "a changed file opened.")
+        }
+
+        let missing = folder.appendingPathComponent("none.jpg")
+        check(StoredFiles.sealFile(at: missing, context: "File.JournalAttachments/none.jpg", key: key) == .gone, "a missing file was not reported as gone.")
+
+        let fresh = folder.appendingPathComponent("d.m4a")
+        check((try? Data([1, 2, 3]).write(to: fresh)) != nil, "could not write a fresh file.")
+        check(StoredFiles.sealFile(at: fresh, context: "File.VoiceNotes/d.m4a", key: key, skipRecent: true) == .left, "a file written just now was not left alone.")
+        check(!StoredFiles.isSealed(at: fresh), "a file written just now was sealed.")
     }
 }
 #endif

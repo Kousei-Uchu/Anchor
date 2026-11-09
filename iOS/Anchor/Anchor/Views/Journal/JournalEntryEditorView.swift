@@ -693,6 +693,7 @@ struct JournalEntryEditorView: View {
 /// picked, drawings made, images pulled from context suggestions) —
 /// referenced from entry text by filename only, same pattern as
 /// JournalEntry.audioFileName elsewhere in the model.
+/// Once photos are locked (Patch 35d) a file here is sealed, so it is read and written only through `StoredFiles`.
 enum JournalAttachmentStore {
     private static let cache = NSCache<NSString, UIImage>()
 
@@ -708,9 +709,8 @@ enum JournalAttachmentStore {
     @discardableResult
     static func save(imageData: Data) -> String? {
         let filename = "\(UUID().uuidString).jpg"
-        let url = folderURL.appendingPathComponent(filename)
         do {
-            try imageData.write(to: url)
+            try StoredFiles.write(imageData, .journalPhotos, filename)
             return filename
         } catch {
             return nil
@@ -719,7 +719,7 @@ enum JournalAttachmentStore {
 
     static func image(named filename: String) -> UIImage? {
         if let cached = cache.object(forKey: filename as NSString) { return cached }
-        guard let image = UIImage(contentsOfFile: folderURL.appendingPathComponent(filename).path) else { return nil }
+        guard let data = StoredFiles.read(.journalPhotos, filename), let image = UIImage(data: data) else { return nil }
         cache.setObject(image, forKey: filename as NSString)
         return image
     }

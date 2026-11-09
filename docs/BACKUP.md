@@ -33,4 +33,4 @@ All numbers are big endian.
 
 ## Not covered
 
-Backups are for moving or keeping a copy, not for syncing. Settings (such as reminder times and layout) are not in them, the same as the JSON export. The photo and voice note files on the device itself are not encrypted by this patch; that is the at-rest work in Patches 34 and 35.
+Backups are for moving or keeping a copy, not for syncing. Settings (such as reminder times and layout) are not in them, the same as the JSON export. The photo and voice note files on the device itself are locked by Lock my files (Patch 35d, `docs/ENCRYPTION.md`). A backup always holds them as plain bytes, so it opens on any phone with its password and `scripts/anchorbackup.py` reads it without this phone's key. If a locked file cannot be opened when a backup is made, the backup stops instead of leaving it out.

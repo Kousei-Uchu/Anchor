@@ -722,6 +722,7 @@ struct DataControlView: View {
         WidgetCenter.shared.reloadAllTimelines()
         clearJournalAttachments()
         LockMyData.cancelRequest()
+        LockMyFiles.cancelRequest()
         SafetyCopy.deleteEverything()
         showClearedAlert = true
     }
@@ -1057,12 +1058,26 @@ enum BackupArchive {
         try writer.write(json)
         try writer.write(BackupFormat.bigEndian(UInt64(entries.count), bytes: 4))
         for entry in entries {
+            // A locked file goes into the backup as the plain file it is, one at a time. The backup has a password
+            // of its own and may be opened on a phone with another key, so it cannot hold a file only this key
+            // opens. If a locked file cannot be opened, the backup stops instead of leaving it out.
+            var opened: Data?
+            if StoredFiles.isSealed(at: entry.url) {
+                let kind: StoredFiles.Folder = entry.folder == 0 ? .journalPhotos : .voiceNotes
+                guard let plain = StoredFiles.read(kind, entry.name) else { throw BackupError.io }
+                opened = plain
+            }
+            let size = opened.map { UInt64($0.count) } ?? entry.size
             let nameData = Data(entry.name.utf8)
             var head = Data([entry.folder])
             head.append(BackupFormat.bigEndian(UInt64(nameData.count), bytes: 2))
             head.append(nameData)
-            head.append(BackupFormat.bigEndian(entry.size, bytes: 8))
+            head.append(BackupFormat.bigEndian(size, bytes: 8))
             try writer.write(head)
+            if let opened {
+                try writer.write(opened)
+                continue
+            }
             let input = try FileHandle(forReadingFrom: entry.url)
             defer { try? input.close() }
             var remaining = entry.size
@@ -1127,7 +1142,11 @@ enum BackupArchive {
                 .appendingPathComponent(file.name)
             let destination = folderURL(file.folder).appendingPathComponent(file.name)
             if manager.fileExists(atPath: destination.path) { continue }
-            if (try? manager.moveItem(at: source, to: destination)) != nil { added += 1 }
+            if (try? manager.moveItem(at: source, to: destination)) != nil {
+                added += 1
+                // Files come out of a backup plain. Once files are locked, a restored one is locked too.
+                StoredFiles.sealIfOn(file.folder == 0 ? .journalPhotos : .voiceNotes, file.name)
+            }
         }
         return added
     }

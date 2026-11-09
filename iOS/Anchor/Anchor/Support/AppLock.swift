@@ -612,6 +612,35 @@ enum FieldCipher {
     }
 }
 
+/// Seals and opens a whole file, a voice note or a Journal photo, with the data key (Patch 35d, D31). A sealed
+/// file is the nine bytes "ANCHFILE" and a 1, then the nonce, the ciphertext and the tag. The context (the
+/// folder and the file name, such as "File.VoiceNotes/x.m4a") is authenticated, so a sealed file cannot be
+/// renamed into another file's place. A photo starts with 0xFF 0xD8 and a voice note has "ftyp" near its
+/// start, so a plain file is never taken for a sealed one.
+enum FileCipher {
+    static let magic = Data([0x41, 0x4E, 0x43, 0x48, 0x46, 0x49, 0x4C, 0x45, 0x01])
+
+    static func looksSealed(_ data: Data) -> Bool {
+        data.count >= magic.count && data.prefix(magic.count) == magic
+    }
+
+    static func seal(_ plain: Data, context: String, key: SymmetricKey) throws -> Data {
+        guard let box = try? AES.GCM.seal(plain, using: key, authenticating: Data(context.utf8)),
+              let combined = box.combined else { throw DataKeyError.storage }
+        return magic + combined
+    }
+
+    /// The file's bytes, or nil when it is not sealed or does not open with this key and context.
+    static func open(_ stored: Data, context: String, key: SymmetricKey) -> Data? {
+        guard looksSealed(stored), stored.count >= magic.count + 28 else { return nil }
+        let combined = Data(stored.dropFirst(magic.count))
+        guard let box = try? AES.GCM.SealedBox(combined: combined),
+              let plain = try? AES.GCM.open(box, using: key, authenticating: Data(context.utf8))
+        else { return nil }
+        return plain
+    }
+}
+
 enum KeyLookup {
     case found(SymmetricKey)
     case missing
@@ -674,6 +703,9 @@ enum FieldLockWiring {
     private static let lock = NSLock()
     private static var cached: SymmetricKey?
 
+    /// The data key, read once and kept in memory. Nil when there is no key or the Keychain cannot be read yet.
+    static func currentKey() -> SymmetricKey? { key() }
+
     private static func key() -> SymmetricKey? {
         lock.lock()
         defer { lock.unlock() }
@@ -694,6 +726,8 @@ enum FieldLockWiring {
     static func install() {
         // Locking is on only after a Lock my data run has checked every item (Patch 35b3).
         FieldLock.isOn = LockMyData.isOn
+        // Voice notes and photos are sealed as they are saved only after Lock my files has checked every one (Patch 35d).
+        FileLock.isOn = LockMyFiles.isOn
         FieldLock.opener = { stored, context in
             guard let key = key() else { return nil }
             return FieldCipher.open(stored, context: context, key: key)

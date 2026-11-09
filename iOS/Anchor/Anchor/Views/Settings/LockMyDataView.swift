@@ -1,10 +1,14 @@
 import SwiftUI
 
 /// The Lock my data screen (Patch 35b3, D15). It only asks for a job; the job runs on the next start, after the
-/// safety copy has been made. See `LockMyData` and docs/DECISIONS_EXPLAINED.md.
+/// safety copy has been made. See `LockMyData` and docs/DECISIONS_EXPLAINED.md. Once the text is locked it offers
+/// the second step, the voice notes and Journal photos (Patch 35d, D31, `LockMyFiles`).
 struct LockMyDataView: View {
     @StateObject private var keys = DataKeyManager.shared
     @State private var status = LockMyData.status()
+    @State private var files = LockMyFiles.status()
+    @State private var fileCounts = StoredFiles.Counts()
+    @State private var confirmLockFiles = false
     @State private var recoveryChecked = false
     @State private var backupKept = false
     @State private var showCheck = false
@@ -13,6 +17,10 @@ struct LockMyDataView: View {
     private var keyReady: Bool { keys.status == .ready && keys.hasRecoveryFile }
     private var canLock: Bool {
         keyReady && recoveryChecked && backupKept && !DemoMode.isOn && AnchorSchema.openedPersistentStore
+    }
+    /// The text is already locked when this is offered, so the recovery key and the backup were dealt with there.
+    private var canLockFiles: Bool {
+        keyReady && !DemoMode.isOn && AnchorSchema.openedPersistentStore
     }
 
     var body: some View {
@@ -45,6 +53,18 @@ struct LockMyDataView: View {
                 }
             }
 
+            if let result = files.lastResult {
+                Anchor.SettingsSection(title: "Last time, voice notes and photos") {
+                    Text(result).font(.system(.subheadline, design: .rounded))
+                    Button {
+                        LockMyFiles.clearLastResult()
+                        refresh()
+                    } label: {
+                        Text("Dismiss").font(.system(.subheadline, design: .rounded))
+                    }
+                }
+            }
+
             if status.isOn {
                 lockedSection
             } else if !status.waiting {
@@ -62,6 +82,9 @@ struct LockMyDataView: View {
         .onAppear {
             keys.refresh()
             refresh()
+        }
+        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
+            if files.running { refresh() }
         }
         .sheet(isPresented: $showCheck) {
             RecoveryKeyEntrySheet(title: "Check recovery key", buttonTitle: "Check") { typed in
@@ -82,6 +105,15 @@ struct LockMyDataView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("A safety copy is made first. If anything does not check out afterwards, Anchor goes back to it.")
+        }
+        .confirmationDialog("Lock your voice notes and photos on the next start?", isPresented: $confirmLockFiles, titleVisibility: .visible) {
+            Button("Lock on the next start") {
+                LockMyFiles.request()
+                refresh()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("A new safety copy is made first. Each file is checked before it replaces the original.")
         }
     }
 
@@ -120,7 +152,7 @@ struct LockMyDataView: View {
 
         Anchor.SettingsSection(
             title: nil,
-            footer: DemoMode.isOn ? "Off while showcase mode is on." : "A safety copy is made first. Voice notes and Journal photos are not locked yet."
+            footer: DemoMode.isOn ? "Off while showcase mode is on." : "A safety copy is made first. Voice notes and Journal photos are locked afterwards, in a second step."
         ) {
             Button {
                 confirmLock = true
@@ -145,8 +177,9 @@ struct LockMyDataView: View {
                 row("Locked", when.formatted(date: .abbreviated, time: .shortened))
             }
             row("Items checked", "\(status.items)")
-            row("Voice notes and photos", "Not locked yet")
         }
+
+        filesSection
 
         Anchor.SettingsSection(
             title: "The safety copy",
@@ -156,6 +189,67 @@ struct LockMyDataView: View {
                 SafetyCopyView()
             } label: {
                 Text("Safety copy").font(.system(.subheadline, design: .rounded))
+            }
+        }
+    }
+
+    // MARK: Voice notes and photos
+
+    @ViewBuilder
+    private var filesSection: some View {
+        if files.running {
+            Anchor.SettingsSection(
+                title: "Voice notes and photos",
+                footer: "This runs in the background. Each file is locked and checked on its own, so it is safe to close Anchor, and nothing is lost if you do."
+            ) {
+                row("Locked so far", "\(fileCounts.sealed) of \(fileCounts.total)")
+            }
+        } else if files.waiting {
+            Anchor.SettingsSection(
+                title: "Waiting",
+                footer: "Close Anchor from the app switcher and open it again. The safety copy is made first, then your voice notes and photos are locked."
+            ) {
+                Text("Your voice notes and photos will be locked on the next start.")
+                    .font(.system(.subheadline, design: .rounded))
+                Button {
+                    LockMyFiles.cancelRequest()
+                    refresh()
+                } label: {
+                    Text("Cancel").font(.system(.subheadline, design: .rounded))
+                }
+            }
+        } else if files.isOn {
+            Anchor.SettingsSection(
+                title: "Voice notes and photos",
+                footer: fileCounts.plain == 0
+                    ? "Everything you record or add from now on is locked as it is saved."
+                    : "A file made in the last two minutes is locked on the next start."
+            ) {
+                if let when = files.lockedAt {
+                    row("Locked", when.formatted(date: .abbreviated, time: .shortened))
+                }
+                row("Files locked", "\(fileCounts.sealed)")
+                if fileCounts.plain > 0 {
+                    row("Not locked yet", "\(fileCounts.plain)")
+                }
+            }
+        } else {
+            Anchor.SettingsSection(
+                title: "Voice notes and photos",
+                footer: DemoMode.isOn
+                    ? "Off while showcase mode is on."
+                    : "A new safety copy is made first. Files are locked one at a time, and each is checked before it replaces the original. A backup made in Your data holds them unlocked, so it opens on any phone, and its password protects it."
+            ) {
+                row("Files now", "\(fileCounts.total)")
+                if fileCounts.sealed > 0 {
+                    row("Already locked", "\(fileCounts.sealed)")
+                }
+                Button {
+                    confirmLockFiles = true
+                } label: {
+                    Text("Lock voice notes and photos").font(.system(.subheadline, design: .rounded).weight(.semibold))
+                }
+                .disabled(!canLockFiles)
             }
         }
     }
@@ -174,6 +268,8 @@ struct LockMyDataView: View {
 
     private func refresh() {
         status = LockMyData.status()
+        files = LockMyFiles.status()
+        if status.isOn { fileCounts = StoredFiles.counts() }
     }
 }
 
