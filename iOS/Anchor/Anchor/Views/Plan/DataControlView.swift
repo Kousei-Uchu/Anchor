@@ -721,6 +721,7 @@ struct DataControlView: View {
         ShowcasePasscode.remove()
         WidgetCenter.shared.reloadAllTimelines()
         clearJournalAttachments()
+        SafetyCopy.deleteEverything()
         showClearedAlert = true
     }
 

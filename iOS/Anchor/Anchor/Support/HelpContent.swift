@@ -778,6 +778,15 @@ struct HelpNoteToolbarButton: View {
     }
 }
 
+enum SafetyCopyHelp {
+    static let paragraphs: [String] = [
+        "A safety copy is an exact copy of everything Anchor has saved: your database, your voice notes and your Journal photos and drawings. It is kept on this phone and left out of phone backups.",
+        "It is made when Anchor starts, before anything is opened, so it cannot be half old and half new. Every file in it is checked against a fingerprint. Choose Make a safety copy, then close Anchor from the app switcher and open it again.",
+        "Go back puts the copy in place. What was there before is set aside, not deleted, and Undo go back brings it back. Anything you wrote after the copy was made is in the set-aside part, and does not appear next to the older data.",
+        "If the phone is lost or wiped, the copy goes with it, so it does not replace a backup kept somewhere else. While it exists, a copy of the phone's files shows your data readable, so delete it when you no longer need it. Clear all data deletes it too."
+    ]
+}
+
 enum AIToolsHelp {
     static let paragraphs: [String] = [
         "AI tools are off unless you turn them on here. While this is off, nothing in Anchor uses AI, no AI buttons show anywhere, and nothing is sent to any service.",

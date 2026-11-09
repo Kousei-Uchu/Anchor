@@ -254,6 +254,11 @@ struct SettingsView: View {
                     } label: {
                         Text("AI tools (test build)").font(.system(.subheadline, design: .rounded))
                     }
+                    NavigationLink {
+                        SafetyCopyView()
+                    } label: {
+                        Text("Safety copy (test build)").font(.system(.subheadline, design: .rounded))
+                    }
                     #endif
                 }
             }

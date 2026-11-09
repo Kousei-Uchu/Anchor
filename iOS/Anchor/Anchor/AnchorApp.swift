@@ -18,6 +18,8 @@ struct AnchorApp: App {
         WidgetSealSelfTest.run()
         #endif
         if !DemoMode.isOn {
+            // A waiting safety copy job runs first, before anything opens the database.
+            SafetyCopy.runAtLaunch()
             ContainerHolder.prepareRealStore(ContainerHolder.shared.container)
         } else if ShowcaseMode.isOn {
             // A launch that starts in showcase mode opens nothing from the real store, and leaves
