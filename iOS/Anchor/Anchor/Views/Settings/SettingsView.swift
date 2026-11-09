@@ -1029,7 +1029,7 @@ struct ShowcaseSettingsView: View {
     }
 }
 
-/// Setting or changing the showcase passcode: typed twice, at least four characters.
+/// Setting or changing the showcase passcode: 4 to 6 digits on the number pad, typed twice.
 struct ShowcasePasscodeSetView: View {
     @Environment(\.dismiss) private var dismiss
     let onSaved: () -> Void
@@ -1040,9 +1040,19 @@ struct ShowcasePasscodeSetView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Anchor.SettingsSection(title: "New passcode", footer: "At least 4 characters.") {
+                Anchor.SettingsSection(title: "New passcode", footer: "4 to 6 digits.") {
                     SecureField("Passcode", text: $first)
+                        .keyboardType(.numberPad)
+                        .onChange(of: first) { _, new in
+                            let kept = ShowcasePasscode.digits(new)
+                            if kept != new { first = kept }
+                        }
                     SecureField("Type it again", text: $second)
+                        .keyboardType(.numberPad)
+                        .onChange(of: second) { _, new in
+                            let kept = ShowcasePasscode.digits(new)
+                            if kept != new { second = kept }
+                        }
                 }
                 if let error {
                     Text(error)
@@ -1067,7 +1077,7 @@ struct ShowcasePasscodeSetView: View {
 
     private func save() {
         guard first.count >= ShowcasePasscode.minimumLength else {
-            error = "Use at least 4 characters."
+            error = "Use 4 to 6 digits."
             return
         }
         guard first == second else {
@@ -1101,8 +1111,7 @@ struct ShowcaseExitView: View {
                 if hasPasscode {
                     Anchor.SettingsSection(title: "Showcase passcode") {
                         SecureField("Passcode", text: $attempt)
-                            .submitLabel(.go)
-                            .onSubmit { tryPasscode() }
+                            .keyboardType(.numberPad)
                         Button {
                             tryPasscode()
                         } label: {

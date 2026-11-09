@@ -259,6 +259,8 @@ enum ShowcaseMode {
 
 enum ShowcasePasscodeError: Error, Equatable {
     case tooShort
+    /// Anything other than digits.
+    case notDigits
     case storage
 }
 
@@ -282,6 +284,12 @@ enum ShowcasePasscode {
     }
 
     static let minimumLength = 4
+    static let maximumLength = 6
+
+    /// Only the digits of what was typed, at most six, so the number pad and a paste both come out right.
+    static func digits(_ text: String) -> String {
+        String(text.filter { $0.isASCII && $0.isNumber }.prefix(maximumLength))
+    }
 
     private static let service = "page.aspens.anchor.showcasepasscode"
     private static let account = "passcode"
@@ -320,6 +328,9 @@ enum ShowcasePasscode {
 
     /// Sets the passcode, or replaces the one there.
     static func set(_ passcode: String) throws {
+        guard passcode.allSatisfy({ $0.isASCII && $0.isNumber }), passcode.count <= maximumLength else {
+            throw ShowcasePasscodeError.notDigits
+        }
         guard passcode.count >= minimumLength else { throw ShowcasePasscodeError.tooShort }
         let salt = Data((0..<16).map { _ in UInt8.random(in: 0...255) })
         guard let key = BackupFormat.deriveKey(password: passcode, salt: salt, iterations: iterations) else {

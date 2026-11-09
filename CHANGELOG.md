@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch SH2a: the showcase passcode is 4 to 6 digits on the number pad, typed twice, and the exit screen asks for it on the number pad.
 - Patch 30q: in Post-session notes a line that starts with [ ] is a thing to do, and each one has an Add as task button under the note. Nothing is added until you tap, the task has no date, and the line stays in the note. Add a thing to do starts a marked line for you.
 - Patch AB2: What's new has a fold for each version of the app with what it added, changed and removed, the newest open and the older ones closed. There is one version so far, 1.0, and a group with nothing in it is not shown.
 - Patch SL6: sleep has its own columns in the CSV and a plain time-asleep line in the PDF. Your data's CSV adds bed_time, wake_time, minutes_asleep and feel after its first three columns, and its PDF gets a Sleep section with the line; Export for someone's PDF draws the same line and the web page's Download CSV adds in_bed, up and minutes_asleep. The line runs from 0 h to the next whole hour above the longest night, has no target, and is drawn only when two nights have a time.
