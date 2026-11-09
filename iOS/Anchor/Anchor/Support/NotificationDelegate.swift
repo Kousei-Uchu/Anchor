@@ -33,6 +33,9 @@ struct HelloRequest: Identifiable {
     var dayBefore: Bool = false
     /// Set when the reminder was a follow-up: the message it was asked for.
     var followUpMessageID: UUID? = nil
+    /// Set when the reminder was for the start of a trigger window, and which window.
+    var companion: Bool = false
+    var companionWindowID: UUID? = nil
 }
 
 /// What a trigger window reminder shows once it is opened. The lock screen never carries these;
@@ -108,6 +111,9 @@ final class NotificationDelegate: NSObject, ObservableObject, UNUserNotification
                 } else if (userInfo[HelloReminders.kindKey] as? String) == HelloReminders.followUpKind,
                           let raw = userInfo[HelloReminders.messageKey] as? String {
                     request.followUpMessageID = UUID(uuidString: raw)
+                } else if (userInfo[HelloReminders.kindKey] as? String) == HelloReminders.companionKind {
+                    request.companion = true
+                    request.companionWindowID = (userInfo[HelloReminders.windowKey] as? String).flatMap { UUID(uuidString: $0) }
                 }
                 hello = request
             }

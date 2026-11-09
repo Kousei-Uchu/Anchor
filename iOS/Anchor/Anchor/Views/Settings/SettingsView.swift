@@ -161,6 +161,17 @@ struct SettingsView: View {
                     }
                 }
 
+                if helloContacts.contains(where: { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {
+                    Anchor.SettingsSection(
+                        title: "Hard-time reminders",
+                        footer: "Off until you switch one on. At the start of a trigger window you pick, a reminder that this person is one option. A support day or a follow-up keeps its day over it, it takes the place of a hello, and at most one comes on any day. The lock screen never shows a name or says what it is about."
+                    ) {
+                        ForEach(helloContacts.filter { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) { contact in
+                            CompanionSettingsRow(contact: contact)
+                        }
+                    }
+                }
+
                 if showsRecovery {
                     Anchor.SettingsSection(
                         title: "Recovery",
@@ -444,6 +455,55 @@ private struct SupportDayReminderSettingsRow: View {
             HelloReminders.refresh(using: modelContext)
         }
         .onChange(of: contact.supportDaysDayBefore) { _, _ in HelloReminders.refresh(using: modelContext) }
+    }
+}
+
+/// One person's hard-time reminder in Settings: the switch, then the trigger windows it is for once it is on.
+private struct CompanionSettingsRow: View {
+    @Bindable var contact: TrustedContact
+    @Query(sort: \TriggerWindow.startHour) private var windows: [TriggerWindow]
+    @Environment(\.modelContext) private var modelContext
+
+    private var activeWindows: [TriggerWindow] { windows.filter { $0.isActive } }
+
+    private func isOn(_ window: TriggerWindow) -> Binding<Bool> {
+        Binding(
+            get: { contact.companionWindowIDs.contains(window.id) },
+            set: { on in
+                var ids = contact.companionWindowIDs
+                if on {
+                    if !ids.contains(window.id) { ids.append(window.id) }
+                } else {
+                    ids.removeAll { $0 == window.id }
+                }
+                contact.companionWindowIDs = ids
+            }
+        )
+    }
+
+    var body: some View {
+        Group {
+            Anchor.SettingsToggle(title: contact.name, isOn: $contact.companionEnabled)
+            if contact.companionEnabled {
+                if activeWindows.isEmpty {
+                    Text("No trigger windows are switched on. Add one in Plan, then pick it here.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                } else {
+                    ForEach(activeWindows) { window in
+                        let label = window.label.trimmingCharacters(in: .whitespacesAndNewlines)
+                        Anchor.SettingsToggle(title: label.isEmpty ? "Unnamed window" : label, isOn: isOn(window))
+                    }
+                }
+            }
+        }
+        .onChange(of: contact.companionEnabled) { _, on in
+            if on {
+                if contact.companionWindowIDs.isEmpty { contact.companionWindowIDs = activeWindows.map { $0.id } }
+                NotificationScheduler.askForPermissionIfNeeded()
+            }
+            HelloReminders.refresh(using: modelContext)
+        }
+        .onChange(of: contact.companionWindowIDs) { _, _ in HelloReminders.refresh(using: modelContext) }
     }
 }
 

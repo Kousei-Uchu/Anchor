@@ -586,14 +586,19 @@ struct ThreadMessageComposer: View {
     private let supportDay: Date?
     private let dayBefore: Bool
     private let followUpMessageID: UUID?
+    private let isCompanion: Bool
+    private let companionWindowID: UUID?
+    @Query private var triggerWindows: [TriggerWindow]
 
     init(startingContactID: UUID? = nil, isHello: Bool = false, supportDay: Date? = nil, dayBefore: Bool = false,
-         followUpMessageID: UUID? = nil) {
+         followUpMessageID: UUID? = nil, isCompanion: Bool = false, companionWindowID: UUID? = nil) {
         _selectedContactID = State(initialValue: startingContactID)
         self.isHello = isHello
         self.supportDay = supportDay
         self.dayBefore = dayBefore
         self.followUpMessageID = followUpMessageID
+        self.isCompanion = isCompanion
+        self.companionWindowID = companionWindowID
     }
 
     private var pickedContact: TrustedContact? {
@@ -640,6 +645,16 @@ struct ThreadMessageComposer: View {
                 note.isEmpty ? nil : note)
     }
 
+    /// Shown only when the box was opened from a hard-time reminder. It names the window as you named
+    /// it, if it is still there. Closing it does nothing and is not recorded.
+    private var companionLine: String? {
+        guard isCompanion, !pickedName.isEmpty else { return nil }
+        let label = triggerWindows.first(where: { $0.id == companionWindowID })?.label
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if label.isEmpty { return "A time you marked as hard is starting. \(pickedName) is one option." }
+        return "A time you marked as hard is starting: \(label). \(pickedName) is one option."
+    }
+
     /// Shown only when the box was opened from a hello reminder. Closing it does nothing and is not recorded.
     private var helloLine: String? {
         guard isHello,
@@ -653,6 +668,11 @@ struct ThreadMessageComposer: View {
         NavigationStack {
             Form {
                 if let line = helloLine {
+                    Section {
+                        Text(line).font(.callout).foregroundStyle(.secondary)
+                    }
+                }
+                if let line = companionLine {
                     Section {
                         Text(line).font(.callout).foregroundStyle(.secondary)
                     }

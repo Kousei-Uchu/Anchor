@@ -217,6 +217,8 @@ extension NotificationScheduler {
                                             escalationContacts: escalationContacts,
                                             primaryContact: contacts.first)
         }
+        // A window that changed or was removed changes when a hard-time reminder comes, or whether it does.
+        HelloReminders.refresh(using: context)
     }
 }
 
@@ -668,8 +670,10 @@ enum AppointmentReminderSelfTest {
 /// hello that day, and when two support days come on the same day the person higher in the
 /// contacts list keeps it. A third kind is a follow-up the person asked for when they wrote to
 /// someone, a few days later at 10 am: it takes the place of a hello that day, and loses the day to a
-/// support day or to a follow-up written earlier. Every call clears the hello notifications and adds
-/// the current set again.
+/// support day or to a follow-up written earlier. A fourth kind is a reminder at the start of a
+/// trigger window that a person is one option for: it takes the place of a hello that day, loses the
+/// day to a support day or a follow-up, and when two come on one day the window that starts first keeps
+/// it. Every call clears the hello notifications and adds the current set again.
 enum HelloReminders {
     static let prefix = "hello-"
     static let body = "A quiet moment to reach out?"
@@ -683,6 +687,14 @@ enum HelloReminders {
     static let dayBeforeKey = "helloDayBefore"
     static let followUpKind = "followUp"
     static let messageKey = "helloMessageID"
+    static let companionKind = "companion"
+    static let windowKey = "helloWindowID"
+    static let companionMorningBody = "A gentle nudge for this morning."
+    static let companionAfternoonBody = "A gentle nudge for this afternoon."
+    static let companionEveningBody = "A gentle nudge for this evening."
+    /// The most hard-time reminders kept pending, soonest first, so a few windows and people cannot
+    /// use up the 64 reminders iOS allows the whole app.
+    static let companionCap = 8
     /// A support day is planned this far ahead. A hello on a weekday that has a support day in this
     /// time is planned as separate dated reminders for the same time, so one day can be skipped.
     static let weeksAhead = 3
@@ -711,6 +723,22 @@ enum HelloReminders {
         let setAt: Date
     }
 
+    /// One day a trigger window starts on, for a person who is one option for that window.
+    struct Companion {
+        let contactID: UUID
+        let order: Int
+        let windowID: UUID
+        /// The start of the day.
+        let day: Date
+        /// When the window starts.
+        let at: Date
+    }
+
+    /// A person with the hard-time reminder on, and the windows it is for.
+    typealias CompanionEntry = (contactID: UUID, order: Int, windowIDs: [UUID])
+    /// A trigger window as the plan needs it: its days and the time it starts.
+    typealias WindowEntry = (id: UUID, active: Bool, days: [Int], hour: Int, minute: Int)
+
     struct Planned {
         let id: String
         let components: DateComponents
@@ -718,6 +746,7 @@ enum HelloReminders {
         let repeats: Bool
         let supportDay: SupportDay?
         var followUp: FollowUp? = nil
+        var companion: Companion? = nil
     }
 
     struct Plan {
@@ -726,6 +755,51 @@ enum HelloReminders {
         var skipped: [SupportDay]
         /// Follow-ups that got no reminder because a support day or an earlier follow-up has the day.
         var skippedFollowUps: [FollowUp] = []
+        /// Hard-time reminders that got no reminder because something else has the day.
+        var skippedCompanions: [Companion] = []
+    }
+
+    /// The lock screen line for a window that starts at this hour. It names no one and no window.
+    static func companionBody(hour: Int) -> String {
+        switch hour {
+        case ..<12: return companionMorningBody
+        case 12..<17: return companionAfternoonBody
+        default: return companionEveningBody
+        }
+    }
+
+    /// People who have the hard-time reminder on and a name, with the windows it is for.
+    static func companionEntries(of contacts: [TrustedContact]) -> [CompanionEntry] {
+        contacts
+            .filter { $0.companionEnabled && !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+            .map { (contactID: $0.id, order: $0.sortOrder, windowIDs: $0.companionWindowIDs) }
+    }
+
+    static func windowEntries(of windows: [TriggerWindow]) -> [WindowEntry] {
+        windows.map { (id: $0.id, active: $0.isActive, days: $0.daysOfWeek, hour: $0.startHour, minute: $0.startMinute) }
+    }
+
+    /// Every start of a window the person is one option for, today and the weeks planned ahead. A
+    /// window that is switched off, or that has since been deleted, gives nothing.
+    static func companions(of entries: [CompanionEntry], windows: [WindowEntry],
+                           now: Date = .now, calendar: Calendar = .current) -> [Companion] {
+        let today = calendar.startOfDay(for: now)
+        var found: [Companion] = []
+        for entry in entries {
+            for window in windows where window.active && entry.windowIDs.contains(window.id) {
+                let hour = min(max(window.hour, 0), 23)
+                let minute = min(max(window.minute, 0), 59)
+                for offset in 0...(7 * weeksAhead) {
+                    guard let raw = calendar.date(byAdding: .day, value: offset, to: today) else { continue }
+                    let day = calendar.startOfDay(for: raw)
+                    guard window.days.contains(calendar.component(.weekday, from: day)),
+                          let at = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day) else { continue }
+                    found.append(Companion(contactID: entry.contactID, order: entry.order,
+                                           windowID: window.id, day: day, at: at))
+                }
+            }
+        }
+        return found
     }
 
     static func entries(of contacts: [TrustedContact]) -> [Entry] {
@@ -779,7 +853,8 @@ enum HelloReminders {
     /// For a caller that has its own list of days, such as one that has just removed a day.
     static func refresh(contacts: [TrustedContact], entries: [SupportCalendarEntry], using context: ModelContext) {
         let messages = (try? context.fetch(FetchDescriptor<ThreadMessage>())) ?? []
-        refresh(contacts: contacts, entries: entries, messages: messages)
+        let windows = (try? context.fetch(FetchDescriptor<TriggerWindow>())) ?? []
+        refresh(contacts: contacts, entries: entries, messages: messages, windows: windows)
     }
 
     /// For a message that has just been deleted: planned again without it.
@@ -787,15 +862,18 @@ enum HelloReminders {
         let contacts = (try? context.fetch(FetchDescriptor<TrustedContact>(sortBy: [SortDescriptor(\.sortOrder)]))) ?? []
         let days = (try? context.fetch(FetchDescriptor<SupportCalendarEntry>())) ?? []
         let messages = ((try? context.fetch(FetchDescriptor<ThreadMessage>())) ?? []).filter { $0.id != messageID }
-        refresh(contacts: contacts, entries: days, messages: messages)
+        let windows = (try? context.fetch(FetchDescriptor<TriggerWindow>())) ?? []
+        refresh(contacts: contacts, entries: days, messages: messages, windows: windows)
     }
 
     static func refresh(contacts: [TrustedContact], entries: [SupportCalendarEntry] = [],
-                        messages: [ThreadMessage] = []) {
+                        messages: [ThreadMessage] = [], windows: [TriggerWindow] = []) {
         guard !DemoMode.isOn else { return }
         let days = supportDays(of: contacts, entries: entries)
         let follow = followUps(of: messages, contacts: contacts)
-        apply(plan(entries: HelloReminders.entries(of: contacts), supportDays: days, followUps: follow).reminders)
+        let starts = companions(of: companionEntries(of: contacts), windows: windowEntries(of: windows))
+        apply(plan(entries: HelloReminders.entries(of: contacts), supportDays: days, followUps: follow,
+                   companions: starts).reminders)
     }
 
     /// True when this message's follow-up got no reminder, so its sheet can say so.
@@ -828,6 +906,7 @@ enum HelloReminders {
     /// one repeating weekly reminder, unless a support day or a follow-up falls on that weekday in the
     /// next few weeks, when it is separate dated reminders for those weeks that leave out that day.
     static func plan(entries: [Entry], supportDays: [SupportDay] = [], followUps: [FollowUp] = [],
+                     companions: [Companion] = [],
                      now: Date = .now, calendar: Calendar = .current) -> Plan {
         let today = calendar.startOfDay(for: now)
         let last = calendar.date(byAdding: .day, value: 7 * weeksAhead, to: today) ?? today
@@ -861,8 +940,28 @@ enum HelloReminders {
             }
         }
 
+        // Then hard-time reminders: a support day or a follow-up keeps its day over one, and when two
+        // share a day the window that starts first keeps it. The soonest few are kept.
+        var keptCompanions: [Date: Companion] = [:]
+        var skippedCompanions: [Companion] = []
+        let starts = companions.sorted {
+            ($0.at, $0.order, $0.windowID.uuidString) < ($1.at, $1.order, $1.windowID.uuidString)
+        }
+        for item in starts {
+            guard item.at > now, calendar.startOfDay(for: item.at) <= last else { continue }
+            let key = calendar.startOfDay(for: item.at)
+            if kept[key] != nil || keptFollowUps[key] != nil || keptCompanions[key] != nil {
+                skippedCompanions.append(item)
+            } else {
+                keptCompanions[key] = item
+            }
+        }
+        if keptCompanions.count > companionCap {
+            for key in keptCompanions.keys.sorted().dropFirst(companionCap) { keptCompanions[key] = nil }
+        }
+
         var planned: [Planned] = []
-        let busyDays = Array(kept.keys) + Array(keptFollowUps.keys)
+        let busyDays = Array(kept.keys) + Array(keptFollowUps.keys) + Array(keptCompanions.keys)
         let busyWeekdays = Set(busyDays.map { calendar.component(.weekday, from: $0) })
         for weekday in 1...7 {
             let wanting = entries.filter { $0.enabled && $0.days.contains(weekday) }
@@ -880,6 +979,7 @@ enum HelloReminders {
                 guard let raw = calendar.date(byAdding: .day, value: offset, to: today) else { continue }
                 let day = calendar.startOfDay(for: raw)
                 guard calendar.component(.weekday, from: day) == weekday, kept[day] == nil, keptFollowUps[day] == nil,
+                      keptCompanions[day] == nil,
                       let at = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day),
                       at > now else { continue }
                 planned.append(Planned(
@@ -902,7 +1002,16 @@ enum HelloReminders {
                 components: calendar.dateComponents([.year, .month, .day, .hour, .minute], from: entry.at),
                 contactID: entry.item.contactID.uuidString, repeats: false, supportDay: nil, followUp: entry.item))
         }
-        return Plan(reminders: planned, skipped: skipped, skippedFollowUps: skippedFollowUps)
+
+        for (key, item) in keptCompanions.sorted(by: { $0.key < $1.key }) {
+            planned.append(Planned(
+                id: prefix + "companion-" + item.contactID.uuidString + "-" + item.windowID.uuidString + "-"
+                    + stamp(key, calendar: calendar),
+                components: calendar.dateComponents([.year, .month, .day, .hour, .minute], from: item.at),
+                contactID: item.contactID.uuidString, repeats: false, supportDay: nil, companion: item))
+        }
+        return Plan(reminders: planned, skipped: skipped, skippedFollowUps: skippedFollowUps,
+                    skippedCompanions: skippedCompanions)
     }
 
     /// The days this person chose that someone higher in the list already has, so Settings can say so.
@@ -941,6 +1050,10 @@ enum HelloReminders {
                     content.body = followUpBody
                     info[kindKey] = followUpKind
                     info[messageKey] = follow.messageID.uuidString
+                } else if let start = item.companion {
+                    content.body = companionBody(hour: item.components.hour ?? 18)
+                    info[kindKey] = companionKind
+                    info[windowKey] = start.windowID.uuidString
                 } else {
                     content.body = body
                 }
@@ -1053,10 +1166,89 @@ enum HelloReminderSelfTest {
             fatalError("Hello reminder self-test: a support day did not keep its day over a follow-up.")
         }
 
+        // Hard-time reminders. A window that starts on Sundays at 5 pm, for the first person: the three
+        // Sundays in the weeks planned (15, 22 and 29 November), dated, none repeating.
+        let sundays: HelloReminders.WindowEntry = (id: UUID(), active: true, days: [1], hour: 17, minute: 0)
+        let companionEntry: [HelloReminders.CompanionEntry] = [(contactID: first, order: 0, windowIDs: [sundays.id])]
+        let starts = HelloReminders.companions(of: companionEntry, windows: [sundays], now: now, calendar: calendar)
+        let nudges = HelloReminders.plan(entries: [], companions: starts, now: now, calendar: calendar)
+        guard starts.count == 3, nudges.reminders.count == 3,
+              nudges.reminders.allSatisfy({ $0.companion != nil && !$0.repeats && $0.components.hour == 17 }),
+              Set(nudges.reminders.compactMap { $0.components.day }) == [15, 22, 29] else {
+            fatalError("Hard-time reminder self-test: expected one dated reminder for each start of the window.")
+        }
+        let switchedOff: HelloReminders.WindowEntry = (id: sundays.id, active: false, days: [1], hour: 17, minute: 0)
+        guard HelloReminders.companions(of: companionEntry, windows: [switchedOff], now: now, calendar: calendar).isEmpty,
+              HelloReminders.companions(of: companionEntry, windows: [], now: now, calendar: calendar).isEmpty else {
+            fatalError("Hard-time reminder self-test: a switched off or deleted window was used.")
+        }
+
+        // It takes the place of a hello on those Sundays, so that weekday has nothing else.
+        let sundayHello: [HelloReminders.Entry] = [(id: second, order: 1, enabled: true, days: [1], hour: 17, minute: 30)]
+        let withHello = HelloReminders.plan(entries: sundayHello, companions: starts, now: now, calendar: calendar)
+        guard withHello.reminders.count == 3, withHello.reminders.allSatisfy({ $0.companion != nil }) else {
+            fatalError("Hard-time reminder self-test: a hard-time reminder did not take the place of that day's hello.")
+        }
+
+        // A support day on 15 November keeps its day, and that start is listed as skipped.
+        let supportOnSunday = HelloReminders.SupportDay(contactID: second, order: 1, eventDay: day(15), dayBefore: false)
+        let beatenBySupport = HelloReminders.plan(entries: [], supportDays: [supportOnSunday], companions: starts,
+                                                  now: now, calendar: calendar)
+        guard beatenBySupport.reminders.count == 3, beatenBySupport.skippedCompanions.count == 1,
+              beatenBySupport.reminders.filter({ $0.companion != nil }).count == 2,
+              beatenBySupport.reminders.contains(where: { $0.supportDay != nil && $0.components.day == 15 }) else {
+            fatalError("Hard-time reminder self-test: a support day did not keep its day.")
+        }
+
+        // So does a follow-up.
+        let followOnSunday = HelloReminders.FollowUp(messageID: UUID(), contactID: second, day: day(22), setAt: day(10))
+        let beatenByFollow = HelloReminders.plan(entries: [], followUps: [followOnSunday], companions: starts,
+                                                 now: now, calendar: calendar)
+        guard beatenByFollow.skippedCompanions.count == 1,
+              beatenByFollow.reminders.filter({ $0.companion != nil }).count == 2,
+              !beatenByFollow.reminders.contains(where: { $0.companion != nil && $0.components.day == 22 }) else {
+            fatalError("Hard-time reminder self-test: a follow-up did not keep its day.")
+        }
+
+        // Two on one day: the window that starts first keeps it, whoever the person is.
+        let earlier: HelloReminders.WindowEntry = (id: UUID(), active: true, days: [1], hour: 9, minute: 0)
+        let twoPeople: [HelloReminders.CompanionEntry] = [
+            (contactID: first, order: 0, windowIDs: [sundays.id]),
+            (contactID: second, order: 1, windowIDs: [earlier.id])
+        ]
+        let clashing = HelloReminders.plan(
+            entries: [], companions: HelloReminders.companions(of: twoPeople, windows: [sundays, earlier],
+                                                                now: now, calendar: calendar),
+            now: now, calendar: calendar)
+        guard clashing.reminders.count == 3, clashing.skippedCompanions.count == 3,
+              clashing.reminders.allSatisfy({ $0.contactID == second.uuidString && $0.components.hour == 9 }) else {
+            fatalError("Hard-time reminder self-test: two on one day did not go to the window that starts first.")
+        }
+
+        // At most a few are kept, the soonest first.
+        let everyDay: HelloReminders.WindowEntry = (id: UUID(), active: true, days: [1, 2, 3, 4, 5, 6, 7], hour: 17, minute: 0)
+        let allDays: [HelloReminders.CompanionEntry] = [(contactID: first, order: 0, windowIDs: [everyDay.id])]
+        let capped = HelloReminders.plan(
+            entries: [], companions: HelloReminders.companions(of: allDays, windows: [everyDay], now: now, calendar: calendar),
+            now: now, calendar: calendar)
+        guard capped.reminders.count == HelloReminders.companionCap,
+              capped.reminders.allSatisfy({ ($0.components.day ?? 99) <= 9 + HelloReminders.companionCap - 1 }) else {
+            fatalError("Hard-time reminder self-test: the soonest few were not the ones kept.")
+        }
+
+        guard HelloReminders.companionBody(hour: 8) == HelloReminders.companionMorningBody,
+              HelloReminders.companionBody(hour: 13) == HelloReminders.companionAfternoonBody,
+              HelloReminders.companionBody(hour: 17) == HelloReminders.companionEveningBody,
+              HelloReminders.companionBody(hour: 23) == HelloReminders.companionEveningBody else {
+            fatalError("Hard-time reminder self-test: the lock screen line does not follow the time of day.")
+        }
+
         for line in [HelloReminders.body, HelloReminders.dayBody, HelloReminders.dayBeforeBody,
-                     HelloReminders.followUpBody] {
+                     HelloReminders.followUpBody, HelloReminders.companionMorningBody,
+                     HelloReminders.companionAfternoonBody, HelloReminders.companionEveningBody] {
             let lower = line.lowercased()
-            guard !lower.contains("hello"), !lower.contains("support"), !lower.contains("extra") else {
+            guard !lower.contains("hello"), !lower.contains("support"), !lower.contains("extra"),
+                  !lower.contains("hard"), !lower.contains("trigger"), !lower.contains("window") else {
                 fatalError("Hello reminder self-test: the lock screen says what the reminder is about.")
             }
         }

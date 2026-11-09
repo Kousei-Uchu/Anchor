@@ -218,6 +218,11 @@ final class TrustedContact {
     var supportDaysEnabled: Bool = false
     var supportDaysDayBefore: Bool = false
 
+    /// An optional reminder at the start of a trigger window, to say this person is one option.
+    /// Off unless you switch it on. It comes only for the windows listed here.
+    var companionEnabled: Bool = false
+    var companionWindowIDs: [UUID] = []
+
     init(id: UUID = UUID(), name: String, phoneNumber: String, sortOrder: Int,
          escalationEnabled: Bool = false, escalationWindowMinutes: Int? = nil,
          messageTemplates: [MessageTemplate] = [],
@@ -227,7 +232,8 @@ final class TrustedContact {
          availableToHour: Int? = nil, availableToMinute: Int? = nil,
          helloEnabled: Bool = false, helloDays: [Int] = [],
          helloHour: Int = 17, helloMinute: Int = 0,
-         supportDaysEnabled: Bool = false, supportDaysDayBefore: Bool = false) {
+         supportDaysEnabled: Bool = false, supportDaysDayBefore: Bool = false,
+         companionEnabled: Bool = false, companionWindowIDs: [UUID] = []) {
         self.id = id
         self.namePlain = name
         self.phoneNumberPlain = phoneNumber
@@ -248,6 +254,8 @@ final class TrustedContact {
         self.helloMinute = helloMinute
         self.supportDaysEnabled = supportDaysEnabled
         self.supportDaysDayBefore = supportDaysDayBefore
+        self.companionEnabled = companionEnabled
+        self.companionWindowIDs = companionWindowIDs
         lockNewValues()
     }
 }
@@ -340,6 +348,12 @@ extension TrustedContact {
         let names = calendar.shortWeekdaySymbols
         let ordered = (0..<7).map { (calendar.firstWeekday - 1 + $0) % 7 + 1 }.filter { days.contains($0) }
         return ordered.map { names[$0 - 1] }.joined(separator: ", ") + " at " + time
+    }
+
+    /// "1 trigger window" or "2 trigger windows", or nil while the hard-time reminder is off or has none.
+    var companionSummary: String? {
+        guard companionEnabled, !companionWindowIDs.isEmpty else { return nil }
+        return companionWindowIDs.count == 1 ? "1 trigger window" : "\(companionWindowIDs.count) trigger windows"
     }
 }
 

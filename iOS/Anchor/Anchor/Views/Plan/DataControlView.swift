@@ -1430,6 +1430,7 @@ struct TrustedContactDTO: Codable {
     var helloEnabled: Bool?; var helloDays: [Int]?
     var helloHour: Int?; var helloMinute: Int?
     var supportDaysEnabled: Bool?; var supportDaysDayBefore: Bool?
+    var companionEnabled: Bool?; var companionWindowIDs: [UUID]?
     init(_ m: TrustedContact) {
         id = m.id; name = m.name; phoneNumber = m.phoneNumber; sortOrder = m.sortOrder
         escalationEnabled = m.escalationEnabled; escalationWindowMinutes = m.escalationWindowMinutes
@@ -1441,6 +1442,7 @@ struct TrustedContactDTO: Codable {
         helloEnabled = m.helloEnabled; helloDays = m.helloDays
         helloHour = m.helloHour; helloMinute = m.helloMinute
         supportDaysEnabled = m.supportDaysEnabled; supportDaysDayBefore = m.supportDaysDayBefore
+        companionEnabled = m.companionEnabled; companionWindowIDs = m.companionWindowIDs
     }
     func toModel() -> TrustedContact {
         TrustedContact(id: id, name: name, phoneNumber: phoneNumber, sortOrder: sortOrder,
@@ -1453,7 +1455,9 @@ struct TrustedContactDTO: Codable {
                         helloEnabled: helloEnabled ?? false, helloDays: helloDays ?? [],
                         helloHour: helloHour ?? 17, helloMinute: helloMinute ?? 0,
                         supportDaysEnabled: supportDaysEnabled ?? false,
-                        supportDaysDayBefore: supportDaysDayBefore ?? false)
+                        supportDaysDayBefore: supportDaysDayBefore ?? false,
+                        companionEnabled: companionEnabled ?? false,
+                        companionWindowIDs: companionWindowIDs ?? [])
     }
 }
 
@@ -2255,7 +2259,9 @@ extension TrustedContact: DataBrowsable {
             .yesNo("Hello reminder on", helloEnabled),
             .text("Hello reminder", helloSummary),
             .yesNo("Support day reminders on", supportDaysEnabled),
-            .text("Support day reminders", supportDaysEnabled ? (supportDaysDayBefore ? "The day before" : "The morning of") : nil)
+            .text("Support day reminders", supportDaysEnabled ? (supportDaysDayBefore ? "The day before" : "The morning of") : nil),
+            .yesNo("Hard-time reminders on", companionEnabled),
+            .text("Hard-time reminders", companionSummary)
         ]
     }
 }

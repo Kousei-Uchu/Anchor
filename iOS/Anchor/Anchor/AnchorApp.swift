@@ -245,8 +245,11 @@ enum DemoMode {
         context.insert(GroundingTool(title: "Something warm", kind: .physicalAction,
             steps: "Make a warm drink, or hold a warm mug.\nFeel the warmth in your hands.\nTake a few slow sips.", sortOrder: 4))
 
-        context.insert(TriggerWindow(label: "Sunday evenings", daysOfWeek: [1],
-                                     startTime: DateComponents(hour: 17), endTime: DateComponents(hour: 20)))
+        let demoSundayEvenings = TriggerWindow(label: "Sunday evenings", daysOfWeek: [1],
+                                               startTime: DateComponents(hour: 17), endTime: DateComponents(hour: 20))
+        context.insert(demoSundayEvenings)
+        demoAlex.companionEnabled = true
+        demoAlex.companionWindowIDs = [demoSundayEvenings.id]
         context.insert(TriggerWindow(label: "Before the Monday call", daysOfWeek: [2],
                                      startTime: DateComponents(hour: 8, minute: 30), endTime: DateComponents(hour: 10)))
         context.insert(TriggerWindow(label: "Exam weeks, afternoons", daysOfWeek: [3, 5],

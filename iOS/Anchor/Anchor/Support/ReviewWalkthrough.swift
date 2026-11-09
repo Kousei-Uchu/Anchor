@@ -231,6 +231,8 @@ enum ReviewStops {
          "Settings, Support day reminders: Sam is on, the day before. Switch Alex on too and change When it comes. Support calendar shows the days Sam can see. (Not scheduled in demo mode.)", 1, .settings),
         ("30n3", "Follow-up reminders", "When you write to someone you can ask for a reminder 1 to 7 days later, at 10 am. Off unless you choose one, and set only when you save and send. The lock screen says only that it is a follow-up you set earlier. It takes the place of a hello that day, and a support day or an earlier follow-up keeps the day.",
          "Thread, Message log, Write something: pick Jordan, choose Follow up, then Save and send. Open that message to see or remove it. Settings, Follow-up reminders removes them all. (Not scheduled in demo mode.)", 1, .messages),
+        ("30p1", "Hard-time reminders", "At the start of a trigger window you pick, a reminder that a person you chose is one option: off until switched on. The lock screen says only a gentle nudge for this morning, afternoon or evening, naming no one. It takes the place of a hello that day, a support day or a follow-up keeps its day, and at most one comes on any day. Tapping it opens a message to that person.",
+         "Settings, Hard-time reminders: Alex is on for Sunday evenings in demo. Switch Sam on and pick a window. (Not scheduled in demo mode.)", 1, .settings),
         ("45b", "Suggestions ask when tapped", "Calendar, photos and music are asked for only when each button is tapped.",
          "Journal, new entry, Add, Journaling Suggestions.", 2, nil),
         ("45c", "No scoring of check-ins", "A check-in row only says Check-in, with no rating or colour (RV5 added the sliders as plain bars).",
