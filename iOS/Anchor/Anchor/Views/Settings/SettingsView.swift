@@ -141,6 +141,17 @@ struct SettingsView: View {
                     }
                 }
 
+                if helloContacts.contains(where: { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {
+                    Anchor.SettingsSection(
+                        title: "Support day reminders",
+                        footer: "Off until you switch one on. For a person who can see a day on your Support calendar, a reminder at 9 am the morning of that day or the day before. It takes the place of a hello that day, and at most one comes on any day. The lock screen never shows a name."
+                    ) {
+                        ForEach(helloContacts.filter { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) { contact in
+                            SupportDayReminderSettingsRow(contact: contact, all: helloContacts)
+                        }
+                    }
+                }
+
                 if showsRecovery {
                     Anchor.SettingsSection(
                         title: "Recovery",
@@ -373,6 +384,42 @@ private struct HelloReminderSettingsRow: View {
         .onChange(of: contact.helloHour) { _, _ in HelloReminders.refresh(using: modelContext) }
         .onChange(of: contact.helloMinute) { _, _ in HelloReminders.refresh(using: modelContext) }
         .onChange(of: contact.helloDays) { _, _ in HelloReminders.refresh(using: modelContext) }
+    }
+}
+
+/// One person's support day reminder in Settings: the switch, then when it comes once it is on.
+private struct SupportDayReminderSettingsRow: View {
+    @Bindable var contact: TrustedContact
+    let all: [TrustedContact]
+    @Query(sort: \SupportCalendarEntry.date) private var entries: [SupportCalendarEntry]
+    @Environment(\.modelContext) private var modelContext
+
+    private var skippedNote: String? {
+        let days = HelloReminders.skippedSupportDays(for: contact.id, contacts: all, entries: entries)
+        guard !days.isEmpty else { return nil }
+        let names = days.map { $0.formatted(.dateTime.day().month(.abbreviated)) }.joined(separator: ", ")
+        return "No reminder for \(names): another person's comes that day."
+    }
+
+    var body: some View {
+        Group {
+            Anchor.SettingsToggle(title: contact.name, isOn: $contact.supportDaysEnabled)
+            if contact.supportDaysEnabled {
+                Picker("When it comes", selection: $contact.supportDaysDayBefore) {
+                    Text("The morning of").tag(false)
+                    Text("The day before").tag(true)
+                }
+                .pickerStyle(.segmented)
+                if let note = skippedNote {
+                    Text(note).font(.footnote).foregroundStyle(.secondary)
+                }
+            }
+        }
+        .onChange(of: contact.supportDaysEnabled) { _, isOn in
+            if isOn { NotificationScheduler.askForPermissionIfNeeded() }
+            HelloReminders.refresh(using: modelContext)
+        }
+        .onChange(of: contact.supportDaysDayBefore) { _, _ in HelloReminders.refresh(using: modelContext) }
     }
 }
 

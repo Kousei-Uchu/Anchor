@@ -163,6 +163,11 @@ final class TrustedContact {
     var helloHour: Int = 17
     var helloMinute: Int = 0
 
+    /// An optional reminder for each day on the Support calendar that this person can see.
+    /// Off unless you switch it on. False is the morning of the day, true is the day before.
+    var supportDaysEnabled: Bool = false
+    var supportDaysDayBefore: Bool = false
+
     init(id: UUID = UUID(), name: String, phoneNumber: String, sortOrder: Int,
          escalationEnabled: Bool = false, escalationWindowMinutes: Int? = nil,
          messageTemplates: [MessageTemplate] = [],
@@ -171,7 +176,8 @@ final class TrustedContact {
          availableFromHour: Int? = nil, availableFromMinute: Int? = nil,
          availableToHour: Int? = nil, availableToMinute: Int? = nil,
          helloEnabled: Bool = false, helloDays: [Int] = [],
-         helloHour: Int = 17, helloMinute: Int = 0) {
+         helloHour: Int = 17, helloMinute: Int = 0,
+         supportDaysEnabled: Bool = false, supportDaysDayBefore: Bool = false) {
         self.id = id
         self.name = name
         self.phoneNumber = phoneNumber
@@ -190,6 +196,8 @@ final class TrustedContact {
         self.helloDays = helloDays
         self.helloHour = helloHour
         self.helloMinute = helloMinute
+        self.supportDaysEnabled = supportDaysEnabled
+        self.supportDaysDayBefore = supportDaysDayBefore
     }
 }
 

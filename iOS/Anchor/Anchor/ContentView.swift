@@ -642,7 +642,8 @@ struct ContentView: View {
             }
         }
         .sheet(item: $notificationDelegate.hello) { request in
-            ThreadMessageComposer(startingContactID: request.contactID, isHello: true)
+            ThreadMessageComposer(startingContactID: request.contactID, isHello: request.supportDay == nil,
+                                  supportDay: request.supportDay, dayBefore: request.dayBefore)
         }
         .onReceive(NotificationCenter.default.publisher(for: .anchorOpenContactsInPlan)) { _ in
             // Switches to the Plan tab. Doesn't drill into Contacts

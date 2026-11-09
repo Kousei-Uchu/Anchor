@@ -139,6 +139,7 @@ extension Guide {
             howToUse: "The plus adds someone, either from your phone's Contacts or by typing them in. Tap a card to open it and choose how to reach them (phone or Discord), write message templates for that person, and set an optional reminder. The first two people in the list are the quick buttons on Now, so use Reorder to put the two you would reach for first. A card can also hold a timezone and the hours someone is usually awake, which Who's awake right now uses so you are not guessing across timezones.",
             tips: [
                 "Escalate if I don't respond is off until you turn it on. If you then miss a trigger window check-in, a reminder to message that person shows up after the number of minutes you chose. It is only a reminder to you. Anchor never messages anyone by itself, and the words on the lock screen do not name anyone.",
+                "A reminder about a Support calendar day, for a person who can see it, is also off until you switch it on in Settings.",
                 "A hello reminder for a person is off until you switch it on in Settings. It comes on the days and at the time you choose, the lock screen names no one, and tapping it opens a message to them with your starters ready.",
                 "For Discord you need the person's numeric user ID, not their username.",
                 "Deleting a contact also deletes their page in Thread."
@@ -372,7 +373,8 @@ extension Guide {
             howToUse: "Use the plus to mark a day and choose which of your contacts can see it. Share with makes a calendar file of the days you chose to share, so the person does not need Anchor to open it.",
             tips: [
                 "Add contacts in Plan first, so there is someone to choose.",
-                "A day nobody can see is not shared."
+                "A day nobody can see is not shared.",
+                "In Settings, Support day reminders can remind you of a day the morning of it or the day before, for each person who can see it. It is off until you switch it on, and tapping it opens a message to that person."
             ]
         ),
         GuideEntry(
@@ -474,12 +476,12 @@ extension Guide {
         GuideEntry(
             id: "settings", tab: nil, title: "Settings", icon: "gearshape.fill",
             whatItIs: "The switches, reminders and controls for the whole app. You can use Anchor without changing any of them.",
-            howToUse: "Privacy has Require Face ID, which locks Anchor on its own, separately from your phone's lock. Reminders has the daily check-in, with a time you choose, and the focus timer's alerts and lock screen timer. Session reminders has two switches for the evening before and a couple of hours before a session. Hello reminders has a switch, a time and the days for each person you have added. Layout switches Plan, Bridge and Thread between widgets and a grid of icons, and opens Customise widgets. Your data and help has Your data, Take the tour, About Anchor and Showcase mode.",
+            howToUse: "Privacy has Require Face ID, which locks Anchor on its own, separately from your phone's lock. Reminders has the daily check-in, with a time you choose, and the focus timer's alerts and lock screen timer. Session reminders has two switches for the evening before and a couple of hours before a session. Hello reminders has a switch, a time and the days for each person you have added. Support day reminders has a switch for each person, and a choice of the morning of a day or the day before. Layout switches Plan, Bridge and Thread between widgets and a grid of icons, and opens Customise widgets. Your data and help has Your data, Take the tour, About Anchor and Showcase mode.",
             tips: [
                 "The reminders and the optional extras are off until you switch them on.",
                 "Routine reminders, Recovery and Sleep only show here once you have a routine, a Recovery counter, or have started using Sleep, so Settings stays short until you need them.",
                 "Recovery has a Daily pledge, an Evening review and Milestones, each with its own switch.",
-                "What shows on the lock screen is plain wording. Routine, Session, Hello, Recovery and Sleep reminders never say what they are about.",
+                "What shows on the lock screen is plain wording. Routine, Session, Hello, Support day, Recovery and Sleep reminders never say what they are about.",
                 "Require Face ID needs Face ID, Touch ID or a passcode on the phone. Without one, the switch cannot be used."
             ]
         ),

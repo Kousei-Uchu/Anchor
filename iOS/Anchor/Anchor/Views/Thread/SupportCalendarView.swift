@@ -86,7 +86,10 @@ struct SupportCalendarView: View {
                             }
                         }
                         .buttonStyle(.plain)
-                        .anchorDeletable { modelContext.delete(entry) }
+                        .anchorDeletable {
+                            modelContext.delete(entry)
+                            refreshReminders(excluding: entry)
+                        }
                     }
                 }
             }
@@ -127,10 +130,17 @@ struct SupportCalendarView: View {
     /// Deleting waits until the sheet has closed, so the sheet never reads
     /// a day that is already gone.
     private func finishEditing() {
-        if let entry = entryToDelete {
+        let removed = entryToDelete
+        if let entry = removed {
             modelContext.delete(entry)
             entryToDelete = nil
         }
+        refreshReminders(excluding: removed)
+    }
+
+    /// Days people can see decide the support day reminders, so they are planned again after a change.
+    private func refreshReminders(excluding removed: SupportCalendarEntry? = nil) {
+        HelloReminders.refresh(contacts: contacts, entries: entries.filter { $0 !== removed })
     }
 
     private func visibleNames(_ entry: SupportCalendarEntry) -> String {

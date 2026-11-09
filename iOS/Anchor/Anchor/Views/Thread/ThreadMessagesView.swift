@@ -524,11 +524,33 @@ struct ThreadMessageComposer: View {
     @State private var sendRequest: SendRequest?
     @State private var discordFailureMessage: String?
 
-    private let isHello: Bool
+    @Query(sort: \SupportCalendarEntry.date) private var supportEntries: [SupportCalendarEntry]
 
-    init(startingContactID: UUID? = nil, isHello: Bool = false) {
+    private let isHello: Bool
+    private let supportDay: Date?
+    private let dayBefore: Bool
+
+    init(startingContactID: UUID? = nil, isHello: Bool = false, supportDay: Date? = nil, dayBefore: Bool = false) {
         _selectedContactID = State(initialValue: startingContactID)
         self.isHello = isHello
+        self.supportDay = supportDay
+        self.dayBefore = dayBefore
+    }
+
+    /// Shown only when the box was opened from a reminder about a Support calendar day, and only
+    /// while the person picked can see that day. Closing it does nothing and is not recorded.
+    private var supportDayLines: (line: String, note: String?)? {
+        guard let supportDay,
+              let contact = contacts.first(where: { $0.id == selectedContactID }) else { return nil }
+        let name = contact.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty,
+              let entry = supportEntries.first(where: {
+                  $0.visibleToContactIDs.contains(contact.id) && Calendar.current.isDate($0.date, inSameDayAs: supportDay)
+              }) else { return nil }
+        let note = entry.note.trimmingCharacters(in: .whitespacesAndNewlines)
+        let when = dayBefore ? "Tomorrow" : "Today"
+        return ("\(when) is a day you marked for extra support, and \(name) can see it. A message might help.",
+                note.isEmpty ? nil : note)
     }
 
     /// Shown only when the box was opened from a hello reminder. Closing it does nothing and is not recorded.
@@ -546,6 +568,14 @@ struct ThreadMessageComposer: View {
                 if let line = helloLine {
                     Section {
                         Text(line).font(.callout).foregroundStyle(.secondary)
+                    }
+                }
+                if let day = supportDayLines {
+                    Section {
+                        Text(day.line).font(.callout).foregroundStyle(.secondary)
+                        if let note = day.note {
+                            Text(note).font(.callout)
+                        }
                     }
                 }
                 if !contacts.isEmpty {

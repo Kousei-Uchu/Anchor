@@ -153,7 +153,7 @@ struct ContactsView: View {
         for contact in contacts where contact !== deleting && isBlank(contact) {
             remove(contact)
         }
-        HelloReminders.refresh(contacts: contacts.filter { $0 !== deleting && !isBlank($0) })
+        HelloReminders.refresh(contacts: contacts.filter { $0 !== deleting && !isBlank($0) }, using: modelContext)
     }
 
     /// Deleting a person also removes the page of notes kept about them.

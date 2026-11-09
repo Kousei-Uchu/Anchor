@@ -28,6 +28,9 @@ struct SessionPrepRequest: Identifiable {
 struct HelloRequest: Identifiable {
     let id = UUID()
     let contactID: UUID
+    /// Set when the reminder was about a day on the Support calendar: the day on the calendar.
+    var supportDay: Date? = nil
+    var dayBefore: Bool = false
 }
 
 /// What a trigger window reminder shows once it is opened. The lock screen never carries these;
@@ -95,7 +98,13 @@ final class NotificationDelegate: NSObject, ObservableObject, UNUserNotification
             if response.actionIdentifier != "IM_OKAY",
                response.notification.request.content.categoryIdentifier == NotificationCategory.helloReminder.rawValue,
                let raw = userInfo[HelloReminders.contactKey] as? String, let contact = UUID(uuidString: raw) {
-                hello = HelloRequest(contactID: contact)
+                var request = HelloRequest(contactID: contact)
+                if (userInfo[HelloReminders.kindKey] as? String) == HelloReminders.supportDayKind,
+                   let seconds = userInfo[HelloReminders.dayKey] as? Double {
+                    request.supportDay = Date(timeIntervalSince1970: seconds)
+                    request.dayBefore = (userInfo[HelloReminders.dayBeforeKey] as? Bool) ?? false
+                }
+                hello = request
             }
             if response.notification.request.content.categoryIdentifier == NotificationCategory.dailyCheckIn.rawValue {
                 shouldOpenCheckIn = true

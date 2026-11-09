@@ -659,23 +659,53 @@ enum AppointmentReminderSelfTest {
 
 // MARK: - Hello reminders
 
-/// An optional reminder to say hello to one person, set by the person using the app, off unless they
-/// switch it on. The lock screen says only that it is a quiet moment to reach out and never names
-/// anyone; who it is for travels inside the reminder and is read when it is opened. At most one comes
-/// on any day, whoever it is for: when two people share a day, the one higher in the contacts list
-/// keeps it. Every call clears the hello notifications and adds the current set again.
+/// Optional reminders to reach out to one person, set by the person using the app, off unless they
+/// switch them on. There are two kinds: a regular hello on days and a time they pick, and a reminder
+/// about a day on the Support calendar that the person can see, at 9 am the morning of that day or
+/// the day before. The lock screen never names anyone and never says what the reminder is about
+/// beyond something to remember; who it is for travels inside the reminder and is read when it is
+/// opened. At most one comes on any day, whoever it is for. A support day takes the place of a
+/// hello that day, and when two support days come on the same day the person higher in the
+/// contacts list keeps it. Every call clears the hello notifications and adds the current set again.
 enum HelloReminders {
     static let prefix = "hello-"
     static let body = "A quiet moment to reach out?"
+    static let dayBody = "Something to remember today."
+    static let dayBeforeBody = "Something to remember tomorrow."
     static let contactKey = "helloContactID"
+    static let kindKey = "helloKind"
+    static let supportDayKind = "supportDay"
+    static let dayKey = "helloEventDay"
+    static let dayBeforeKey = "helloDayBefore"
+    /// A support day is planned this far ahead. A hello on a weekday that has a support day in this
+    /// time is planned as separate dated reminders for the same time, so one day can be skipped.
+    static let weeksAhead = 3
+    static let supportDayHour = 9
 
     /// The plain values the plan needs, so nothing from SwiftData is held by the notification centre.
     typealias Entry = (id: UUID, order: Int, enabled: Bool, days: [Int], hour: Int, minute: Int)
+
+    /// One day on the Support calendar that one person can see, for a person who has these on.
+    struct SupportDay {
+        let contactID: UUID
+        let order: Int
+        /// The start of the day on the calendar.
+        let eventDay: Date
+        let dayBefore: Bool
+    }
 
     struct Planned {
         let id: String
         let components: DateComponents
         let contactID: String
+        let repeats: Bool
+        let supportDay: SupportDay?
+    }
+
+    struct Plan {
+        var reminders: [Planned]
+        /// Support days that got no reminder because another person's comes the same day.
+        var skipped: [SupportDay]
     }
 
     static func entries(of contacts: [TrustedContact]) -> [Entry] {
@@ -683,34 +713,111 @@ enum HelloReminders {
                         days: $0.helloDays, hour: $0.helloHour, minute: $0.helloMinute) }
     }
 
+    static func supportDays(of contacts: [TrustedContact], entries: [SupportCalendarEntry],
+                            calendar: Calendar = .current) -> [SupportDay] {
+        var found: [SupportDay] = []
+        for contact in contacts where contact.supportDaysEnabled {
+            for entry in entries where entry.visibleToContactIDs.contains(contact.id) {
+                found.append(SupportDay(contactID: contact.id, order: contact.sortOrder,
+                                        eventDay: calendar.startOfDay(for: entry.date),
+                                        dayBefore: contact.supportDaysDayBefore))
+            }
+        }
+        return found
+    }
+
     static func refresh(using context: ModelContext) {
         #if DEBUG
         HelloReminderSelfTest.run()
         #endif
         let contacts = (try? context.fetch(FetchDescriptor<TrustedContact>(sortBy: [SortDescriptor(\.sortOrder)]))) ?? []
-        refresh(contacts: contacts)
+        refresh(contacts: contacts, using: context)
     }
 
-    static func refresh(contacts: [TrustedContact]) {
+    /// For a caller that has its own list of contacts, such as one that has just deleted someone.
+    static func refresh(contacts: [TrustedContact], using context: ModelContext) {
+        let days = (try? context.fetch(FetchDescriptor<SupportCalendarEntry>())) ?? []
+        refresh(contacts: contacts, entries: days)
+    }
+
+    static func refresh(contacts: [TrustedContact], entries: [SupportCalendarEntry] = []) {
         guard !DemoMode.isOn else { return }
-        apply(plan(entries: entries(of: contacts)))
+        let days = supportDays(of: contacts, entries: entries)
+        apply(plan(entries: HelloReminders.entries(of: contacts), supportDays: days).reminders)
     }
 
-    /// One repeating weekly notification for each weekday that someone has chosen, owned by the
-    /// first person (by position in the contacts list) who chose it.
-    static func plan(entries: [Entry]) -> [Planned] {
+    /// The time a support day's reminder comes, or nil if it is in the past or beyond the weeks planned.
+    private static func fireTime(of day: SupportDay, now: Date, last: Date, calendar: Calendar) -> Date? {
+        let fireDay = day.dayBefore ? calendar.date(byAdding: .day, value: -1, to: day.eventDay) : day.eventDay
+        guard let fireDay,
+              let at = calendar.date(bySettingHour: supportDayHour, minute: 0, second: 0, of: fireDay),
+              at > now, calendar.startOfDay(for: at) <= last else { return nil }
+        return at
+    }
+
+    private static func stamp(_ date: Date, calendar: Calendar) -> String {
+        let parts = calendar.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d%02d%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
+    }
+
+    /// Support days first, one for each day. Then one hello for each weekday that someone has chosen,
+    /// owned by the first person (by position in the contacts list) who chose it: one repeating
+    /// weekly reminder, unless a support day falls on that weekday in the next few weeks, when it is
+    /// separate dated reminders for those weeks that leave out the day the support day takes.
+    static func plan(entries: [Entry], supportDays: [SupportDay] = [], now: Date = .now,
+                     calendar: Calendar = .current) -> Plan {
+        let today = calendar.startOfDay(for: now)
+        let last = calendar.date(byAdding: .day, value: 7 * weeksAhead, to: today) ?? today
+
+        var kept: [Date: (day: SupportDay, at: Date)] = [:]
+        var skipped: [SupportDay] = []
+        for day in supportDays {
+            guard let at = fireTime(of: day, now: now, last: last, calendar: calendar) else { continue }
+            let key = calendar.startOfDay(for: at)
+            guard let current = kept[key] else { kept[key] = (day, at); continue }
+            if current.day.contactID == day.contactID && current.day.eventDay == day.eventDay { continue }
+            if (day.order, day.eventDay) < (current.day.order, current.day.eventDay) {
+                skipped.append(current.day)
+                kept[key] = (day, at)
+            } else {
+                skipped.append(day)
+            }
+        }
+
         var planned: [Planned] = []
+        let busyWeekdays = Set(kept.keys.map { calendar.component(.weekday, from: $0) })
         for weekday in 1...7 {
             let wanting = entries.filter { $0.enabled && $0.days.contains(weekday) }
             guard let owner = wanting.min(by: { $0.order < $1.order }) else { continue }
             let hour = min(max(owner.hour, 0), 23)
             let minute = min(max(owner.minute, 0), 59)
-            planned.append(Planned(
-                id: prefix + owner.id.uuidString + "-\(weekday)",
-                components: DateComponents(hour: hour, minute: minute, weekday: weekday),
-                contactID: owner.id.uuidString))
+            if !busyWeekdays.contains(weekday) {
+                planned.append(Planned(
+                    id: prefix + owner.id.uuidString + "-\(weekday)",
+                    components: DateComponents(hour: hour, minute: minute, weekday: weekday),
+                    contactID: owner.id.uuidString, repeats: true, supportDay: nil))
+                continue
+            }
+            for offset in 0...(7 * weeksAhead) {
+                guard let raw = calendar.date(byAdding: .day, value: offset, to: today) else { continue }
+                let day = calendar.startOfDay(for: raw)
+                guard calendar.component(.weekday, from: day) == weekday, kept[day] == nil,
+                      let at = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day),
+                      at > now else { continue }
+                planned.append(Planned(
+                    id: prefix + owner.id.uuidString + "-" + stamp(day, calendar: calendar),
+                    components: calendar.dateComponents([.year, .month, .day, .hour, .minute], from: at),
+                    contactID: owner.id.uuidString, repeats: false, supportDay: nil))
+            }
         }
-        return planned
+
+        for (key, item) in kept.sorted(by: { $0.key < $1.key }) {
+            planned.append(Planned(
+                id: prefix + "day-" + item.day.contactID.uuidString + "-" + stamp(key, calendar: calendar),
+                components: calendar.dateComponents([.year, .month, .day, .hour, .minute], from: item.at),
+                contactID: item.day.contactID.uuidString, repeats: false, supportDay: item.day))
+        }
+        return Plan(reminders: planned, skipped: skipped)
     }
 
     /// The days this person chose that someone higher in the list already has, so Settings can say so.
@@ -721,6 +828,14 @@ enum HelloReminders {
         }
     }
 
+    /// The support days of this person that got no reminder, for Settings to say so.
+    static func skippedSupportDays(for id: UUID, contacts: [TrustedContact],
+                                   entries: [SupportCalendarEntry]) -> [Date] {
+        plan(entries: HelloReminders.entries(of: contacts),
+             supportDays: supportDays(of: contacts, entries: entries))
+            .skipped.filter { $0.contactID == id }.map(\.eventDay).sorted()
+    }
+
     private static func apply(_ planned: [Planned]) {
         let center = UNUserNotificationCenter.current()
         center.getPendingNotificationRequests { pending in
@@ -729,11 +844,19 @@ enum HelloReminders {
             for item in planned {
                 let content = UNMutableNotificationContent()
                 content.title = "Anchor"
-                content.body = body
-                content.categoryIdentifier = NotificationCategory.helloReminder.rawValue
                 content.sound = .default
-                content.userInfo = [contactKey: item.contactID]
-                let trigger = UNCalendarNotificationTrigger(dateMatching: item.components, repeats: true)
+                content.categoryIdentifier = NotificationCategory.helloReminder.rawValue
+                var info: [String: Any] = [contactKey: item.contactID]
+                if let day = item.supportDay {
+                    content.body = day.dayBefore ? dayBeforeBody : dayBody
+                    info[kindKey] = supportDayKind
+                    info[dayKey] = day.eventDay.timeIntervalSince1970
+                    info[dayBeforeKey] = day.dayBefore
+                } else {
+                    content.body = body
+                }
+                content.userInfo = info
+                let trigger = UNCalendarNotificationTrigger(dateMatching: item.components, repeats: item.repeats)
                 center.add(UNNotificationRequest(identifier: item.id, content: content, trigger: trigger))
             }
         }
@@ -750,29 +873,77 @@ enum HelloReminderSelfTest {
     static func run() {
         if hasRun { return }
         hasRun = true
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC") ?? .current
+        // Monday 9 November 2026, 8 am: the three weeks run to Monday 30 November.
+        guard let now = calendar.date(from: DateComponents(year: 2026, month: 11, day: 9, hour: 8)) else { return }
+        func day(_ d: Int) -> Date {
+            calendar.startOfDay(for: calendar.date(from: DateComponents(year: 2026, month: 11, day: d, hour: 12)) ?? now)
+        }
+
         let first = UUID(), second = UUID(), off = UUID()
         let entries: [HelloReminders.Entry] = [
             (id: second, order: 1, enabled: true, days: [1, 3], hour: 9, minute: 0),
             (id: first, order: 0, enabled: true, days: [1, 5], hour: 17, minute: 30),
             (id: off, order: 2, enabled: false, days: [1, 2], hour: 8, minute: 0)
         ]
-        let plan = HelloReminders.plan(entries: entries)
-        guard plan.count == 3 else {
-            fatalError("Hello reminder self-test: expected one reminder for each of three days.")
+        let plain = HelloReminders.plan(entries: entries, now: now, calendar: calendar).reminders
+        guard plain.count == 3, plain.allSatisfy({ $0.repeats && $0.supportDay == nil }) else {
+            fatalError("Hello reminder self-test: expected one repeating reminder for each of three days.")
         }
-        guard let sunday = plan.first(where: { $0.components.weekday == 1 }),
+        guard let sunday = plain.first(where: { $0.components.weekday == 1 }),
               sunday.contactID == first.uuidString, sunday.components.hour == 17, sunday.components.minute == 30 else {
             fatalError("Hello reminder self-test: a shared day did not go to the person higher in the list.")
         }
-        guard !plan.contains(where: { $0.contactID == off.uuidString }) else {
+        guard !plain.contains(where: { $0.contactID == off.uuidString }) else {
             fatalError("Hello reminder self-test: a switched off hello was scheduled.")
         }
         guard HelloReminders.sharedDays(for: second, in: entries) == [1],
               HelloReminders.sharedDays(for: first, in: entries).isEmpty else {
             fatalError("Hello reminder self-test: the shared days were not found.")
         }
-        guard !HelloReminders.body.lowercased().contains("hello") else {
-            fatalError("Hello reminder self-test: the lock screen says what the reminder is about.")
+
+        // A support day on Wednesday 18 November takes the day from the Wednesday hello.
+        let helloOnWednesdays: [HelloReminders.Entry] = [
+            (id: first, order: 0, enabled: true, days: [4], hour: 17, minute: 0)
+        ]
+        let aSupportDay = HelloReminders.SupportDay(contactID: second, order: 1, eventDay: day(18), dayBefore: false)
+        let withDay = HelloReminders.plan(entries: helloOnWednesdays, supportDays: [aSupportDay],
+                                          now: now, calendar: calendar)
+        let hellos = withDay.reminders.filter { $0.supportDay == nil }
+        let days = withDay.reminders.filter { $0.supportDay != nil }
+        guard hellos.count == 2, hellos.allSatisfy({ !$0.repeats }),
+              !hellos.contains(where: { $0.components.day == 18 }),
+              hellos.contains(where: { $0.components.day == 11 }), hellos.contains(where: { $0.components.day == 25 }),
+              days.count == 1, days[0].components.day == 18, days[0].components.hour == 9, !days[0].repeats else {
+            fatalError("Hello reminder self-test: a support day did not take the place of that day's hello.")
+        }
+
+        // The day before comes the day before, and the person higher in the list keeps a shared day.
+        let dayBeforeOne = HelloReminders.SupportDay(contactID: second, order: 1, eventDay: day(20), dayBefore: true)
+        let sameDayOne = HelloReminders.SupportDay(contactID: first, order: 0, eventDay: day(19), dayBefore: false)
+        let clash = HelloReminders.plan(entries: [], supportDays: [dayBeforeOne, sameDayOne], now: now, calendar: calendar)
+        guard clash.reminders.count == 1, clash.reminders[0].contactID == first.uuidString,
+              clash.skipped.count == 1, clash.skipped[0].contactID == second else {
+            fatalError("Hello reminder self-test: two support days on one day did not go to the first person.")
+        }
+        let early = HelloReminders.plan(entries: [], supportDays: [dayBeforeOne], now: now, calendar: calendar)
+        guard early.reminders.count == 1, early.reminders[0].components.day == 19 else {
+            fatalError("Hello reminder self-test: a day before reminder did not come the day before.")
+        }
+
+        // Past days and days beyond the weeks planned get nothing.
+        let past = HelloReminders.SupportDay(contactID: first, order: 0, eventDay: day(2), dayBefore: false)
+        let farOff = HelloReminders.SupportDay(contactID: first, order: 0, eventDay: day(30).addingTimeInterval(86_400 * 5), dayBefore: false)
+        guard HelloReminders.plan(entries: [], supportDays: [past, farOff], now: now, calendar: calendar).reminders.isEmpty else {
+            fatalError("Hello reminder self-test: a past or far off support day was scheduled.")
+        }
+
+        for line in [HelloReminders.body, HelloReminders.dayBody, HelloReminders.dayBeforeBody] {
+            let lower = line.lowercased()
+            guard !lower.contains("hello"), !lower.contains("support"), !lower.contains("extra") else {
+                fatalError("Hello reminder self-test: the lock screen says what the reminder is about.")
+            }
         }
     }
 }

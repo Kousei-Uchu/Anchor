@@ -1427,6 +1427,7 @@ struct TrustedContactDTO: Codable {
     /// Optional so exports made before hello reminders existed still import.
     var helloEnabled: Bool?; var helloDays: [Int]?
     var helloHour: Int?; var helloMinute: Int?
+    var supportDaysEnabled: Bool?; var supportDaysDayBefore: Bool?
     init(_ m: TrustedContact) {
         id = m.id; name = m.name; phoneNumber = m.phoneNumber; sortOrder = m.sortOrder
         escalationEnabled = m.escalationEnabled; escalationWindowMinutes = m.escalationWindowMinutes
@@ -1437,6 +1438,7 @@ struct TrustedContactDTO: Codable {
         availableToHour = m.availableToHour; availableToMinute = m.availableToMinute
         helloEnabled = m.helloEnabled; helloDays = m.helloDays
         helloHour = m.helloHour; helloMinute = m.helloMinute
+        supportDaysEnabled = m.supportDaysEnabled; supportDaysDayBefore = m.supportDaysDayBefore
     }
     func toModel() -> TrustedContact {
         TrustedContact(id: id, name: name, phoneNumber: phoneNumber, sortOrder: sortOrder,
@@ -1447,7 +1449,9 @@ struct TrustedContactDTO: Codable {
                         availableFromHour: availableFromHour, availableFromMinute: availableFromMinute,
                         availableToHour: availableToHour, availableToMinute: availableToMinute,
                         helloEnabled: helloEnabled ?? false, helloDays: helloDays ?? [],
-                        helloHour: helloHour ?? 17, helloMinute: helloMinute ?? 0)
+                        helloHour: helloHour ?? 17, helloMinute: helloMinute ?? 0,
+                        supportDaysEnabled: supportDaysEnabled ?? false,
+                        supportDaysDayBefore: supportDaysDayBefore ?? false)
     }
 }
 
@@ -2243,7 +2247,9 @@ extension TrustedContact: DataBrowsable {
             .number("Available to (hour)", availableToHour),
             .number("Available to (minute)", availableToMinute),
             .yesNo("Hello reminder on", helloEnabled),
-            .text("Hello reminder", helloSummary)
+            .text("Hello reminder", helloSummary),
+            .yesNo("Support day reminders on", supportDaysEnabled),
+            .text("Support day reminders", supportDaysEnabled ? (supportDaysDayBefore ? "The day before" : "The morning of") : nil)
         ]
     }
 }

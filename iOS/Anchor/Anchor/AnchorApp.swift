@@ -188,7 +188,8 @@ enum DemoMode {
         func ago(_ days: Double, hour: Double = 0) -> Date { now.addingTimeInterval(-days * 86_400 - hour * 3_600) }
 
         let demoSam = TrustedContact(name: "Sam", phoneNumber: "0400 000 001", sortOrder: 0,
-                                     helloEnabled: true, helloDays: [1], helloHour: 17, helloMinute: 0)
+                                     helloEnabled: true, helloDays: [1], helloHour: 17, helloMinute: 0,
+                                     supportDaysEnabled: true, supportDaysDayBefore: true)
         context.insert(demoSam)
         let demoAlex = TrustedContact(name: "Alex", phoneNumber: "0400 000 002", sortOrder: 1)
         let demoJordan = TrustedContact(name: "Jordan", phoneNumber: "0400 000 003", sortOrder: 2)
