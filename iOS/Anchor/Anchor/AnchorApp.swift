@@ -241,7 +241,7 @@ enum DemoMode {
                                                 matchingPolicy: .nextTime) ?? now.addingTimeInterval(3 * 86_400)
         // Earlier sessions, with the notes a person would have written around them.
         let leePrepNote = JournalEntry(createdAt: ago(29), text: "Want to ask about sleep, and whether the evening call is worth keeping.")
-        let leeNoteRecent = JournalEntry(createdAt: ago(14), text: "Talked about the sleep. Try the same wake-up time for two weeks and see.")
+        let leeNoteRecent = JournalEntry(createdAt: ago(14), text: "Talked about the sleep. Try the same wake-up time for two weeks and see.\n[ ] Pick a wake-up time\n[ ] Ask Sam to check in on Sunday")
         let leeNoteOlder = JournalEntry(createdAt: ago(28), text: "Went over the month. Dr Lee thought the walks were worth keeping.")
         let patelNote = JournalEntry(createdAt: ago(60), text: "Short visit. Booked the next one for the longer appointment.")
         for note in [leePrepNote, leeNoteRecent, leeNoteOlder, patelNote] { context.insert(note) }

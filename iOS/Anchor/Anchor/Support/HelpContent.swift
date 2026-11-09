@@ -299,8 +299,9 @@ extension Guide {
         GuideEntry(
             id: "bridge.post-session", tab: .bridge, title: "Post-session notes", icon: "note.text",
             whatItIs: "Your own notes on how a session went, one for each session.",
-            howToUse: "Past sessions are listed with whether they have notes yet. Tap one and write whatever you want to keep. If you close it with nothing written, no note is kept.",
+            howToUse: "Past sessions are listed with whether they have notes yet. Tap one and write whatever you want to keep. If you close it with nothing written, no note is kept. A line that starts with [ ] is a thing to do: Add a thing to do starts one for you, and under the note each one has an Add as task button.",
             tips: [
+                "Nothing goes into Tasks unless you tap Add as task. The task has no date, and the line stays in your note.",
                 "With more than one provider, a row of names at the top of Bridge switches between them."
             ]
         ),

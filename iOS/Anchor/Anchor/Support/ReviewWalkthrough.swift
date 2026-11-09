@@ -252,7 +252,9 @@ enum ReviewStops {
         ("SL6", "Sleep in the CSV and the PDFs", "The CSV from Your data has its own sleep columns (bed_time, wake_time, minutes_asleep, feel) at the end, and the PDFs from Your data and from Export for someone draw the same plain time-asleep line as the web page, with no target line. The web page's Download CSV has in_bed, up and minutes_asleep columns.",
          "Open Your data, Export Journal, Check-ins and Sleep (PDF) and look for the Sleep heading with a line above the nights. Then Export for someone with Sleep switched on, make the PDF and the web page, and press Download CSV in the page. Export and Share are off in showcase and demo mode, so try this on your own copy.", 1, .yourData),
         ("AB2", "What's new by version", "What's new is a fold for each version with what it added, changed and removed. The newest is open, the others closed, and a group with nothing in it is not shown.",
-         "Open About, then What's new. There is one version so far, 1.0, open, with its eight additions. Fold and open it again and try large text.", 1, .about)
+         "Open About, then What's new. There is one version so far, 1.0, open, with its eight additions. Fold and open it again and try large text.", 1, .about),
+        ("30q", "Session actions offered as tasks", "In Post-session notes, a line that starts with [ ] is a thing to do and has an Add as task button under the note. Nothing is added until you tap, the task has no date, and the line stays in the note.",
+         "Open Post-session notes for Dr Lee, open the session 14 days ago and look under the note: two things to do. Tap Add as task on one, then open Tasks and find it with no date. Back in the note it now says In Tasks. Add a thing to do puts a new [ ] line at the end.", 3, .afterSession)
     ])
 }
 
