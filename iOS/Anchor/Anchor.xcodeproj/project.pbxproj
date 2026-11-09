@@ -8,7 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		03341B23D1B41EB29A286F8D /* SafetyCopyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87A893C8C649E0DA82BF5434 /* SafetyCopyView.swift */; };
+		25D53E264D1F99304DF6A72B /* LockMyDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85B27412DFF5FC3D964C3D85 /* LockMyDataView.swift */; };
 		60A074630CC7C6188746A45F /* SafetyCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 905C4FDA487AB3F8365B7465 /* SafetyCopy.swift */; };
+		0CAA287DC6AAD87AC93CC178 /* LockMyData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92D593B269EB6B064DC986FE /* LockMyData.swift */; };
 		383D93D08A9CDB63AB066AD1 /* AIGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60E32204EBCB9844F599B451 /* AIGate.swift */; };
 		1A4FEEC54C9A2A6CC97357BE /* LockedFields.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8FC090AB9CDA60DC7E77AF2 /* LockedFields.swift */; };
 		07033D98FCBCC16228F86C85 /* LockedFields.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8FC090AB9CDA60DC7E77AF2 /* LockedFields.swift */; };
@@ -127,7 +129,9 @@
 
 /* Begin PBXFileReference section */
 		87A893C8C649E0DA82BF5434 /* SafetyCopyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafetyCopyView.swift; sourceTree = "<group>"; };
+		85B27412DFF5FC3D964C3D85 /* LockMyDataView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockMyDataView.swift; sourceTree = "<group>"; };
 		905C4FDA487AB3F8365B7465 /* SafetyCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafetyCopy.swift; sourceTree = "<group>"; };
+		92D593B269EB6B064DC986FE /* LockMyData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockMyData.swift; sourceTree = "<group>"; };
 		60E32204EBCB9844F599B451 /* AIGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIGate.swift; sourceTree = "<group>"; };
 		E8FC090AB9CDA60DC7E77AF2 /* LockedFields.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockedFields.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4B5C /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -250,6 +254,7 @@
 			isa = PBXGroup;
 			children = (
 				87A893C8C649E0DA82BF5434 /* SafetyCopyView.swift */,
+				85B27412DFF5FC3D964C3D85 /* LockMyDataView.swift */,
 				A1B2C3D4E5F60718293A4B5C /* SettingsView.swift */,
 			);
 			path = Settings;
@@ -301,6 +306,7 @@
 			isa = PBXGroup;
 			children = (
 				905C4FDA487AB3F8365B7465 /* SafetyCopy.swift */,
+				92D593B269EB6B064DC986FE /* LockMyData.swift */,
 				60E32204EBCB9844F599B451 /* AIGate.swift */,
 				E8FC090AB9CDA60DC7E77AF2 /* LockedFields.swift */,
 				C7C09E04301AA21400F9144F /* HelpContent.swift */,
@@ -620,7 +626,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				03341B23D1B41EB29A286F8D /* SafetyCopyView.swift in Sources */,
+				25D53E264D1F99304DF6A72B /* LockMyDataView.swift in Sources */,
 				60A074630CC7C6188746A45F /* SafetyCopy.swift in Sources */,
+				0CAA287DC6AAD87AC93CC178 /* LockMyData.swift in Sources */,
 				383D93D08A9CDB63AB066AD1 /* AIGate.swift in Sources */,
 				07033D98FCBCC16228F86C85 /* LockedFields.swift in Sources */,
 				B82692F35F794738ADD35491 /* AnchorApp.swift in Sources */,

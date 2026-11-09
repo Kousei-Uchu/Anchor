@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 
 /// How a stored field reads and writes once it can be locked (Patch 35b2, D15).
 ///
@@ -76,5 +77,32 @@ enum FieldLock {
     static func storeData(_ data: Data, context: String) -> (plain: Data, sealed: String?) {
         if isOn, let sealed = sealer?(data.base64EncodedString(), context) { return (Data(), sealed) }
         return (data, nil)
+    }
+}
+
+// MARK: - Locking what is already stored (Patch 35b3)
+
+/// A model with locked fields, as Lock my data sees it (`Support/LockMyData.swift`). The three methods are written
+/// next to each model's `lockNewValues()`, and `scripts/check-locked-fields.mjs` keeps the list of models in
+/// `LockMyData.kinds` complete.
+protocol LockableModel: PersistentModel {
+    /// Seals what is stored plain, leaves anything sealed alone, and does nothing while locking is off.
+    func lockExistingValues()
+    /// What every locked field reads as, through the old names, so a sealed value is compared as its text.
+    func lockedSnapshot() -> String
+    /// True when every locked field is held sealed with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool
+}
+
+extension FieldLock {
+    static func describe(_ value: String) -> String { "s:" + value }
+    static func describe(_ value: String?) -> String { value.map { "s:" + $0 } ?? "nil" }
+    static func describe<T>(_ list: [T]) -> String { "l:" + String(describing: list) }
+    static func describe(_ data: Data) -> String { "d:" + data.base64EncodedString() }
+
+    /// One piece of text for a whole item. The separator cannot be typed into a text field by accident, and a
+    /// change in any one field changes the result.
+    static func join(_ parts: [String]) -> String {
+        parts.joined(separator: "\u{1F}")
     }
 }

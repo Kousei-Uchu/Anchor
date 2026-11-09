@@ -18,10 +18,15 @@ struct AnchorApp: App {
         #if DEBUG
         WidgetSealSelfTest.run()
         FieldLockSelfTest.run()
+        LockMyDataSelfTest.run()
         #endif
         if !DemoMode.isOn {
+            // A lock run that was stopped in the middle asks for the safety copy to be put back.
+            LockMyData.recoverInterruptedRun()
             // A waiting safety copy job runs first, before anything opens the database.
             SafetyCopy.runAtLaunch()
+            // After a good lock, the database file is rebuilt while nothing has it open.
+            LockMyData.scrubAtLaunch()
             ContainerHolder.prepareRealStore(ContainerHolder.shared.container)
         } else if ShowcaseMode.isOn {
             // A launch that starts in showcase mode opens nothing from the real store, and leaves
@@ -57,7 +62,9 @@ struct AnchorRootView: View {
 
     var body: some View {
         AppLockGateView {
-            ContentView()
+            KeyGateView {
+                ContentView()
+            }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             if !AnchorSchema.openedPersistentStore {
@@ -123,6 +130,8 @@ final class ContainerHolder: ObservableObject {
         WidgetSealing.sealLeftovers()
         TaskMigration.migrateNextHourItemsIfNeeded(container: container)
         SafetyPlanMigration.migrateIfNeeded(container: container)
+        // The last step: a waiting Lock my data run, after the safety copy it asked for has been made.
+        LockMyData.runIfWaiting(container: container)
     }
 
     /// Returns false, and changes nothing, when the made-up store cannot be made. The real store is never

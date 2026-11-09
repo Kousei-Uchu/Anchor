@@ -1,6 +1,6 @@
 # Locking what Anchor stores
 
-This is the at-rest work of point 20 in the plan. It is in two parts. Patch 34 made the keys. Patch 35 is split: 35a (done) seals what the widgets are shown, with a key of its own; 35b will use the data key to lock the stored text and move what is already stored, and waits on a decision (D15 in the plan). Nothing stored in the database is locked with the data key yet, and the screen for it is only in test builds (Settings, Your data and help, Encryption (test build)).
+This is the at-rest work of point 20 in the plan. It is in two parts. Patch 34 made the keys. Patch 35 is split: 35a (done) seals what the widgets are shown, with a key of its own; 35b uses the data key to lock the stored text, in three patches: 35b1 the safety copy, 35b2 the locked fields, 35b3 Lock my data (D15, option B). Patch 35b3 adds Lock my data, which locks the stored text with the data key; until it has been run nothing stored in the database is locked, and the screens for it are only in test builds (Settings, Encryption (test build), Safety copy (test build), Lock my data (test build)).
 
 ## The pieces
 
@@ -60,15 +60,38 @@ What this does and does not cover: it keeps the summaries out of a backup in a r
 Each field that holds your own words is two stored properties on its model: the plain one (`textPlain`) and a sealed twin (`textSealed`, a string that is empty until locking is on). The field's old name (`text`) is a computed property that goes through `FieldLock`, so no screen, export or widget changed. The plain property keeps the old name as its `originalName`, so SwiftData carries the stored values over when the app first opens.
 
 - **Sealing.** The sealed value is the same format as sealed text above, with the context `Model.field` (for example `JournalEntry.text`) so a value cannot move to another field. Lists of small records are sealed as JSON and Data as base64, each as one value.
-- **Off for now.** `FieldLock.isOn` is false until Patch 35b3, so a write keeps the text plain and the sealed twin empty. A new item ends its init with `lockNewValues()`, which does nothing while it is off.
+- **Off until Lock my data has run.** `FieldLock.isOn` is false until a Lock my data run (Patch 35b3) has checked every item, so until then a write keeps the text plain and the sealed twin empty. A new item ends its init with `lockNewValues()`, which does nothing while it is off.
 - **A value that will not open** reads as empty and is never written back, so a missing key cannot overwrite your words.
 - **Who may touch the twins.** Only the models, `LockedFields.swift` and `AppLock.swift`; `scripts/check-locked-fields.mjs` enforces it, and also that nothing sorts or filters on a locked field.
 - **Locked:** the text and notes on every model, contact names, phone numbers, Discord ids and message templates, goal notes, list and routine items, diagram data, and the Recovery counter's name, label and start dates. **Left readable:** dates, numbers, switches, ids and the links between items, icon and colour names, and shipped Mascot lines (D44). Voice note and photo files wait for 35d.
 - **Widgets.** The extension builds the model files but holds no key, so it never opens a sealed value. It reads its own sealed summaries as before.
 
-## Not done yet (Patch 35b3)
+## Lock my data (Patch 35b3)
 
-Locking the stored text and moving what is already there, in a way that can be undone and survives being stopped half way; a start-up check for a missing key that stops the store being opened over locked text; the voice note and photo files; and a way to turn it off. D15 is answered (option B, every model in one go, with a safety copy first), so 35b is three patches: 35b1 the safety copy and the way back, 35b2 the locked fields, and 35b3 the Lock my data flow. See the plan and `docs/DECISIONS_EXPLAINED.md`.
+One flow that locks every field in the list above on every model, after the way back exists. Settings, Lock my data (test builds only for now). The code is `Support/LockMyData.swift` and the screen is `Views/Settings/LockMyDataView.swift`.
+
+**The order.**
+
+1. On the screen the person checks the recovery key (typed, and checked against the recovery file) and ticks that an encrypted backup is kept somewhere other than this phone. Lock my data stays off until the key and recovery file are here, both are done, and the real store is open.
+2. Lock my data records a job (the time it was asked) and asks for a safety copy. Nothing else happens while the app is open.
+3. On the next start the safety copy is made first, before the database is opened (Patch 35b1).
+4. Once the database is open, and after the older migrations, the run starts. It refuses, says why and locks nothing if the safety copy is older than the request, if the data key is missing or does not open what it seals, or if the recovery file was made for a different key.
+5. It notes what every item reads as, in a fresh context. It locks every item (`lockExistingValues`, which seals only what is stored plain and leaves anything sealed alone), saves, and reads everything again in another fresh context. It checks that every kind has the same number of items, that every item reads exactly as before, and that every locked field is held sealed with nothing left in the plain property.
+6. If every check passes, one write records that locking is on and that the run is over. From then on `FieldLock.isOn` is turned on at every launch, so every new value is sealed as it is saved.
+7. If any check fails, locking is not turned on and the safety copy is asked to be put back on the next start. The run does not try to undo its own writes in place, because a value that did not open is the reason it might have failed.
+8. If the app is closed in the middle of a run, the next start sees that it never finished (the state is "running") and asks for the safety copy to be put back, before the database is opened. The copy was made at the start of that same run and nothing was written in between, so going back loses nothing.
+9. After a good run, the next start rebuilds the database file before it is opened (`PRAGMA wal_checkpoint(TRUNCATE)`, `secure_delete`, `VACUUM`), because the old plain text can stay in unused space in a SQLite file after a value is rewritten. If this fails nothing is lost, and the screen says some old text may still be in the file.
+
+**The key gate.** While text is locked, and the key is not on this phone (a restored phone, or the key and recovery file both gone), the app shows a screen in place of Anchor: restore with the recovery key, try again, or open Anchor without it, with a warning. Without it every screen would show locked text as empty, and saving one of them would write the empty text over the locked text. The gate is off in showcase mode and when nothing is locked.
+
+**What this does not cover.**
+
+- **The safety copy is plain.** It was made before locking, so it holds your text unlocked until you delete it. It is kept out of phone backups. Delete it once you are happy (Settings, Safety copy). Clear all data deletes it too.
+- **Old backups.** A phone backup made before locking still holds your text readable, and so does any export made before.
+- **Voice notes and Journal photos** are files, not text, and are not locked yet (Patch 35d).
+- **After a failed run, until the next start.** Reading still works, because the key is here. Anything written before the app is closed and opened again is in the set-aside part after going back, and Undo go back brings it back.
+- **Turning it off.** There is no switch that unlocks in place. The way back is the safety copy (Go back), or an encrypted backup. If you would like an in-place unlock, say so.
+- **The tidy-up of the file** relies on SQLite's VACUUM on the store file before the app opens it. It has not been run on a real store.
 
 ## Checking a test build on a device
 

@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 35b3: Lock my data. One step locks the words you have written in every part of Anchor, after it has made a safety copy, and then checks that every item is still there and reads exactly as before. If anything is off it goes back to the safety copy by itself. If Anchor is closed in the middle, the next start goes back too. After a good lock the database file is rebuilt so old plain copies are not left in it, and a screen asks for your recovery key if locked text is opened on a phone without the key. In test builds only for now. Voice notes and Journal photos are not locked yet.
 - Patch 35b2: every field that holds your own words is now ready to be locked, in the same place as before, and nothing is locked yet. Everything reads and saves as it did. Also adds three files to the Xcode project that earlier patches left out, and two new checks that catch that.
 - Patch 35b1: a safety copy of your database, voice notes and Journal photos, made when Anchor starts and checked against fingerprints, with Go back and Undo go back that never delete anything. In test builds only for now. Clear all data removes the copy too.
 - Patch CK1: one command, bash scripts/check-all.sh, runs every check that needs no Xcode, including a new one that reads all the Swift files and lists anything that does not parse. It is a syntax check only, not a build.

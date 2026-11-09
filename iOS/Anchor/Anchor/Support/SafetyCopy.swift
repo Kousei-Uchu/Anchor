@@ -66,6 +66,9 @@ enum SafetyCopy {
     }
     private static var storeDir: URL { storeFile.deletingLastPathComponent() }
 
+    /// The database file as the app opens it. Lock my data tidies it, before the app opens it (Patch 35b3).
+    static var liveStoreURL: URL { storeFile }
+
     private static func liveStoreNames() -> [String] {
         let base = storeFile.lastPathComponent
         let support = "." + storeFile.deletingPathExtension().lastPathComponent + "_SUPPORT"

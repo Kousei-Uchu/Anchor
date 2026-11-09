@@ -74,6 +74,26 @@ extension JournalEntry {
         guard FieldLock.isOn else { return }
         text = textPlain
     }
+
+    /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
+    /// again. It does nothing while locking is off.
+    func lockExistingValues() {
+        guard FieldLock.isOn else { return }
+        if textSealed == nil { text = textPlain }
+    }
+
+    /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
+    /// before and after. It reads through the old names, so a sealed value is compared as its text.
+    func lockedSnapshot() -> String {
+        FieldLock.join([
+            FieldLock.describe(text)
+        ])
+    }
+
+    /// True when every locked field is held sealed, with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool {
+        textSealed != nil && textPlain.isEmpty
+    }
 }
 
 extension JournalEntry {
@@ -276,6 +296,35 @@ extension TrustedContact {
         messageTemplates = messageTemplatesPlain
         discordUserID = discordUserIDPlain
     }
+
+    /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
+    /// again. It does nothing while locking is off.
+    func lockExistingValues() {
+        guard FieldLock.isOn else { return }
+        if nameSealed == nil { name = namePlain }
+        if phoneNumberSealed == nil { phoneNumber = phoneNumberPlain }
+        if messageTemplatesSealed == nil { messageTemplates = messageTemplatesPlain }
+        if discordUserIDSealed == nil, let kept = discordUserIDPlain { discordUserID = kept }
+    }
+
+    /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
+    /// before and after. It reads through the old names, so a sealed value is compared as its text.
+    func lockedSnapshot() -> String {
+        FieldLock.join([
+            FieldLock.describe(name),
+            FieldLock.describe(phoneNumber),
+            FieldLock.describe(messageTemplates),
+            FieldLock.describe(discordUserID)
+        ])
+    }
+
+    /// True when every locked field is held sealed, with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool {
+        nameSealed != nil && namePlain.isEmpty
+            && phoneNumberSealed != nil && phoneNumberPlain.isEmpty
+            && messageTemplatesSealed != nil && messageTemplatesPlain.isEmpty
+            && discordUserIDPlain == nil
+    }
 }
 
 extension TrustedContact {
@@ -379,6 +428,29 @@ extension GroundingTool {
         title = titlePlain
         steps = stepsPlain
     }
+
+    /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
+    /// again. It does nothing while locking is off.
+    func lockExistingValues() {
+        guard FieldLock.isOn else { return }
+        if titleSealed == nil { title = titlePlain }
+        if stepsSealed == nil, let kept = stepsPlain { steps = kept }
+    }
+
+    /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
+    /// before and after. It reads through the old names, so a sealed value is compared as its text.
+    func lockedSnapshot() -> String {
+        FieldLock.join([
+            FieldLock.describe(title),
+            FieldLock.describe(steps)
+        ])
+    }
+
+    /// True when every locked field is held sealed, with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool {
+        titleSealed != nil && titlePlain.isEmpty
+            && stepsPlain == nil
+    }
 }
 
 enum TimeWindowTag: String, Codable {
@@ -461,6 +533,35 @@ extension SafetyPlan {
         reasonsToKeepGoingText = reasonsToKeepGoingTextPlain
         environmentSafetyStepsText = environmentSafetyStepsTextPlain
     }
+
+    /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
+    /// again. It does nothing while locking is off.
+    func lockExistingValues() {
+        guard FieldLock.isOn else { return }
+        if warningSignsTextSealed == nil { warningSignsText = warningSignsTextPlain }
+        if copingStrategiesTextSealed == nil { copingStrategiesText = copingStrategiesTextPlain }
+        if reasonsToKeepGoingTextSealed == nil { reasonsToKeepGoingText = reasonsToKeepGoingTextPlain }
+        if environmentSafetyStepsTextSealed == nil { environmentSafetyStepsText = environmentSafetyStepsTextPlain }
+    }
+
+    /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
+    /// before and after. It reads through the old names, so a sealed value is compared as its text.
+    func lockedSnapshot() -> String {
+        FieldLock.join([
+            FieldLock.describe(warningSignsText),
+            FieldLock.describe(copingStrategiesText),
+            FieldLock.describe(reasonsToKeepGoingText),
+            FieldLock.describe(environmentSafetyStepsText)
+        ])
+    }
+
+    /// True when every locked field is held sealed, with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool {
+        warningSignsTextSealed != nil && warningSignsTextPlain.isEmpty
+            && copingStrategiesTextSealed != nil && copingStrategiesTextPlain.isEmpty
+            && reasonsToKeepGoingTextSealed != nil && reasonsToKeepGoingTextPlain.isEmpty
+            && environmentSafetyStepsTextSealed != nil && environmentSafetyStepsTextPlain.isEmpty
+    }
 }
 
 /// One section of the safety plan: a title, the person's own words, and how
@@ -529,6 +630,29 @@ extension SafetyPlanSection {
         guard FieldLock.isOn else { return }
         title = titlePlain
         text = textPlain
+    }
+
+    /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
+    /// again. It does nothing while locking is off.
+    func lockExistingValues() {
+        guard FieldLock.isOn else { return }
+        if titleSealed == nil { title = titlePlain }
+        if textSealed == nil { text = textPlain }
+    }
+
+    /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
+    /// before and after. It reads through the old names, so a sealed value is compared as its text.
+    func lockedSnapshot() -> String {
+        FieldLock.join([
+            FieldLock.describe(title),
+            FieldLock.describe(text)
+        ])
+    }
+
+    /// True when every locked field is held sealed, with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool {
+        titleSealed != nil && titlePlain.isEmpty
+            && textSealed != nil && textPlain.isEmpty
     }
 }
 
@@ -619,6 +743,29 @@ extension BoundarySection {
         guard FieldLock.isOn else { return }
         title = titlePlain
         text = textPlain
+    }
+
+    /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
+    /// again. It does nothing while locking is off.
+    func lockExistingValues() {
+        guard FieldLock.isOn else { return }
+        if titleSealed == nil { title = titlePlain }
+        if textSealed == nil { text = textPlain }
+    }
+
+    /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
+    /// before and after. It reads through the old names, so a sealed value is compared as its text.
+    func lockedSnapshot() -> String {
+        FieldLock.join([
+            FieldLock.describe(title),
+            FieldLock.describe(text)
+        ])
+    }
+
+    /// True when every locked field is held sealed, with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool {
+        titleSealed != nil && titlePlain.isEmpty
+            && textSealed != nil && textPlain.isEmpty
     }
 }
 
@@ -725,6 +872,26 @@ extension SleepEntry {
         guard FieldLock.isOn else { return }
         note = notePlain
     }
+
+    /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
+    /// again. It does nothing while locking is off.
+    func lockExistingValues() {
+        guard FieldLock.isOn else { return }
+        if noteSealed == nil { note = notePlain }
+    }
+
+    /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
+    /// before and after. It reads through the old names, so a sealed value is compared as its text.
+    func lockedSnapshot() -> String {
+        FieldLock.join([
+            FieldLock.describe(note)
+        ])
+    }
+
+    /// True when every locked field is held sealed, with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool {
+        noteSealed != nil && notePlain.isEmpty
+    }
 }
 
 /// The three words for how a night felt. They start as plain, neutral words
@@ -818,6 +985,29 @@ extension PersonSection {
         guard FieldLock.isOn else { return }
         title = titlePlain
         text = textPlain
+    }
+
+    /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
+    /// again. It does nothing while locking is off.
+    func lockExistingValues() {
+        guard FieldLock.isOn else { return }
+        if titleSealed == nil { title = titlePlain }
+        if textSealed == nil { text = textPlain }
+    }
+
+    /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
+    /// before and after. It reads through the old names, so a sealed value is compared as its text.
+    func lockedSnapshot() -> String {
+        FieldLock.join([
+            FieldLock.describe(title),
+            FieldLock.describe(text)
+        ])
+    }
+
+    /// True when every locked field is held sealed, with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool {
+        titleSealed != nil && titlePlain.isEmpty
+            && textSealed != nil && textPlain.isEmpty
     }
 }
 
@@ -976,6 +1166,44 @@ extension PersonalGoal {
         smartAchievable = smartAchievablePlain
         smartTimeBound = smartTimeBoundPlain
     }
+
+    /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
+    /// again. It does nothing while locking is off.
+    func lockExistingValues() {
+        guard FieldLock.isOn else { return }
+        if titleSealed == nil { title = titlePlain }
+        if whySealed == nil { why = whyPlain }
+        if notesSealed == nil { notes = notesPlain }
+        if smartSpecificSealed == nil { smartSpecific = smartSpecificPlain }
+        if smartMeasurableSealed == nil { smartMeasurable = smartMeasurablePlain }
+        if smartAchievableSealed == nil { smartAchievable = smartAchievablePlain }
+        if smartTimeBoundSealed == nil { smartTimeBound = smartTimeBoundPlain }
+    }
+
+    /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
+    /// before and after. It reads through the old names, so a sealed value is compared as its text.
+    func lockedSnapshot() -> String {
+        FieldLock.join([
+            FieldLock.describe(title),
+            FieldLock.describe(why),
+            FieldLock.describe(notes),
+            FieldLock.describe(smartSpecific),
+            FieldLock.describe(smartMeasurable),
+            FieldLock.describe(smartAchievable),
+            FieldLock.describe(smartTimeBound)
+        ])
+    }
+
+    /// True when every locked field is held sealed, with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool {
+        titleSealed != nil && titlePlain.isEmpty
+            && whySealed != nil && whyPlain.isEmpty
+            && notesSealed != nil && notesPlain.isEmpty
+            && smartSpecificSealed != nil && smartSpecificPlain.isEmpty
+            && smartMeasurableSealed != nil && smartMeasurablePlain.isEmpty
+            && smartAchievableSealed != nil && smartAchievablePlain.isEmpty
+            && smartTimeBoundSealed != nil && smartTimeBoundPlain.isEmpty
+    }
 }
 
 /// One of the person's own short lines for starting a message on a hard day,
@@ -1026,6 +1254,26 @@ extension MessageStarter {
     func lockNewValues() {
         guard FieldLock.isOn else { return }
         text = textPlain
+    }
+
+    /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
+    /// again. It does nothing while locking is off.
+    func lockExistingValues() {
+        guard FieldLock.isOn else { return }
+        if textSealed == nil { text = textPlain }
+    }
+
+    /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
+    /// before and after. It reads through the old names, so a sealed value is compared as its text.
+    func lockedSnapshot() -> String {
+        FieldLock.join([
+            FieldLock.describe(text)
+        ])
+    }
+
+    /// True when every locked field is held sealed, with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool {
+        textSealed != nil && textPlain.isEmpty
     }
 }
 
@@ -1193,6 +1441,26 @@ extension TriggerWindow {
         guard FieldLock.isOn else { return }
         label = labelPlain
     }
+
+    /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
+    /// again. It does nothing while locking is off.
+    func lockExistingValues() {
+        guard FieldLock.isOn else { return }
+        if labelSealed == nil { label = labelPlain }
+    }
+
+    /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
+    /// before and after. It reads through the old names, so a sealed value is compared as its text.
+    func lockedSnapshot() -> String {
+        FieldLock.join([
+            FieldLock.describe(label)
+        ])
+    }
+
+    /// True when every locked field is held sealed, with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool {
+        labelSealed != nil && labelPlain.isEmpty
+    }
 }
 
 /// Appointments are a recurring RULE (e.g. "usually Tuesdays 4pm") plus
@@ -1326,6 +1594,35 @@ extension AppointmentSeries {
         exportLabel = exportLabelPlain
         notes = notesPlain
     }
+
+    /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
+    /// again. It does nothing while locking is off.
+    func lockExistingValues() {
+        guard FieldLock.isOn else { return }
+        if clinicianLabelSealed == nil { clinicianLabel = clinicianLabelPlain }
+        if roleSealed == nil { role = rolePlain }
+        if exportLabelSealed == nil { exportLabel = exportLabelPlain }
+        if notesSealed == nil { notes = notesPlain }
+    }
+
+    /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
+    /// before and after. It reads through the old names, so a sealed value is compared as its text.
+    func lockedSnapshot() -> String {
+        FieldLock.join([
+            FieldLock.describe(clinicianLabel),
+            FieldLock.describe(role),
+            FieldLock.describe(exportLabel),
+            FieldLock.describe(notes)
+        ])
+    }
+
+    /// True when every locked field is held sealed, with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool {
+        clinicianLabelSealed != nil && clinicianLabelPlain.isEmpty
+            && roleSealed != nil && rolePlain.isEmpty
+            && exportLabelSealed != nil && exportLabelPlain.isEmpty
+            && notesSealed != nil && notesPlain.isEmpty
+    }
 }
 
 @Model
@@ -1371,6 +1668,26 @@ extension AppointmentOccurrence {
     func lockNewValues() {
         guard FieldLock.isOn else { return }
         prepChecklist = prepChecklistPlain
+    }
+
+    /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
+    /// again. It does nothing while locking is off.
+    func lockExistingValues() {
+        guard FieldLock.isOn else { return }
+        if prepChecklistSealed == nil { prepChecklist = prepChecklistPlain }
+    }
+
+    /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
+    /// before and after. It reads through the old names, so a sealed value is compared as its text.
+    func lockedSnapshot() -> String {
+        FieldLock.join([
+            FieldLock.describe(prepChecklist)
+        ])
+    }
+
+    /// True when every locked field is held sealed, with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool {
+        prepChecklistSealed != nil && prepChecklistPlain.isEmpty
     }
 }
 
@@ -1434,6 +1751,29 @@ extension BridgeDraftItem {
         guard FieldLock.isOn else { return }
         text = textPlain
         answer = answerPlain
+    }
+
+    /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
+    /// again. It does nothing while locking is off.
+    func lockExistingValues() {
+        guard FieldLock.isOn else { return }
+        if textSealed == nil { text = textPlain }
+        if answerSealed == nil { answer = answerPlain }
+    }
+
+    /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
+    /// before and after. It reads through the old names, so a sealed value is compared as its text.
+    func lockedSnapshot() -> String {
+        FieldLock.join([
+            FieldLock.describe(text),
+            FieldLock.describe(answer)
+        ])
+    }
+
+    /// True when every locked field is held sealed, with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool {
+        textSealed != nil && textPlain.isEmpty
+            && answerSealed != nil && answerPlain.isEmpty
     }
 }
 
@@ -1520,6 +1860,29 @@ extension FeedbackLoopDiagram {
         title = titlePlain
         graphJSON = graphJSONPlain
     }
+
+    /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
+    /// again. It does nothing while locking is off.
+    func lockExistingValues() {
+        guard FieldLock.isOn else { return }
+        if titleSealed == nil { title = titlePlain }
+        if graphJSONSealed == nil { graphJSON = graphJSONPlain }
+    }
+
+    /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
+    /// before and after. It reads through the old names, so a sealed value is compared as its text.
+    func lockedSnapshot() -> String {
+        FieldLock.join([
+            FieldLock.describe(title),
+            FieldLock.describe(graphJSON)
+        ])
+    }
+
+    /// True when every locked field is held sealed, with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool {
+        titleSealed != nil && titlePlain.isEmpty
+            && graphJSONSealed != nil && graphJSONPlain.isEmpty
+    }
 }
 
 // MARK: - Thread
@@ -1566,6 +1929,26 @@ extension ThreadMessage {
         guard FieldLock.isOn else { return }
         text = textPlain
     }
+
+    /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
+    /// again. It does nothing while locking is off.
+    func lockExistingValues() {
+        guard FieldLock.isOn else { return }
+        if textSealed == nil { text = textPlain }
+    }
+
+    /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
+    /// before and after. It reads through the old names, so a sealed value is compared as its text.
+    func lockedSnapshot() -> String {
+        FieldLock.join([
+            FieldLock.describe(text)
+        ])
+    }
+
+    /// True when every locked field is held sealed, with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool {
+        textSealed != nil && textPlain.isEmpty
+    }
 }
 
 @Model
@@ -1602,6 +1985,26 @@ extension SupportCalendarEntry {
     func lockNewValues() {
         guard FieldLock.isOn else { return }
         note = notePlain
+    }
+
+    /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
+    /// again. It does nothing while locking is off.
+    func lockExistingValues() {
+        guard FieldLock.isOn else { return }
+        if noteSealed == nil { note = notePlain }
+    }
+
+    /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
+    /// before and after. It reads through the old names, so a sealed value is compared as its text.
+    func lockedSnapshot() -> String {
+        FieldLock.join([
+            FieldLock.describe(note)
+        ])
+    }
+
+    /// True when every locked field is held sealed, with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool {
+        noteSealed != nil && notePlain.isEmpty
     }
 }
 
@@ -1662,6 +2065,29 @@ extension FutureNote {
         text = textPlain
         openWhen = openWhenPlain
     }
+
+    /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
+    /// again. It does nothing while locking is off.
+    func lockExistingValues() {
+        guard FieldLock.isOn else { return }
+        if textSealed == nil { text = textPlain }
+        if openWhenSealed == nil { openWhen = openWhenPlain }
+    }
+
+    /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
+    /// before and after. It reads through the old names, so a sealed value is compared as its text.
+    func lockedSnapshot() -> String {
+        FieldLock.join([
+            FieldLock.describe(text),
+            FieldLock.describe(openWhen)
+        ])
+    }
+
+    /// True when every locked field is held sealed, with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool {
+        textSealed != nil && textPlain.isEmpty
+            && openWhenSealed != nil && openWhenPlain.isEmpty
+    }
 }
 
 @Model
@@ -1712,6 +2138,29 @@ extension UnsentDraft {
         recipientLabel = recipientLabelPlain
         text = textPlain
     }
+
+    /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
+    /// again. It does nothing while locking is off.
+    func lockExistingValues() {
+        guard FieldLock.isOn else { return }
+        if recipientLabelSealed == nil { recipientLabel = recipientLabelPlain }
+        if textSealed == nil { text = textPlain }
+    }
+
+    /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
+    /// before and after. It reads through the old names, so a sealed value is compared as its text.
+    func lockedSnapshot() -> String {
+        FieldLock.join([
+            FieldLock.describe(recipientLabel),
+            FieldLock.describe(text)
+        ])
+    }
+
+    /// True when every locked field is held sealed, with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool {
+        recipientLabelSealed != nil && recipientLabelPlain.isEmpty
+            && textSealed != nil && textPlain.isEmpty
+    }
 }
 
 // MARK: - Decision-fatigue presets
@@ -1760,6 +2209,26 @@ extension DecisionPresetCategory {
     func lockNewValues() {
         guard FieldLock.isOn else { return }
         name = namePlain
+    }
+
+    /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
+    /// again. It does nothing while locking is off.
+    func lockExistingValues() {
+        guard FieldLock.isOn else { return }
+        if nameSealed == nil { name = namePlain }
+    }
+
+    /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
+    /// before and after. It reads through the old names, so a sealed value is compared as its text.
+    func lockedSnapshot() -> String {
+        FieldLock.join([
+            FieldLock.describe(name)
+        ])
+    }
+
+    /// True when every locked field is held sealed, with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool {
+        nameSealed != nil && namePlain.isEmpty
     }
 }
 
@@ -1813,6 +2282,29 @@ extension DecisionPresetChoice {
         name = namePlain
         steps = stepsPlain
     }
+
+    /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
+    /// again. It does nothing while locking is off.
+    func lockExistingValues() {
+        guard FieldLock.isOn else { return }
+        if nameSealed == nil { name = namePlain }
+        if stepsSealed == nil { steps = stepsPlain }
+    }
+
+    /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
+    /// before and after. It reads through the old names, so a sealed value is compared as its text.
+    func lockedSnapshot() -> String {
+        FieldLock.join([
+            FieldLock.describe(name),
+            FieldLock.describe(steps)
+        ])
+    }
+
+    /// True when every locked field is held sealed, with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool {
+        nameSealed != nil && namePlain.isEmpty
+            && stepsSealed != nil && stepsPlain.isEmpty
+    }
 }
 
 // MARK: - De-escalation scripts
@@ -1856,6 +2348,26 @@ extension DeEscalationScript {
         guard FieldLock.isOn else { return }
         text = textPlain
     }
+
+    /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
+    /// again. It does nothing while locking is off.
+    func lockExistingValues() {
+        guard FieldLock.isOn else { return }
+        if textSealed == nil { text = textPlain }
+    }
+
+    /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
+    /// before and after. It reads through the old names, so a sealed value is compared as its text.
+    func lockedSnapshot() -> String {
+        FieldLock.join([
+            FieldLock.describe(text)
+        ])
+    }
+
+    /// True when every locked field is held sealed, with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool {
+        textSealed != nil && textPlain.isEmpty
+    }
 }
 
 // MARK: - Affirmations / quotes
@@ -1896,6 +2408,26 @@ extension Affirmation {
     func lockNewValues() {
         guard FieldLock.isOn else { return }
         text = textPlain
+    }
+
+    /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
+    /// again. It does nothing while locking is off.
+    func lockExistingValues() {
+        guard FieldLock.isOn else { return }
+        if textSealed == nil { text = textPlain }
+    }
+
+    /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
+    /// before and after. It reads through the old names, so a sealed value is compared as its text.
+    func lockedSnapshot() -> String {
+        FieldLock.join([
+            FieldLock.describe(text)
+        ])
+    }
+
+    /// True when every locked field is held sealed, with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool {
+        textSealed != nil && textPlain.isEmpty
     }
 }
 
@@ -1944,6 +2476,26 @@ extension NextHourItem {
     func lockNewValues() {
         guard FieldLock.isOn else { return }
         text = textPlain
+    }
+
+    /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
+    /// again. It does nothing while locking is off.
+    func lockExistingValues() {
+        guard FieldLock.isOn else { return }
+        if textSealed == nil { text = textPlain }
+    }
+
+    /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
+    /// before and after. It reads through the old names, so a sealed value is compared as its text.
+    func lockedSnapshot() -> String {
+        FieldLock.join([
+            FieldLock.describe(text)
+        ])
+    }
+
+    /// True when every locked field is held sealed, with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool {
+        textSealed != nil && textPlain.isEmpty
     }
 }
 
@@ -2087,6 +2639,32 @@ extension TaskItem {
         title = titlePlain
         notes = notesPlain
         firstStep = firstStepPlain
+    }
+
+    /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
+    /// again. It does nothing while locking is off.
+    func lockExistingValues() {
+        guard FieldLock.isOn else { return }
+        if titleSealed == nil { title = titlePlain }
+        if notesSealed == nil { notes = notesPlain }
+        if firstStepSealed == nil { firstStep = firstStepPlain }
+    }
+
+    /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
+    /// before and after. It reads through the old names, so a sealed value is compared as its text.
+    func lockedSnapshot() -> String {
+        FieldLock.join([
+            FieldLock.describe(title),
+            FieldLock.describe(notes),
+            FieldLock.describe(firstStep)
+        ])
+    }
+
+    /// True when every locked field is held sealed, with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool {
+        titleSealed != nil && titlePlain.isEmpty
+            && notesSealed != nil && notesPlain.isEmpty
+            && firstStepSealed != nil && firstStepPlain.isEmpty
     }
 }
 
@@ -2489,6 +3067,29 @@ extension QuickList {
         title = titlePlain
         items = itemsPlain
     }
+
+    /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
+    /// again. It does nothing while locking is off.
+    func lockExistingValues() {
+        guard FieldLock.isOn else { return }
+        if titleSealed == nil { title = titlePlain }
+        if itemsSealed == nil { items = itemsPlain }
+    }
+
+    /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
+    /// before and after. It reads through the old names, so a sealed value is compared as its text.
+    func lockedSnapshot() -> String {
+        FieldLock.join([
+            FieldLock.describe(title),
+            FieldLock.describe(items)
+        ])
+    }
+
+    /// True when every locked field is held sealed, with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool {
+        titleSealed != nil && titlePlain.isEmpty
+            && itemsSealed != nil && itemsPlain.isEmpty
+    }
 }
 
 extension QuickList {
@@ -2674,6 +3275,29 @@ extension Routine {
         name = namePlain
         steps = stepsPlain
     }
+
+    /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
+    /// again. It does nothing while locking is off.
+    func lockExistingValues() {
+        guard FieldLock.isOn else { return }
+        if nameSealed == nil { name = namePlain }
+        if stepsSealed == nil { steps = stepsPlain }
+    }
+
+    /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
+    /// before and after. It reads through the old names, so a sealed value is compared as its text.
+    func lockedSnapshot() -> String {
+        FieldLock.join([
+            FieldLock.describe(name),
+            FieldLock.describe(steps)
+        ])
+    }
+
+    /// True when every locked field is held sealed, with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool {
+        nameSealed != nil && namePlain.isEmpty
+            && stepsSealed != nil && stepsPlain.isEmpty
+    }
 }
 
 extension Routine {
@@ -2840,6 +3464,32 @@ extension ItemList {
         name = namePlain
         variables = variablesPlain
         items = itemsPlain
+    }
+
+    /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
+    /// again. It does nothing while locking is off.
+    func lockExistingValues() {
+        guard FieldLock.isOn else { return }
+        if nameSealed == nil { name = namePlain }
+        if variablesSealed == nil { variables = variablesPlain }
+        if itemsSealed == nil { items = itemsPlain }
+    }
+
+    /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
+    /// before and after. It reads through the old names, so a sealed value is compared as its text.
+    func lockedSnapshot() -> String {
+        FieldLock.join([
+            FieldLock.describe(name),
+            FieldLock.describe(variables),
+            FieldLock.describe(items)
+        ])
+    }
+
+    /// True when every locked field is held sealed, with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool {
+        nameSealed != nil && namePlain.isEmpty
+            && variablesSealed != nil && variablesPlain.isEmpty
+            && itemsSealed != nil && itemsPlain.isEmpty
     }
 }
 
@@ -3034,3 +3684,33 @@ enum AnchorSchema {
         }
     }
 }
+
+// Patch 35b3: every model with locked fields can be locked in place, and checked, by Lock my data.
+extension JournalEntry: LockableModel {}
+extension TrustedContact: LockableModel {}
+extension GroundingTool: LockableModel {}
+extension SafetyPlan: LockableModel {}
+extension SafetyPlanSection: LockableModel {}
+extension BoundarySection: LockableModel {}
+extension SleepEntry: LockableModel {}
+extension PersonSection: LockableModel {}
+extension PersonalGoal: LockableModel {}
+extension MessageStarter: LockableModel {}
+extension TriggerWindow: LockableModel {}
+extension AppointmentSeries: LockableModel {}
+extension AppointmentOccurrence: LockableModel {}
+extension BridgeDraftItem: LockableModel {}
+extension FeedbackLoopDiagram: LockableModel {}
+extension ThreadMessage: LockableModel {}
+extension SupportCalendarEntry: LockableModel {}
+extension FutureNote: LockableModel {}
+extension UnsentDraft: LockableModel {}
+extension DecisionPresetCategory: LockableModel {}
+extension DecisionPresetChoice: LockableModel {}
+extension DeEscalationScript: LockableModel {}
+extension Affirmation: LockableModel {}
+extension NextHourItem: LockableModel {}
+extension TaskItem: LockableModel {}
+extension QuickList: LockableModel {}
+extension Routine: LockableModel {}
+extension ItemList: LockableModel {}

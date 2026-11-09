@@ -6,6 +6,9 @@
 //    everything else uses the old name, so a locked value always reads as its text.
 // 3. No init sets the old name before the object is whole, and every init ends with lockNewValues().
 // 4. Nothing queries or sorts on a locked field, because a stored value that is sealed cannot be compared.
+// 5. (Patch 35b3) Every model with locked fields can be locked in place: it conforms to LockableModel, has
+//    lockExistingValues, lockedSnapshot and lockedFieldsAreSealed, and is in the list in LockMyData.kinds, so Lock my
+//    data cannot leave one behind. Every field is in its snapshot and its sealed check.
 // Run it from anywhere:  node scripts/check-locked-fields.mjs
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
@@ -16,7 +19,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const swiftRoot = join(root, "iOS");
 const modelFiles = ["Models/AnchorModels.swift", "Models/RecoveryModels.swift"].map((f) => join(swiftRoot, "Anchor/Anchor", f));
 // Files allowed to touch the twins: the models, and the code that is about the locking itself.
-const allowed = (rel) => /Models\/(Anchor|Recovery)Models\.swift$/.test(rel) || /Support\/(AppLock|LockedFields)\.swift$/.test(rel);
+const allowed = (rel) => /Models\/(Anchor|Recovery)Models\.swift$/.test(rel) || /Support\/(AppLock|LockedFields|LockMyData)\.swift$/.test(rel);
 
 function swiftFiles(dir) {
   const out = [];
@@ -92,6 +95,30 @@ for (const file of swiftFiles(swiftRoot)) {
         if (names.has(m[1])) problems.push(`${rel}: a predicate reads ${m[1]}, which is a locked field.`);
       }
     }
+  }
+}
+
+// 5. Lock my data covers every model with locked fields.
+const lockMyData = readFileSync(join(swiftRoot, "Anchor/Anchor/Support/LockMyData.swift"), "utf8");
+const modelText = modelFiles.map((f) => readFileSync(f, "utf8")).join("\n");
+const lockedClasses = new Set(locked.map((f) => f.cls));
+for (const cls of lockedClasses) {
+  if (!new RegExp(`^extension ${cls}: LockableModel \\{\\}`, "m").test(modelText)) problems.push(`${cls} does not conform to LockableModel.`);
+  if (!lockMyData.includes(`kind(${cls}.self)`)) problems.push(`${cls} is not in LockMyData.kinds, so Lock my data would leave it unlocked.`);
+}
+for (const m of lockMyData.matchAll(/kind\((\w+)\.self\)/g)) {
+  if (!lockedClasses.has(m[1])) problems.push(`LockMyData.kinds lists ${m[1]}, which has no locked fields.`);
+}
+for (const cls of lockedClasses) {
+  const start = modelText.indexOf(`extension ${cls} {`);
+  const end = modelText.indexOf("\n}\n", start);
+  const body = start >= 0 ? modelText.slice(start, end) : "";
+  for (const fn of ["func lockExistingValues()", "func lockedSnapshot()", "func lockedFieldsAreSealed()"]) {
+    if (!body.includes(fn)) problems.push(`${cls} has no ${fn.replace("func ", "")}.`);
+  }
+  for (const f of locked.filter((x) => x.cls === cls)) {
+    if (!new RegExp(`FieldLock\\.describe\\(${f.name}\\)`).test(body)) problems.push(`${cls}.${f.name} is not in lockedSnapshot().`);
+    if (!new RegExp(`\\b${f.name}(Sealed|Plain)\\b`).test(body.slice(body.indexOf("func lockedFieldsAreSealed")))) problems.push(`${cls}.${f.name} is not in lockedFieldsAreSealed().`);
   }
 }
 

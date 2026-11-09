@@ -259,6 +259,11 @@ struct SettingsView: View {
                     } label: {
                         Text("Safety copy (test build)").font(.system(.subheadline, design: .rounded))
                     }
+                    NavigationLink {
+                        LockMyDataView()
+                    } label: {
+                        Text("Lock my data (test build)").font(.system(.subheadline, design: .rounded))
+                    }
                     #endif
                 }
             }
@@ -762,7 +767,7 @@ private enum KeyEntryKind: Identifiable {
     var id: Self { self }
 }
 
-private func keyMessage(for error: Error) -> String {
+func keyMessage(for error: Error) -> String {
     switch (error as? DataKeyError) ?? .storage {
     case .notARecoveryKey: return "That is not a whole recovery key. Check it against what you wrote down."
     case .wrongRecoveryKey: return "That recovery key does not match."
@@ -793,7 +798,12 @@ struct EncryptionSettingsView: View {
 
     var body: some View {
         Form {
-            Anchor.SettingsSection(title: "Data key", footer: "Stored text is not locked with this key yet.") {
+            Anchor.SettingsSection(
+                title: "Data key",
+                footer: LockMyData.isOn
+                    ? "Your stored text is locked with this key. Without this key or the recovery key, it cannot be opened."
+                    : "Stored text is not locked with this key yet. Lock my data does that."
+            ) {
                 keyRow("Data key", statusText)
                 if keys.status == .notSetUp {
                     Button {
@@ -838,11 +848,13 @@ struct EncryptionSettingsView: View {
             }
 
             #if DEBUG
-            Anchor.SettingsSection(title: "Test build only") {
-                Button(role: .destructive) {
-                    confirmRemove = true
-                } label: {
-                    rowText("Remove the key and the recovery file")
+            if !LockMyData.isOn {
+                Anchor.SettingsSection(title: "Test build only") {
+                    Button(role: .destructive) {
+                        confirmRemove = true
+                    } label: {
+                        rowText("Remove the key and the recovery file")
+                    }
                 }
             }
             #endif
@@ -1013,7 +1025,7 @@ private struct RecoveryKeyShownSheet: View {
 
 /// Asks for a recovery key. The action returns text to show when it fails, or nil when it
 /// worked and the sheet can close.
-private struct RecoveryKeyEntrySheet: View {
+struct RecoveryKeyEntrySheet: View {
     let title: String
     let buttonTitle: String
     let action: (String) -> String?
@@ -1021,6 +1033,13 @@ private struct RecoveryKeyEntrySheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var typed = ""
     @State private var errorText: String?
+
+    /// Written out because a view with private state has a memberwise init that other files cannot reach.
+    init(title: String, buttonTitle: String, action: @escaping (String) -> String?) {
+        self.title = title
+        self.buttonTitle = buttonTitle
+        self.action = action
+    }
 
     var body: some View {
         NavigationStack {

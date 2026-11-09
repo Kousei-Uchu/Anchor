@@ -668,7 +668,8 @@ enum DataKeyStore {
 
 /// Gives `FieldLock` (Support/LockedFields.swift, which the widget builds too and so cannot hold key code) the
 /// two functions it needs, using the data key in the Keychain. The key is read once and kept in memory, not
-/// read from the Keychain for every field. Nothing is sealed until Patch 35b3 turns `FieldLock.isOn` on.
+/// read from the Keychain for every field. Nothing is sealed until a Lock my data run (Patch 35b3) has checked every
+/// item; `install` then turns `FieldLock.isOn` on at every launch.
 enum FieldLockWiring {
     private static let lock = NSLock()
     private static var cached: SymmetricKey?
@@ -691,6 +692,8 @@ enum FieldLockWiring {
     }
 
     static func install() {
+        // Locking is on only after a Lock my data run has checked every item (Patch 35b3).
+        FieldLock.isOn = LockMyData.isOn
         FieldLock.opener = { stored, context in
             guard let key = key() else { return nil }
             return FieldCipher.open(stored, context: context, key: key)

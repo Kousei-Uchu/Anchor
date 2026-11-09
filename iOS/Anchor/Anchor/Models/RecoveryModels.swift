@@ -314,6 +314,32 @@ extension RecoveryCounter {
         discreetLabel = discreetLabelPlain
         runsData = runsDataPlain
     }
+
+    /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
+    /// again. It does nothing while locking is off.
+    func lockExistingValues() {
+        guard FieldLock.isOn else { return }
+        if nameSealed == nil { name = namePlain }
+        if discreetLabelSealed == nil { discreetLabel = discreetLabelPlain }
+        if runsDataSealed == nil { runsData = runsDataPlain }
+    }
+
+    /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
+    /// before and after. It reads through the old names, so a sealed value is compared as its text.
+    func lockedSnapshot() -> String {
+        FieldLock.join([
+            FieldLock.describe(name),
+            FieldLock.describe(discreetLabel),
+            FieldLock.describe(runsData)
+        ])
+    }
+
+    /// True when every locked field is held sealed, with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool {
+        nameSealed != nil && namePlain.isEmpty
+            && discreetLabelSealed != nil && discreetLabelPlain.isEmpty
+            && runsDataSealed != nil && runsDataPlain.isEmpty
+    }
 }
 
 // MARK: - Motivations
@@ -355,6 +381,26 @@ extension RecoveryMotivation {
     func lockNewValues() {
         guard FieldLock.isOn else { return }
         text = textPlain
+    }
+
+    /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
+    /// again. It does nothing while locking is off.
+    func lockExistingValues() {
+        guard FieldLock.isOn else { return }
+        if textSealed == nil { text = textPlain }
+    }
+
+    /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
+    /// before and after. It reads through the old names, so a sealed value is compared as its text.
+    func lockedSnapshot() -> String {
+        FieldLock.join([
+            FieldLock.describe(text)
+        ])
+    }
+
+    /// True when every locked field is held sealed, with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool {
+        textSealed != nil && textPlain.isEmpty
     }
 }
 
@@ -431,6 +477,32 @@ extension RecoveryDayEntry {
         hard = hardPlain
         tomorrow = tomorrowPlain
     }
+
+    /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
+    /// again. It does nothing while locking is off.
+    func lockExistingValues() {
+        guard FieldLock.isOn else { return }
+        if helpedSealed == nil { helped = helpedPlain }
+        if hardSealed == nil { hard = hardPlain }
+        if tomorrowSealed == nil { tomorrow = tomorrowPlain }
+    }
+
+    /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
+    /// before and after. It reads through the old names, so a sealed value is compared as its text.
+    func lockedSnapshot() -> String {
+        FieldLock.join([
+            FieldLock.describe(helped),
+            FieldLock.describe(hard),
+            FieldLock.describe(tomorrow)
+        ])
+    }
+
+    /// True when every locked field is held sealed, with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool {
+        helpedSealed != nil && helpedPlain.isEmpty
+            && hardSealed != nil && hardPlain.isEmpty
+            && tomorrowSealed != nil && tomorrowPlain.isEmpty
+    }
 }
 
 // MARK: - Urges
@@ -484,6 +556,26 @@ extension RecoveryUrge {
     func lockNewValues() {
         guard FieldLock.isOn else { return }
         note = notePlain
+    }
+
+    /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
+    /// again. It does nothing while locking is off.
+    func lockExistingValues() {
+        guard FieldLock.isOn else { return }
+        if noteSealed == nil { note = notePlain }
+    }
+
+    /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
+    /// before and after. It reads through the old names, so a sealed value is compared as its text.
+    func lockedSnapshot() -> String {
+        FieldLock.join([
+            FieldLock.describe(note)
+        ])
+    }
+
+    /// True when every locked field is held sealed, with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool {
+        noteSealed != nil && notePlain.isEmpty
     }
 }
 
@@ -656,3 +748,9 @@ struct RecoveryUrgeDTO: Codable {
     init(_ u: RecoveryUrge) { id = u.id; counterID = u.counterID; date = u.date; strength = u.strength; note = u.note }
     func toModel() -> RecoveryUrge { RecoveryUrge(id: id, counterID: counterID, date: date, strength: strength, note: note) }
 }
+
+// Patch 35b3: every model with locked fields can be locked in place, and checked, by Lock my data.
+extension RecoveryCounter: LockableModel {}
+extension RecoveryMotivation: LockableModel {}
+extension RecoveryDayEntry: LockableModel {}
+extension RecoveryUrge: LockableModel {}
