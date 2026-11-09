@@ -6,5 +6,9 @@
 	<array>
 		<string>group.page.aspens.anchor</string>
 	</array>
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)page.aspens.anchor.widgetkey</string>
+	</array>
 </dict>
 </plist>

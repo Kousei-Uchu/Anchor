@@ -11,6 +11,7 @@
 //
 
 import Foundation
+import Security
 import ActivityKit
 import CryptoKit
 
@@ -186,11 +187,88 @@ enum CounterWidgetStore {
 // MARK: - Sealing what the widgets are shown
 //
 // The two summaries above sit in the App Group's defaults, which a phone backup
-// carries. They are sealed with a key that is kept in the same App Group container
-// but marked as not to be backed up, so a backup (or a copy of the defaults file)
-// on its own cannot be read. The widget only ever reads the key; only the app makes
-// it. Format and reasoning are in docs/ENCRYPTION.md, and scripts/anchorkey.py has
-// the same format in running form.
+// carries. They are sealed with a key that is kept in a Keychain item shared by the
+// app and the widgets (Patch 35a2), which stays on this phone and is never in a backup,
+// so a backup (or a copy of the defaults file) on its own cannot be read. The widget only
+// ever reads the key; only the app makes it. Until the Keychain item can be used, the key
+// is a file in the App Group container that is marked as not to be backed up, which is what
+// Patch 35a made; a key file left by that patch is moved into the Keychain, unchanged, so
+// what is already sealed still opens. Format and reasoning are in docs/ENCRYPTION.md, and
+// scripts/anchorkey.py has the same format in running form.
+
+/// The Keychain item the app and the widgets share for the widget key (Patch 35a2). Both targets
+/// list the group in their entitlements, and both Info.plists carry its full name (the team prefix
+/// is filled in by the build), so the code never writes the team's name.
+private enum SharedKeychain {
+    enum Reading {
+        case found(Data)
+        case missing
+        /// The phone has not been unlocked since it started.
+        case unreadable
+        /// An item is there but is not 32 bytes.
+        case invalid
+        /// No group name, or the Keychain refused for another reason. The key file is used instead.
+        case unavailable
+    }
+
+    private static let service = "page.aspens.anchor.widgetkey"
+    private static let account = "widget"
+
+    static var group: String? {
+        guard let value = Bundle.main.object(forInfoDictionaryKey: "AnchorWidgetKeychainGroup") as? String,
+              !value.isEmpty, !value.contains("$(") else { return nil }
+        return value
+    }
+
+    private static func query(_ group: String) -> [String: Any] {
+        [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+            kSecAttrAccessGroup as String: group
+        ]
+    }
+
+    static func read() -> Reading {
+        guard let group else { return .unavailable }
+        var request = query(group)
+        request[kSecReturnData as String] = true
+        request[kSecMatchLimit as String] = kSecMatchLimitOne
+        var result: CFTypeRef?
+        switch SecItemCopyMatching(request as CFDictionary, &result) {
+        case errSecSuccess:
+            guard let data = result as? Data else { return .invalid }
+            return data.count == 32 ? .found(data) : .invalid
+        case errSecItemNotFound:
+            return .missing
+        case errSecInteractionNotAllowed:
+            return .unreadable
+        default:
+            return .unavailable
+        }
+    }
+
+    /// Kept on this device only, after the first unlock (the widgets run while the phone is locked),
+    /// so it is not in a backup and does not move to another phone.
+    static func add(_ data: Data) -> Bool {
+        guard let group else { return false }
+        var item = query(group)
+        item[kSecValueData as String] = data
+        item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        return SecItemAdd(item as CFDictionary, nil) == errSecSuccess
+    }
+
+    /// True only when the item reads back as exactly these bytes.
+    static func holds(_ data: Data) -> Bool {
+        if case .found(let stored) = read() { return stored == data }
+        return false
+    }
+
+    static func delete() {
+        guard let group else { return }
+        SecItemDelete(query(group) as CFDictionary)
+    }
+}
 
 enum WidgetSealing {
     static let prefix = "anchor.widget.v1:"
@@ -240,15 +318,72 @@ enum WidgetSealing {
         return data.count == 32 ? .valid(data) : .invalid
     }
 
-    /// For the widget: the key if it can be read, and never a new one.
+    /// For the widget: the key if it can be read, and never a new one. The Keychain item first; the
+    /// key file only while the app has not moved it yet, or where the Keychain cannot be used.
     static func readKey() -> SymmetricKey? {
-        guard let url = keyURL, case .valid(let data) = state(of: url) else { return nil }
-        return SymmetricKey(data: data)
+        switch SharedKeychain.read() {
+        case .found(let data):
+            return SymmetricKey(data: data)
+        case .unreadable:
+            return nil
+        case .missing, .invalid, .unavailable:
+            guard let url = keyURL, case .valid(let data) = state(of: url) else { return nil }
+            return SymmetricKey(data: data)
+        }
+    }
+
+    private static func removeKeyFile() {
+        if let url = keyURL { try? FileManager.default.removeItem(at: url) }
     }
 
     /// For the app. Makes the key the first time. A key that is there but cannot be read
     /// yet is never replaced, so a locked phone cannot lead to a second key.
+    ///
+    /// A key file left by Patch 35a is moved into the Keychain with the same bytes, so what is
+    /// already sealed still opens and nothing has to be sealed again. The file is removed only
+    /// after the Keychain item reads back as the same key. Where the Keychain cannot be used the
+    /// key file works as it did before.
     static func keyForWriting() -> KeyResult {
+        var reading = SharedKeychain.read()
+        if case .invalid = reading {
+            SharedKeychain.delete()
+            reading = .missing
+        }
+        switch reading {
+        case .found(let data):
+            removeKeyFile()
+            return .ready(SymmetricKey(data: data))
+        case .unreadable:
+            return .unreadable
+        case .unavailable:
+            return fileKeyForWriting()
+        case .invalid:
+            return fileKeyForWriting()
+        case .missing:
+            if let url = keyURL {
+                switch state(of: url) {
+                case .valid(let data):
+                    if SharedKeychain.add(data), SharedKeychain.holds(data) { removeKeyFile() }
+                    return .ready(SymmetricKey(data: data))
+                case .unreadable:
+                    return .unreadable
+                case .missing, .invalid:
+                    break
+                }
+            }
+            let fresh = SymmetricKey(size: .bits256)
+            let data = fresh.withUnsafeBytes { Data($0) }
+            if SharedKeychain.add(data), SharedKeychain.holds(data) {
+                removeKeyFile()
+                return .ready(fresh)
+            }
+            SharedKeychain.delete()
+            return fileKeyForWriting()
+        }
+    }
+
+    /// The key file, as Patch 35a made it.
+    private static func fileKeyForWriting() -> KeyResult {
         guard let folder = folderURL, let url = keyURL else { return .failed }
         switch state(of: url) {
         case .valid(let data):
@@ -349,11 +484,13 @@ enum WidgetSealing {
         }
     }
 
-    /// App only: Clear everything. Takes both summaries and the key off the device.
+    /// App only: Clear everything. Takes both summaries and the key off the device, the Keychain
+    /// item and any key file.
     static func removeEverything() {
         clear(.snapshot)
         clear(.counters)
-        if let url = keyURL { try? FileManager.default.removeItem(at: url) }
+        SharedKeychain.delete()
+        removeKeyFile()
     }
 }
 

@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 35a2: the key the widgets' summaries are sealed with is kept in a Keychain item shared by the app and the widgets, on this phone only, and the key file from the earlier patch is moved into it unchanged and then removed.
 - Patch SH2c: share and export work in showcase mode on the made-up content (the counter share, diagram share, Boundaries, the support calendar, Export for someone, and the JSON, CSV and PDF exports in Your data). The encrypted backup, Import and Clear all data stay switched off there.
 - Patch SH2b: while showcase mode is on the widgets show made-up content (Sam and Alex, a plan, a window and a counter) instead of being empty, and your own come back when it is turned off.
 - Patch SH2a: the showcase passcode is 4 to 6 digits on the number pad, typed twice, and the exit screen asks for it on the number pad.

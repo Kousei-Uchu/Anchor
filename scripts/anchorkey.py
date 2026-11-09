@@ -168,8 +168,8 @@ def open_field(stored: str, context: str, master: bytes):
 # ---- Widget summaries ------------------------------------------------------------
 # "anchor.widget.v1:" + base64(nonce(12) | ciphertext | tag(16)). The same AES-256-GCM
 # as sealed text, with its own prefix, and the authenticated data is "WidgetSnapshot" or
-# "CounterItems". The key is 32 random bytes in the App Group container (Keys/widget.key),
-# not backed up, and is a different key from the data key so the widget never holds it.
+# "CounterItems". The key is 32 random bytes in a Keychain item shared by the app and the widgets
+# (an older build kept it in Keys/widget.key in the App Group container), never backed up, and is a different key from the data key so the widget never holds it.
 
 def seal_widget(data: bytes, context: str, key: bytes, nonce: bytes = None) -> str:
     nonce = nonce or os.urandom(12)

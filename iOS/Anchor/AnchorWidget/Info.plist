@@ -7,5 +7,7 @@
 		<key>NSExtensionPointIdentifier</key>
 		<string>com.apple.widgetkit-extension</string>
 	</dict>
+	<key>AnchorWidgetKeychainGroup</key>
+	<string>$(AppIdentifierPrefix)page.aspens.anchor.widgetkey</string>
 </dict>
 </plist>
