@@ -133,7 +133,7 @@ The source code repository is at <https://github.com/Kousei-Uchu/Anchor/tree/v2-
 | SL6: Sleep in the CSV (its own columns) and in the PDF (a time-asleep chart), for Export for someone and for Your data (D29) | ⬜ Not started; answered |
 | SH2: Showcase mode, your changes (D21): a 4 to 6 digit number pad passcode, made-up content in the widgets, share and export working on made-up content | ⬜ Not started; answered |
 | AB2: What's new by version (D23, 3): one collapsible section per version, the latest open | ⬜ Not started; answered. The creator section and the licence wait on your words and files |
-| RV5a: Export check-in labels taken from the right sliders (change log 90) | ⬜ Not started; answered (D18), first in the queue |
+| RV5a: Export check-in labels taken from the right sliders (change log 90) | 🟡 Written (change log 101), not yet pushed; build not yet confirmed |
 | 46b: `STATUS.md` in place of `BUILD_STATUS.md`, one terminology list, an in-app copy edit (point 23) | ⬜ Not started; answered (D20: yes, as long as no information is lost, so every part of the old file is carried somewhere before it goes) |
 | 35d: Voice notes and Journal photos locked too (D31) | ⬜ Not started; after 35b3 has been checked on your phone |
 
@@ -592,7 +592,7 @@ Decided (D10 to D14 closed, 7 Nov 2026) and part of the main release, Apple Heal
 | **RV3** | Appointments, sessions: Coming up and the calendar, earlier sessions folded away | 13 | M | 🟡 |
 | **RV4** | Goals: optional SMART frame, off by default | 18 | S | 🟡 |
 | **RV5** | Check-ins in the Journal show each day's own values, never inferred | 5 | S | 🟡 |
-| **RV5a** | Export check-in labels from the right sliders (D18 answered: fix it) | 19 | S | ⬜ |
+| **RV5a** | Export check-in labels from the right sliders (D18 answered: fix it) | 19 | S | 🟡 |
 | **RV6** | Privacy page: links to the other policies and the Privacy Visualiser section (read it first, D28) | 20 | S | 🟡 |
 | **RV7** | Showcase mode and the demo have made-up content for every kind of content, and a script keeps it so | 17 | M | 🟡 |
 | **RV8** | The ? guides: ideas one to a line, Show more, short tab overviews, the tour meets the tabs first | 16 | M | 🟡 |

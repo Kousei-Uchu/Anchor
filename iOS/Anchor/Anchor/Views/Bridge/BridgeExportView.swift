@@ -57,7 +57,7 @@ enum ExportCategory: String, CaseIterable, Identifiable {
     }
 }
 
-/// A number that can be drawn, such as one of a check-in's four values (0 to 1).
+/// A number that can be drawn, such as one of a check-in's five values (0 to 1).
 struct ExportValue {
     let label: String
     let number: Double
@@ -180,16 +180,19 @@ struct BridgeExportBuilder {
             }
         case .checkIns:
             return checkIns.filter { inRange($0.timestamp) }.sorted { $0.timestamp < $1.timestamp }.map { check in
-                let line = "Energy \(fmt(check.physicalEnergy)), clarity \(fmt(1 - check.cognitiveBurnout)), room in head \(fmt(1 - check.mentalLoad)), social \(fmt(check.socialEnergy))"
+                // Each value is read back to the slider the person moved. Three are stored turned
+                // over (as exhaustion, burnout and load); physicalEnergy is the Moving slider.
+                let line = "Energy \(fmt(1 - check.physicalExhaustion)), clarity \(fmt(1 - check.cognitiveBurnout)), room in head \(fmt(1 - check.mentalLoad)), moving \(fmt(check.physicalEnergy)), social energy \(fmt(check.socialEnergy))"
                 return ExportCandidate(
                     id: check.id, category: category,
                     headline: check.timestamp.formatted(date: .abbreviated, time: .shortened),
                     entry: ExportEntry(
                         id: check.id, date: check.timestamp, heading: nil, lines: [line], footnote: nil,
                         values: [
-                            ExportValue(label: "Energy", number: check.physicalEnergy),
+                            ExportValue(label: "Energy", number: 1 - check.physicalExhaustion),
                             ExportValue(label: "Clarity", number: 1 - check.cognitiveBurnout),
                             ExportValue(label: "Room in head", number: 1 - check.mentalLoad),
+                            ExportValue(label: "Moving", number: check.physicalEnergy),
                             ExportValue(label: "Social energy", number: check.socialEnergy)
                         ]
                     )

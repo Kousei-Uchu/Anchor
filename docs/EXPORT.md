@@ -4,7 +4,7 @@ Bridge has a share button that opens Export for someone. The person writes who i
 
 ## Formats
 - **PDF.** Plain pages: the name, the note, then each kind in turn.
-- **Web page (.html).** One file with the document inside it and a small viewer: search, By section and Timeline, a line chart for each of the four check-in values (and one for time asleep, if Sleep is included, with no target line), a print stylesheet (Print or save as PDF) and Download CSV and Download Word file buttons. It reads fine as a document and needs no internet.
+- **Web page (.html).** One file with the document inside it and a small viewer: search, By section and Timeline, a line chart for each of the five check-in values (Energy, Clarity, Room in head, Moving, Social energy) (and one for time asleep, if Sleep is included, with no target line), a print stylesheet (Print or save as PDF) and Download CSV and Download Word file buttons. It reads fine as a document and needs no internet.
 - **Word (.docx).** Made inside the web page by its Download Word file button, named like the page. It holds the title, the note, then each kind with its count and each entry as its date, heading, lines and footnote. It is plain text with headings: no charts or photos. It is the whole document, not just what the search box is showing. The page size is A4, or US Letter when the browser's language ends in US, CA, MX or PH. A locked page has to be unlocked first. There is no document library in the page: the page writes the .docx itself as a zip with the files stored uncompressed, so the file is about the size of the text.
 
 ## How the web page is kept safe

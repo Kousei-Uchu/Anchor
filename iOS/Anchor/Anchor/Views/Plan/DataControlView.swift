@@ -536,7 +536,7 @@ struct DataControlView: View {
             lines.append("journal,\(iso(entry.createdAt)),\"\(escaped)\"")
         }
         for checkIn in filteredCheckIns(range) {
-            let values = "energy=\(fmt(checkIn.physicalEnergy)) clarity=\(fmt(1 - checkIn.cognitiveBurnout)) space=\(fmt(1 - checkIn.mentalLoad)) physicalEnergy=\(fmt(checkIn.physicalEnergy)) social=\(fmt(checkIn.socialEnergy))"
+            let values = "energy=\(fmt(1 - checkIn.physicalExhaustion)) clarity=\(fmt(1 - checkIn.cognitiveBurnout)) space=\(fmt(1 - checkIn.mentalLoad)) moving=\(fmt(checkIn.physicalEnergy)) social=\(fmt(checkIn.socialEnergy))"
             lines.append("checkin,\(iso(checkIn.timestamp)),\"\(values)\"")
         }
         if includeRecovery {
@@ -582,7 +582,7 @@ struct DataControlView: View {
             }
             draw("Check-ins", font: headingFont)
             for checkIn in filteredCheckIns(range) {
-                draw("\(checkIn.timestamp.formatted(date: .abbreviated, time: .shortened)): energy \(fmt(checkIn.physicalEnergy)), clarity \(fmt(1 - checkIn.cognitiveBurnout)), room in head \(fmt(1 - checkIn.mentalLoad)), physical energy \(fmt(checkIn.physicalEnergy)), social \(fmt(checkIn.socialEnergy))", font: bodyFont)
+                draw("\(checkIn.timestamp.formatted(date: .abbreviated, time: .shortened)): energy \(fmt(1 - checkIn.physicalExhaustion)), clarity \(fmt(1 - checkIn.cognitiveBurnout)), room in head \(fmt(1 - checkIn.mentalLoad)), moving \(fmt(checkIn.physicalEnergy)), social energy \(fmt(checkIn.socialEnergy))", font: bodyFont)
             }
             if includeRecovery {
                 draw("Recovery", font: headingFont)
@@ -2143,10 +2143,12 @@ extension CheckIn: DataBrowsable {
     var browseFields: [BrowseField] {
         [
             .date("Timestamp", timestamp),
-            .decimal("Physical exhaustion", physicalExhaustion),
-            .decimal("Cognitive burnout", cognitiveBurnout),
-            .decimal("Mental load", mentalLoad),
-            .decimal("Physical energy", physicalEnergy),
+            // Named for the five sliders as the check-in asks them, with the value the person left
+            // them at. Three are stored turned over, so they are turned back here.
+            .decimal("Physical energy", 1 - physicalExhaustion),
+            .decimal("Mental clarity", 1 - cognitiveBurnout),
+            .decimal("Room in your head", 1 - mentalLoad),
+            .decimal("Physical energy to move", physicalEnergy),
             .decimal("Social energy", socialEnergy),
             .linked("Journal entry written from this", expandedEntryID)
         ]

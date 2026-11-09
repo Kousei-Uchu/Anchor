@@ -240,7 +240,9 @@ enum ReviewStops {
         ("RV8", "The ? guides, less crowded", "Each guide shows its ideas one to a line, four at first with Show more for the rest, and the extras wait behind Show more on longer ones. The five tab guides are short overviews. The tour now meets all five tabs first, then each tab's screens. Export for someone has its own ? .",
          "Open the ? on Now, Plan and Bridge, then on Appointments and Sleep and tap Show more. Take the tour from Settings and check the first five pages are the tabs. Open Export for someone from the share button on Bridge and tap its ?.", 2, nil),
         ("RV7", "Showcase content", "Every kind of content the app keeps now has made-up content in the demo, so showcase mode no longer shows empty screens. A script checks that a new kind cannot be left out.",
-         "Open Trigger windows (three, one off), then Decision presets (each category has options, one with steps), Recovery (Energy drinks: Streaks, Calendar, Urges, Motivations), Unsent drafts, Appointments, Earlier sessions with notes, the message log for Alex and Jordan, and the Journal Month and Year views.", 1, .triggerWindows)
+         "Open Trigger windows (three, one off), then Decision presets (each category has options, one with steps), Recovery (Energy drinks: Streaks, Calendar, Urges, Motivations), Unsent drafts, Appointments, Earlier sessions with notes, the message log for Alex and Jordan, and the Journal Month and Year views.", 1, .triggerWindows),
+        ("RV5a", "Export check-in names fixed", "In Export for someone and in the older CSV and PDF, a check-in's values are named from the right sliders: Energy, Clarity, Room in head, Moving and Social energy. Before, Moving was called Energy and the real Physical energy slider was missing. The data viewer names the five sliders as the check-in asks them.",
+         "Open the Bridge share button, Export for someone, pick Check-ins and look at the preview and the web page: five values each, five small charts. Open Your data, Look at what's stored, Check-ins, and compare a check-in with the bars in the Journal.", 2, nil)
     ])
 }
 
