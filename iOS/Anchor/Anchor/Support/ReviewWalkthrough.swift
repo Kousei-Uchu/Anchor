@@ -258,7 +258,9 @@ enum ReviewStops {
         ("30q", "Session actions offered as tasks", "In Post-session notes, a line that starts with [ ] is a thing to do and has an Add as task button under the note. Nothing is added until you tap, the task has no date, and the line stays in the note.",
          "Open Post-session notes for Dr Lee, open the session 14 days ago and look under the note: two things to do. Tap Add as task on one, then open Tasks and find it with no date. Back in the note it now says In Tasks. Add a thing to do puts a new [ ] line at the end.", 3, .afterSession),
         ("SH2a", "Showcase passcode on the number pad", "The showcase passcode is 4 to 6 digits typed on the number pad, twice. Typing anything else is ignored, and the exit screen asks for it on the number pad.",
-         "Settings, Your data and help, Showcase mode, Set a passcode. Try letters (they do not appear), 3 digits (it says to use 4 to 6), two different entries, then a good one. Showcase mode cannot be turned on in a review run, so check the exit screen on your own copy.", 1, .settings)
+         "Settings, Your data and help, Showcase mode, Set a passcode. Try letters (they do not appear), 3 digits (it says to use 4 to 6), two different entries, then a good one. Showcase mode cannot be turned on in a review run, so check the exit screen on your own copy.", 1, .settings),
+        ("30o2", "Sealed notes stay sealed in the viewer", "Look at what's stored lists a note that is sealed until a date by that date, not by what it says, and a search does not find its words. They show once the date has passed.",
+         "Your data, Look at what's stored, To future me. The note sealed for two weeks reads Sealed until and the date; search for got through and it is not found. The letter and the note whose day has passed still show their words.", 1, .yourData)
     ])
 }
 

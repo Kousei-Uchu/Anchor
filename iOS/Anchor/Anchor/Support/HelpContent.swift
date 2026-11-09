@@ -381,7 +381,8 @@ extension Guide {
             howToUse: "Use the plus and choose how it opens. A note on a date stays sealed until that day, and until then only the date shows. A letter that opens when you choose has a few words after Open when, such as the kind of night it is for, and no date. You open it yourself when you need it.",
             tips: [
                 "A sealed note cannot be read early.",
-                "A letter is never locked. In Your data, Look at what's stored lists it by its Open when words, and a search does not look inside it."
+                "A letter is never locked. In Your data, Look at what's stored lists it by its Open when words, and a search does not look inside it.",
+                "A note sealed until a date is sealed in Your data too. Look at what's stored shows the date and none of its words until that day."
             ]
         ),
         GuideEntry(

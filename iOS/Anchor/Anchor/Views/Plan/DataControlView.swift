@@ -2522,16 +2522,29 @@ extension FutureNote: DataBrowsable {
     static var browseTitle: String { "To future me" }
     static var browseSingular: String { "Note to future me" }
     static var browseIcon: String { "envelope.open.badge.clock" }
+    /// A note sealed until a date is sealed here too: the list and the search show the date and
+    /// nothing of what it says, the same promise To future me keeps. Once the date has passed the
+    /// words show. isUnlocked is a stored flag nothing updates, so the date decides.
+    private var isSealed: Bool { !isOpenWhenLetter && unlockDate > .now }
+    private var sealedUntil: String {
+        "Sealed until " + unlockDate.formatted(date: .abbreviated, time: .omitted)
+    }
     /// A letter that opens when the person chooses shows only the words they
     /// put after Open when. What it says is in the record, one tap away, and
     /// is not read by the list or the search.
     var browseHeadline: String {
-        isOpenWhenLetter ? "Open when " + openWhen : DataText.firstLine(text, "Empty note")
+        if isOpenWhenLetter { return "Open when " + openWhen }
+        if isSealed { return sealedUntil }
+        return DataText.firstLine(text, "Empty note")
     }
     var browseSubtitle: String? {
-        isOpenWhenLetter
-            ? "Letter, written " + writtenAt.formatted(date: .abbreviated, time: .omitted)
-            : "Opens " + unlockDate.formatted(date: .abbreviated, time: .omitted)
+        if isOpenWhenLetter {
+            return "Letter, written " + writtenAt.formatted(date: .abbreviated, time: .omitted)
+        }
+        if isSealed {
+            return "Written " + writtenAt.formatted(date: .abbreviated, time: .omitted)
+        }
+        return "Opens " + unlockDate.formatted(date: .abbreviated, time: .omitted)
     }
     var browseDate: Date? { writtenAt }
     var browseFields: [BrowseField] {
@@ -2543,12 +2556,11 @@ extension FutureNote: DataBrowsable {
                 BrowseField.text("Text", text).keptOutOfSearch()
             ]
         }
-        // isUnlocked is a stored flag nothing updates, so the date decides.
         return [
             .date("Written", writtenAt),
             .date("Unlock date", unlockDate),
-            .text("Text", text),
-            .yesNo("Unlocked", unlockDate <= .now)
+            .text("Text", isSealed ? sealedUntil : text),
+            .yesNo("Unlocked", !isSealed)
         ]
     }
 }
