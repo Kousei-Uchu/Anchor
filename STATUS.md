@@ -9,7 +9,7 @@ A private safety plan, contacts and journal app for iPhone and iPad, in SwiftUI 
 ## Branch and build
 
 - Work is on `v2-recovery`. Patches are written as `.sh` files and pasted into Terminal; the Progress table in `ANCHOR_PATCH_PLAN.md` says which are pushed and which are written and waiting.
-- The code has never been compiled by the tool that writes the patches, which has no Xcode. Every patch is marked "build not yet confirmed" until you have built it. A first build after several patches may need small fixes.
+- The code has never been compiled by the tool that writes the patches, which has no Xcode. It does run `bash scripts/check-all.sh`, which reads every Swift file with a parser and runs the content checks; that finds syntax slips, not compile errors. Every patch is marked "build not yet confirmed" until you have built it. A first build after several patches may need small fixes.
 - Open `iOS/Anchor/Anchor.xcodeproj` in Xcode 26 or later. Two targets: the app and `AnchorWidget` (the widget extension). App group `group.page.aspens.anchor`; a shared Keychain item for the widget key (Patch 35a2).
 
 ## Where things live
