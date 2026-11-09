@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch DOC23: the plan now records that Label who is speaking (VN3) is pushed and waiting for a build.
 - Patch VN3: Label who is speaking. A third switch in Settings, Journal, off to begin with. While Dictate listens, tap Speaker 1 or Speaker 2 when the speaker changes and the words that follow go on a new line with that label. Rename speakers, in a page's three dots, changes the names on that page only. Anchor does not tell voices apart and keeps nothing about a voice.
 - Patch VN2: Keep a voice note while dictating. A second switch in Settings, Journal, off to begin with. When it is on, Dictate also saves what you say as a voice note on the page, and afterwards you choose whether to keep the words, the voice note or both. Nothing leaves your phone.
 - Patch DOC22: the plan now records that Dictate in the Journal (VN1) is pushed and waiting for a build.
