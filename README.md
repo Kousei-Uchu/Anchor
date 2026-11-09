@@ -9,7 +9,8 @@ website/           Vite and React site for anchor.aspens.page
 remotion-project/  Source for the promo video
 scripts/           make-screenshots.sh (App Store screenshots and demo video), check-about-content.mjs (the About copy in the app and on the website must match), check-demo-coverage.mjs (every kind of content has made-up content for showcase mode and the screenshots), anchorbackup.py (opens an encrypted backup without the app), anchorkey.py (the key and recovery key formats, with a self-test)
 docs/              Release guide and App Store copy
-BUILD_STATUS.md    Running notes on the app's state (some older entries are out of date)
+STATUS.md          Short current picture of the app and the repo
+ANCHOR_PATCH_PLAN.md  The patch plan, decisions and progress; docs/BUILD_STATUS_HISTORY.md is the old build log
 
 Website
 
