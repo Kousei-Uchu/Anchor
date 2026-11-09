@@ -1,0 +1,103 @@
+# Optional extras: iCloud sync, voice, and AI tools
+
+Written 9 Nov 2026 (change log 123). Nothing here is built. Every claim about the code was checked in the repo; claims about Apple's frameworks are from memory and are marked **check** where a spike must confirm them before a patch promises anything. The patches are in Phase I of `ANCHOR_PATCH_PLAN.md`, the questions are D38 to D43 in section 0.4.
+
+## The rules that apply to all of it
+
+1. **Everything here is optional and off by default.** A person who never opens Settings never sees any of it.
+2. **Nothing is assumed, inferred, generalised or collected.** A feature works only on what the person selected, only when they press its button, and its result is a suggestion until they keep it.
+3. **The original is always kept and always one tap away.** Nothing rewrites, replaces or deletes what the person wrote.
+4. **AI is a formatting and accessibility tool, not a feature to sell.** Never front and centre, never a chatbot, never a "how are you feeling" conversation, never on by default, never pushed in onboarding, the tour, the website or the App Store text. It is a button like any other button.
+5. **Local first, and cloud is only ever an option the person adds themselves.** The app never suggests, names, preselects or recommends a cloud model.
+6. **Send the least possible.** The model receives only the text the person selected for that one action, plus a fixed instruction. No names from Contacts, no other entries, no dates, no history, no device details.
+7. **Keep nothing longer than needed, and say how long.** The answer is held in memory until the person keeps or discards it. No logs, no analytics, no "improve the product" use. Whatever is kept is the person's own entry, in their own store, locked and backed up like everything else.
+8. **Ask every time, unless told not to.** Each use shows what will be sent, to which provider, and what that provider does with it. "Don't ask again" is a switch the person turns on, per feature and per provider, and can turn off again.
+9. **One switch turns all of it off.** See E5.
+10. **UI wording follows the plan's rules:** plain verbs ("Make shorter", "Break into steps", "Turn into tasks"), no "AI-powered", no "smart", no sparkle icons, no emoji, no em dashes.
+
+---
+
+## E1. Optional iCloud storage, for sync between your own devices
+
+**What it is.** A switch in Settings, off by default, that keeps the same Anchor data on every device signed in to the same Apple ID. Anchor has no server and never will; the only place data goes is the person's own private iCloud space.
+
+**What "secure" means here.** Two layers, and the second is what matters. CloudKit's private database is only readable by the person's Apple ID and is encrypted in transit and at rest, but Apple holds the keys unless the person has turned on Advanced Data Protection. So the second layer is Anchor's own field-level locking (point 20, D15 option B, patches 35b1 to 35d): by the time anything reaches iCloud every text field is already ciphertext, so Apple, and anyone who ever got into the iCloud account, sees nothing readable. **That is why sync comes after the locking work and never before it.**
+
+**What the code says today** (checked): `AnchorSchema.makeContainer` has a comment saying there is deliberately no CloudKit. All 34 models declare `@Attribute(.unique) var id: UUID`, and SwiftData stores that sync through CloudKit cannot carry unique constraints. So the first sync patch is not about sync at all: it removes the constraint from every model and has the app itself keep ids from doubling up. That is a store migration, so it needs the safety copy (35b1) first.
+
+**Rules for sync.**
+- **Off by default, turned on in Settings, with a plain screen saying what leaves the phone and where it goes.** Turning it off stops syncing and leaves each device's copy as it is; nothing is deleted anywhere without being asked.
+- **Per-device things stay per-device:** reminders (each device schedules its own), the widget summaries, the app lock, the showcase mode switch and its passcode, the review run, and which widgets show where.
+- **Showcase mode never syncs.** The demo store is in memory and the real store is not opened while it is on.
+- **Sleep stays out of the first version** (D39). `docs/SLEEP.md` already notes Apple's rule that health information must not be stored in iCloud, and Apple Health nights are exactly that.
+- **Voice notes and Journal photos** are files, not rows. They travel as CloudKit assets in a second step (SY2), and only after 35d has locked them.
+- **Deleting means deleting everywhere.** "Clear everything" says plainly that it also removes the data from the other devices. A way back is the safety copy on each device, not iCloud.
+- **Conflicts:** the same record edited on two phones at once keeps the later edit, which is what CloudKit does. Text is never merged line by line. **Check** whether a conflicted text field is worth keeping both versions of; the first version does not.
+- **The key** (D40): a second device needs the data key before it can read anything. Either the recovery key is typed on the new device (nothing travels), or the key is put in iCloud Keychain, which Apple also encrypts end to end, if the person turns that on. Recommendation in D40.
+- **Needs from you in Xcode:** the iCloud capability with CloudKit on the app target, a container, and a first run on two real devices. Neither can be tested in a simulator pair.
+
+## E2. Dictation and voice notes together, for journalling
+
+**What it is.** In the Journal editor, a Dictate button. While it runs, what is said appears as text in the entry as it is spoken, **and** the audio is recorded as a voice note at the same time. When it stops, the person chooses what to keep: the text, the audio, or both. Keeping only the text deletes the audio file.
+
+**How it is built.** One microphone tap feeds two things: a file writer (the voice note path from 14b) and the speech recognizer. **On-device recognition only.** If the language is not available on the device, the button says so and does not fall back to Apple's servers. Recognition is a text-in-progress that the person can edit, like any typed text; nothing about it is stored beyond the entry's text.
+
+**Permissions.** The microphone string today says voice notes "you choose to attach to a message" and must be widened; speech recognition needs its own usage string. Both are written in the plain words the plan uses. The privacy page is updated in the same patch.
+
+**Telling people apart (D38).** When more than one person is talking (a session, a conversation the person wants to remember), the transcript can be split into turns labelled **Speaker 1, Speaker 2**. The person can rename a label to plain text for that entry only ("Mum", "Dr Lee"). **Nothing about a person is stored:** no voiceprint, no profile, no list of names, nothing that would recognise the same voice in a later recording. A voiceprint is biometric data about someone who never agreed to it, and the rule is not to hold people data. Labels live inside the entry's own text like every other word in it.
+**Check first (spike VN3):** whether Apple's current speech APIs separate speakers at all. As far as I know the transcript comes back without speaker turns, so the first version may be a manual label, "Who is speaking?", tapped as the speaker changes, which needs no recognition of voices and stores nothing. A model that separates voices would be an on-device option only, and only if it passes the same rules.
+
+**Never inferred.** The transcript is what was said. No tone, no sentiment, no "you sounded".
+
+## E3. A "tidier version" of an entry: the AI Optimised block
+
+**What it is.** In the Journal editor, a plain button (Make shorter, or Tidy up) on a text block or on a whole entry. After the consent sheet, the chosen provider returns a shorter rewrite that keeps the detail. It is shown as its own visibly different block, headed **AI Optimised**, and folded to start with. Opening it shows the rewrite; a second control shows the **original text exactly as written or transcribed**. The person taps Keep or Discard. Nothing is saved before Keep, and a discarded rewrite is gone.
+
+**How it is stored.** Journal pages are Markdown text, and non-text blocks are single lines that `JournalBlocks.parse` already knows how to read (`JournalBlock.Kind` has `.text`, `.image` and `.card`). The block would be a fourth kind, `.assist`, written as one line holding the rewrite and the original it was made from. So there is **no model change**, no migration, the original travels with the block through backup, export and import, and deleting the original paragraph elsewhere never loses it. Opening the page in an older build shows an unknown line as plain text rather than losing it. **Check** in the patch that this really holds.
+
+**Honesty about the output.** A model can summarise wrongly or leave something out. That is why the original is one tap away, why the block is labelled, why nothing is saved without a read and a Keep, and why the rewrite is never presented as the person's own words anywhere else (D43: left out of Export for someone unless ticked, and labelled when it is in).
+
+**What it must not do.** Add facts, add advice, comment on feelings, change who said what, or tidy away a quote. The fixed instruction says to shorten, keep every concrete detail and name, and add nothing. That instruction is visible in the consent sheet.
+
+## E4. A small helper for tasks, not a chatbot
+
+**What it is.** A few plain buttons, each one action on text the person chose, none of them a conversation:
+
+- **Break into steps** on a task: proposes steps (the nested steps from RV2), each with an optional time guess.
+- **Estimate time** on a task or its steps: proposes minutes (the existing estimate field). A suggestion the person can edit; nothing is checked against it.
+- **Turn into tasks** on a journal entry or a pasted braindump: proposes a list of tasks. Shown as a checklist; **nothing is created until the person ticks lines and taps Add**, the same pattern as 30q.
+- **Tidy a braindump** into shorter text, a to-do list, or things to raise in a session (the existing Things to raise list). The person picks which; the app does not guess.
+
+**Linked and traceable.** Every task or item made this way carries a link back to the entry or text it came from, and the original is never changed. A task has no such field today (checked), so the first patch adds an optional source id to a task and to a Things to raise item, with the export, import and demo changes the Definition of Done asks for.
+
+**What it must not do.** Pick dates, set priorities or energy, decide what matters, summarise how the person has been, or add anything that is not in the text. Dates, priority and everything else stay as the person sets them.
+
+**Where the buttons live.** On the screen they act on, as one ordinary button, shown only when AI tools are on and a provider is set up. Not on Now, not in a tab of its own, not in the tour.
+
+## E5. One switch for all of it
+
+**Settings, AI tools, Use AI tools: off by default.** When it is off:
+
+- no AI button appears anywhere, and no screen mentions AI apart from this one row and its own short help;
+- no model is loaded, no network connection to any AI provider is opened, and no Local Network permission is asked;
+- the guide, the tour and onboarding say nothing about it.
+
+When it is turned off, anything half done is dropped, and the person's saved AI Optimised blocks stay as the text they are (they are the person's entries now). A separate, clearly named choice offers to turn them back into the original text, one entry at a time.
+
+**How it is enforced.** One function, `AIGate.isEnabled`, that every AI entry point must call before it does anything. A script, `scripts/check-ai-gate.mjs`, in the same spirit as the existing check scripts, fails if a file that talks to a provider does not go through the gate. The first patch (AI0) builds the switch and the check before there is anything behind them, so no later patch can skip it. Showcase mode keeps it off.
+
+## Providers
+
+| Order | Provider | How it is reached | Notes |
+| --- | --- | --- | --- |
+| 1 | **Apple on-device model** (Apple Intelligence, through the FoundationModels framework) | On the phone, no network | Only on devices that support it. **Check** the current iOS and model requirements. Preferred and the only one shown first. |
+| 2 | **Ollama** on the person's own computer | The person's home network. The person types the address; the app asks for the Local Network permission only when this is first used | Plain `http` on a home network is accepted but the consent sheet says the text crosses the person's own network. Nothing leaves it. |
+| 3 | **Other provider** the person adds themselves | Their own key, over `https` | Under an Other provider heading in AI tools, never suggested, never named in the app's own text, never preselected. Anchor runs no relay server and holds no key of its own. The consent sheet says Anchor cannot check how that provider keeps the text, and links the provider's own terms if the person gave one. Zero-retention accounts are the person's setting with the provider; Anchor cannot see or verify it (D42). |
+
+## The consent sheet
+
+Every use, before anything is sent: **what** (the exact text, in full, scrollable), **to whom** (this phone, your computer at the address, or the named provider), **what happens to it** (held in memory until you keep or discard; the provider's own keeping stated for Other providers), and two buttons, Send and Cancel. "Don't ask again for this" is a switch on the sheet itself, per feature and per provider, listed in AI tools where it can be turned off. For an Other provider the recommendation is that the switch is not offered (D42).
+
+## What each patch has to update (Definition of Done, plus)
+
+`Privacy.tsx` and `docs/APP_STORE_COPY.md` (the App Privacy answers are checked again for every provider that sends text off the phone and for iCloud), the guide registry, the demo data, the data viewer, the export DTOs, and `scripts/check-ai-gate.mjs` for anything that reaches a model.

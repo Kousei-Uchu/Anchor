@@ -22,7 +22,7 @@ A private safety plan, contacts and journal app for iPhone and iPad, in SwiftUI 
 | Promo video | `remotion-project/` |
 | Screenshots, checks, backup tools | `scripts/` |
 | Release steps and App Store text | `docs/RELEASE_GUIDE.md`, `docs/APP_STORE_COPY.md` |
-| Feature notes | `docs/` (`SLEEP.md`, `SHOWCASE.md`, `ENCRYPTION.md`, `EXPORT.md`, `BACKUP.md`, `RECOVERY_V2.md`, `REVIEW.md`, `SCREENSHOTS.md`) |
+| Feature notes | `docs/` (`SLEEP.md`, `SHOWCASE.md`, `ENCRYPTION.md`, `EXPORT.md`, `OPTIONAL_FEATURES.md`, `BACKUP.md`, `RECOVERY_V2.md`, `REVIEW.md`, `SCREENSHOTS.md`) |
 | Decisions in plain words | `docs/DECISIONS_EXPLAINED.md` |
 
 ## Fixed rules
@@ -30,6 +30,7 @@ A private safety plan, contacts and journal app for iPhone and iPad, in SwiftUI 
 - No scores, streak pressure, or readings of how you have been. Check-ins show your own values and nothing summed up.
 - Reminders and notifications use generic lock-screen wording. Escalation is a local reminder to you, never an automatic message to anyone.
 - Reminders are optional and off by default.
+- AI is optional, off by default, never front and centre, never a chatbot, and turned off completely by one switch. The app never suggests a cloud model. Nothing is sent without the person seeing it first, and the original is always kept. See `docs/OPTIONAL_FEATURES.md`.
 - Every question for the user is tracked in section 0.4 of the plan.
 - The NSW mental health law screen is compiled only with the `PERSONAL_BUILD` flag and is not in the public build.
 
@@ -39,4 +40,4 @@ Tabs: Now, Plan, Journal, Bridge, Thread. The area for counters is Recovery. Mes
 
 ## Not done
 
-See the ⬜ rows in the Progress table of `ANCHOR_PATCH_PLAN.md`: the locking work (35b1 to 35b3, then 35d), the last two relationship reminders (30p), the one-page summary (30r), the website pages and video (47 to 53), and the web demo and Android work at the end.
+See the ⬜ rows in the Progress table of `ANCHOR_PATCH_PLAN.md`: the locking work (35b1 to 35b3, then 35d), the last two relationship reminders (30p), the one-page summary (30r), the website pages and video (47 to 53), the optional extras (Phase I: the AI switch and tools, dictation with voice notes, iCloud sync), and the web demo and Android work at the end.
