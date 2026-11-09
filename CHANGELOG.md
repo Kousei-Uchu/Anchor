@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch DOC19: the plan now records that the AI Optimised block in the Journal (AI2) and the task helper's Break into steps and Estimate time (AI3) are pushed and waiting for a build.
 - Patch AI3: on a task, under its steps, Break into steps and Estimate time, shown only while AI tools are on. Each shows exactly what is sent first. Suggested steps are ticked before any is added, and a suggested time is used or discarded. A task can also remember the Journal entry it came from.
 - Patch AI2: Make shorter in a Journal page's three dots menu, for one paragraph or the whole entry. After the sheet that shows exactly what is sent, a shorter version waits on the page and is only added when you tap Keep, as a folded block called AI Optimised with your original one tap away. Exports leave it out unless you tick it. The AI tools row in Settings now shows in every build.
 - Patch DOC18: the plan now records that the AI tools consent sheet and provider screen (AI1) is pushed and waiting for a build.
