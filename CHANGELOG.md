@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch DOC15: the plan now records that everything pushed through the second review round builds and works, as you confirmed.
 - Patch R3: the review walkthrough in test builds now holds only the changes added since the first 66, plus a few more that had no stop, and keeps its notes separately.
 - Patch 30p1: a hard-time reminder for each person, off until you switch it on in Settings, Hard-time reminders. You pick which of your trigger windows it is for, and at the start of each one a quiet reminder says a person you chose is one option. The lock screen says only a gentle nudge for the morning, afternoon or evening and names no one. Tapping it opens a message to that person with your starters ready. At most one reminder comes on any day.
 - Patch 30r: a one-page layout. Session prep has Make a one-page sheet, where you choose what goes on it (what you wrote is on to begin with, the looking back is off until you switch it on), and Export for someone has Make a one-page PDF to share. The print gets smaller to fit, nothing is cut, and if it still would not fit it says so and makes nothing.
