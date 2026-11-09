@@ -24,6 +24,12 @@ struct SessionPrepRequest: Identifiable {
     let providerID: UUID?
 }
 
+/// Set when a hello reminder is opened, so the message box opens for that person.
+struct HelloRequest: Identifiable {
+    let id = UUID()
+    let contactID: UUID
+}
+
 /// What a trigger window reminder shows once it is opened. The lock screen never carries these;
 /// they travel inside the reminder and are read here.
 struct WindowReminderPrompt: Identifiable {
@@ -54,6 +60,10 @@ final class NotificationDelegate: NSObject, ObservableObject, UNUserNotification
     /// the session is with, which is carried inside the reminder and never on the lock screen.
     @Published var sessionPrep: SessionPrepRequest?
 
+    /// Set when a hello reminder is opened. ContentView opens the message box for that person,
+    /// who is carried inside the reminder and never on the lock screen.
+    @Published var hello: HelloRequest?
+
     /// Set when a trigger-window/escalation notification arrives while the
     /// app is in the foreground, so it still shows as a banner.
     func userNotificationCenter(_ center: UNUserNotificationCenter,
@@ -81,6 +91,11 @@ final class NotificationDelegate: NSObject, ObservableObject, UNUserNotification
                response.notification.request.content.categoryIdentifier == NotificationCategory.appointmentReminder.rawValue {
                 let provider = (userInfo["providerID"] as? String).flatMap { UUID(uuidString: $0) }
                 sessionPrep = SessionPrepRequest(providerID: provider)
+            }
+            if response.actionIdentifier != "IM_OKAY",
+               response.notification.request.content.categoryIdentifier == NotificationCategory.helloReminder.rawValue,
+               let raw = userInfo[HelloReminders.contactKey] as? String, let contact = UUID(uuidString: raw) {
+                hello = HelloRequest(contactID: contact)
             }
             if response.notification.request.content.categoryIdentifier == NotificationCategory.dailyCheckIn.rawValue {
                 shouldOpenCheckIn = true

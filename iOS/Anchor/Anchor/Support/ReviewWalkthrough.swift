@@ -225,6 +225,8 @@ enum ReviewStops {
          "Not scheduled in demo mode. On your own copy: make a window a few minutes ahead with a contact on Escalate, open its reminder, then check Settings, Notifications for the later days.", 1, .triggerWindows),
         ("45e", "Session reminders, the rest", "A choice of evening time, and a tap on a reminder opens Session prep.",
          "Settings, Session reminders: switch on The evening before and change Evening time. (Not scheduled in demo mode.)", 1, .settings),
+        ("30n1", "Hello reminders", "A regular hello to one person: off until switched on, on the days and time you pick, a plain line on the lock screen, at most one a day. Tapping it opens a message to them.",
+         "Settings, Hello reminders: switch on Sam (already on in demo) and change the days. (Not scheduled in demo mode.)", 1, .settings),
         ("45b", "Suggestions ask when tapped", "Calendar, photos and music are asked for only when each button is tapped.",
          "Journal, new entry, Add, Journaling Suggestions.", 2, nil),
         ("45c", "No scoring of check-ins", "A check-in row only says Check-in, with no rating or colour (RV5 added the sliders as plain bars).",

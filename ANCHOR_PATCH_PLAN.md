@@ -1,6 +1,6 @@
 # Anchor — Patch Plan (v2-recovery)
 
-*Living document. Last updated: 9 Nov 2026, after patch 46b2. Pushed through 46b1 (`03ef9c9`); written and waiting for you to push: DOC8 and 46b2, none confirmed building; the ones not started are marked ⬜. Questions are in 0.4. Still waiting on you: the words for the About screen's creator section and the licence files (both D23). Open but not blocking anything: D29a, the Apple Health sleep cleanup, which you cannot review yet. New and assumed as read: D32, D34 and D35. Held on purpose: medication notes (B5), recorded in Appendix D and no longer a decision or a to-do. Everything else in D16 to D31 is answered and either built or queued in the Progress table. D3 is parked until the end, just before the Android work. D15 is answered: option B, every model locked in one go, with a safety copy and an easy way back built first. Things I offered but did not build are in Appendix D. The history of updates is in `docs/PLAN_CHANGELOG.md`. Plain explanations of the decisions you asked about are in `docs/DECISIONS_EXPLAINED.md`.*
+*Living document. Last updated: 9 Nov 2026, after patch 30n1. Pushed through 46b1 (`03ef9c9`); written and waiting for you to push: DOC8, 46b2 and 30n1, none confirmed building; the ones not started are marked ⬜. Questions are in 0.4. Still waiting on you: the words for the About screen's creator section and the licence files (both D23). Open but not blocking anything: D29a, the Apple Health sleep cleanup, which you cannot review yet. New and assumed as read: D32, D34 and D35. Held on purpose: medication notes (B5), recorded in Appendix D and no longer a decision or a to-do. Everything else in D16 to D31 is answered and either built or queued in the Progress table. D3 is parked until the end, just before the Android work. D15 is answered: option B, every model locked in one go, with a safety copy and an easy way back built first. Things I offered but did not build are in Appendix D. The history of updates is in `docs/PLAN_CHANGELOG.md`. Plain explanations of the decisions you asked about are in `docs/DECISIONS_EXPLAINED.md`.*
 
 > ## READ THIS FIRST: THIS FILE IS THE PROMPT
 >
@@ -126,7 +126,9 @@ The source code repository is at <https://github.com/Kousei-Uchu/Anchor/tree/v2-
 | RV9: Apple Health sleep section: tidy the toggles | 🟡 Pushed by you (`2e929c1`); build not yet confirmed |
 | RV10: Check-in mascot no longer follows the sliders (one switch, `mascotFollowsSliders`, brings it back) | 🟡 Pushed by you (`4c66161`); build not yet confirmed |
 | 45a: Audit 2, part 1: session reminders, optional and off by default, with generic lock-screen wording; the unused reminder code that named the provider is removed | 🟡 Pushed by you (`237e998`); build not yet confirmed |
-| 30n: Relationship reminders (T3, approved in Appendix C1): the first three types, regular hello, their dates and follow-up, off by default, generic lock-screen wording, one a day at most | ⬜ Not started; approved, not blocked |
+| 30n1: Relationship reminders, part 1 (T3, Appendix C1): the regular hello for each person, off by default, a plain lock-screen line, at most one a day, a tap opens the message box for that person | 🟡 Written (change log 117), not yet pushed; build not yet confirmed |
+| 30n2: Relationship reminders, part 2: their dates, from the Support calendar | ⬜ Not started; approved, not blocked |
+| 30n3: Relationship reminders, part 3: follow-up after you reach out | ⬜ Not started; approved, not blocked |
 | 30p onward | The last two T3 types come after 30n; T2 is 30c, B3 is 30e, Personal goals is 30f and T7 was done in 14b (30o is the letters row above) |
 | 30q: Session actions offered as tasks (B4, D30): in Post-session notes, a line you mark as a thing to do gets an Add as task button; nothing is added until you tap, and the task has no date unless you give it one | 🟡 Pushed by you (`42a84d3`); build not yet confirmed |
 | 30r: One-page summary (B6, D30): a one-page layout inside Session prep and Export for someone, made only of your own words and plain facts in your order, with no scores, labels or readings | ⬜ Not started; answered, my reading is D32 |
@@ -143,7 +145,7 @@ The source code repository is at <https://github.com/Kousei-Uchu/Anchor/tree/v2-
 | 46b2: the in-app copy edit against the terminology list (point 23): the data viewer names each kind as its screen is named, the presets screen is titled Decision presets, and nothing else in the app needed changing | 🟡 Written (change log 116), not yet pushed; build not yet confirmed |
 | 35d: Voice notes and Journal photos locked too (D31) | ⬜ Not started; after 35b3 has been checked on your phone |
 
-**Order of work from 9 Nov 2026.** The small answered items first, because each is one clear change you asked for: SL6, AB2, SH2, 46b1, RV5a and 30o are all pushed, and 46b2 (the copy edit) is written, the last of them. Then 35a2 (pushed), the widgets' key in a shared Keychain item, before any locking, because the locking work uses the keys. Then the locking work, which is the part that can lose data and needs your phone to check: 35b1, 35b2, 35b3, then 35d. Then 30n (relationship reminders) and 30r (the one-page summary); 30q (session actions as tasks) is pushed. The website, demo and video patches stay last, with 55 at the very end.
+**Order of work from 9 Nov 2026.** The small answered items first, because each is one clear change you asked for: SL6, AB2, SH2, 46b1, RV5a and 30o are all pushed, and 46b2 (the copy edit) is written, the last of them. Then 35a2 (pushed), the widgets' key in a shared Keychain item, before any locking, because the locking work uses the keys. Then the locking work, which is the part that can lose data and needs your phone to check: 35b1, 35b2, 35b3, then 35d. Then 30n1 (written), 30n2 and 30n3 (relationship reminders) and 30r (the one-page summary); 30q (session actions as tasks) is pushed. The website, demo and video patches stay last, with 55 at the very end.
 
 ## Change log of this plan
 
@@ -537,7 +539,9 @@ First add an explicit SwiftData migration plan: a store that fails to open shows
 | **30k** | Things to raise per provider (B8, part 2) | 18 | S | 🟡 |
 | **30l** | Person pages (T1), on the shared sections editor | 18, C3 | M+ | 🟡 |
 | **30m** | Session prep, the rest of B1: Waiting to be raised and a To bring checklist per session | 18 | S | 🟡 |
-| **30n** | Relationship reminders (T3, Appendix C1): regular hello, their dates and follow-up, off by default, generic lock-screen wording, one a day at most, listed in Settings, Reminders | 18, C1 | M | ⬜ approved, not blocked |
+| **30n1** | Relationship reminders, part 1: regular hello per person, off by default, generic lock-screen wording, one a day at most, a section in Settings | 18, C1 | S | 🟡 |
+| **30n2** | Relationship reminders, part 2: their dates (from the Support calendar), sharing the one-a-day rule | 18, C1 | S | ⬜ approved, not blocked |
+| **30n3** | Relationship reminders, part 3: follow-up after reaching out, sharing the one-a-day rule | 18, C1 | S | ⬜ approved, not blocked |
 | **30o** | Letters you open (T5), situational ones never locked, contents hidden in the list (D25) | 18 | S | 🟡 |
 | **30p+** | The last two T3 types (hard-time companion, after an appointment), one patch each | 18 | per idea | ⬜ |
 | **30q** | Session actions offered as tasks, with no date unless you add one (B4, D30) | 18 | S | 🟡 |

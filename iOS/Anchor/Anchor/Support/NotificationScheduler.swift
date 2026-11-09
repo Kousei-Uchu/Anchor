@@ -17,6 +17,7 @@ enum NotificationCategory: String {
     case appointmentReminder = "ANCHOR_APPOINTMENT_REMINDER"
     case escalationCheckIn = "ANCHOR_ESCALATION_CHECKIN"
     case dailyCheckIn = "ANCHOR_DAILY_CHECKIN"
+    case helloReminder = "ANCHOR_HELLO_REMINDER"
 }
 
 @MainActor
@@ -52,8 +53,14 @@ struct NotificationScheduler {
             intentIdentifiers: []
         )
 
+        let helloCategory = UNNotificationCategory(
+            identifier: NotificationCategory.helloReminder.rawValue,
+            actions: [openAction],
+            intentIdentifiers: []
+        )
+
         UNUserNotificationCenter.current().setNotificationCategories(
-            [triggerCategory, appointmentCategory, escalationCategory, dailyCheckInCategory]
+            [triggerCategory, appointmentCategory, escalationCategory, dailyCheckInCategory, helloCategory]
         )
     }
 
@@ -644,6 +651,128 @@ enum AppointmentReminderSelfTest {
         let odd = AppointmentReminders.clampedEvening(hour: 20, minute: 75)
         guard early.hour == 16, early.minute == 0, late.hour == 22, late.minute == 59, odd.hour == 20, odd.minute == 59 else {
             fatalError("Session reminder self-test: the evening time is not kept between 4 pm and 10:59 pm.")
+        }
+    }
+}
+#endif
+
+
+// MARK: - Hello reminders
+
+/// An optional reminder to say hello to one person, set by the person using the app, off unless they
+/// switch it on. The lock screen says only that it is a quiet moment to reach out and never names
+/// anyone; who it is for travels inside the reminder and is read when it is opened. At most one comes
+/// on any day, whoever it is for: when two people share a day, the one higher in the contacts list
+/// keeps it. Every call clears the hello notifications and adds the current set again.
+enum HelloReminders {
+    static let prefix = "hello-"
+    static let body = "A quiet moment to reach out?"
+    static let contactKey = "helloContactID"
+
+    /// The plain values the plan needs, so nothing from SwiftData is held by the notification centre.
+    typealias Entry = (id: UUID, order: Int, enabled: Bool, days: [Int], hour: Int, minute: Int)
+
+    struct Planned {
+        let id: String
+        let components: DateComponents
+        let contactID: String
+    }
+
+    static func entries(of contacts: [TrustedContact]) -> [Entry] {
+        contacts.map { (id: $0.id, order: $0.sortOrder, enabled: $0.helloEnabled,
+                        days: $0.helloDays, hour: $0.helloHour, minute: $0.helloMinute) }
+    }
+
+    static func refresh(using context: ModelContext) {
+        #if DEBUG
+        HelloReminderSelfTest.run()
+        #endif
+        let contacts = (try? context.fetch(FetchDescriptor<TrustedContact>(sortBy: [SortDescriptor(\.sortOrder)]))) ?? []
+        refresh(contacts: contacts)
+    }
+
+    static func refresh(contacts: [TrustedContact]) {
+        guard !DemoMode.isOn else { return }
+        apply(plan(entries: entries(of: contacts)))
+    }
+
+    /// One repeating weekly notification for each weekday that someone has chosen, owned by the
+    /// first person (by position in the contacts list) who chose it.
+    static func plan(entries: [Entry]) -> [Planned] {
+        var planned: [Planned] = []
+        for weekday in 1...7 {
+            let wanting = entries.filter { $0.enabled && $0.days.contains(weekday) }
+            guard let owner = wanting.min(by: { $0.order < $1.order }) else { continue }
+            let hour = min(max(owner.hour, 0), 23)
+            let minute = min(max(owner.minute, 0), 59)
+            planned.append(Planned(
+                id: prefix + owner.id.uuidString + "-\(weekday)",
+                components: DateComponents(hour: hour, minute: minute, weekday: weekday),
+                contactID: owner.id.uuidString))
+        }
+        return planned
+    }
+
+    /// The days this person chose that someone higher in the list already has, so Settings can say so.
+    static func sharedDays(for id: UUID, in entries: [Entry]) -> [Int] {
+        guard let mine = entries.first(where: { $0.id == id }), mine.enabled else { return [] }
+        return Set(mine.days).filter { (1...7).contains($0) }.sorted().filter { weekday in
+            entries.contains { $0.id != id && $0.enabled && $0.days.contains(weekday) && $0.order < mine.order }
+        }
+    }
+
+    private static func apply(_ planned: [Planned]) {
+        let center = UNUserNotificationCenter.current()
+        center.getPendingNotificationRequests { pending in
+            let old = pending.map(\.identifier).filter { $0.hasPrefix(prefix) }
+            center.removePendingNotificationRequests(withIdentifiers: old)
+            for item in planned {
+                let content = UNMutableNotificationContent()
+                content.title = "Anchor"
+                content.body = body
+                content.categoryIdentifier = NotificationCategory.helloReminder.rawValue
+                content.sound = .default
+                content.userInfo = [contactKey: item.contactID]
+                let trigger = UNCalendarNotificationTrigger(dateMatching: item.components, repeats: true)
+                center.add(UNNotificationRequest(identifier: item.id, content: content, trigger: trigger))
+            }
+        }
+    }
+}
+
+
+#if DEBUG
+/// Checks the one-a-day rule and that the lock screen wording names no one. A wrong answer stops a
+/// test build at once, so a broken rule is seen before it reaches a phone.
+enum HelloReminderSelfTest {
+    private static var hasRun = false
+
+    static func run() {
+        if hasRun { return }
+        hasRun = true
+        let first = UUID(), second = UUID(), off = UUID()
+        let entries: [HelloReminders.Entry] = [
+            (id: second, order: 1, enabled: true, days: [1, 3], hour: 9, minute: 0),
+            (id: first, order: 0, enabled: true, days: [1, 5], hour: 17, minute: 30),
+            (id: off, order: 2, enabled: false, days: [1, 2], hour: 8, minute: 0)
+        ]
+        let plan = HelloReminders.plan(entries: entries)
+        guard plan.count == 3 else {
+            fatalError("Hello reminder self-test: expected one reminder for each of three days.")
+        }
+        guard let sunday = plan.first(where: { $0.components.weekday == 1 }),
+              sunday.contactID == first.uuidString, sunday.components.hour == 17, sunday.components.minute == 30 else {
+            fatalError("Hello reminder self-test: a shared day did not go to the person higher in the list.")
+        }
+        guard !plan.contains(where: { $0.contactID == off.uuidString }) else {
+            fatalError("Hello reminder self-test: a switched off hello was scheduled.")
+        }
+        guard HelloReminders.sharedDays(for: second, in: entries) == [1],
+              HelloReminders.sharedDays(for: first, in: entries).isEmpty else {
+            fatalError("Hello reminder self-test: the shared days were not found.")
+        }
+        guard !HelloReminders.body.lowercased().contains("hello") else {
+            fatalError("Hello reminder self-test: the lock screen says what the reminder is about.")
         }
     }
 }

@@ -35,6 +35,7 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \RecoveryCounter.sortOrder) private var allCounters: [RecoveryCounter]
     @Query(sort: \Routine.createdAt) private var routines: [Routine]
+    @Query(sort: \TrustedContact.sortOrder) private var helloContacts: [TrustedContact]
 
     @StateObject private var appLock = AppLock.shared
     @State private var faceIDEnabled = AppLock.shared.isEnabled
@@ -127,6 +128,17 @@ struct SettingsView: View {
                         Anchor.SettingsTimeRow(title: "Evening time", time: eveningBinding)
                     }
                     Anchor.SettingsToggle(title: "A couple of hours before", isOn: $remindSameDay)
+                }
+
+                if helloContacts.contains(where: { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {
+                    Anchor.SettingsSection(
+                        title: "Hello reminders",
+                        footer: "Off until you switch one on. At most one comes on any day, and the lock screen never shows a name."
+                    ) {
+                        ForEach(helloContacts.filter { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) { contact in
+                            HelloReminderSettingsRow(contact: contact, all: helloContacts)
+                        }
+                    }
                 }
 
                 if showsRecovery {
@@ -305,6 +317,62 @@ struct SettingsView: View {
                 minute.wrappedValue = parts.minute ?? minute.wrappedValue
             }
         )
+    }
+}
+
+/// One person's hello reminder in Settings: the switch, then the time and the days once it is on.
+private struct HelloReminderSettingsRow: View {
+    @Bindable var contact: TrustedContact
+    let all: [TrustedContact]
+    @Environment(\.modelContext) private var modelContext
+
+    private var timeBinding: Binding<Date> {
+        Binding(
+            get: {
+                Calendar.current.date(bySettingHour: contact.helloHour, minute: contact.helloMinute,
+                                      second: 0, of: .now) ?? .now
+            },
+            set: { newValue in
+                let parts = Calendar.current.dateComponents([.hour, .minute], from: newValue)
+                contact.helloHour = parts.hour ?? contact.helloHour
+                contact.helloMinute = parts.minute ?? contact.helloMinute
+            }
+        )
+    }
+
+    private var sharedNote: String? {
+        let days = HelloReminders.sharedDays(for: contact.id, in: HelloReminders.entries(of: all))
+        guard !days.isEmpty else { return nil }
+        let names = days.map { Calendar.current.shortWeekdaySymbols[$0 - 1] }.joined(separator: ", ")
+        return "Not on \(names): another person's hello is set for that day."
+    }
+
+    var body: some View {
+        Group {
+            Anchor.SettingsToggle(title: contact.name, isOn: $contact.helloEnabled)
+            if contact.helloEnabled {
+                Anchor.SettingsTimeRow(time: timeBinding)
+                RoutineWeekdayRow(days: $contact.helloDays)
+                if let summary = contact.helloSummary {
+                    Text(summary).font(.footnote).foregroundStyle(.secondary)
+                } else {
+                    Text("No days picked yet.").font(.footnote).foregroundStyle(.secondary)
+                }
+                if let note = sharedNote {
+                    Text(note).font(.footnote).foregroundStyle(.secondary)
+                }
+            }
+        }
+        .onChange(of: contact.helloEnabled) { _, isOn in
+            if isOn {
+                if contact.helloDays.isEmpty { contact.helloDays = [1] }
+                NotificationScheduler.askForPermissionIfNeeded()
+            }
+            HelloReminders.refresh(using: modelContext)
+        }
+        .onChange(of: contact.helloHour) { _, _ in HelloReminders.refresh(using: modelContext) }
+        .onChange(of: contact.helloMinute) { _, _ in HelloReminders.refresh(using: modelContext) }
+        .onChange(of: contact.helloDays) { _, _ in HelloReminders.refresh(using: modelContext) }
     }
 }
 

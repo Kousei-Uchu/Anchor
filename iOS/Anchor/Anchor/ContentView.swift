@@ -641,6 +641,9 @@ struct ContentView: View {
                     }
             }
         }
+        .sheet(item: $notificationDelegate.hello) { request in
+            ThreadMessageComposer(startingContactID: request.contactID, isHello: true)
+        }
         .onReceive(NotificationCenter.default.publisher(for: .anchorOpenContactsInPlan)) { _ in
             // Switches to the Plan tab. Doesn't drill into Contacts
             // specifically — PlanView's NavigationStack doesn't have a

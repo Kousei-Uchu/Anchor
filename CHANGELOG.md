@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 30n1: a regular hello reminder for each person, off until you switch it on in Settings, Hello reminders. You pick the days and the time; the lock screen says only that it is a quiet moment to reach out, and tapping it opens a message to that person with your starters ready. At most one comes on any day.
 - Patch 46b2: the words used for screens now match everywhere. Look at what's stored names each kind as its screen is named (Contacts, Message log, To future me, Things I haven't said, Decision presets, Lists), and the presets screen is titled Decision presets instead of Decision-fatigue presets.
 - Patch 46b1: a short STATUS.md replaces BUILD_STATUS.md at the root, and the old build log is kept whole as docs/BUILD_STATUS_HISTORY.md.
 - Patch 35a2: the key the widgets' summaries are sealed with is kept in a Keychain item shared by the app and the widgets, on this phone only, and the key file from the earlier patch is moved into it unchanged and then removed.

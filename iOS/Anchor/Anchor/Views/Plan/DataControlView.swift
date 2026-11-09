@@ -514,6 +514,7 @@ struct DataControlView: View {
         }
         RecoveryNotifications.refresh(using: modelContext)
         RoutineReminders.refresh(using: modelContext)
+        HelloReminders.refresh(using: modelContext)
         AppointmentReminders.refresh(using: modelContext)
 
         if importedCount == 0 && restoredFiles == 0 {
@@ -713,6 +714,7 @@ struct DataControlView: View {
         for item in recoveryUrges { modelContext.delete(item) }
         RecoveryNotifications.refresh(counters: [])
         RoutineReminders.refresh(routines: [])
+        HelloReminders.refresh(contacts: [])
         AppointmentReminders.refresh(sessions: [])
         RecoveryWidgetSync.refresh(counters: [])
         WidgetSealing.removeEverything()
@@ -1422,6 +1424,9 @@ struct TrustedContactDTO: Codable {
     var timeZoneIdentifier: String?
     var availableFromHour: Int?; var availableFromMinute: Int?
     var availableToHour: Int?; var availableToMinute: Int?
+    /// Optional so exports made before hello reminders existed still import.
+    var helloEnabled: Bool?; var helloDays: [Int]?
+    var helloHour: Int?; var helloMinute: Int?
     init(_ m: TrustedContact) {
         id = m.id; name = m.name; phoneNumber = m.phoneNumber; sortOrder = m.sortOrder
         escalationEnabled = m.escalationEnabled; escalationWindowMinutes = m.escalationWindowMinutes
@@ -1430,6 +1435,8 @@ struct TrustedContactDTO: Codable {
         timeZoneIdentifier = m.timeZoneIdentifier
         availableFromHour = m.availableFromHour; availableFromMinute = m.availableFromMinute
         availableToHour = m.availableToHour; availableToMinute = m.availableToMinute
+        helloEnabled = m.helloEnabled; helloDays = m.helloDays
+        helloHour = m.helloHour; helloMinute = m.helloMinute
     }
     func toModel() -> TrustedContact {
         TrustedContact(id: id, name: name, phoneNumber: phoneNumber, sortOrder: sortOrder,
@@ -1438,7 +1445,9 @@ struct TrustedContactDTO: Codable {
                         contactMethod: ContactMethod(rawValue: contactMethod) ?? .phone, discordUserID: discordUserID,
                         timeZoneIdentifier: timeZoneIdentifier,
                         availableFromHour: availableFromHour, availableFromMinute: availableFromMinute,
-                        availableToHour: availableToHour, availableToMinute: availableToMinute)
+                        availableToHour: availableToHour, availableToMinute: availableToMinute,
+                        helloEnabled: helloEnabled ?? false, helloDays: helloDays ?? [],
+                        helloHour: helloHour ?? 17, helloMinute: helloMinute ?? 0)
     }
 }
 
@@ -2232,7 +2241,9 @@ extension TrustedContact: DataBrowsable {
             .number("Available from (hour)", availableFromHour),
             .number("Available from (minute)", availableFromMinute),
             .number("Available to (hour)", availableToHour),
-            .number("Available to (minute)", availableToMinute)
+            .number("Available to (minute)", availableToMinute),
+            .yesNo("Hello reminder on", helloEnabled),
+            .text("Hello reminder", helloSummary)
         ]
     }
 }

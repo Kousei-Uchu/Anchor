@@ -524,13 +524,30 @@ struct ThreadMessageComposer: View {
     @State private var sendRequest: SendRequest?
     @State private var discordFailureMessage: String?
 
-    init(startingContactID: UUID? = nil) {
+    private let isHello: Bool
+
+    init(startingContactID: UUID? = nil, isHello: Bool = false) {
         _selectedContactID = State(initialValue: startingContactID)
+        self.isHello = isHello
+    }
+
+    /// Shown only when the box was opened from a hello reminder. Closing it does nothing and is not recorded.
+    private var helloLine: String? {
+        guard isHello,
+              let name = contacts.first(where: { $0.id == selectedContactID })?.name
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+              !name.isEmpty else { return nil }
+        return "Thinking of \(name)? A quick hello could be nice."
     }
 
     var body: some View {
         NavigationStack {
             Form {
+                if let line = helloLine {
+                    Section {
+                        Text(line).font(.callout).foregroundStyle(.secondary)
+                    }
+                }
                 if !contacts.isEmpty {
                     Section("About") {
                         Picker("About", selection: $selectedContactID) {

@@ -156,13 +156,22 @@ final class TrustedContact {
     var availableToHour: Int?
     var availableToMinute: Int?
 
+    /// An optional regular hello you set for this person. Off unless you switch it on.
+    var helloEnabled: Bool = false
+    /// Calendar weekdays it comes on, 1 = Sunday to 7 = Saturday.
+    var helloDays: [Int] = []
+    var helloHour: Int = 17
+    var helloMinute: Int = 0
+
     init(id: UUID = UUID(), name: String, phoneNumber: String, sortOrder: Int,
          escalationEnabled: Bool = false, escalationWindowMinutes: Int? = nil,
          messageTemplates: [MessageTemplate] = [],
          contactMethod: ContactMethod = .phone, discordUserID: String? = nil,
          timeZoneIdentifier: String? = nil,
          availableFromHour: Int? = nil, availableFromMinute: Int? = nil,
-         availableToHour: Int? = nil, availableToMinute: Int? = nil) {
+         availableToHour: Int? = nil, availableToMinute: Int? = nil,
+         helloEnabled: Bool = false, helloDays: [Int] = [],
+         helloHour: Int = 17, helloMinute: Int = 0) {
         self.id = id
         self.name = name
         self.phoneNumber = phoneNumber
@@ -177,6 +186,26 @@ final class TrustedContact {
         self.availableFromMinute = availableFromMinute
         self.availableToHour = availableToHour
         self.availableToMinute = availableToMinute
+        self.helloEnabled = helloEnabled
+        self.helloDays = helloDays
+        self.helloHour = helloHour
+        self.helloMinute = helloMinute
+    }
+}
+
+extension TrustedContact {
+    /// "Sun at 5:00 PM", "Every day at 5:00 PM", or nil while the hello is off or has no days.
+    var helloSummary: String? {
+        guard helloEnabled else { return nil }
+        let days = Set(helloDays.filter { (1...7).contains($0) })
+        guard !days.isEmpty else { return nil }
+        let calendar = Calendar.current
+        var parts = DateComponents(); parts.hour = helloHour; parts.minute = helloMinute
+        let time = calendar.date(from: parts)?.formatted(date: .omitted, time: .shortened) ?? ""
+        if days.count == 7 { return "Every day at \(time)" }
+        let names = calendar.shortWeekdaySymbols
+        let ordered = (0..<7).map { (calendar.firstWeekday - 1 + $0) % 7 + 1 }.filter { days.contains($0) }
+        return ordered.map { names[$0 - 1] }.joined(separator: ", ") + " at " + time
     }
 }
 

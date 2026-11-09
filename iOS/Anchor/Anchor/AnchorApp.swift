@@ -187,7 +187,8 @@ enum DemoMode {
         let now = Date.now
         func ago(_ days: Double, hour: Double = 0) -> Date { now.addingTimeInterval(-days * 86_400 - hour * 3_600) }
 
-        let demoSam = TrustedContact(name: "Sam", phoneNumber: "0400 000 001", sortOrder: 0)
+        let demoSam = TrustedContact(name: "Sam", phoneNumber: "0400 000 001", sortOrder: 0,
+                                     helloEnabled: true, helloDays: [1], helloHour: 17, helloMinute: 0)
         context.insert(demoSam)
         let demoAlex = TrustedContact(name: "Alex", phoneNumber: "0400 000 002", sortOrder: 1)
         let demoJordan = TrustedContact(name: "Jordan", phoneNumber: "0400 000 003", sortOrder: 2)
@@ -549,6 +550,7 @@ enum ShowcaseSweep {
         // The reminders and the counter widget, the same ones Plan refreshes when it appears.
         RecoveryNotifications.refresh(using: context)
         RoutineReminders.refresh(using: context)
+        HelloReminders.refresh(using: context)
         AppointmentReminders.refresh(using: context)
         SleepReminder.refresh()
         NotificationScheduler.resyncTriggerWindows(using: context)
