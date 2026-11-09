@@ -18,6 +18,8 @@ export function Header() {
         <Icon name={open ? 'close' : 'menu'} />
       </button>
       <nav id="site-nav" aria-label="Main">
+        <Link to="/features">Features</Link>
+        <Link to="/philosophy">Philosophy</Link>
         <Link to="/demo">Demo</Link>
         <Link to={{ pathname: '/', hash: '#about' }}>About</Link>
         <Link to="/privacy">Privacy</Link>
