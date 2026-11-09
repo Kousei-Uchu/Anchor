@@ -804,9 +804,11 @@ enum LockMyDataHelp {
 enum AIToolsHelp {
     static let paragraphs: [String] = [
         "AI tools are off unless you turn them on here. While this is off, nothing in Anchor uses AI, no AI buttons show anywhere, and nothing is sent to any service.",
-        "When it is on, Anchor may offer a few plain buttons, such as making a long entry shorter. Each one works only on the text you pick, and asks you first, every time, unless you tell it not to.",
+        "When it is on, Anchor may offer a few plain buttons, such as making a long entry shorter. Each one works only on the text you pick.",
+        "Before anything is sent you see the exact text, the instruction that goes with it, where it goes and what happens to it, and you choose Send or Cancel. On that screen, Don't ask again skips it for that one tool in that one place. Any you turn on are listed here under Asking, where you can turn them off.",
+        "For now the only place it runs is Apple's on-device model, on this phone, on phones that support Apple Intelligence with it turned on in the phone's Settings. The text you pick does not leave the phone.",
         "Anchor keeps what you wrote exactly as it was. Anything an AI tool suggests is only a suggestion until you keep it.",
-        "Turning this off removes every AI button at once. It is off while showcase mode is on."
+        "Turning this off removes every AI button at once and drops anything half done. It is off while showcase mode is on."
     ]
 }
 

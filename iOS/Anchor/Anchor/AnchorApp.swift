@@ -20,6 +20,7 @@ struct AnchorApp: App {
         FieldLockSelfTest.run()
         LockMyDataSelfTest.run()
         LockMyFilesSelfTest.run()
+        AIAskSelfTest.run()
         #endif
         if !DemoMode.isOn {
             // A lock run that was stopped in the middle asks for the safety copy to be put back.

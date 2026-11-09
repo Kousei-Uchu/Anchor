@@ -1,6 +1,6 @@
 # Optional extras: iCloud sync, voice, and AI tools
 
-Written 9 Nov 2026 (change log 123). Nothing here is built. Every claim about the code was checked in the repo; claims about Apple's frameworks are from memory and are marked **check** where a spike must confirm them before a patch promises anything. The patches are in Phase I of `ANCHOR_PATCH_PLAN.md`, the questions are D38 to D43 in section 0.4.
+Written 9 Nov 2026 (change log 123). Built so far: the one switch (AI0) and the consent sheet with the Apple on-device provider (AI1, change log 141); everything else here is not built. Every claim about the code was checked in the repo; claims about Apple's frameworks are from memory and are marked **check** where a spike must confirm them before a patch promises anything. The patches are in Phase I of `ANCHOR_PATCH_PLAN.md`, the questions are D38 to D43 in section 0.4.
 
 ## The rules that apply to all of it
 
@@ -84,7 +84,7 @@ Written 9 Nov 2026 (change log 123). Nothing here is built. Every claim about th
 
 When it is turned off, anything half done is dropped, and the person's saved AI Optimised blocks stay as the text they are (they are the person's entries now). A separate, clearly named choice offers to turn them back into the original text, one entry at a time.
 
-**How it is enforced.** One function, `AIGate.isEnabled`, that every AI entry point must call before it does anything. A script, `scripts/check-ai-gate.mjs`, in the same spirit as the existing check scripts, fails if a file that talks to a provider does not go through the gate. The first patch (AI0) builds the switch and the check before there is anything behind them, so no later patch can skip it. Showcase mode keeps it off. Until the first tool exists the row in Settings is in test builds only; AI1 makes it visible in every build.
+**How it is enforced.** One function, `AIGate.isEnabled`, that every AI entry point must call before it does anything. A script, `scripts/check-ai-gate.mjs`, in the same spirit as the existing check scripts, fails if a file that talks to a provider does not go through the gate. The first patch (AI0) builds the switch and the check before there is anything behind them, so no later patch can skip it. Showcase mode keeps it off. Until the first tool exists the row in Settings is in test builds only. AI1 (the consent sheet and the provider) is not a tool, so the first real tool, AI2 or AI3, is the patch that makes the row visible in every build.
 
 ## Providers
 
@@ -97,6 +97,8 @@ When it is turned off, anything half done is dropped, and the person's saved AI 
 ## The consent sheet
 
 Every use, before anything is sent: **what** (the exact text, in full, scrollable), **to whom** (this phone, your computer at the address, or the named provider), **what happens to it** (held in memory until you keep or discard; the provider's own keeping stated for Other providers), and two buttons, Send and Cancel. "Don't ask again for this" is a switch on the sheet itself, per feature and per provider, listed in AI tools where it can be turned off. For an Other provider the recommendation is that the switch is not offered (D42).
+
+**As built in AI1.** The sheet is `Views/Settings/AIConsentSheet.swift`. It shows the whole text that will be sent (never cut short), the fixed instruction that goes with it, where it goes and what happens to it, and has Send and Cancel pinned at the bottom. Don't ask again is a switch on the sheet for a provider that offers it, kept only if the person taps Send. Settings, AI tools lists each tool that no longer asks, with Ask again. All of it runs through `AIAsk` (`Support/AIAsk.swift`): the gate, the checks on the text, the sheet and only then the provider, and `scripts/check-ai-gate.mjs` fails if anything else sends text to a provider or if that order changes. Text over the provider's limit (4,000 characters for Apple's model, a guess to **check** on a phone) is refused before anything is sent. Turning AI tools off while the sheet is open or the model is working drops it and returns nothing.
 
 ## What each patch has to update (Definition of Done, plus)
 

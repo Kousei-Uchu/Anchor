@@ -1170,11 +1170,13 @@ struct RecoveryKeyEntrySheet: View {
     }
 }
 
-/// AI tools in Settings (Patch AI0): the one switch for every AI feature. Off to begin with. Nothing sits
-/// behind it yet, so the row is in test builds only until the first AI tool is built; the rules it
-/// carries are in docs/OPTIONAL_FEATURES.md.
+/// AI tools in Settings (Patch AI0, AI1): the one switch for every AI feature, off to begin with, and, once it
+/// is on, where it runs and the list of tools that no longer ask first. No tool is built yet, so the row is in
+/// test builds only until the first one is; the rules it carries are in docs/OPTIONAL_FEATURES.md.
 struct AIToolsSettingsView: View {
     @State private var isOn = AIGate.isChosen
+    @State private var status: AIProviderStatus?
+    @State private var skips: [AIConsentStore.Pair] = []
 
     var body: some View {
         Form {
@@ -1189,12 +1191,78 @@ struct AIToolsSettingsView: View {
                     set: { newValue in
                         isOn = newValue
                         AIGate.setChosen(newValue)
+                        refresh()
                     }
                 )) {
                     Text("Use AI tools")
                         .font(.system(.subheadline, design: .rounded))
                 }
                 .disabled(DemoMode.isOn)
+            }
+
+            if let status {
+                Anchor.SettingsSection(
+                    title: "Where it runs",
+                    footer: "The model runs on this phone. The text you pick does not leave it."
+                ) {
+                    HStack(alignment: .firstTextBaseline) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("On this phone")
+                                .font(.system(.subheadline, design: .rounded))
+                            Text(AIProviders.chosen.name)
+                                .font(.system(.footnote, design: .rounded))
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Text(status.plainText)
+                            .font(.system(.footnote, design: .rounded))
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.trailing)
+                    }
+                    if status != .ready {
+                        Button {
+                            refresh()
+                        } label: {
+                            Text("Check again").font(.system(.subheadline, design: .rounded))
+                        }
+                    }
+                }
+
+                Anchor.SettingsSection(
+                    title: "Asking",
+                    footer: skips.isEmpty
+                        ? "Don't ask again is a switch on that screen. Any you turn on are listed here, where you can turn them off."
+                        : nil
+                ) {
+                    if skips.isEmpty {
+                        Text("Anchor shows you exactly what is sent and asks before every use.")
+                            .font(.system(.subheadline, design: .rounded))
+                    } else {
+                        ForEach(skips, id: \.self) { pair in
+                            HStack(alignment: .firstTextBaseline) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(pair.feature.title)
+                                        .font(.system(.subheadline, design: .rounded))
+                                    Text("Not asking again, " + pair.provider.name)
+                                        .font(.system(.footnote, design: .rounded))
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                Button {
+                                    AIConsentStore.standard.setSkipsAsking(false, pair.feature, pair.provider)
+                                    refresh()
+                                } label: {
+                                    Text("Ask again").font(.system(.subheadline, design: .rounded))
+                                }
+                                .buttonStyle(.borderless)
+                            }
+                        }
+                    }
+                }
+
+                #if DEBUG
+                AITryItSection()
+                #endif
             }
         }
         .anchorSettingsStyle()
@@ -1205,8 +1273,81 @@ struct AIToolsSettingsView: View {
                 HelpNoteToolbarButton(icon: "slider.horizontal.3", title: "About AI tools", paragraphs: AIToolsHelp.paragraphs)
             }
         }
+        .onAppear { refresh() }
+    }
+
+    /// Looks at the provider and the list only while AI tools are on, so nothing is asked of the model otherwise.
+    private func refresh() {
+        isOn = AIGate.isChosen
+        if AIGate.isEnabled {
+            status = AIProviders.make(AIProviders.chosen).status()
+            skips = AIConsentStore.standard.all
+        } else {
+            status = nil
+            skips = []
+        }
     }
 }
+
+#if DEBUG
+/// A way to try the consent sheet and the on-device model before any real tool exists (Patch AI1, test builds
+/// only). It runs Make shorter on the text in the box, shows the answer and keeps nothing. It is not offered in
+/// a review run, because AI tools are switched off there.
+private struct AITryItSection: View {
+    @StateObject private var ask = AIAsk()
+    @State private var sample = "On Tuesday I went to the clinic and waited for forty minutes before Dr Lee could see me. I told her the nights have been harder since the last appointment, and that I keep waking at three. She said we could look at the evening routine again and asked me to bring my notes next time."
+    @State private var answer = ""
+    @State private var message = ""
+
+    var body: some View {
+        Anchor.SettingsSection(
+            title: "Try it (test build)",
+            footer: "Runs Make shorter on the text above so you can see the sheet and the answer. Nothing is saved."
+        ) {
+            TextEditor(text: $sample)
+                .font(.system(.body, design: .rounded))
+                .frame(minHeight: 120)
+            Button {
+                Task { await run() }
+            } label: {
+                Text("Make shorter").font(.system(.subheadline, design: .rounded))
+            }
+            .disabled(ask.isWorking || sample.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .aiAsk(ask)
+            if ask.isWorking && ask.pending == nil {
+                ProgressView()
+            }
+            if !answer.isEmpty {
+                Text(answer)
+                    .font(.system(.subheadline, design: .rounded))
+                    .textSelection(.enabled)
+                Button {
+                    answer = ""
+                } label: {
+                    Text("Clear").font(.system(.subheadline, design: .rounded))
+                }
+            }
+            if !message.isEmpty {
+                Text(message)
+                    .font(.system(.footnote, design: .rounded))
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private func run() async {
+        answer = ""
+        message = ""
+        do {
+            answer = try await ask.run(.makeShorter, on: sample)
+        } catch let error as AIError {
+            message = error.plainText
+        } catch {
+            message = AIError.failed.plainText
+        }
+    }
+}
+#endif
 
 /// Showcase mode in Settings (Patch 40b). Turning it on swaps the app to made-up content and makes the
 /// window again, which closes this screen. While it is on, the same screen only offers to turn it off,
