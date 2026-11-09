@@ -55,7 +55,7 @@ Crisis numbers on the Now tab are shown for the user's region (changeable from t
 
 Widgets share only contact names and numbers, whether a safety plan exists, the next trigger window label, and one de-escalation phrase and one affirmation the user wrote, through an App Group, stored locked with a key that is kept out of backups. A Recovery counter widget shows a generic label unless the user turns on showing that counter's name. The focus timer can show on the lock screen and in the Dynamic Island if the user switches that on, and it never shows the task. Widgets are optional. Lock screen widgets are visible without unlocking the phone, which the privacy policy explains.
 
-AI tools (Settings, AI tools) are off unless the user switches them on. The only tool is Make shorter in the Journal, which shows the exact text and asks before every use and runs only on Apple's on-device model, on the phone. Nothing is sent to any server, and the shorter version is not saved unless the user taps Keep. The App Privacy answers stay as they are: no data is collected.
+AI tools (Settings, AI tools) are off unless the user switches them on. The tools are Make shorter in the Journal and Break into steps and Estimate time on a task, each of which shows the exact text and asks before every use and runs only on Apple's on-device model, on the phone. Nothing is sent to any server, and the shorter version is not saved unless the user taps Keep. The App Privacy answers stay as they are: no data is collected.
 
 Showcase mode (Settings, Your data and help) runs the app on made-up content held only in memory, for showing it to someone, and the user's own data is not opened while it is on.
 

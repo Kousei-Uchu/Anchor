@@ -47,7 +47,7 @@ export default function Privacy() {
 
       <h2>AI tools (optional)</h2>
       <p>
-        AI tools are off unless you switch them on in Settings, and one switch turns all of them off. The only one so far is Make shorter in the Journal. Each time you use it, Anchor shows you the exact text it will send, where it goes and what happens to it, and nothing is sent until you tap Send. For now it runs only on Apple&rsquo;s on-device model on your phone, so the text does not leave it. Anchor keeps no log of what was sent. The shorter version is not added to your entry until you tap Keep, your original stays with it, and it is left out of exports unless you switch it on for that export.
+        AI tools are off unless you switch them on in Settings, and one switch turns all of them off. So far these are Make shorter in the Journal and Break into steps and Estimate time on a task. Each time you use one, Anchor shows you the exact text it will send, where it goes and what happens to it, and nothing is sent until you tap Send. For now it runs only on Apple&rsquo;s on-device model on your phone, so the text does not leave it. Anchor keeps no log of what was sent. A shorter version is not added to your entry until you tap Keep, your original stays with it, and it is left out of exports unless you switch it on for that export. Suggested steps and times are added only when you tap.
       </p>
 
       <h2>When data leaves your device</h2>

@@ -2582,6 +2582,10 @@ final class TaskItem {
     /// A rough guess at how long the task takes, in minutes. 0 means no
     /// estimate. Only used to add up a day's plan; nothing is checked against it.
     var estimateMinutes: Int = 0
+    /// The Journal entry this task was made from, when a tool made it from one (Patch AI3). Nothing sets it
+    /// yet, and nothing reads the entry through it: it is only a trace back to the words the task came from,
+    /// and the entry is never changed. A deleted entry leaves it pointing at nothing.
+    var sourceEntryID: UUID? = nil
 
     init(
         id: UUID = UUID(),
@@ -2602,7 +2606,8 @@ final class TaskItem {
         firstStep: String = "",
         focusSessions: Int = 0,
         focusMinutes: Int = 0,
-        estimateMinutes: Int = 0
+        estimateMinutes: Int = 0,
+        sourceEntryID: UUID? = nil
     ) {
         self.id = id
         self.titlePlain = title
@@ -2623,6 +2628,7 @@ final class TaskItem {
         self.focusSessions = focusSessions
         self.focusMinutes = focusMinutes
         self.estimateMinutes = estimateMinutes
+        self.sourceEntryID = sourceEntryID
         lockNewValues()
     }
 

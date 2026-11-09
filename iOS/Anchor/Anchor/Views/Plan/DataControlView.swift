@@ -1664,6 +1664,8 @@ struct TaskItemDTO: Codable {
     var focusSessions: Int?; var focusMinutes: Int?
     /// Optional so exports made before tasks had an estimate still import.
     var estimateMinutes: Int?
+    /// Optional so exports made before tasks could trace back to a Journal entry still import.
+    var sourceEntryID: UUID?
     init(_ m: TaskItem) {
         id = m.id; title = m.title; notes = m.notes; isDone = m.isDone
         completedAt = m.completedAt; createdAt = m.createdAt; sortOrder = m.sortOrder
@@ -1673,6 +1675,7 @@ struct TaskItemDTO: Codable {
         status = m.status.rawValue; energy = m.energy.rawValue; firstStep = m.firstStep
         focusSessions = m.focusSessions; focusMinutes = m.focusMinutes
         estimateMinutes = m.estimateMinutes
+        sourceEntryID = m.sourceEntryID
     }
     func toModel() -> TaskItem {
         TaskItem(id: id, title: title, notes: notes, isDone: isDone,
@@ -1684,7 +1687,8 @@ struct TaskItemDTO: Codable {
                  energy: TaskEnergy(rawValue: energy ?? "") ?? .unset,
                  firstStep: firstStep ?? "",
                  focusSessions: focusSessions ?? 0, focusMinutes: focusMinutes ?? 0,
-                 estimateMinutes: estimateMinutes ?? 0)
+                 estimateMinutes: estimateMinutes ?? 0,
+                 sourceEntryID: sourceEntryID)
     }
 }
 
@@ -2710,7 +2714,8 @@ extension TaskItem: DataBrowsable {
             .text("First step", firstStep),
             .number("Focus sessions", focusSessions),
             .number("Focus minutes", focusMinutes),
-            .number("Estimate (minutes)", estimateMinutes)
+            .number("Estimate (minutes)", estimateMinutes),
+            .linked("Made from a Journal entry", sourceEntryID)
         ]
     }
 }

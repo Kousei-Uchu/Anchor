@@ -22,6 +22,7 @@ struct AnchorApp: App {
         LockMyFilesSelfTest.run()
         AIAskSelfTest.run()
         JournalAssistSelfTest.run()
+        AIAnswerReaderSelfTest.run()
         #endif
         if !DemoMode.isOn {
             // A lock run that was stopped in the middle asks for the safety copy to be put back.
@@ -293,6 +294,7 @@ enum DemoMode {
             role: "GP", exportLabel: "My GP", notes: "Ask for the longer appointment.", sortOrder: 1)
         context.insert(patel)
 
+        let optimisedEntryID = UUID()
         let water = TaskItem(title: "Drink some water", sortOrder: 0, energy: .little, estimateMinutes: 5)
         water.setDue(.today)
         context.insert(water)
@@ -307,6 +309,7 @@ enum DemoMode {
                             firstStep: "Find the number and put it on the screen.", estimateMinutes: 15)
         context.insert(call)
         context.insert(TaskItem(title: "Bring the form along", sortOrder: 4, blockedByIDs: [call.id]))
+        context.insert(TaskItem(title: "Bring my notes to the next appointment", sortOrder: 6, sourceEntryID: optimisedEntryID))
         context.insert(TaskItem(title: "Step outside for five minutes", isDone: true, completedAt: ago(0, hour: 2), sortOrder: 2))
         context.insert(TaskItem(title: "Sort out the old paperwork", sortOrder: 5, status: .setAside, energy: .lots))
 
@@ -391,7 +394,7 @@ enum DemoMode {
         context.insert(JournalEntry(createdAt: ago(0, hour: 3), text: "Slept badly, but the walk helped a bit."))
         let optimisedOriginal = "On Tuesday I went to the clinic and waited forty minutes before Dr Lee could see me. I told her the nights have been harder since the last appointment and that I keep waking at three. She said we could look at the evening routine again and asked me to bring my notes next time."
         let optimisedShort = "Waited forty minutes at the clinic on Tuesday. Told Dr Lee the nights are harder and I wake at three. She will look at the evening routine again and wants my notes next time."
-        context.insert(JournalEntry(createdAt: ago(2, hour: 4), text: optimisedOriginal + "\n" + JournalAssist(rewrite: optimisedShort, original: optimisedOriginal).markdownLine))
+        context.insert(JournalEntry(id: optimisedEntryID, createdAt: ago(2, hour: 4), text: optimisedOriginal + "\n" + JournalAssist(rewrite: optimisedShort, original: optimisedOriginal).markdownLine))
         context.insert(JournalEntry(createdAt: ago(1, hour: 2), text: "Quiet day. Made toast, answered one message, and that was enough."))
         context.insert(JournalEntry(createdAt: ago(3), text: "Felt tense before the call, but it went better than I expected."))
         let favouriteEntry = JournalEntry(createdAt: ago(6), text: "Walked past the pottery studio and did not turn around. That was something.")

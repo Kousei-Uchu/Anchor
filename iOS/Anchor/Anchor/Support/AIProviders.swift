@@ -8,11 +8,15 @@ import FoundationModels
 /// A later patch adds its own case, and its own instruction, here.
 enum AIFeature: String, CaseIterable {
     case makeShorter
+    case breakIntoSteps
+    case estimateTime
 
     /// The plain name of the button, and of the tool in the list of ones that no longer ask.
     var title: String {
         switch self {
         case .makeShorter: return "Make shorter"
+        case .breakIntoSteps: return "Break into steps"
+        case .estimateTime: return "Estimate time"
         }
     }
 
@@ -21,6 +25,10 @@ enum AIFeature: String, CaseIterable {
         switch self {
         case .makeShorter:
             return "Make this text shorter. Keep every concrete detail, name, number and date, and keep who said what. Add nothing: no advice, no comment on feelings, no new facts. Use the same voice and the same language as the text. Reply with the shorter text only."
+        case .breakIntoSteps:
+            return "Break this task into a short list of small steps, in the order they would be done. Use only what the text says or plainly needs. Add no dates, no priorities, no advice and no comment on feelings. Write one step per line, with no numbers, bullets or other words, and at most 8 lines. Use the same language as the text."
+        case .estimateTime:
+            return "Guess how many minutes this task takes to do. Reply with one whole number of minutes and nothing else."
         }
     }
 }
@@ -163,3 +171,63 @@ struct AppleOnDeviceProvider: AIProviding {
         #endif
     }
 }
+
+/// Reads what a model answered into the small pieces a tool shows as suggestions (Patch AI3). Nothing here sends
+/// anything or keeps anything; the caller shows the pieces and the person decides.
+enum AIAnswerReader {
+    /// One step per line, with any bullet or number the model added taken off, blank and repeated lines dropped,
+    /// and at most `limit` of them. Nothing is cut short or reworded.
+    static func steps(from answer: String, limit: Int = 8) -> [String] {
+        var seen = Set<String>()
+        var result: [String] = []
+        for raw in answer.components(separatedBy: .newlines) {
+            var line = raw.trimmingCharacters(in: .whitespaces)
+            while let first = line.first, "-*\u{2022}\u{2013}\u{2014}".contains(first) {
+                line.removeFirst()
+                line = line.trimmingCharacters(in: .whitespaces)
+            }
+            if let marker = line.range(of: #"^\d{1,2}[.)]\s+"#, options: .regularExpression) {
+                line.removeSubrange(marker)
+            }
+            line = line.trimmingCharacters(in: .whitespaces)
+            guard !line.isEmpty, seen.insert(line.lowercased()).inserted else { continue }
+            result.append(line)
+            if result.count == limit { break }
+        }
+        return result
+    }
+
+    /// A guess in minutes, rounded to the nearest 5 and held between 5 and 480, or nil when the answer is not
+    /// plainly a number of minutes (for instance, when it talks about hours).
+    static func minutes(from answer: String) -> Int? {
+        let lower = answer.lowercased()
+        guard !lower.contains("hour"), !lower.contains("hr") else { return nil }
+        guard let range = lower.range(of: #"\d+"#, options: .regularExpression), let value = Int(lower[range]), value > 0 else { return nil }
+        let rounded = Int((Double(value) / 5).rounded()) * 5
+        return min(480, max(5, rounded))
+    }
+}
+
+#if DEBUG
+/// Checks, in a test build, how a model's answer is read into suggestions: bullets, numbers and repeats come off,
+/// the count is held, and a number of minutes is rounded and bounded or refused. Patch AI3.
+enum AIAnswerReaderSelfTest {
+    private static var hasRun = false
+
+    private static func check(_ condition: Bool, _ message: String) {
+        if !condition { fatalError("AI answer reader self-test: \(message)") }
+    }
+
+    static func run() {
+        if hasRun { return }
+        hasRun = true
+        let steps = AIAnswerReader.steps(from: "1. Find the form\n- Fill it in\n\u{2022} Fill it in\n\n  2) Post it\n")
+        check(steps == ["Find the form", "Fill it in", "Post it"], "marks, blanks and repeats come off")
+        check(AIAnswerReader.steps(from: (1...12).map { "Step \($0)" }.joined(separator: "\n")).count == 8, "at most eight")
+        check(AIAnswerReader.steps(from: "  \n ").isEmpty, "nothing in, nothing out")
+        check(AIAnswerReader.minutes(from: "17") == 15 && AIAnswerReader.minutes(from: "About 20 minutes") == 20, "rounded to five")
+        check(AIAnswerReader.minutes(from: "1") == 5 && AIAnswerReader.minutes(from: "9000") == 480, "held between 5 and 480")
+        check(AIAnswerReader.minutes(from: "2 hours") == nil && AIAnswerReader.minutes(from: "no idea") == nil && AIAnswerReader.minutes(from: "0") == nil, "not plainly minutes is refused")
+    }
+}
+#endif

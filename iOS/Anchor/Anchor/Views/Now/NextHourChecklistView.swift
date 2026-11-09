@@ -969,6 +969,17 @@ private struct TaskEditorSheet: View {
     @State private var showMore = false
     @State private var editingStep: TaskItem?
     @State private var stepToDelete: TaskItem?
+    @StateObject private var ask = AIAsk()
+    @State private var suggestedSteps: [StepSuggestion] = []
+    @State private var suggestedMinutes: Int?
+    @State private var helperMessage: String?
+    @State private var sourceLabel: String?
+
+    private struct StepSuggestion: Identifiable {
+        let id = UUID()
+        let text: String
+        var ticked = false
+    }
 
     private var isStep: Bool { task.parentID != nil }
     private var steps: [TaskItem] { TaskItem.steps(of: task, in: liveTasks) }
@@ -997,6 +1008,7 @@ private struct TaskEditorSheet: View {
                         .lineLimit(1...4)
                 }
                 stepsSection
+                helperSection
                 Section("When") {
                     Picker("When", selection: Binding(
                         get: { task.dueKind },
@@ -1019,6 +1031,13 @@ private struct TaskEditorSheet: View {
                 Section("Notes") {
                     TextField("Anything to remember", text: $task.notes, axis: .vertical)
                         .lineLimit(2...8)
+                }
+                if let sourceLabel {
+                    Section {
+                        Label(sourceLabel, systemImage: "book.closed")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 Section {
                     Toggle("Done", isOn: Binding(
@@ -1043,7 +1062,17 @@ private struct TaskEditorSheet: View {
             }
             .environment(\.editMode, $editMode)
         }
-        .onAppear { if hasMoreSet { showMore = true } }
+        .onAppear {
+            if hasMoreSet { showMore = true }
+            loadSource()
+        }
+        .aiAsk(ask)
+        .onReceive(NotificationCenter.default.publisher(for: .aiToolsTurnedOff)) { _ in
+            // Anything half done is dropped. Steps already added stay, as the person's own.
+            suggestedSteps = []
+            suggestedMinutes = nil
+            helperMessage = nil
+        }
         .sheet(isPresented: $showFocus) {
             PomodoroView()
         }
@@ -1129,6 +1158,9 @@ private struct TaskEditorSheet: View {
         Section("How long") {
             Picker("How long", selection: $task.estimateMinutes) {
                 Text("None").tag(0)
+                if task.estimateMinutes > 0 && !TaskItem.estimateChoices.contains(task.estimateMinutes) {
+                    Text(TaskItem.durationText(task.estimateMinutes)).tag(task.estimateMinutes)
+                }
                 ForEach(TaskItem.estimateChoices, id: \.self) { minutes in
                     Text(minutes == 60 ? "1 hr" : "\(minutes) min").tag(minutes)
                 }
@@ -1162,6 +1194,158 @@ private struct TaskEditorSheet: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
+        }
+    }
+
+    // MARK: Task helper (Patch AI3)
+
+    private var hasWords: Bool { !task.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+
+    /// Two plain buttons, only while AI tools are on. Each works on this task's own words, through `AIAsk`, so the
+    /// person sees exactly what is sent first. What comes back is a suggestion until they tap to use it.
+    @ViewBuilder private var helperSection: some View {
+        if AIGate.isEnabled && hasWords {
+            Section {
+                Button { suggestSteps() } label: {
+                    Label(AIFeature.breakIntoSteps.title, systemImage: "list.bullet.indent")
+                }
+                .disabled(ask.isWorking)
+                Button { suggestTime() } label: {
+                    Label(AIFeature.estimateTime.title, systemImage: "clock")
+                }
+                .disabled(ask.isWorking)
+                if ask.isWorking && ask.pending == nil {
+                    ProgressView()
+                }
+                if let helperMessage {
+                    Text(helperMessage)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                if let minutes = suggestedMinutes {
+                    Text("About \(TaskItem.durationText(minutes))")
+                        .font(.system(.headline, design: .rounded))
+                    HStack(spacing: 16) {
+                        Button("Use this") {
+                            task.estimateMinutes = minutes
+                            suggestedMinutes = nil
+                        }
+                        .font(.subheadline.weight(.semibold))
+                        Button("Discard", role: .destructive) { suggestedMinutes = nil }
+                            .font(.subheadline)
+                    }
+                    .buttonStyle(.borderless)
+                }
+                if !suggestedSteps.isEmpty {
+                    ForEach($suggestedSteps) { $step in
+                        Button {
+                            step.ticked.toggle()
+                        } label: {
+                            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                                Image(systemName: step.ticked ? "checkmark.circle.fill" : "circle")
+                                    .foregroundStyle(step.ticked ? Anchor.Theme.sage : Anchor.Theme.accent)
+                                Text(step.text)
+                                    .foregroundStyle(.primary)
+                                    .multilineTextAlignment(.leading)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(step.ticked ? .isSelected : [])
+                    }
+                    let count = suggestedSteps.filter(\.ticked).count
+                    HStack(spacing: 16) {
+                        Button(count == 1 ? "Add 1 step" : "Add \(count) steps") { addSuggestedSteps() }
+                            .font(.subheadline.weight(.semibold))
+                            .disabled(count == 0)
+                        Button("Discard", role: .destructive) { suggestedSteps = [] }
+                            .font(.subheadline)
+                    }
+                    .buttonStyle(.borderless)
+                }
+            } footer: {
+                if !suggestedSteps.isEmpty || suggestedMinutes != nil {
+                    Text("These are suggestions. Nothing is added until you tap.")
+                }
+            }
+        }
+    }
+
+    private func suggestSteps() {
+        guard AIGate.isEnabled, !ask.isWorking else { return }
+        let notes = task.notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        let title = task.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let text = notes.isEmpty ? title : title + "\n\n" + notes
+        helperMessage = nil
+        suggestedMinutes = nil
+        suggestedSteps = []
+        Task {
+            do {
+                let answer = try await ask.run(.breakIntoSteps, on: text)
+                let lines = AIAnswerReader.steps(from: answer)
+                await MainActor.run {
+                    guard AIGate.isEnabled else { return }
+                    if lines.isEmpty {
+                        helperMessage = AIError.failed.plainText
+                    } else {
+                        suggestedSteps = lines.map { StepSuggestion(text: $0) }
+                    }
+                }
+            } catch let error as AIError {
+                await MainActor.run { helperMessage = error.plainText }
+            } catch {
+                await MainActor.run { helperMessage = AIError.failed.plainText }
+            }
+        }
+    }
+
+    private func suggestTime() {
+        guard AIGate.isEnabled, !ask.isWorking else { return }
+        var text = task.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        for step in steps {
+            let line = step.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !line.isEmpty { text += "\n- " + line }
+        }
+        helperMessage = nil
+        suggestedMinutes = nil
+        suggestedSteps = []
+        Task {
+            do {
+                let answer = try await ask.run(.estimateTime, on: text)
+                let minutes = AIAnswerReader.minutes(from: answer)
+                await MainActor.run {
+                    guard AIGate.isEnabled else { return }
+                    if let minutes {
+                        suggestedMinutes = minutes
+                    } else {
+                        helperMessage = AIError.failed.plainText
+                    }
+                }
+            } catch let error as AIError {
+                await MainActor.run { helperMessage = error.plainText }
+            } catch {
+                await MainActor.run { helperMessage = AIError.failed.plainText }
+            }
+        }
+    }
+
+    /// Adds only the steps that were ticked, after the ones already there.
+    private func addSuggestedSteps() {
+        var order = (steps.map(\.sortOrder).max() ?? -1) + 1
+        for step in suggestedSteps where step.ticked {
+            modelContext.insert(TaskItem(title: step.text, sortOrder: order, parentID: task.id))
+            order += 1
+        }
+        suggestedSteps = []
+    }
+
+    /// The quiet line saying which Journal entry a task was made from, when it was made from one.
+    private func loadSource() {
+        guard let id = task.sourceEntryID else { sourceLabel = nil; return }
+        let descriptor = FetchDescriptor<JournalEntry>(predicate: #Predicate { $0.id == id })
+        if let entry = try? modelContext.fetch(descriptor).first {
+            sourceLabel = "From your Journal, " + entry.createdAt.formatted(date: .abbreviated, time: .omitted)
+        } else {
+            sourceLabel = "From a Journal entry that is no longer here"
         }
     }
 
