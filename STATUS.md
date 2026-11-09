@@ -8,7 +8,7 @@ A private safety plan, contacts and journal app for iPhone and iPad, in SwiftUI 
 
 ## Branch and build
 
-- Work is on `v2-recovery`. Patches are written as `.sh` files and pasted into Terminal; the Progress table in `ANCHOR_PATCH_PLAN.md` says which are pushed and which are written and waiting.
+- Work is on `v2-recovery`. Patches are written as `.sh` files and pasted into Terminal; the Progress table in `ANCHOR_PATCH_PLAN.md` says which are pushed and which are written and waiting. RV1a and 30p2 are pushed and wait for you to build them.
 - The code has never been compiled by the tool that writes the patches, which has no Xcode. It does run `bash scripts/check-all.sh`, which reads every Swift file with a parser and runs the content checks; that finds syntax slips, not compile errors. A patch is marked as building only after you have built it and told me so; on 9 Nov 2026 you confirmed everything pushed through R3 builds and works, and each newer patch stays "build not yet confirmed" until you do the same. A first build after several patches may need small fixes.
 - Open `iOS/Anchor/Anchor.xcodeproj` in Xcode 26 or later. Two targets: the app and `AnchorWidget` (the widget extension). App group `group.page.aspens.anchor`; a shared Keychain item for the widget key (Patch 35a2).
 
@@ -40,4 +40,4 @@ Tabs: Now, Plan, Journal, Bridge, Thread. The area for counters is Recovery. Mes
 
 ## Not done
 
-See the ⬜ rows in the Progress table of `ANCHOR_PATCH_PLAN.md`: the locking work (35d; 35b1, 35b2 and 35b3 are pushed), the last relationship reminder (30p2, after an appointment), the website pages and video (47 to 53), the optional extras (Phase I: the AI switch and tools, dictation with voice notes, iCloud sync), and the web demo and Android work at the end.
+See the ⬜ rows in the Progress table of `ANCHOR_PATCH_PLAN.md`: the locking work (35d; 35b1, 35b2 and 35b3 are pushed), the website pages and video (47 to 53), the optional extras (Phase I: the AI switch and tools, dictation with voice notes, iCloud sync), and the web demo and Android work at the end.

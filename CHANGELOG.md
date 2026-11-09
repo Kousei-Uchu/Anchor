@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch DOC16: the plan now records that the task card facts (RV1a) and the after-session reminder (30p2) are pushed and waiting for a build.
 - Patch 30p2: an optional reminder after a session for each person, off until you switch it on in Settings, After-session reminders. It comes that evening or the next morning and asks whether you want to tell them how it went. The lock screen says only something for this evening or morning.
 - Patch RV1a: a task card's quiet line is now a few small facts with icons (the day, how long, started, the energy it needs, steps done and focus sessions) that wrap onto a second row instead of being cut off, and the first step wraps to two lines.
 - Patch DOC15: the plan now records that everything pushed through the second review round builds and works, as you confirmed.
