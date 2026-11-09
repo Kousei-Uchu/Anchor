@@ -38,4 +38,5 @@ An optional, quiet record of nights. It has no score, no target hours, no streak
 - [ ] App Privacy answers in App Store Connect: sleep stays on the device, so the answer very probably stays "Data not collected". Check Apple's current wording before submitting.
 - [ ] App Review notes say that HealthKit is used to read sleep for the sleep journal, only after the person taps Connect, and that nothing is shared or used for advertising.
 - [ ] Check the current App Store guideline text on Health data (no advertising, no iCloud storage). Anchor does neither.
+- [ ] **Open, not blocking (D29a):** the Apple Health sleep cleanup has not been reviewed on a device. Try Remove imported sleep, Remove what Anchor saved, deleting a night and clearing a night's times, and check the rules for nights under three hours apart, naps, and the written asleep sample ending when you got up. Nothing else waits on this.
 - [ ] Try on a real device with real sleep data: connect, deny, allow later in the Health app, disconnect, remove imported sleep, save a typed night, edit it, delete it, and check Health shows one set of samples from Anchor each time.

@@ -208,3 +208,25 @@ The widgets on your home screen are a separate small program from the app, and t
 
 Tell me which, if any, you want, and in what shape.
 
+---
+
+## Your answers to those, 9 Nov 2026 (second round)
+
+Recorded in section 0.4 of the plan. What each one changes, in plain words.
+
+**D17 (lock screen).** Yes, hidden when locked. A trigger window reminder will show a plain Anchor title and a line that names nothing. Your words stay one tap away inside the app. Patch 45d.
+
+**D18 (export labels).** Fix it, and it is fixed: RV5a is pushed.
+
+**D21 (e).** Fine. The plain screen over the app switcher stays.
+
+**D22 (d).** You chose the shared Keychain item for the widgets' key. Patch 35a2 builds it: the app and the widgets read the same Keychain item, the key file goes, and the summaries already sealed with the old key are read once and sealed again so none is lost. One step is yours: switch on Keychain Sharing for both the app and the widget in Signing and Capabilities in Xcode. The patch says exactly where. If that step is missed, the widgets would go blank, which is why the old key file is not removed until the new item has been read back successfully.
+
+**D29.** All fine as described. SL6 builds the sleep columns and the chart. The Apple Health sleep cleanup (D29a) stays open and does not block anything, because you cannot try it yet. It covers Remove imported sleep, Remove what Anchor saved, the samples removed when a night is deleted, and the two small rules (nights under three hours apart count as one with naps left out, and the written sample ending when you got up). It is on the release checklist in `docs/SLEEP.md`.
+
+**D30.**
+
+- **B4, session actions into Tasks.** Built the safe way (patch 30q): a button on a line you marked as a thing to do, nothing added until you tap, no date unless you give one.
+- **B6, one-page summary.** Built as a re-formatting of Session prep and Export for someone (patch 30r), not as a new screen. It puts what those already hold on one page, in your order, in your own words and plain facts. How I read this is D32, so you can correct it.
+- **B5, medication notes.** Held. It is out of the decisions and out of the to-do list so it does not keep asking for an answer. The note on it is kept in Appendix D of the plan, with the reasons in the D30 section above, and it only comes back if you ask.
+
