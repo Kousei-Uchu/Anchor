@@ -36,6 +36,8 @@ struct HelloRequest: Identifiable {
     /// Set when the reminder was for the start of a trigger window, and which window.
     var companion: Bool = false
     var companionWindowID: UUID? = nil
+    /// Set when the reminder was the one after a session.
+    var afterSession: Bool = false
 }
 
 /// What a trigger window reminder shows once it is opened. The lock screen never carries these;
@@ -114,6 +116,8 @@ final class NotificationDelegate: NSObject, ObservableObject, UNUserNotification
                 } else if (userInfo[HelloReminders.kindKey] as? String) == HelloReminders.companionKind {
                     request.companion = true
                     request.companionWindowID = (userInfo[HelloReminders.windowKey] as? String).flatMap { UUID(uuidString: $0) }
+                } else if (userInfo[HelloReminders.kindKey] as? String) == HelloReminders.afterSessionKind {
+                    request.afterSession = true
                 }
                 hello = request
             }

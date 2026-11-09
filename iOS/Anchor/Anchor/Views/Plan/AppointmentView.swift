@@ -577,8 +577,14 @@ struct ProviderPageHost: View {
         }
         // Reminders follow the sessions: any session added, moved or removed, here or in a
         // sheet, changes this and the waiting reminders are made to match.
-        .onChange(of: sessionSignature) { _, _ in AppointmentReminders.refresh(using: modelContext) }
-        .onDisappear { AppointmentReminders.refresh(using: modelContext) }
+        .onChange(of: sessionSignature) { _, _ in
+            AppointmentReminders.refresh(using: modelContext)
+            HelloReminders.refresh(using: modelContext)
+        }
+        .onDisappear {
+            AppointmentReminders.refresh(using: modelContext)
+            HelloReminders.refresh(using: modelContext)
+        }
     }
 
     private var sessionSignature: String {

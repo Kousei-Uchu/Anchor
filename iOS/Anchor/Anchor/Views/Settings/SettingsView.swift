@@ -172,6 +172,17 @@ struct SettingsView: View {
                     }
                 }
 
+                if helloContacts.contains(where: { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {
+                    Anchor.SettingsSection(
+                        title: "After-session reminders",
+                        footer: "Off until you switch one on. After a session you have scheduled, a reminder to ask whether you want to tell this person how it went. It comes at 6 pm, or at least two hours after a late session starts, and if that would be after 9 pm it comes the next morning at 9. A support day, a follow-up or a hard-time reminder keeps its day over it, and at most one comes on any day. The lock screen never shows a name or says what it is about."
+                    ) {
+                        ForEach(helloContacts.filter { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) { contact in
+                            AfterSessionSettingsRow(contact: contact)
+                        }
+                    }
+                }
+
                 if showsRecovery {
                     Anchor.SettingsSection(
                         title: "Recovery",
@@ -504,6 +515,30 @@ private struct CompanionSettingsRow: View {
             HelloReminders.refresh(using: modelContext)
         }
         .onChange(of: contact.companionWindowIDs) { _, _ in HelloReminders.refresh(using: modelContext) }
+    }
+}
+
+/// One person's after-session reminder in Settings: the switch, then when it comes once it is on.
+private struct AfterSessionSettingsRow: View {
+    @Bindable var contact: TrustedContact
+    @Environment(\.modelContext) private var modelContext
+
+    var body: some View {
+        Group {
+            Anchor.SettingsToggle(title: contact.name, isOn: $contact.afterSessionEnabled)
+            if contact.afterSessionEnabled {
+                Picker("When it comes", selection: $contact.afterSessionNextMorning) {
+                    Text("That evening").tag(false)
+                    Text("The next morning").tag(true)
+                }
+                .pickerStyle(.segmented)
+            }
+        }
+        .onChange(of: contact.afterSessionEnabled) { _, isOn in
+            if isOn { NotificationScheduler.askForPermissionIfNeeded() }
+            HelloReminders.refresh(using: modelContext)
+        }
+        .onChange(of: contact.afterSessionNextMorning) { _, _ in HelloReminders.refresh(using: modelContext) }
     }
 }
 

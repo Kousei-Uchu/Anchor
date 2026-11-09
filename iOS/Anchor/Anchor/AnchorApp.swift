@@ -248,6 +248,7 @@ enum DemoMode {
         let demoSundayEvenings = TriggerWindow(label: "Sunday evenings", daysOfWeek: [1],
                                                startTime: DateComponents(hour: 17), endTime: DateComponents(hour: 20))
         context.insert(demoSundayEvenings)
+        demoSam.afterSessionEnabled = true
         demoAlex.companionEnabled = true
         demoAlex.companionWindowIDs = [demoSundayEvenings.id]
         context.insert(TriggerWindow(label: "Before the Monday call", daysOfWeek: [2],

@@ -588,10 +588,12 @@ struct ThreadMessageComposer: View {
     private let followUpMessageID: UUID?
     private let isCompanion: Bool
     private let companionWindowID: UUID?
+    private let isAfterSession: Bool
     @Query private var triggerWindows: [TriggerWindow]
 
     init(startingContactID: UUID? = nil, isHello: Bool = false, supportDay: Date? = nil, dayBefore: Bool = false,
-         followUpMessageID: UUID? = nil, isCompanion: Bool = false, companionWindowID: UUID? = nil) {
+         followUpMessageID: UUID? = nil, isCompanion: Bool = false, companionWindowID: UUID? = nil,
+         isAfterSession: Bool = false) {
         _selectedContactID = State(initialValue: startingContactID)
         self.isHello = isHello
         self.supportDay = supportDay
@@ -599,6 +601,7 @@ struct ThreadMessageComposer: View {
         self.followUpMessageID = followUpMessageID
         self.isCompanion = isCompanion
         self.companionWindowID = companionWindowID
+        self.isAfterSession = isAfterSession
     }
 
     private var pickedContact: TrustedContact? {
@@ -655,6 +658,13 @@ struct ThreadMessageComposer: View {
         return "A time you marked as hard is starting: \(label). \(pickedName) is one option."
     }
 
+    /// Shown only when the box was opened from an after-session reminder. Closing it does nothing and
+    /// is not recorded.
+    private var afterSessionLine: String? {
+        guard isAfterSession, !pickedName.isEmpty else { return nil }
+        return "How did it go? Want to tell \(pickedName) about it?"
+    }
+
     /// Shown only when the box was opened from a hello reminder. Closing it does nothing and is not recorded.
     private var helloLine: String? {
         guard isHello,
@@ -673,6 +683,11 @@ struct ThreadMessageComposer: View {
                     }
                 }
                 if let line = companionLine {
+                    Section {
+                        Text(line).font(.callout).foregroundStyle(.secondary)
+                    }
+                }
+                if let line = afterSessionLine {
                     Section {
                         Text(line).font(.callout).foregroundStyle(.secondary)
                     }

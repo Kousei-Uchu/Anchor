@@ -692,6 +692,18 @@ enum HelloReminders {
     static let companionMorningBody = "A gentle nudge for this morning."
     static let companionAfternoonBody = "A gentle nudge for this afternoon."
     static let companionEveningBody = "A gentle nudge for this evening."
+    static let afterSessionKind = "afterSession"
+    static let afterSessionEveningBody = "Something for this evening."
+    static let afterSessionMorningBody = "Something for this morning."
+    static let afterSessionEveningHour = 18
+    static let afterSessionMorningHour = 9
+    /// After a session ends the reminder waits at least this long from its start, so it never comes
+    /// before a late session is over.
+    static let afterSessionMinHours = 2
+    /// An evening reminder that would come after this hour comes the next morning instead.
+    static let afterSessionLatestHour = 21
+    /// The most after-session reminders kept pending, soonest first.
+    static let afterSessionCap = 8
     /// The most hard-time reminders kept pending, soonest first, so a few windows and people cannot
     /// use up the 64 reminders iOS allows the whole app.
     static let companionCap = 8
@@ -739,6 +751,18 @@ enum HelloReminders {
     /// A trigger window as the plan needs it: its days and the time it starts.
     typealias WindowEntry = (id: UUID, active: Bool, days: [Int], hour: Int, minute: Int)
 
+    /// A person with the after-session reminder on, and whether it comes the next morning.
+    typealias AfterSessionEntry = (contactID: UUID, order: Int, nextMorning: Bool)
+
+    /// One reminder for one session and one person.
+    struct AfterSession {
+        let contactID: UUID
+        let order: Int
+        /// When the reminder comes.
+        let at: Date
+        let nextMorning: Bool
+    }
+
     struct Planned {
         let id: String
         let components: DateComponents
@@ -747,6 +771,7 @@ enum HelloReminders {
         let supportDay: SupportDay?
         var followUp: FollowUp? = nil
         var companion: Companion? = nil
+        var afterSession: AfterSession? = nil
     }
 
     struct Plan {
@@ -757,6 +782,53 @@ enum HelloReminders {
         var skippedFollowUps: [FollowUp] = []
         /// Hard-time reminders that got no reminder because something else has the day.
         var skippedCompanions: [Companion] = []
+        /// After-session reminders that got no reminder because something else has the day.
+        var skippedAfterSessions: [AfterSession] = []
+    }
+
+    /// People who have the after-session reminder on and a name.
+    static func afterSessionEntries(of contacts: [TrustedContact]) -> [AfterSessionEntry] {
+        contacts
+            .filter { $0.afterSessionEnabled && !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+            .map { (contactID: $0.id, order: $0.sortOrder, nextMorning: $0.afterSessionNextMorning) }
+    }
+
+    /// When the reminder for a session that starts at `start` comes. That evening it is 6 pm, but never
+    /// less than two hours after the start, and if that would be after 9 pm it comes the next morning
+    /// at 9 instead. The next-morning choice is always 9 am the day after.
+    static func afterSessionTime(start: Date, nextMorning: Bool, calendar: Calendar = .current) -> (at: Date, morning: Bool)? {
+        let day = calendar.startOfDay(for: start)
+        func morning() -> (at: Date, morning: Bool)? {
+            guard let next = calendar.date(byAdding: .day, value: 1, to: day),
+                  let at = calendar.date(bySettingHour: afterSessionMorningHour, minute: 0, second: 0, of: next) else { return nil }
+            return (at, true)
+        }
+        if nextMorning { return morning() }
+        guard let evening = calendar.date(bySettingHour: afterSessionEveningHour, minute: 0, second: 0, of: day),
+              let latest = calendar.date(bySettingHour: afterSessionLatestHour, minute: 0, second: 0, of: day) else { return nil }
+        let earliest = start.addingTimeInterval(TimeInterval(afterSessionMinHours * 3600))
+        let at = max(evening, earliest)
+        return at > latest ? morning() : (at, false)
+    }
+
+    /// Every reminder for the sessions still to come, for each person who has this on.
+    static func afterSessions(of entries: [AfterSessionEntry], sessions: [Date],
+                              calendar: Calendar = .current) -> [AfterSession] {
+        var found: [AfterSession] = []
+        for entry in entries {
+            for start in sessions {
+                guard let time = afterSessionTime(start: start, nextMorning: entry.nextMorning, calendar: calendar) else { continue }
+                found.append(AfterSession(contactID: entry.contactID, order: entry.order,
+                                          at: time.at, nextMorning: time.morning))
+            }
+        }
+        return found
+    }
+
+    /// The start of every session the person has scheduled, from every provider.
+    static func sessionStarts(using context: ModelContext) -> [Date] {
+        let providers = (try? context.fetch(FetchDescriptor<AppointmentSeries>())) ?? []
+        return providers.flatMap { $0.occurrences.map(\.scheduledDate) }
     }
 
     /// The lock screen line for a window that starts at this hour. It names no one and no window.
@@ -854,7 +926,8 @@ enum HelloReminders {
     static func refresh(contacts: [TrustedContact], entries: [SupportCalendarEntry], using context: ModelContext) {
         let messages = (try? context.fetch(FetchDescriptor<ThreadMessage>())) ?? []
         let windows = (try? context.fetch(FetchDescriptor<TriggerWindow>())) ?? []
-        refresh(contacts: contacts, entries: entries, messages: messages, windows: windows)
+        refresh(contacts: contacts, entries: entries, messages: messages, windows: windows,
+                sessions: sessionStarts(using: context))
     }
 
     /// For a message that has just been deleted: planned again without it.
@@ -863,17 +936,20 @@ enum HelloReminders {
         let days = (try? context.fetch(FetchDescriptor<SupportCalendarEntry>())) ?? []
         let messages = ((try? context.fetch(FetchDescriptor<ThreadMessage>())) ?? []).filter { $0.id != messageID }
         let windows = (try? context.fetch(FetchDescriptor<TriggerWindow>())) ?? []
-        refresh(contacts: contacts, entries: days, messages: messages, windows: windows)
+        refresh(contacts: contacts, entries: days, messages: messages, windows: windows,
+                sessions: sessionStarts(using: context))
     }
 
     static func refresh(contacts: [TrustedContact], entries: [SupportCalendarEntry] = [],
-                        messages: [ThreadMessage] = [], windows: [TriggerWindow] = []) {
+                        messages: [ThreadMessage] = [], windows: [TriggerWindow] = [],
+                        sessions: [Date] = []) {
         guard !DemoMode.isOn else { return }
         let days = supportDays(of: contacts, entries: entries)
         let follow = followUps(of: messages, contacts: contacts)
         let starts = companions(of: companionEntries(of: contacts), windows: windowEntries(of: windows))
+        let after = afterSessions(of: afterSessionEntries(of: contacts), sessions: sessions)
         apply(plan(entries: HelloReminders.entries(of: contacts), supportDays: days, followUps: follow,
-                   companions: starts).reminders)
+                   companions: starts, afterSessions: after).reminders)
     }
 
     /// True when this message's follow-up got no reminder, so its sheet can say so.
@@ -906,7 +982,7 @@ enum HelloReminders {
     /// one repeating weekly reminder, unless a support day or a follow-up falls on that weekday in the
     /// next few weeks, when it is separate dated reminders for those weeks that leave out that day.
     static func plan(entries: [Entry], supportDays: [SupportDay] = [], followUps: [FollowUp] = [],
-                     companions: [Companion] = [],
+                     companions: [Companion] = [], afterSessions: [AfterSession] = [],
                      now: Date = .now, calendar: Calendar = .current) -> Plan {
         let today = calendar.startOfDay(for: now)
         let last = calendar.date(byAdding: .day, value: 7 * weeksAhead, to: today) ?? today
@@ -960,8 +1036,26 @@ enum HelloReminders {
             for key in keptCompanions.keys.sorted().dropFirst(companionCap) { keptCompanions[key] = nil }
         }
 
+        // Then after-session reminders, last of the dated ones: anything above keeps its day, and when
+        // two share a day the earlier time, then the person higher in the contacts list, keeps it.
+        var keptAfter: [Date: AfterSession] = [:]
+        var skippedAfter: [AfterSession] = []
+        let afterInOrder = afterSessions.sorted { ($0.at, $0.order) < ($1.at, $1.order) }
+        for item in afterInOrder {
+            guard item.at > now, calendar.startOfDay(for: item.at) <= last else { continue }
+            let key = calendar.startOfDay(for: item.at)
+            if kept[key] != nil || keptFollowUps[key] != nil || keptCompanions[key] != nil || keptAfter[key] != nil {
+                skippedAfter.append(item)
+            } else {
+                keptAfter[key] = item
+            }
+        }
+        if keptAfter.count > afterSessionCap {
+            for key in keptAfter.keys.sorted().dropFirst(afterSessionCap) { keptAfter[key] = nil }
+        }
+
         var planned: [Planned] = []
-        let busyDays = Array(kept.keys) + Array(keptFollowUps.keys) + Array(keptCompanions.keys)
+        let busyDays = Array(kept.keys) + Array(keptFollowUps.keys) + Array(keptCompanions.keys) + Array(keptAfter.keys)
         let busyWeekdays = Set(busyDays.map { calendar.component(.weekday, from: $0) })
         for weekday in 1...7 {
             let wanting = entries.filter { $0.enabled && $0.days.contains(weekday) }
@@ -979,7 +1073,7 @@ enum HelloReminders {
                 guard let raw = calendar.date(byAdding: .day, value: offset, to: today) else { continue }
                 let day = calendar.startOfDay(for: raw)
                 guard calendar.component(.weekday, from: day) == weekday, kept[day] == nil, keptFollowUps[day] == nil,
-                      keptCompanions[day] == nil,
+                      keptCompanions[day] == nil, keptAfter[day] == nil,
                       let at = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day),
                       at > now else { continue }
                 planned.append(Planned(
@@ -1010,8 +1104,14 @@ enum HelloReminders {
                 components: calendar.dateComponents([.year, .month, .day, .hour, .minute], from: item.at),
                 contactID: item.contactID.uuidString, repeats: false, supportDay: nil, companion: item))
         }
+        for (key, item) in keptAfter.sorted(by: { $0.key < $1.key }) {
+            planned.append(Planned(
+                id: prefix + "after-" + item.contactID.uuidString + "-" + stamp(key, calendar: calendar),
+                components: calendar.dateComponents([.year, .month, .day, .hour, .minute], from: item.at),
+                contactID: item.contactID.uuidString, repeats: false, supportDay: nil, afterSession: item))
+        }
         return Plan(reminders: planned, skipped: skipped, skippedFollowUps: skippedFollowUps,
-                    skippedCompanions: skippedCompanions)
+                    skippedCompanions: skippedCompanions, skippedAfterSessions: skippedAfter)
     }
 
     /// The days this person chose that someone higher in the list already has, so Settings can say so.
@@ -1054,6 +1154,9 @@ enum HelloReminders {
                     content.body = companionBody(hour: item.components.hour ?? 18)
                     info[kindKey] = companionKind
                     info[windowKey] = start.windowID.uuidString
+                } else if let after = item.afterSession {
+                    content.body = after.nextMorning ? afterSessionMorningBody : afterSessionEveningBody
+                    info[kindKey] = afterSessionKind
                 } else {
                     content.body = body
                 }
@@ -1243,9 +1346,49 @@ enum HelloReminderSelfTest {
             fatalError("Hard-time reminder self-test: the lock screen line does not follow the time of day.")
         }
 
+        // After a session: 6 pm, two hours after a late start, the next morning if that is after 9 pm,
+        // and 9 am the next day when that is what was chosen.
+        func clock(_ hour: Int, on d: Int) -> Date {
+            calendar.date(from: DateComponents(year: 2026, month: 11, day: d, hour: hour)) ?? now
+        }
+        guard let usual = HelloReminders.afterSessionTime(start: clock(14, on: 12), nextMorning: false, calendar: calendar),
+              let late = HelloReminders.afterSessionTime(start: clock(17, on: 12), nextMorning: false, calendar: calendar),
+              let tooLate = HelloReminders.afterSessionTime(start: clock(20, on: 12), nextMorning: false, calendar: calendar),
+              let chosen = HelloReminders.afterSessionTime(start: clock(14, on: 12), nextMorning: true, calendar: calendar),
+              usual.at == clock(18, on: 12), !usual.morning,
+              late.at == clock(19, on: 12), !late.morning,
+              tooLate.at == clock(9, on: 13), tooLate.morning,
+              chosen.at == clock(9, on: 13), chosen.morning else {
+            fatalError("After-session reminder self-test: the time of the reminder is wrong.")
+        }
+        let afterEntry: [HelloReminders.AfterSessionEntry] = [(contactID: first, order: 0, nextMorning: false)]
+        let afterOne = HelloReminders.afterSessions(of: afterEntry, sessions: [clock(14, on: 12), clock(10, on: 2)],
+                                                    calendar: calendar)
+        let afterPlan = HelloReminders.plan(entries: [], afterSessions: afterOne, now: now, calendar: calendar)
+        guard afterPlan.reminders.count == 1, afterPlan.reminders[0].afterSession != nil,
+              afterPlan.reminders[0].components.day == 12, afterPlan.reminders[0].components.hour == 18,
+              !afterPlan.reminders[0].repeats else {
+            fatalError("After-session reminder self-test: expected one dated reminder for the one session still to come.")
+        }
+        // A support day on that day keeps it, and the reminder is listed as skipped. It takes the place of a hello.
+        let supportOnTwelfth = HelloReminders.SupportDay(contactID: second, order: 1, eventDay: day(12), dayBefore: false)
+        let beatenAfter = HelloReminders.plan(entries: [], supportDays: [supportOnTwelfth], afterSessions: afterOne,
+                                              now: now, calendar: calendar)
+        guard beatenAfter.reminders.count == 1, beatenAfter.reminders[0].supportDay != nil,
+              beatenAfter.skippedAfterSessions.count == 1 else {
+            fatalError("After-session reminder self-test: a support day did not keep its day.")
+        }
+        let thursdayHello: [HelloReminders.Entry] = [(id: second, order: 1, enabled: true, days: [5], hour: 17, minute: 0)]
+        let overHello = HelloReminders.plan(entries: thursdayHello, afterSessions: afterOne, now: now, calendar: calendar)
+        guard overHello.reminders.filter({ $0.afterSession != nil }).count == 1,
+              !overHello.reminders.contains(where: { $0.afterSession == nil && $0.components.day == 12 }) else {
+            fatalError("After-session reminder self-test: it did not take the place of that day's hello.")
+        }
+
         for line in [HelloReminders.body, HelloReminders.dayBody, HelloReminders.dayBeforeBody,
                      HelloReminders.followUpBody, HelloReminders.companionMorningBody,
-                     HelloReminders.companionAfternoonBody, HelloReminders.companionEveningBody] {
+                     HelloReminders.companionAfternoonBody, HelloReminders.companionEveningBody,
+                     HelloReminders.afterSessionEveningBody, HelloReminders.afterSessionMorningBody] {
             let lower = line.lowercased()
             guard !lower.contains("hello"), !lower.contains("support"), !lower.contains("extra"),
                   !lower.contains("hard"), !lower.contains("trigger"), !lower.contains("window") else {

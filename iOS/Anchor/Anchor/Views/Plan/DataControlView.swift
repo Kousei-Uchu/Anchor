@@ -1431,6 +1431,7 @@ struct TrustedContactDTO: Codable {
     var helloHour: Int?; var helloMinute: Int?
     var supportDaysEnabled: Bool?; var supportDaysDayBefore: Bool?
     var companionEnabled: Bool?; var companionWindowIDs: [UUID]?
+    var afterSessionEnabled: Bool?; var afterSessionNextMorning: Bool?
     init(_ m: TrustedContact) {
         id = m.id; name = m.name; phoneNumber = m.phoneNumber; sortOrder = m.sortOrder
         escalationEnabled = m.escalationEnabled; escalationWindowMinutes = m.escalationWindowMinutes
@@ -1443,6 +1444,7 @@ struct TrustedContactDTO: Codable {
         helloHour = m.helloHour; helloMinute = m.helloMinute
         supportDaysEnabled = m.supportDaysEnabled; supportDaysDayBefore = m.supportDaysDayBefore
         companionEnabled = m.companionEnabled; companionWindowIDs = m.companionWindowIDs
+        afterSessionEnabled = m.afterSessionEnabled; afterSessionNextMorning = m.afterSessionNextMorning
     }
     func toModel() -> TrustedContact {
         TrustedContact(id: id, name: name, phoneNumber: phoneNumber, sortOrder: sortOrder,
@@ -1457,7 +1459,9 @@ struct TrustedContactDTO: Codable {
                         supportDaysEnabled: supportDaysEnabled ?? false,
                         supportDaysDayBefore: supportDaysDayBefore ?? false,
                         companionEnabled: companionEnabled ?? false,
-                        companionWindowIDs: companionWindowIDs ?? [])
+                        companionWindowIDs: companionWindowIDs ?? [],
+                        afterSessionEnabled: afterSessionEnabled ?? false,
+                        afterSessionNextMorning: afterSessionNextMorning ?? false)
     }
 }
 
@@ -2261,7 +2265,9 @@ extension TrustedContact: DataBrowsable {
             .yesNo("Support day reminders on", supportDaysEnabled),
             .text("Support day reminders", supportDaysEnabled ? (supportDaysDayBefore ? "The day before" : "The morning of") : nil),
             .yesNo("Hard-time reminders on", companionEnabled),
-            .text("Hard-time reminders", companionSummary)
+            .text("Hard-time reminders", companionSummary),
+            .yesNo("After-session reminder on", afterSessionEnabled),
+            .text("After-session reminder", afterSessionSummary)
         ]
     }
 }

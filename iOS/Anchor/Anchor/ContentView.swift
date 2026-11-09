@@ -644,10 +644,11 @@ struct ContentView: View {
         .sheet(item: $notificationDelegate.hello) { request in
             ThreadMessageComposer(startingContactID: request.contactID,
                                   isHello: request.supportDay == nil && request.followUpMessageID == nil
-                                      && !request.companion,
+                                      && !request.companion && !request.afterSession,
                                   supportDay: request.supportDay, dayBefore: request.dayBefore,
                                   followUpMessageID: request.followUpMessageID,
-                                  isCompanion: request.companion, companionWindowID: request.companionWindowID)
+                                  isCompanion: request.companion, companionWindowID: request.companionWindowID,
+                                  isAfterSession: request.afterSession)
         }
         .onReceive(NotificationCenter.default.publisher(for: .anchorOpenContactsInPlan)) { _ in
             // Switches to the Plan tab. Doesn't drill into Contacts

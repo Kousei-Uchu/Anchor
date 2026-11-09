@@ -223,6 +223,11 @@ final class TrustedContact {
     var companionEnabled: Bool = false
     var companionWindowIDs: [UUID] = []
 
+    /// An optional reminder after a session, to ask if you want to tell this person how it went. Off
+    /// unless you switch it on. It comes that evening, or the next morning if you choose that.
+    var afterSessionEnabled: Bool = false
+    var afterSessionNextMorning: Bool = false
+
     init(id: UUID = UUID(), name: String, phoneNumber: String, sortOrder: Int,
          escalationEnabled: Bool = false, escalationWindowMinutes: Int? = nil,
          messageTemplates: [MessageTemplate] = [],
@@ -233,7 +238,8 @@ final class TrustedContact {
          helloEnabled: Bool = false, helloDays: [Int] = [],
          helloHour: Int = 17, helloMinute: Int = 0,
          supportDaysEnabled: Bool = false, supportDaysDayBefore: Bool = false,
-         companionEnabled: Bool = false, companionWindowIDs: [UUID] = []) {
+         companionEnabled: Bool = false, companionWindowIDs: [UUID] = [],
+         afterSessionEnabled: Bool = false, afterSessionNextMorning: Bool = false) {
         self.id = id
         self.namePlain = name
         self.phoneNumberPlain = phoneNumber
@@ -256,6 +262,8 @@ final class TrustedContact {
         self.supportDaysDayBefore = supportDaysDayBefore
         self.companionEnabled = companionEnabled
         self.companionWindowIDs = companionWindowIDs
+        self.afterSessionEnabled = afterSessionEnabled
+        self.afterSessionNextMorning = afterSessionNextMorning
         lockNewValues()
     }
 }
@@ -348,6 +356,12 @@ extension TrustedContact {
         let names = calendar.shortWeekdaySymbols
         let ordered = (0..<7).map { (calendar.firstWeekday - 1 + $0) % 7 + 1 }.filter { days.contains($0) }
         return ordered.map { names[$0 - 1] }.joined(separator: ", ") + " at " + time
+    }
+
+    /// "That evening" or "The next morning", or nil while the after-session reminder is off.
+    var afterSessionSummary: String? {
+        guard afterSessionEnabled else { return nil }
+        return afterSessionNextMorning ? "The next morning" : "That evening"
     }
 
     /// "1 trigger window" or "2 trigger windows", or nil while the hard-time reminder is off or has none.
