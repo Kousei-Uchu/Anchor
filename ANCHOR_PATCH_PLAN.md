@@ -130,7 +130,7 @@ The source code repository is at <https://github.com/Kousei-Uchu/Anchor/tree/v2-
 | 30p onward | The last two T3 types come after 30n; T2 is 30c, B3 is 30e, Personal goals is 30f and T7 was done in 14b (30o is the letters row above) |
 | 30q: Session actions offered as tasks (B4, D30): in Post-session notes, a line you mark as a thing to do gets an Add as task button; nothing is added until you tap, and the task has no date unless you give it one | ⬜ Not started; answered |
 | 30r: One-page summary (B6, D30): a one-page layout inside Session prep and Export for someone, made only of your own words and plain facts in your order, with no scores, labels or readings | ⬜ Not started; answered, my reading is D32 |
-| 45d: Escalation and trigger-window reminders (change log 83): cancelling one escalation leaves the following weeks alone (D16), and the trigger-window lock-screen wording is plain (D17) | ⬜ Not started; answered, in the queue below |
+| 45d: Escalation and trigger-window reminders (change log 83): cancelling one escalation leaves the following weeks alone (D16), and the trigger-window lock-screen wording is plain (D17) | 🟡 Written (change log 103), not yet pushed; build not yet confirmed |
 | 45e: Appointment reminders, the things left out of 45a (D26): tap opens Session prep, a choice of evening time | ⬜ Not started; answered |
 | 30o: Letters you open (T5), situational ones: never locked, contents hidden in the list until you open one (D25) | ⬜ Not started; answered |
 | SL6: Sleep in the CSV (its own columns) and in the PDF (a time-asleep chart), for Export for someone and for Your data (D29) | ⬜ Not started; answered |
@@ -140,7 +140,7 @@ The source code repository is at <https://github.com/Kousei-Uchu/Anchor/tree/v2-
 | 46b: `STATUS.md` in place of `BUILD_STATUS.md`, one terminology list, an in-app copy edit (point 23) | ⬜ Not started; answered (D20: yes, as long as no information is lost, so every part of the old file is carried somewhere before it goes) |
 | 35d: Voice notes and Journal photos locked too (D31) | ⬜ Not started; after 35b3 has been checked on your phone |
 
-**Order of work from 9 Nov 2026.** The small answered items first, because each is one clear change you asked for: 45d, 45e, 30o, SL6, SH2, AB2, 46b (RV5a is pushed). Then 35a2, the widgets' key in a shared Keychain item, before any locking, because the locking work uses the keys. Then the locking work, which is the part that can lose data and needs your phone to check: 35b1, 35b2, 35b3, then 35d. Then 30n (relationship reminders), 30q (session actions as tasks) and 30r (the one-page summary). The website, demo and video patches stay last, with 55 at the very end.
+**Order of work from 9 Nov 2026.** The small answered items first, because each is one clear change you asked for: 45e, 30o, SL6, SH2, AB2, 46b (RV5a is pushed). Then 35a2, the widgets' key in a shared Keychain item, before any locking, because the locking work uses the keys. Then the locking work, which is the part that can lose data and needs your phone to check: 35b1, 35b2, 35b3, then 35d. Then 30n (relationship reminders), 30q (session actions as tasks) and 30r (the one-page summary). The website, demo and video patches stay last, with 55 at the very end.
 
 ## Change log of this plan
 

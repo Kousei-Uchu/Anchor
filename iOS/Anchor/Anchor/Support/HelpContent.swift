@@ -148,7 +148,7 @@ extension Guide {
             whatItIs: "A plan you write once, while you are calm, so it is there when you need it.",
             howToUse: "It is made of sections that belong to you. It starts with four, and every one can be renamed, rewritten, hidden or deleted. Tap a card to open it and change its name, its words, its icon and colour, and whether it shows. The plus adds a section of your own, and Reorder changes the order. Nothing is written for you.",
             tips: [
-                "One section at a time can be used for reminder quotes. Turn on Use this for reminder quotes inside it, and trigger window reminders can quote a line from it, always in your own words.",
+                "One section at a time can be used for reminder quotes. Turn on Use this for reminder quotes inside it, and a line from it shows when you open a trigger window reminder, always in your own words. It never shows on the lock screen.",
                 "A hidden section stays saved. It just does not show.",
                 "The date it was last changed is shown at the bottom."
             ]
@@ -156,10 +156,10 @@ extension Guide {
         GuideEntry(
             id: "plan.trigger-windows", tab: .plan, title: "Trigger windows", icon: "clock.fill",
             whatItIs: "The times of day that tend to be hard, so Anchor can check in with you then.",
-            howToUse: "Add a window with a label, the days it applies to, and a start and end time. While a window is active, Anchor sends a reminder on those days at the start time, with your label as its title. The first time you switch one on, iOS asks whether Anchor may send notifications. The wording is a plain fixed line, sometimes with a line from your safety plan. A window is only about the time and the days. It never uses your location.",
+            howToUse: "Add a window with a label, the days it applies to, and a start and end time. While a window is active, Anchor sends a reminder on those days at the start time. The first time you switch one on, iOS asks whether Anchor may send notifications. On the lock screen it says only Anchor and a plain line, so a glance at your phone tells nobody anything. Open the reminder and Anchor shows your label, and a line from your safety plan if you have chosen a section for that. A window is only about the time and the days. It never uses your location.",
             tips: [
                 "Switch Active off to pause a window without deleting it.",
-                "If a contact has Escalate if I don't respond turned on, a check-in you do not answer can lead to a reminder to message them.",
+                "If a contact has Escalate if I don't respond turned on, a check-in you do not answer can lead to a reminder to message them. Answering one day's reminder only skips that day. The following weeks keep theirs.",
                 "Reminders stay on this phone."
             ]
         ),

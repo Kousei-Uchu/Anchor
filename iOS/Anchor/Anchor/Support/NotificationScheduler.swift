@@ -2,12 +2,10 @@
 //  NotificationScheduler.swift
 //  Anchor
 //
-//  All notification bodies come from one of two places: a fixed template
-//  string written in this file (reviewed, shipped with the app) with a
-//  stored SafetyPlan/Journal/Thread quote slotted into it, or the raw
-//  stored text itself. Nothing here ever asks a model to write a sentence.
-//  "Context-aware" means the *selection* of which stored quote to surface
-//  can be smart — the words themselves are always the user's own.
+//  Every lock screen line comes from a fixed string written in this file
+//  (reviewed, shipped with the app). Nothing here ever asks a model to write
+//  a sentence, and nothing the person wrote is shown on the lock screen: their
+//  own words travel inside a reminder and are shown once the app is open.
 //
 
 import Foundation
@@ -59,144 +57,96 @@ struct NotificationScheduler {
         )
     }
 
-    /// Schedules a repeating local notification for a trigger window, plus
-    /// (for any contact with escalationEnabled) a follow-up "escalation"
-    /// reminder offset by that contact's window in minutes.
+    /// Replaces everything pending for one trigger window: its weekly reminder on each of its
+    /// days and, for each contact who has Escalate if I don't respond switched on, a reminder
+    /// that many minutes after the start. Anything the window had before is removed and the new
+    /// set added in the same step, so a re-sync can never remove what it has just added.
     ///
-    /// IMPORTANT LIMIT, stated plainly rather than papered over: iOS does
-    /// not allow an app to silently send an SMS in the background. The
-    /// escalation notification cannot auto-message a contact by itself —
-    /// what it *can* do, and what this does, is remind the user at the
-    /// escalation deadline and put "Message a contact" one tap away. If the
-    /// user taps "I'm okay" (or opens the app) before the escalation fires,
-    /// it's cancelled and the contact is never notified at all — matching
-    /// "opt-in per contact, not automatic."
+    /// What the lock screen shows is the same for every window and every person: the title
+    /// Anchor and one plain line that names nothing. The window's label and a line from the
+    /// person's own safety plan travel inside the notification, out of sight, and are shown once
+    /// the app is open (see WindowReminderPrompt).
+    ///
+    /// Escalations are dated, one request for each of the next few weeks, and not one repeating
+    /// request, because iOS cannot skip a single occurrence of a repeating one. Answering one
+    /// reminder removes only that day's escalation and records it in EscalationSkips so the next
+    /// re-sync does not put it back; the weeks after it keep theirs. The cost is that they use
+    /// some of the 64 pending reminders iOS allows the whole app, and they are only topped up when
+    /// Anchor is opened.
+    ///
+    /// iOS cannot send a message for the person in the background. The escalation reminder only
+    /// puts "Message a contact" one tap away.
     func scheduleTriggerWindow(_ window: TriggerWindow, reasonsPool: [String],
                                 escalationContacts: [TrustedContact], primaryContact: TrustedContact?) {
         guard !DemoMode.isOn else { return }
-        guard window.isActive, let startHour = window.startTime.hour, let startMinute = window.startTime.minute else { return }
-        // Safety net: scheduling means the user has a reminder set up, so make sure we've asked.
-        Self.askForPermissionIfNeeded()
-
-        let body = templatedBody(reasonsPool: reasonsPool)
-
-        for weekday in window.daysOfWeek {
-            var dateComponents = DateComponents()
-            dateComponents.weekday = weekday
-            dateComponents.hour = startHour
-            dateComponents.minute = startMinute
-
-            let escalationIDs = escalationContacts.compactMap { contact -> String? in
+        let windowID = window.id
+        var planned: [PlannedReminder] = []
+        if window.isActive, let hour = window.startTime.hour, let minute = window.startTime.minute {
+            let escalations = escalationContacts.compactMap { contact -> TriggerReminderPlan.Escalation? in
                 guard let minutes = contact.escalationWindowMinutes else { return nil }
-                return escalationIdentifier(windowID: window.id, weekday: weekday, contactID: contact.id, minutes: minutes)
+                return TriggerReminderPlan.Escalation(contactID: contact.id, name: contact.name,
+                                                      phone: contact.phoneNumber, minutes: minutes)
             }
+            EscalationSkips.prune()
+            planned = TriggerReminderPlan.make(
+                windowID: windowID, label: window.label, days: window.daysOfWeek,
+                hour: hour, minute: minute,
+                quote: TriggerReminderPlan.pickQuote(from: reasonsPool),
+                primaryName: primaryContact?.name ?? "", primaryPhone: primaryContact?.phoneNumber ?? "",
+                escalations: escalations, now: Date(), skipped: EscalationSkips.all())
+            // Safety net: scheduling means the user has a reminder set up, so make sure we've asked.
+            if !planned.isEmpty { Self.askForPermissionIfNeeded() }
+        }
+        Self.replacePending(for: windowID, with: planned)
+    }
 
-            let content = UNMutableNotificationContent()
-            content.title = window.label
-            content.body = body
-            content.categoryIdentifier = NotificationCategory.triggerWindow.rawValue
-            content.sound = .default
-            content.userInfo = [
-                "escalationIdentifiers": escalationIDs,
-                "contactName": primaryContact?.name ?? "",
-                "contactPhone": primaryContact?.phoneNumber ?? ""
-            ]
-
-            let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
-            let request = UNNotificationRequest(
-                identifier: "trigger-\(window.id.uuidString)-\(weekday)",
-                content: content,
-                trigger: trigger
-            )
-            UNUserNotificationCenter.current().add(request)
-
-            for contact in escalationContacts {
-                guard let minutes = contact.escalationWindowMinutes else { continue }
-                scheduleEscalation(weekday: weekday, hour: startHour, minute: startMinute,
-                                    minutesAfter: minutes, windowID: window.id, contact: contact)
+    /// Removes what is pending for the window and adds the plan in one callback. Only plain values
+    /// are captured, so no stored objects reach the notification centre's own queue.
+    private static func replacePending(for windowID: UUID, with planned: [PlannedReminder]) {
+        let center = UNUserNotificationCenter.current()
+        let prefixes = Self.pendingPrefixes(for: windowID)
+        center.getPendingNotificationRequests { pending in
+            let old = pending.map(\.identifier).filter { id in prefixes.contains { id.hasPrefix($0) } }
+            center.removePendingNotificationRequests(withIdentifiers: old)
+            for item in planned {
+                let content = UNMutableNotificationContent()
+                content.title = item.title
+                content.body = item.body
+                content.categoryIdentifier = item.category
+                content.sound = .default
+                var userInfo: [AnyHashable: Any] = item.info
+                if !item.escalationKeys.isEmpty { userInfo["escalationKeys"] = item.escalationKeys }
+                content.userInfo = userInfo
+                let trigger = UNCalendarNotificationTrigger(dateMatching: item.components, repeats: item.repeats)
+                center.add(UNNotificationRequest(identifier: item.id, content: content, trigger: trigger))
             }
         }
     }
 
-    /// The escalation reminder itself — fires `minutesAfter` past the
-    /// trigger window's start, only if not cancelled by an "I'm okay"/open
-    /// response to the original notification.
-    ///
-    /// A window that starts late in the evening can have its escalation fall after
-    /// midnight, which is the next weekday, so the weekday moves on with the clock.
-    /// The identifier keeps the window's own weekday, because that is what the
-    /// trigger-window notification lists for cancelling.
-    ///
-    /// The words on the lock screen are the same fixed line for everyone. They do not
-    /// name the window or the person, and they do not say the check-in was missed. Who the
-    /// reminder is about is only shown once the app is open.
-    private func scheduleEscalation(weekday: Int, hour: Int, minute: Int,
-                                     minutesAfter: Int, windowID: UUID, contact: TrustedContact) {
-        let totalMinutes = hour * 60 + minute + minutesAfter
-        let daysLater = totalMinutes / (24 * 60)
-
-        var dateComponents = DateComponents()
-        dateComponents.weekday = (weekday - 1 + daysLater) % 7 + 1
-        dateComponents.hour = (totalMinutes / 60) % 24
-        dateComponents.minute = totalMinutes % 60
-
-        let content = UNMutableNotificationContent()
-        content.title = "Anchor"
-        content.body = "Would you like to let someone know you're okay?"
-        content.categoryIdentifier = NotificationCategory.escalationCheckIn.rawValue
-        content.sound = .default
-        content.userInfo = ["contactName": contact.name, "contactPhone": contact.phoneNumber]
-
-        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
-        let request = UNNotificationRequest(
-            identifier: escalationIdentifier(windowID: windowID, weekday: weekday, contactID: contact.id, minutes: minutesAfter),
-            content: content,
-            trigger: trigger
-        )
-        UNUserNotificationCenter.current().add(request)
+    private static func pendingPrefixes(for windowID: UUID) -> [String] {
+        ["trigger-\(windowID.uuidString)-", "escalation-\(windowID.uuidString)-"]
     }
 
-    private func escalationIdentifier(windowID: UUID, weekday: Int, contactID: UUID, minutes: Int) -> String {
-        "escalation-\(windowID.uuidString)-\(weekday)-\(contactID.uuidString)-\(minutes)"
+    /// Called when the person answers a trigger window reminder (I'm okay, Open Anchor or a tap on
+    /// it): takes away that day's escalation reminders and nothing after them.
+    static func cancelEscalations(keys: [String], firedAt: Date) {
+        guard !keys.isEmpty else { return }
+        let stamp = EscalationKeys.dayStamp(firedAt, calendar: .current)
+        let ids = keys.map { EscalationKeys.identifier(key: $0, dayStamp: stamp) }
+        EscalationSkips.add(ids)
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
     }
 
-    /// Cancels any pending escalation reminders tied to a delivered trigger-
-    /// window notification — called from NotificationDelegate when the user
-    /// taps "I'm okay" or opens the app from that notification.
+    /// For reminders scheduled before this change, which carried the whole list of repeating
+    /// escalation identifiers. The next re-sync replaces them with dated ones.
     static func cancelEscalations(identifiers: [String]) {
         guard !identifiers.isEmpty else { return }
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: identifiers)
     }
 
-    /// Fixed, reviewed templates. The only variable slotted in is the
-    /// user's own previously-written text — nothing about sentence
-    /// structure is generated per-notification. Several phrasings exist
-    /// so a daily/weekly repeating notification doesn't read identically
-    /// every single time; the *set* of possible sentences is fixed and
-    /// reviewed, only which one gets picked (and which stored quote fills
-    /// the blank) varies.
-    private func templatedBody(reasonsPool: [String]) -> String {
-        guard let quote = reasonsPool.filter({ !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }).randomElement() else {
-            return "Checking in. No pressure to respond."
-        }
-        let templates: [(String) -> String] = [
-            { quote in "You wrote: \u{201C}\(quote)\u{201D}" },
-            { quote in "From your safety plan: \u{201C}\(quote)\u{201D}" },
-            { quote in "A reminder, in your own words: \u{201C}\(quote)\u{201D}" },
-            { quote in "Something you told yourself: \u{201C}\(quote)\u{201D}" }
-        ]
-        return templates.randomElement()!(quote)
-    }
-
+    /// Takes a window's reminders away, for a window that is being deleted.
     func removeTriggerWindowNotifications(for window: TriggerWindow) {
-        let triggerIdentifiers = window.daysOfWeek.map { "trigger-\(window.id.uuidString)-\($0)" }
-        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: triggerIdentifiers)
-
-        let escalationPrefix = "escalation-\(window.id.uuidString)-"
-        UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
-            let escalationIdentifiers = requests.map(\.identifier).filter { $0.hasPrefix(escalationPrefix) }
-            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: escalationIdentifiers)
-        }
+        Self.replacePending(for: window.id, with: [])
     }
 
     /// A daily, non-crisis-specific check-in — separate from trigger
@@ -245,6 +195,9 @@ extension NotificationScheduler {
     /// when it appears. Used when a window is created somewhere other than Plan, so it takes
     /// effect straight away instead of the next time Plan opens.
     static func resyncTriggerWindows(using context: ModelContext) {
+        #if DEBUG
+        TriggerReminderSelfTest.run()
+        #endif
         let scheduler = NotificationScheduler(context: context)
         let windows = (try? context.fetch(FetchDescriptor<TriggerWindow>())) ?? []
         let contacts = (try? context.fetch(FetchDescriptor<TrustedContact>(sortBy: [SortDescriptor(\.sortOrder)]))) ?? []
@@ -253,7 +206,6 @@ extension NotificationScheduler {
         let escalationContacts = contacts.filter { $0.escalationEnabled }
 
         for window in windows {
-            scheduler.removeTriggerWindowNotifications(for: window)
             scheduler.scheduleTriggerWindow(window, reasonsPool: reasons,
                                             escalationContacts: escalationContacts,
                                             primaryContact: contacts.first)
@@ -433,3 +385,196 @@ enum AppointmentReminders {
         }
     }
 }
+
+
+// MARK: - Trigger window reminders: the plan, the keys and the skipped days
+
+/// One notification, described as plain values so nothing stored is captured by a callback.
+struct PlannedReminder {
+    let id: String
+    let title: String
+    let body: String
+    let category: String
+    let components: DateComponents
+    let repeats: Bool
+    let info: [String: String]
+    let escalationKeys: [String]
+}
+
+/// Works out what a trigger window should have pending. Pure: the same input always gives the
+/// same plan, so it can be checked without a notification centre.
+enum TriggerReminderPlan {
+    /// Shown on the lock screen for every trigger window. It names nothing.
+    static let plainBody = "Checking in. No pressure to respond."
+    static let escalationBody = "Would you like to let someone know you're okay?"
+    /// How many weeks of dated escalation reminders are kept ahead.
+    static let weeksAhead = 3
+    /// The most escalation reminders one window keeps pending, soonest first, so a few windows
+    /// and contacts cannot use up the 64 reminders iOS allows the whole app.
+    static let escalationCap = 10
+
+    struct Escalation {
+        let contactID: UUID
+        let name: String
+        let phone: String
+        let minutes: Int
+    }
+
+    static func pickQuote(from pool: [String]) -> String? {
+        pool.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .randomElement()
+    }
+
+    static func make(windowID: UUID, label: String, days: [Int], hour: Int, minute: Int,
+                     quote: String?, primaryName: String, primaryPhone: String,
+                     escalations: [Escalation], now: Date, skipped: Set<String>,
+                     calendar: Calendar = .current) -> [PlannedReminder] {
+        var weekly: [PlannedReminder] = []
+        var dated: [(fire: Date, item: PlannedReminder)] = []
+
+        for weekday in days {
+            let keys = escalations.map {
+                EscalationKeys.key(windowID: windowID, weekday: weekday, contactID: $0.contactID, minutes: $0.minutes)
+            }
+            var info = ["windowLabel": label, "contactName": primaryName, "contactPhone": primaryPhone]
+            if let quote { info["line"] = quote }
+            weekly.append(PlannedReminder(
+                id: "trigger-\(windowID.uuidString)-\(weekday)",
+                title: "Anchor", body: plainBody,
+                category: NotificationCategory.triggerWindow.rawValue,
+                components: DateComponents(hour: hour, minute: minute, weekday: weekday),
+                repeats: true, info: info, escalationKeys: keys))
+
+            for (escalation, key) in zip(escalations, keys) {
+                for occurrence in EscalationKeys.dates(weekday: weekday, hour: hour, minute: minute,
+                                                       minutesAfter: escalation.minutes, now: now, calendar: calendar) {
+                    let id = EscalationKeys.identifier(key: key, dayStamp: occurrence.day)
+                    if skipped.contains(id) { continue }
+                    let parts = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: occurrence.fire)
+                    dated.append((occurrence.fire, PlannedReminder(
+                        id: id, title: "Anchor", body: escalationBody,
+                        category: NotificationCategory.escalationCheckIn.rawValue,
+                        components: parts, repeats: false,
+                        info: ["contactName": escalation.name, "contactPhone": escalation.phone],
+                        escalationKeys: [])))
+                }
+            }
+        }
+        let kept = dated.sorted { $0.fire < $1.fire }.prefix(escalationCap).map { $0.item }
+        return weekly + kept
+    }
+}
+
+/// The names given to dated escalation reminders. An escalation is named for its window, the
+/// weekday, the contact, the minutes after the start and the day the window starts on.
+enum EscalationKeys {
+    static func key(windowID: UUID, weekday: Int, contactID: UUID, minutes: Int) -> String {
+        "\(windowID.uuidString)-\(weekday)-\(contactID.uuidString)-\(minutes)"
+    }
+
+    static func identifier(key: String, dayStamp: String) -> String {
+        "escalation-\(key)-\(dayStamp)"
+    }
+
+    /// The day as eight digits, year first, so stamps sort in date order.
+    static func dayStamp(_ date: Date, calendar: Calendar) -> String {
+        let parts = calendar.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d%02d%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
+    }
+
+    /// The coming days that are the given weekday, within the weeks ahead, with the moment the
+    /// escalation would fire. A day whose escalation has already passed is left out.
+    static func dates(weekday: Int, hour: Int, minute: Int, minutesAfter: Int,
+                      now: Date, calendar: Calendar) -> [(day: String, fire: Date)] {
+        let today = calendar.startOfDay(for: now)
+        var result: [(day: String, fire: Date)] = []
+        for offset in 0..<(7 * TriggerReminderPlan.weeksAhead) {
+            guard let day = calendar.date(byAdding: .day, value: offset, to: today),
+                  calendar.component(.weekday, from: day) == weekday,
+                  let start = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day) else { continue }
+            let fire = start.addingTimeInterval(TimeInterval(minutesAfter * 60))
+            if fire > now { result.append((dayStamp(day, calendar: calendar), fire)) }
+        }
+        return result
+    }
+}
+
+/// The escalation reminders the person has answered, so a re-sync does not put them back.
+/// Only the day is kept with each, and a day that has gone by is dropped.
+enum EscalationSkips {
+    private static let storeKey = "anchor.escalationSkipped"
+
+    static func all(defaults: UserDefaults = .standard) -> Set<String> {
+        Set(defaults.stringArray(forKey: storeKey) ?? [])
+    }
+
+    static func add(_ ids: [String], defaults: UserDefaults = .standard) {
+        var set = all(defaults: defaults)
+        ids.forEach { set.insert($0) }
+        defaults.set(Array(set).sorted(), forKey: storeKey)
+    }
+
+    static func prune(defaults: UserDefaults = .standard, calendar: Calendar = .current, now: Date = Date()) {
+        let today = EscalationKeys.dayStamp(now, calendar: calendar)
+        let kept = all(defaults: defaults).filter { String($0.suffix(8)) >= today }
+        defaults.set(Array(kept).sorted(), forKey: storeKey)
+    }
+
+    static func clear(defaults: UserDefaults = .standard) {
+        defaults.removeObject(forKey: storeKey)
+    }
+}
+
+#if DEBUG
+/// Checks the plan for a trigger window against known answers the first time reminders are
+/// re-synced in a debug build, and stops the app with a message if it is wrong.
+enum TriggerReminderSelfTest {
+    private static var hasRun = false
+
+    static func run() {
+        if hasRun { return }
+        hasRun = true
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        // Wednesday 11 Nov 2026, 9 pm. A window on Mondays and Wednesdays at 8 pm, one contact, 30 minutes.
+        let now = calendar.date(from: DateComponents(year: 2026, month: 11, day: 11, hour: 21))!
+        let window = UUID()
+        let contact = TriggerReminderPlan.Escalation(contactID: UUID(), name: "Sam", phone: "0400000000", minutes: 30)
+        func make(skipped: Set<String>) -> [PlannedReminder] {
+            TriggerReminderPlan.make(windowID: window, label: "Sunday evening", days: [2, 4], hour: 20, minute: 0,
+                                     quote: "I have people who care", primaryName: "Sam", primaryPhone: "0400000000",
+                                     escalations: [contact], now: now, skipped: skipped, calendar: calendar)
+        }
+        let plan = make(skipped: [])
+        let weekly = plan.filter { $0.repeats }
+        let escalations = plan.filter { !$0.repeats }
+        // Mondays: 16, 23 and 30 Nov. Wednesdays: today has passed, so 18 and 25 Nov.
+        guard weekly.count == 2, escalations.count == 5 else {
+            fatalError("Trigger reminder self-test: expected 2 weekly and 5 dated reminders, got \(weekly.count) and \(escalations.count).")
+        }
+        guard weekly.allSatisfy({ $0.title == "Anchor" && $0.body == TriggerReminderPlan.plainBody }) else {
+            fatalError("Trigger reminder self-test: the lock screen wording is not the plain wording.")
+        }
+        let shown = plan.map { $0.title + " " + $0.body }.joined(separator: " ")
+        guard !shown.contains("Sunday evening"), !shown.contains("people who care"), !shown.contains("Sam") else {
+            fatalError("Trigger reminder self-test: the lock screen carries the person's words.")
+        }
+        guard weekly.allSatisfy({ $0.info["windowLabel"] == "Sunday evening" && $0.info["line"] == "I have people who care" }) else {
+            fatalError("Trigger reminder self-test: the label and the line did not travel inside the reminder.")
+        }
+        let monday16 = EscalationKeys.identifier(
+            key: EscalationKeys.key(windowID: window, weekday: 2, contactID: contact.contactID, minutes: 30), dayStamp: "20261116")
+        guard escalations.contains(where: { $0.id == monday16 }) else {
+            fatalError("Trigger reminder self-test: the dated reminder for Monday 16 Nov is missing.")
+        }
+        let after = make(skipped: [monday16])
+        guard after.filter({ !$0.repeats }).count == 4, !after.contains(where: { $0.id == monday16 }) else {
+            fatalError("Trigger reminder self-test: skipping one day did not leave the other days alone.")
+        }
+        guard escalations.allSatisfy({ $0.components.hour != nil && $0.components.day != nil }) else {
+            fatalError("Trigger reminder self-test: a dated reminder has no date.")
+        }
+    }
+}
+#endif

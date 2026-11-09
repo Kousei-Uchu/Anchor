@@ -18,6 +18,14 @@ struct ContactMessagePrompt: Identifiable {
     let phoneNumber: String
 }
 
+/// What a trigger window reminder shows once it is opened. The lock screen never carries these;
+/// they travel inside the reminder and are read here.
+struct WindowReminderPrompt: Identifiable {
+    let id = UUID()
+    let label: String
+    let line: String?
+}
+
 @MainActor
 final class NotificationDelegate: NSObject, ObservableObject, UNUserNotificationCenterDelegate {
     static let shared = NotificationDelegate()
@@ -31,6 +39,10 @@ final class NotificationDelegate: NSObject, ObservableObject, UNUserNotification
     /// ContentView observes this to switch to Now and open the check-in
     /// sheet, then resets it back to false.
     @Published var shouldOpenCheckIn = false
+
+    /// Set when a trigger window reminder is opened, so the window's label and a line from the
+    /// safety plan show inside the app instead of on the lock screen.
+    @Published var windowReminder: WindowReminderPrompt?
 
     /// Set when a trigger-window/escalation notification arrives while the
     /// app is in the foreground, so it still shows as a banner.
@@ -49,8 +61,11 @@ final class NotificationDelegate: NSObject, ObservableObject, UNUserNotification
 
         switch response.actionIdentifier {
         case "IM_OKAY", UNNotificationDefaultActionIdentifier, "OPEN":
-            if let escalationIDs = userInfo["escalationIdentifiers"] as? [String] {
-                NotificationScheduler.cancelEscalations(identifiers: escalationIDs)
+            cancelFollowUps(userInfo: userInfo, firedAt: response.notification.date)
+            if response.actionIdentifier != "IM_OKAY",
+               response.notification.request.content.categoryIdentifier == NotificationCategory.triggerWindow.rawValue,
+               let label = userInfo["windowLabel"] as? String, !label.isEmpty {
+                windowReminder = WindowReminderPrompt(label: label, line: userInfo["line"] as? String)
             }
             if response.notification.request.content.categoryIdentifier == NotificationCategory.dailyCheckIn.rawValue {
                 shouldOpenCheckIn = true
@@ -58,9 +73,7 @@ final class NotificationDelegate: NSObject, ObservableObject, UNUserNotification
         case "CHECKIN_NOW":
             shouldOpenCheckIn = true
         case "CONTACT":
-            if let escalationIDs = userInfo["escalationIdentifiers"] as? [String] {
-                NotificationScheduler.cancelEscalations(identifiers: escalationIDs)
-            }
+            cancelFollowUps(userInfo: userInfo, firedAt: response.notification.date)
             let name = userInfo["contactName"] as? String ?? ""
             let phone = userInfo["contactPhone"] as? String ?? ""
             if !phone.isEmpty {
@@ -68,6 +81,17 @@ final class NotificationDelegate: NSObject, ObservableObject, UNUserNotification
             }
         default:
             break
+        }
+    }
+
+    /// Answering a trigger window reminder takes away that day's escalation reminders and leaves
+    /// the weeks after it alone. Reminders scheduled before this change listed repeating
+    /// identifiers instead, and are handled the old way until the next re-sync replaces them.
+    private func cancelFollowUps(userInfo: [AnyHashable: Any], firedAt: Date) {
+        if let keys = userInfo["escalationKeys"] as? [String] {
+            NotificationScheduler.cancelEscalations(keys: keys, firedAt: firedAt)
+        } else if let ids = userInfo["escalationIdentifiers"] as? [String] {
+            NotificationScheduler.cancelEscalations(identifiers: ids)
         }
     }
 }

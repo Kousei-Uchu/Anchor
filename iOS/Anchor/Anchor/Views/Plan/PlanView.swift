@@ -171,7 +171,6 @@ struct PlanView: View {
         let escalationContacts = contacts.filter { $0.escalationEnabled }
 
         for window in triggerWindows {
-            scheduler.removeTriggerWindowNotifications(for: window)
             scheduler.scheduleTriggerWindow(
                 window,
                 reasonsPool: reasons,

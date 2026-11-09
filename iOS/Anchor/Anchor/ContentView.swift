@@ -556,6 +556,8 @@ struct ContentView: View {
     @State private var showSettingsFromLink = false
     @State private var showOnboardingTour = !OnboardingState.hasSeenTour
     @StateObject private var notificationDelegate = NotificationDelegate.shared
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.modelContext) private var modelContext
 
     init() {
         let appearance = UITabBarAppearance()
@@ -622,6 +624,13 @@ struct ContentView: View {
         .onChange(of: notificationDelegate.shouldOpenCheckIn) { _, shouldOpen in
             if shouldOpen { selectedTab = 0 }
         }
+        .onChange(of: scenePhase) { _, phase in
+            // Tops up the dated escalation reminders each time Anchor comes to the front.
+            if phase == .active { NotificationScheduler.resyncTriggerWindows(using: modelContext) }
+        }
+        .sheet(item: $notificationDelegate.windowReminder) { prompt in
+            WindowReminderView(prompt: prompt)
+        }
         .onReceive(NotificationCenter.default.publisher(for: .anchorOpenContactsInPlan)) { _ in
             // Switches to the Plan tab. Doesn't drill into Contacts
             // specifically — PlanView's NavigationStack doesn't have a
@@ -636,6 +645,32 @@ struct ContentView: View {
                     .padding()
             }
         }
+    }
+}
+
+/// Shown when a trigger window reminder is opened: the window's own label and, if a section of
+/// the safety plan is chosen for it, one of its lines.
+private struct WindowReminderView: View {
+    let prompt: WindowReminderPrompt
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(prompt.label)
+                .font(.title2.weight(.semibold))
+            if let line = prompt.line {
+                Text("\u{201C}\(line)\u{201D}")
+                    .font(.body)
+            }
+            Spacer()
+            Button { dismiss() } label: {
+                Text("Close").frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .padding()
+        .anchorBackground()
+        .presentationDetents([.medium])
     }
 }
 
