@@ -1,6 +1,6 @@
 # Optional extras: iCloud sync, voice, and AI tools
 
-Written 9 Nov 2026 (change log 123). Built so far: the one switch (AI0) the consent sheet with the Apple on-device provider (AI1, change log 141), the AI Optimised block in the Journal (AI2, change log 143, D52), Break into steps and Estimate time on a task (AI3, change log 144, D53), and Tidy a braindump (AI4, change log 146, D54); the rest is not built. Every claim about the code was checked in the repo; claims about Apple's frameworks are from memory and are marked **check** where a spike must confirm them before a patch promises anything. The patches are in Phase I of `ANCHOR_PATCH_PLAN.md`, the questions are D38 to D43 in section 0.4.
+Written 9 Nov 2026 (change log 123). Built so far: the one switch (AI0) the consent sheet with the Apple on-device provider (AI1, change log 141), the AI Optimised block in the Journal (AI2, change log 143, D52), Break into steps and Estimate time on a task (AI3, change log 144, D53), Tidy a braindump (AI4, change log 146, D54), and Ollama on your own computer (AI5, change log 148, D55); the rest is not built. Every claim about the code was checked in the repo; claims about Apple's frameworks are from memory and are marked **check** where a spike must confirm them before a patch promises anything. The patches are in Phase I of `ANCHOR_PATCH_PLAN.md`, the questions are D38 to D43 in section 0.4.
 
 ## The rules that apply to all of it
 
@@ -95,6 +95,8 @@ When it is turned off, anything half done is dropped, and the person's saved AI 
 | 1 | **Apple on-device model** (Apple Intelligence, through the FoundationModels framework) | On the phone, no network | Only on devices that support it. **Check** the current iOS and model requirements. Preferred and the only one shown first. |
 | 2 | **Ollama** on the person's own computer | The person's home network. The person types the address; the app asks for the Local Network permission only when this is first used | Plain `http` on a home network is accepted but the consent sheet says the text crosses the person's own network. Nothing leaves it. |
 | 3 | **Other provider** the person adds themselves | Their own key, over `https` | Under an Other provider heading in AI tools, never suggested, never named in the app's own text, never preselected. Anchor runs no relay server and holds no key of its own. The consent sheet says Anchor cannot check how that provider keeps the text, and links the provider's own terms if the person gave one. Zero-retention accounts are the person's setting with the provider; Anchor cannot see or verify it (D42). |
+
+**As built in AI5.** Settings, AI tools, Where it runs chooses between On this phone and On my computer. For the computer the person types an address and a model name, and Look for models lists what Ollama has. Only the person's own network is accepted (a private number, a name ending in .local, or a single name), plain http is allowed to the local network only, the mobile network is never used, and the phone's Local Network question appears on the first connection, never while AI tools are off. The consent sheet shows the address and model. The code is in `Support/AIProviders.swift`, the only file allowed to open a network connection, which `scripts/check-ai-gate.mjs` enforces.
 
 ## The consent sheet
 

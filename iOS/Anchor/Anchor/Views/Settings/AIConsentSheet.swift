@@ -30,6 +30,11 @@ struct AIConsentSheet: View {
                         Text(request.provider.whereItRuns)
                             .font(.system(.subheadline, design: .rounded))
                             .foregroundStyle(.secondary)
+                        if let destination = request.destination {
+                            Text(destination)
+                                .font(.system(.subheadline, design: .rounded))
+                                .textSelection(.enabled)
+                        }
                     }
                 }
                 Anchor.SettingsSection(title: "What happens to it") {

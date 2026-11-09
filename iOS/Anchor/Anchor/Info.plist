@@ -18,6 +18,13 @@
 		<string>spotify</string>
 		<string>discord</string>
 	</array>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Anchor connects to the computer whose address you type in Settings, AI tools, only when you use an AI tool or tap Look for models. It does not look for other devices.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>UILaunchScreen</key>

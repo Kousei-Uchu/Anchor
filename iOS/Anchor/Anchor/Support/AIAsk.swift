@@ -50,6 +50,8 @@ struct AIAskRequest: Identifiable {
     /// The exact text that will be sent, and nothing else is sent with it but the instruction.
     let text: String
     let instruction: String
+    /// The address and model when the text goes to the person's own computer (Patch AI5), shown on the sheet.
+    let destination: String?
 }
 
 /// Runs one AI tool on one piece of text, with the person in charge of every step (Patch AI1). It checks the
@@ -93,7 +95,7 @@ final class AIAsk: ObservableObject {
         defer { isWorking = false }
 
         if !consent.skipsAsking(feature, provider.kind) {
-            let request = AIAskRequest(feature: feature, provider: provider.kind, text: sending, instruction: feature.instruction)
+            let request = AIAskRequest(feature: feature, provider: provider.kind, text: sending, instruction: feature.instruction, destination: provider.destination)
             guard await askPerson(request) else { throw AIError.cancelled }
         }
         guard gate() else { throw AIError.off }

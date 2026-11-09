@@ -1177,6 +1177,12 @@ struct AIToolsSettingsView: View {
     @State private var isOn = AIGate.isChosen
     @State private var status: AIProviderStatus?
     @State private var skips: [AIConsentStore.Pair] = []
+    @State private var chosen = AIProviders.chosen
+    @State private var address = OllamaSettings.address
+    @State private var model = OllamaSettings.model
+    @State private var foundModels: [String] = []
+    @State private var looking = false
+    @State private var lookMessage = ""
 
     var body: some View {
         Form {
@@ -1203,13 +1209,28 @@ struct AIToolsSettingsView: View {
             if let status {
                 Anchor.SettingsSection(
                     title: "Where it runs",
-                    footer: "The model runs on this phone. The text you pick does not leave it."
+                    footer: chosen == .apple
+                        ? "The model runs on this phone. The text you pick does not leave it."
+                        : "The model runs on your own computer with Ollama. The text you pick crosses your home network as it is and goes nowhere else."
                 ) {
+                    Picker("Where it runs", selection: Binding(
+                        get: { chosen },
+                        set: { newValue in
+                            chosen = newValue
+                            AIProviders.setChosen(newValue)
+                            refresh()
+                        }
+                    )) {
+                        Text(AIProviderKind.apple.placeName).tag(AIProviderKind.apple)
+                        Text(AIProviderKind.ollama.placeName).tag(AIProviderKind.ollama)
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
                     HStack(alignment: .firstTextBaseline) {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("On this phone")
+                            Text(chosen.placeName)
                                 .font(.system(.subheadline, design: .rounded))
-                            Text(AIProviders.chosen.name)
+                            Text(chosen.name)
                                 .font(.system(.footnote, design: .rounded))
                                 .foregroundStyle(.secondary)
                         }
@@ -1226,6 +1247,10 @@ struct AIToolsSettingsView: View {
                             Text("Check again").font(.system(.subheadline, design: .rounded))
                         }
                     }
+                }
+
+                if chosen == .ollama {
+                    ollamaSection
                 }
 
                 Anchor.SettingsSection(
@@ -1276,15 +1301,103 @@ struct AIToolsSettingsView: View {
         .onAppear { refresh() }
     }
 
+    /// The address and model for Ollama on the person's own computer (Patch AI5). Typing here connects to nothing.
+    /// Look for models is the only thing on this screen that does, and it sends none of the person's words.
+    private var ollamaSection: some View {
+        let typedProblem: OllamaAddressProblem? = {
+            if case .failure(let problem) = OllamaEndpoint.parse(address) { return problem }
+            return nil
+        }()
+        return Anchor.SettingsSection(
+            title: "Your computer",
+            footer: "Use your computer's address on your home network and the name of a model Ollama has. The first time Anchor connects, the phone asks whether Anchor may find devices on your local network."
+        ) {
+            TextField("Address, such as 192.168.1.20", text: $address)
+                .font(.system(.body, design: .rounded))
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .keyboardType(.URL)
+                .onChange(of: address) { _, newValue in
+                    OllamaSettings.address = newValue
+                    foundModels = []
+                    lookMessage = ""
+                    refresh()
+                }
+            if let typedProblem, typedProblem != .empty {
+                Text(typedProblem.plainText)
+                    .font(.system(.footnote, design: .rounded))
+                    .foregroundStyle(.secondary)
+            }
+            TextField("Model, such as llama3.2", text: $model)
+                .font(.system(.body, design: .rounded))
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .onChange(of: model) { _, newValue in
+                    OllamaSettings.model = newValue
+                    refresh()
+                }
+            Button {
+                lookForModels()
+            } label: {
+                Text("Look for models").font(.system(.subheadline, design: .rounded))
+            }
+            .disabled(looking || typedProblem != nil)
+            if looking {
+                ProgressView()
+            }
+            ForEach(foundModels, id: \.self) { name in
+                Button {
+                    model = name
+                } label: {
+                    HStack {
+                        Text(name).font(.system(.subheadline, design: .rounded))
+                        Spacer()
+                        if name == model.trimmingCharacters(in: .whitespacesAndNewlines) {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+            if !lookMessage.isEmpty {
+                Text(lookMessage)
+                    .font(.system(.footnote, design: .rounded))
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    /// Asks the computer which models it has, only when the person taps the button and only while AI tools are on.
+    private func lookForModels() {
+        guard AIGate.isEnabled, case .success(let endpoint) = OllamaEndpoint.parse(address) else { return }
+        looking = true
+        foundModels = []
+        lookMessage = ""
+        Task {
+            do {
+                let names = try await OllamaClient.models(at: endpoint)
+                foundModels = names
+                lookMessage = names.isEmpty ? "Ollama answered, but it has no models yet." : ""
+            } catch let error as AIError {
+                lookMessage = error.plainText
+            } catch {
+                lookMessage = AIError.cannotReach.plainText
+            }
+            looking = false
+        }
+    }
+
     /// Looks at the provider and the list only while AI tools are on, so nothing is asked of the model otherwise.
     private func refresh() {
         isOn = AIGate.isChosen
+        chosen = AIProviders.chosen
         if AIGate.isEnabled {
-            status = AIProviders.make(AIProviders.chosen).status()
+            status = AIProviders.make(chosen).status()
             skips = AIConsentStore.standard.all
         } else {
             status = nil
             skips = []
+            foundModels = []
+            lookMessage = ""
         }
     }
 }

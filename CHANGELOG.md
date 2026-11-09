@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch AI5: AI tools can run on your own computer with Ollama. In Settings, AI tools, Where it runs, choose On my computer, type its address on your home network and a model name, or tap Look for models. Only your own network is accepted, nothing connects until you use a tool, and the sheet that asks first shows the address.
 - Patch DOC20: the plan now records that Tidy a braindump (AI4) is pushed and waiting for a build.
 - Patch AI4: Tidy a braindump, with two plain buttons, Turn into tasks and Turn into things to raise, so you choose where words go. It opens from a Journal page's three dots, from Add several on Tasks and from the top of Things to raise. You see exactly what is sent, then a list to tick, and only the ticked lines are added. A thing to raise can remember which Journal entry it came from, like a task.
 - Patch DOC19: the plan now records that the AI Optimised block in the Journal (AI2) and the task helper's Break into steps and Estimate time (AI3) are pushed and waiting for a build.

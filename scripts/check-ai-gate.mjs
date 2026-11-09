@@ -21,13 +21,22 @@ const providerSigns = [
   /import\s+FoundationModels/,
   /\bLanguageModelSession\b/,
   /\bSystemLanguageModel\b/,
-  /\bOllama\w*/,
+  /\bOllama(Provider|Client|Endpoint|Settings)\b/,
   /\bAIProvider\w*/,
   /\bAIProviding\b/,
   /api\.anthropic\.com/,
   /api\.openai\.com/,
   /:11434\b/,
+  // Anything that opens a network connection counts too (Patch AI5).
+  /\bURLSession\b/,
+  /\bURLRequest\b/,
+  /\bNWConnection\b/,
 ];
+
+// The one file allowed to open a network connection. Anchor sends no data anywhere except to the provider the
+// person chose, after the consent sheet, so a connection anywhere else is a mistake (Patch AI5).
+const networkSigns = [/\bURLSession\b/, /\bURLRequest\b/, /\bNWConnection\b/, /\bNWBrowser\b/];
+const networkFile = "Support/AIProviders.swift";
 
 function swiftFiles(dir) {
   const out = [];
@@ -56,6 +65,11 @@ for (const file of files) {
     if (!/AIGate\.(isEnabled|require)/.test(text)) {
       problems.push(`${rel}: talks to a model or provider but never checks AIGate.isEnabled`);
     }
+  }
+
+  // Only the provider file may open a network connection.
+  if (!rel.endsWith(networkFile) && networkSigns.some((sign) => sign.test(text))) {
+    problems.push(`${rel}: opens a network connection; only ${networkFile} may, behind the AI gate and the consent sheet`);
   }
 
   // Only AIAsk may send text to a provider.

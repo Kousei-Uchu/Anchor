@@ -41,14 +41,24 @@ enum AIFeature: String, CaseIterable {
     }
 }
 
-/// Where a tool can run. Apple's model on the phone is the only one so far. Ollama (AI5) and a provider the
-/// person adds themselves (AI6) are added here when they are built.
+/// Where a tool can run. Apple's model on the phone, and Ollama on the person's own computer (Patch AI5). A
+/// provider the person adds themselves (AI6) is added here when it is built.
 enum AIProviderKind: String, CaseIterable {
     case apple
+    case ollama
 
     var name: String {
         switch self {
         case .apple: return "Apple's on-device model"
+        case .ollama: return "Ollama on your computer"
+        }
+    }
+
+    /// The short place name used on the Settings screen.
+    var placeName: String {
+        switch self {
+        case .apple: return "On this phone"
+        case .ollama: return "On my computer"
         }
     }
 
@@ -56,6 +66,7 @@ enum AIProviderKind: String, CaseIterable {
     var whereItRuns: String {
         switch self {
         case .apple: return "On this phone. The text does not leave it."
+        case .ollama: return "On your own computer, over your own network. The text crosses your network as it is and goes nowhere else."
         }
     }
 
@@ -63,6 +74,7 @@ enum AIProviderKind: String, CaseIterable {
     var keeping: String {
         switch self {
         case .apple: return "It is held in memory on this phone until you keep or discard the answer. Anchor keeps no log of it."
+        case .ollama: return "Ollama holds it on your computer while it works. Anchor keeps no log of it. What Ollama keeps is set on your computer, and Anchor cannot see it."
         }
     }
 
@@ -70,6 +82,7 @@ enum AIProviderKind: String, CaseIterable {
     var offersDontAskAgain: Bool {
         switch self {
         case .apple: return true
+        case .ollama: return true
         }
     }
 }
@@ -82,6 +95,7 @@ enum AIProviderStatus: Equatable {
     case notReady
     case unavailable
     case aiToolsOff
+    case notSetUp
 
     var plainText: String {
         switch self {
@@ -91,6 +105,7 @@ enum AIProviderStatus: Equatable {
         case .notReady: return "Not ready yet, try again later"
         case .unavailable: return "Not available"
         case .aiToolsOff: return "AI tools are off"
+        case .notSetUp: return "Add your computer's address and a model name"
         }
     }
 }
@@ -103,6 +118,8 @@ enum AIError: Error, Equatable {
     case unavailable(AIProviderStatus)
     case cancelled
     case failed
+    case cannotReach
+    case modelNotFound
 
     var plainText: String {
         switch self {
@@ -113,6 +130,8 @@ enum AIError: Error, Equatable {
         case .unavailable(let status): return status.plainText + ". Nothing was sent."
         case .cancelled: return "Cancelled. Nothing was sent."
         case .failed: return "It could not make an answer. Nothing was kept."
+        case .cannotReach: return "Anchor could not reach your computer. Check the address, that Ollama is running, that you are on the same network, and that Local Network is on for Anchor in the phone's Settings. Nothing was kept."
+        case .modelNotFound: return "Ollama on your computer does not have that model. Check the name in Settings, AI tools. Nothing was kept."
         }
     }
 }
@@ -123,17 +142,34 @@ protocol AIProviding: Sendable {
     var kind: AIProviderKind { get }
     /// The most characters this provider takes in one go. Longer text is refused before anything is sent.
     var maxCharacters: Int { get }
+    /// Where exactly the text goes, when that is more than the kind says (the address of the person's computer).
+    /// The consent sheet shows it under Where it goes.
+    var destination: String? { get }
     func status() -> AIProviderStatus
     func generate(instruction: String, text: String) async throws -> String
 }
 
+extension AIProviding {
+    var destination: String? { nil }
+}
+
 enum AIProviders {
-    /// The provider in use. One for now; a choice is added with the second provider.
-    static var chosen: AIProviderKind { .apple }
+    static let choiceKey = "aiProviderChoice"
+
+    /// The provider in use. Apple's on-device model until the person picks another one in Settings, AI tools. It is
+    /// kept in the phone's settings like the AI switch, so it is not in a backup and Clear all data leaves it.
+    static var chosen: AIProviderKind {
+        AIProviderKind(rawValue: UserDefaults.standard.string(forKey: choiceKey) ?? "") ?? .apple
+    }
+
+    static func setChosen(_ kind: AIProviderKind) {
+        UserDefaults.standard.set(kind.rawValue, forKey: choiceKey)
+    }
 
     static func make(_ kind: AIProviderKind) -> AIProviding {
         switch kind {
         case .apple: return AppleOnDeviceProvider()
+        case .ollama: return OllamaProvider()
         }
     }
 }
@@ -179,6 +215,265 @@ struct AppleOnDeviceProvider: AIProviding {
         #endif
     }
 }
+
+/// Why a typed address is not accepted, in words the person can act on (Patch AI5).
+enum OllamaAddressProblem: Equatable {
+    case empty
+    case notAnAddress
+    case notOnYourNetwork
+    case thisPhone
+
+    var plainText: String {
+        switch self {
+        case .empty: return "Type your computer's address, such as 192.168.1.20."
+        case .notAnAddress: return "That does not look like an address. Try something like 192.168.1.20 or my-mac.local."
+        case .notOnYourNetwork: return "That address is not on your own network. Anchor only sends to a computer on your home network, so use its number such as 192.168.1.20, or its name ending in .local."
+        case .thisPhone: return "That points at this phone. Use your computer's address."
+        }
+    }
+}
+
+/// A checked address for Ollama on the person's own computer (Patch AI5). Only the person's own network is
+/// accepted: a number in a private range, a name ending in .local, or a single name such as my-mac. A public
+/// address is refused, so the text can never be sent across the internet by a slip of the keyboard.
+struct OllamaEndpoint: Equatable {
+    static let defaultPort = 11434
+
+    let base: URL
+    /// The host and port, as shown on the consent sheet.
+    let display: String
+
+    static func parse(_ typed: String) -> Result<OllamaEndpoint, OllamaAddressProblem> {
+        var text = typed.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return .failure(.empty) }
+        if !text.contains("://") { text = "http://" + text }
+        while text.hasSuffix("/") { text.removeLast() }
+        guard let parts = URLComponents(string: text),
+              let scheme = parts.scheme?.lowercased(), scheme == "http" || scheme == "https",
+              let host = parts.host?.lowercased(), !host.isEmpty,
+              parts.user == nil, parts.password == nil, parts.query == nil, parts.fragment == nil,
+              parts.path.isEmpty
+        else { return .failure(.notAnAddress) }
+        if let problem = problem(withHost: host) { return .failure(problem) }
+        let port = parts.port ?? defaultPort
+        var built = URLComponents()
+        built.scheme = scheme
+        built.host = host
+        built.port = port
+        guard let base = built.url else { return .failure(.notAnAddress) }
+        return .success(OllamaEndpoint(base: base, display: host + ":" + String(port)))
+    }
+
+    /// nil when the host is on the person's own network.
+    static func problem(withHost host: String) -> OllamaAddressProblem? {
+        if host == "localhost" || host == "0.0.0.0" || host == "::1" || host.hasPrefix("127.") { return .thisPhone }
+        let pieces = host.split(separator: ".", omittingEmptySubsequences: false)
+        let isDigit: (Character) -> Bool = { $0.isASCII && $0.isNumber }
+        if pieces.count == 4, pieces.allSatisfy({ piece in !piece.isEmpty && piece.allSatisfy(isDigit) }) {
+            let numbers = pieces.compactMap { Int($0) }
+            guard numbers.count == 4, numbers.allSatisfy({ $0 >= 0 && $0 <= 255 }) else { return .notAnAddress }
+            if numbers[0] == 10 { return nil }
+            if numbers[0] == 172 && numbers[1] >= 16 && numbers[1] <= 31 { return nil }
+            if numbers[0] == 192 && numbers[1] == 168 { return nil }
+            if numbers[0] == 169 && numbers[1] == 254 { return nil }
+            return .notOnYourNetwork
+        }
+        let allowed = Set("abcdefghijklmnopqrstuvwxyz0123456789-.")
+        guard host.allSatisfy({ allowed.contains($0) }), !host.hasPrefix("."), !host.hasPrefix("-"), !host.hasSuffix("-") else { return .notAnAddress }
+        if host.allSatisfy(isDigit) { return .notAnAddress }
+        if host.hasSuffix(".local") && host.count > ".local".count { return nil }
+        if !host.contains(".") { return nil }
+        return .notOnYourNetwork
+    }
+}
+
+/// What the person typed for Ollama, kept in the phone's settings like the AI switch (not in a backup, and Clear
+/// all data leaves it). Nothing connects to the address while AI tools are off.
+enum OllamaSettings {
+    static let addressKey = "aiOllamaAddress"
+    static let modelKey = "aiOllamaModel"
+
+    static var address: String {
+        get { UserDefaults.standard.string(forKey: addressKey) ?? "" }
+        set { UserDefaults.standard.set(newValue, forKey: addressKey) }
+    }
+
+    static var model: String {
+        get { UserDefaults.standard.string(forKey: modelKey) ?? "" }
+        set { UserDefaults.standard.set(newValue, forKey: modelKey) }
+    }
+}
+
+private struct OllamaChatRequest: Encodable {
+    struct Message: Encodable {
+        let role: String
+        let content: String
+    }
+    let model: String
+    let messages: [Message]
+    let stream: Bool
+}
+
+private struct OllamaChatReply: Decodable {
+    struct Message: Decodable {
+        let content: String
+    }
+    let message: Message?
+}
+
+private struct OllamaTags: Decodable {
+    struct Model: Decodable {
+        let name: String
+    }
+    let models: [Model]
+}
+
+/// The two ways Anchor talks to Ollama: asking it to answer (through `OllamaProvider`, only after the consent
+/// sheet) and asking which models it has (only when the person taps Look for models, and sending none of their
+/// words). It uses a private session that keeps nothing, and never the mobile network.
+enum OllamaClient {
+    private static let session: URLSession = {
+        let config = URLSessionConfiguration.ephemeral
+        config.allowsCellularAccess = false
+        config.waitsForConnectivity = false
+        config.timeoutIntervalForRequest = 180
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData
+        config.urlCache = nil
+        return URLSession(configuration: config)
+    }()
+
+    fileprivate static func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+        do {
+            let (data, response) = try await session.data(for: request)
+            guard let http = response as? HTTPURLResponse else { throw AIError.failed }
+            return (data, http)
+        } catch let error as URLError {
+            if error.code == .cancelled { throw CancellationError() }
+            throw AIError.cannotReach
+        }
+    }
+
+    /// The models on the computer, by name. It sends a question and none of the person's words.
+    static func models(at endpoint: OllamaEndpoint) async throws -> [String] {
+        guard AIGate.isEnabled else { throw AIError.off }
+        var request = URLRequest(url: endpoint.base.appendingPathComponent("api/tags"))
+        request.timeoutInterval = 10
+        let (data, http) = try await send(request)
+        guard http.statusCode == 200, let tags = try? JSONDecoder().decode(OllamaTags.self, from: data) else { throw AIError.failed }
+        return tags.models.map { $0.name }.sorted()
+    }
+
+    /// Some models put their thinking in the answer between think tags. That is not the answer, so it comes off.
+    static func cleaned(_ answer: String) -> String {
+        var result = answer
+        while let open = result.range(of: "<think>"), let close = result.range(of: "</think>", range: open.upperBound..<result.endIndex) {
+            result.removeSubrange(open.lowerBound..<close.upperBound)
+        }
+        return result.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
+/// Ollama on the person's own computer (Patch AI5, D42). The person types its address and a model name in
+/// Settings, AI tools. Nothing connects while AI tools are off, and the first connection is what makes the phone
+/// ask about the local network, so that is asked only on first use. `AIAsk` calls it after the consent sheet,
+/// which shows the address the text is going to.
+struct OllamaProvider: AIProviding {
+    let kind = AIProviderKind.ollama
+
+    /// A guess to be checked with a real model: Ollama's default window is a few thousand words and the answer
+    /// shares it with the text and the instruction, so the text is held below it.
+    let maxCharacters = 8000
+
+    let address: String
+    let model: String
+
+    init(address: String = OllamaSettings.address, model: String = OllamaSettings.model) {
+        self.address = address
+        self.model = model
+    }
+
+    private var modelName: String { model.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    var destination: String? {
+        guard case .success(let endpoint) = OllamaEndpoint.parse(address) else { return nil }
+        return endpoint.display + ", model " + modelName
+    }
+
+    func status() -> AIProviderStatus {
+        guard AIGate.isEnabled else { return .aiToolsOff }
+        guard case .success = OllamaEndpoint.parse(address), !modelName.isEmpty else { return .notSetUp }
+        return .ready
+    }
+
+    func generate(instruction: String, text: String) async throws -> String {
+        guard AIGate.isEnabled else { throw AIError.off }
+        guard case .success(let endpoint) = OllamaEndpoint.parse(address), !modelName.isEmpty else {
+            throw AIError.unavailable(.notSetUp)
+        }
+        var request = URLRequest(url: endpoint.base.appendingPathComponent("api/chat"))
+        request.httpMethod = "POST"
+        request.timeoutInterval = 180
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(OllamaChatRequest(
+            model: modelName,
+            messages: [
+                .init(role: "system", content: instruction),
+                .init(role: "user", content: text)
+            ],
+            stream: false
+        ))
+        let (data, http) = try await OllamaClient.send(request)
+        if http.statusCode == 404 { throw AIError.modelNotFound }
+        guard http.statusCode == 200,
+              let reply = try? JSONDecoder().decode(OllamaChatReply.self, from: data),
+              let content = reply.message?.content
+        else { throw AIError.failed }
+        return OllamaClient.cleaned(content)
+    }
+}
+
+#if DEBUG
+/// Checks, in a test build, which typed addresses are accepted for Ollama and that its thinking is taken off an
+/// answer. Nothing here connects to anything. Patch AI5.
+enum OllamaSelfTest {
+    private static var hasRun = false
+
+    private static func check(_ condition: Bool, _ message: String) {
+        if !condition { fatalError("Ollama self-test: \(message)") }
+    }
+
+    private static func display(_ typed: String) -> String? {
+        if case .success(let endpoint) = OllamaEndpoint.parse(typed) { return endpoint.display }
+        return nil
+    }
+
+    private static func problem(_ typed: String) -> OllamaAddressProblem? {
+        if case .failure(let problem) = OllamaEndpoint.parse(typed) { return problem }
+        return nil
+    }
+
+    static func run() {
+        if hasRun { return }
+        hasRun = true
+        check(display("192.168.1.20") == "192.168.1.20:11434", "a home number gets the usual port")
+        check(display(" http://10.0.0.5:8080/ ") == "10.0.0.5:8080", "a typed port and a trailing slash are kept and tidied")
+        check(display("172.16.4.2") != nil && display("172.31.255.1") != nil && display("169.254.1.1") != nil, "private ranges are accepted")
+        check(display("My-Mac.local") == "my-mac.local:11434", "a .local name is accepted")
+        check(display("my-mac") == "my-mac:11434", "a single name is accepted")
+        check(problem("172.32.0.1") == .notOnYourNetwork && problem("8.8.8.8") == .notOnYourNetwork, "public numbers are refused")
+        check(problem("example.com") == .notOnYourNetwork && problem("http://anchor.aspens.page") == .notOnYourNetwork, "public names are refused")
+        check(problem("localhost") == .thisPhone && problem("127.0.0.1") == .thisPhone, "this phone is refused")
+        check(problem("") == .empty && problem("   ") == .empty, "nothing typed")
+        check(problem("192.168.1.20/api") == .notAnAddress, "a path is refused")
+        check(problem("http://user:pw@192.168.1.20") == .notAnAddress, "a name and password are refused")
+        check(problem("300.1.1.1") == .notAnAddress && problem("192") == .notAnAddress, "not an address")
+        check(problem("ftp://192.168.1.20") == .notAnAddress, "only http and https")
+        check(OllamaClient.cleaned("<think>hmm</think>\nHello there ") == "Hello there", "thinking comes off")
+        check(OllamaClient.cleaned("Plain answer") == "Plain answer", "a plain answer is left alone")
+        check(OllamaClient.cleaned("<think>never closed Hello") == "<think>never closed Hello", "an unclosed tag is left alone")
+    }
+}
+#endif
 
 /// Reads what a model answered into the small pieces a tool shows as suggestions (Patch AI3). Nothing here sends
 /// anything or keeps anything; the caller shows the pieces and the person decides.
