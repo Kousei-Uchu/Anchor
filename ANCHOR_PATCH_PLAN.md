@@ -1,6 +1,6 @@
 # Anchor — Patch Plan (v2-recovery)
 
-*Living document. Last updated: 9 Nov 2026, after patch 30n3 and DOC11 (written, not yet pushed): DOC11 adds the optional extras E1 to E5 (iCloud sync, dictation with voice notes, and opt-in AI tools with one switch that turns all of them off), written up in `docs/OPTIONAL_FEATURES.md`, with questions D38 to D43 and Phase I below. Pushed through 30n3 (`9c0dce9`), none confirmed building; written and waiting for you to push: DOC11; the ones not started are marked ⬜. Questions are in 0.4. Still waiting on you: the words for the About screen's creator section and the licence files (both D23). Open but not blocking anything: D29a, the Apple Health sleep cleanup, which you cannot review yet. New and assumed as read: D32, D33, D34, D35, D36 and D37. Held on purpose: medication notes (B5), recorded in Appendix D and no longer a decision or a to-do. Everything else in D16 to D31 is answered and either built or queued in the Progress table. D3 is parked until the end, just before the Android work. D15 is answered: option B, every model locked in one go, with a safety copy and an easy way back built first. Things I offered but did not build are in Appendix D. The history of updates is in `docs/PLAN_CHANGELOG.md`. Plain explanations of the decisions you asked about are in `docs/DECISIONS_EXPLAINED.md`.*
+*Living document. Last updated: 9 Nov 2026, after patch 30n3 and DOC11 (written, not yet pushed): DOC11 adds the optional extras E1 to E5 (iCloud sync, dictation with voice notes, and opt-in AI tools with one switch that turns all of them off), written up in `docs/OPTIONAL_FEATURES.md`, with questions D38 to D43 and Phase I below. Pushed through 30n3 (`9c0dce9`), none confirmed building; written and waiting for you to push: DOC11 and AI0 (paste in that order); the ones not started are marked ⬜. Questions are in 0.4. Still waiting on you: the words for the About screen's creator section and the licence files (both D23). Open but not blocking anything: D29a, the Apple Health sleep cleanup, which you cannot review yet. New and assumed as read: D32, D33, D34, D35, D36 and D37. Held on purpose: medication notes (B5), recorded in Appendix D and no longer a decision or a to-do. Everything else in D16 to D31 is answered and either built or queued in the Progress table. D3 is parked until the end, just before the Android work. D15 is answered: option B, every model locked in one go, with a safety copy and an easy way back built first. Things I offered but did not build are in Appendix D. The history of updates is in `docs/PLAN_CHANGELOG.md`. Plain explanations of the decisions you asked about are in `docs/DECISIONS_EXPLAINED.md`.*
 
 > ## READ THIS FIRST: THIS FILE IS THE PROMPT
 >
@@ -147,7 +147,7 @@ The source code repository is at <https://github.com/Kousei-Uchu/Anchor/tree/v2-
 | 46b1: `STATUS.md` in place of `BUILD_STATUS.md` (D20), with the old log kept whole in `docs/BUILD_STATUS_HISTORY.md` and the terminology list in `STATUS.md` | 🟡 Pushed by you (`03ef9c9`); build not yet confirmed |
 | 46b2: the in-app copy edit against the terminology list (point 23): the data viewer names each kind as its screen is named, the presets screen is titled Decision presets, and nothing else in the app needed changing | 🟡 Pushed by you (`a483091`); build not yet confirmed |
 | 35d: Voice notes and Journal photos locked too (D31) | ⬜ Not started; after 35b3 has been checked on your phone |
-| AI0: The one switch (E5): Settings, AI tools, Use AI tools, off by default, `AIGate.isEnabled`, and `scripts/check-ai-gate.mjs`, built before anything sits behind them | ⬜ Not started; small, so early in the order |
+| AI0: The one switch (E5): Settings, AI tools, Use AI tools, off by default, `AIGate.isEnabled`, and `scripts/check-ai-gate.mjs`, built before anything sits behind them | 🟡 Written (change log 124), not yet pushed; build not yet confirmed. The row in Settings is test builds only until AI1 gives it something to switch |
 | AI1: Consent sheet and provider screen (E3, E4): what is sent, to whom, how it is kept, Send or Cancel, Don't ask again per feature and provider, and the Apple on-device provider | ⬜ Not started; after AI0 |
 | AI2: The AI Optimised block in the Journal (E3): a fourth block kind holding the rewrite and the original, folded, Keep or Discard | ⬜ Not started; after AI1 |
 | AI3: Task helper, part 1 (E4): Break into steps and Estimate time on a task, suggestions only, with an optional source link on a task | ⬜ Not started; after AI1 |
@@ -674,7 +674,7 @@ Patches 49, 50 and 54 are **deferred (eventually planned)** pending the React Na
 
 | Patch | Contents | Points | Size | Status |
 | --- | --- | --- | --- | --- |
-| **AI0** | The one switch, the gate, the check script | E5 | S | ⬜ |
+| **AI0** | The one switch, the gate, the check script | E5 | S | 🟡 |
 | **AI1** | Consent sheet, provider screen, Apple on-device provider | E3, E4 | M | ⬜ |
 | **AI2** | The AI Optimised block in the Journal | E3 | M | ⬜ |
 | **AI3** | Task helper: Break into steps, Estimate time, source link on a task | E4 | M | ⬜ |

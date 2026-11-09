@@ -84,7 +84,7 @@ Written 9 Nov 2026 (change log 123). Nothing here is built. Every claim about th
 
 When it is turned off, anything half done is dropped, and the person's saved AI Optimised blocks stay as the text they are (they are the person's entries now). A separate, clearly named choice offers to turn them back into the original text, one entry at a time.
 
-**How it is enforced.** One function, `AIGate.isEnabled`, that every AI entry point must call before it does anything. A script, `scripts/check-ai-gate.mjs`, in the same spirit as the existing check scripts, fails if a file that talks to a provider does not go through the gate. The first patch (AI0) builds the switch and the check before there is anything behind them, so no later patch can skip it. Showcase mode keeps it off.
+**How it is enforced.** One function, `AIGate.isEnabled`, that every AI entry point must call before it does anything. A script, `scripts/check-ai-gate.mjs`, in the same spirit as the existing check scripts, fails if a file that talks to a provider does not go through the gate. The first patch (AI0) builds the switch and the check before there is anything behind them, so no later patch can skip it. Showcase mode keeps it off. Until the first tool exists the row in Settings is in test builds only; AI1 makes it visible in every build.
 
 ## Providers
 

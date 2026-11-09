@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch AI0: a single switch for all AI tools, off to begin with, in Settings (test builds only for now, as nothing is behind it yet). While it is off nothing in Anchor can use AI, and it stays off in showcase mode. A script checks that every future AI feature goes through it.
 - Patch 30n3: an optional follow-up reminder when you write to someone. In Write something, once a person is picked, Follow up offers tomorrow, in 2 days, in 3 days or in a week, off unless you choose one, and set only when you save and send. It comes at 10 am, the lock screen says only that it is a follow-up you set earlier, and tapping it opens a message to that person. A message's sheet shows the day and can remove it, and Settings, Follow-up reminders removes them all. At most one reminder of any kind comes on a day.
 - Patch 30n2: an optional reminder for each person who can see a day on your Support calendar, the morning of it or the day before, off until you switch it on in Settings, Support day reminders. The lock screen says only that there is something to remember, tapping it opens a message to that person, and at most one reminder of any kind comes on a day.
 - Patch 30o2: a note sealed until a date stays sealed in Look at what's stored too. It is listed by its date, its words are not shown or found by a search, and they appear once the day has passed.

@@ -778,6 +778,15 @@ struct HelpNoteToolbarButton: View {
     }
 }
 
+enum AIToolsHelp {
+    static let paragraphs: [String] = [
+        "AI tools are off unless you turn them on here. While this is off, nothing in Anchor uses AI, no AI buttons show anywhere, and nothing is sent to any service.",
+        "When it is on, Anchor may offer a few plain buttons, such as making a long entry shorter. Each one works only on the text you pick, and asks you first, every time, unless you tell it not to.",
+        "Anchor keeps what you wrote exactly as it was. Anything an AI tool suggests is only a suggestion until you keep it.",
+        "Turning this off removes every AI button at once. It is off while showcase mode is on."
+    ]
+}
+
 enum ShowcaseHelp {
     static let paragraphs: [String] = [
         "Showcase mode lets you show someone Anchor without showing them your own things. While it is on, Anchor shows made-up people, entries and plans, and your real data is not opened.",

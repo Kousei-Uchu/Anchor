@@ -249,6 +249,11 @@ struct SettingsView: View {
                     } label: {
                         Text("Encryption (test build)").font(.system(.subheadline, design: .rounded))
                     }
+                    NavigationLink {
+                        AIToolsSettingsView()
+                    } label: {
+                        Text("AI tools (test build)").font(.system(.subheadline, design: .rounded))
+                    }
                     #endif
                 }
             }
@@ -1041,6 +1046,44 @@ private struct RecoveryKeyEntrySheet: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
+            }
+        }
+    }
+}
+
+/// AI tools in Settings (Patch AI0): the one switch for every AI feature. Off to begin with. Nothing sits
+/// behind it yet, so the row is in test builds only until the first AI tool is built; the rules it
+/// carries are in docs/OPTIONAL_FEATURES.md.
+struct AIToolsSettingsView: View {
+    @State private var isOn = AIGate.isChosen
+
+    var body: some View {
+        Form {
+            Anchor.SettingsSection(
+                title: "AI tools",
+                footer: DemoMode.isOn
+                    ? "Off while showcase mode is on."
+                    : "Off to begin with. While it is off, nothing in Anchor uses AI and no AI buttons show anywhere."
+            ) {
+                Toggle(isOn: Binding(
+                    get: { isOn },
+                    set: { newValue in
+                        isOn = newValue
+                        AIGate.setChosen(newValue)
+                    }
+                )) {
+                    Text("Use AI tools")
+                        .font(.system(.subheadline, design: .rounded))
+                }
+                .disabled(DemoMode.isOn)
+            }
+        }
+        .anchorSettingsStyle()
+        .navigationTitle("AI tools")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                HelpNoteToolbarButton(icon: "slider.horizontal.3", title: "About AI tools", paragraphs: AIToolsHelp.paragraphs)
             }
         }
     }
