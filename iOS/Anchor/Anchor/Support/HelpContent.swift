@@ -346,6 +346,7 @@ extension Guide {
             howToUse: "Write something opens a sheet where you pick who it is about, write the message, and add a voice note if you like. You can save it privately, or save it and send it through Messages or Discord. Tap an earlier message to see it, send it again or copy it. The filter at the top shows what you have said to one person. The speech bubble opens your message starters.",
             tips: [
                 "Saving privately sends nothing to anyone.",
+                "Once you pick a person, Follow up can remind you a few days after you save and send. It is off unless you choose one, the lock screen names no one, and tapping it opens a message to that person.",
                 "The first time you record, iOS asks for the microphone.",
                 "Anchor never sends a message by itself."
             ]
@@ -476,12 +477,12 @@ extension Guide {
         GuideEntry(
             id: "settings", tab: nil, title: "Settings", icon: "gearshape.fill",
             whatItIs: "The switches, reminders and controls for the whole app. You can use Anchor without changing any of them.",
-            howToUse: "Privacy has Require Face ID, which locks Anchor on its own, separately from your phone's lock. Reminders has the daily check-in, with a time you choose, and the focus timer's alerts and lock screen timer. Session reminders has two switches for the evening before and a couple of hours before a session. Hello reminders has a switch, a time and the days for each person you have added. Support day reminders has a switch for each person, and a choice of the morning of a day or the day before. Layout switches Plan, Bridge and Thread between widgets and a grid of icons, and opens Customise widgets. Your data and help has Your data, Take the tour, About Anchor and Showcase mode.",
+            howToUse: "Privacy has Require Face ID, which locks Anchor on its own, separately from your phone's lock. Reminders has the daily check-in, with a time you choose, and the focus timer's alerts and lock screen timer. Session reminders has two switches for the evening before and a couple of hours before a session. Hello reminders has a switch, a time and the days for each person you have added. Support day reminders has a switch for each person, and a choice of the morning of a day or the day before. Follow-up reminders shows how many are waiting and removes them all. Layout switches Plan, Bridge and Thread between widgets and a grid of icons, and opens Customise widgets. Your data and help has Your data, Take the tour, About Anchor and Showcase mode.",
             tips: [
                 "The reminders and the optional extras are off until you switch them on.",
                 "Routine reminders, Recovery and Sleep only show here once you have a routine, a Recovery counter, or have started using Sleep, so Settings stays short until you need them.",
                 "Recovery has a Daily pledge, an Evening review and Milestones, each with its own switch.",
-                "What shows on the lock screen is plain wording. Routine, Session, Hello, Support day, Recovery and Sleep reminders never say what they are about.",
+                "What shows on the lock screen is plain wording. Routine, Session, Hello, Support day, Follow-up, Recovery and Sleep reminders never say what they are about.",
                 "Require Face ID needs Face ID, Touch ID or a passcode on the phone. Without one, the switch cannot be used."
             ]
         ),

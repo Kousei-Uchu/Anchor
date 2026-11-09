@@ -31,6 +31,8 @@ struct HelloRequest: Identifiable {
     /// Set when the reminder was about a day on the Support calendar: the day on the calendar.
     var supportDay: Date? = nil
     var dayBefore: Bool = false
+    /// Set when the reminder was a follow-up: the message it was asked for.
+    var followUpMessageID: UUID? = nil
 }
 
 /// What a trigger window reminder shows once it is opened. The lock screen never carries these;
@@ -103,6 +105,9 @@ final class NotificationDelegate: NSObject, ObservableObject, UNUserNotification
                    let seconds = userInfo[HelloReminders.dayKey] as? Double {
                     request.supportDay = Date(timeIntervalSince1970: seconds)
                     request.dayBefore = (userInfo[HelloReminders.dayBeforeKey] as? Bool) ?? false
+                } else if (userInfo[HelloReminders.kindKey] as? String) == HelloReminders.followUpKind,
+                          let raw = userInfo[HelloReminders.messageKey] as? String {
+                    request.followUpMessageID = UUID(uuidString: raw)
                 }
                 hello = request
             }

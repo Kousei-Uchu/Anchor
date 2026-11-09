@@ -64,8 +64,12 @@ enum VoiceNoteStore {
 extension ModelContext {
     /// Deleting a message also removes its voice note file.
     func deleteMessage(_ message: ThreadMessage) {
+        let id = message.id
+        let hadFollowUp = message.followUpAt != nil
         VoiceNoteStore.delete(message.audioFileName)
         delete(message)
+        // A follow-up asked for on this message goes with it.
+        if hadFollowUp { HelloReminders.refresh(using: self, leaving: id) }
     }
 }
 
@@ -435,8 +439,16 @@ private struct ThreadMessageSheet: View {
     @State private var sendRequest: SendRequest?
     @State private var discordFailureMessage: String?
     @State private var copied = false
+    @Environment(\.modelContext) private var modelContext
 
     private var hasVoice: Bool { VoiceNoteStore.exists(message.audioFileName) }
+
+    /// The time the follow-up comes, while it still lies ahead.
+    private var followUpTime: Date? {
+        guard let day = message.followUpAt,
+              let at = HelloReminders.followUpTime(on: day), at > .now else { return nil }
+        return at
+    }
 
     var body: some View {
         Anchor.ItemEditorSheet(title: "Message", onDelete: onDelete, deleteQuestion: "Delete this message?") {
@@ -459,6 +471,20 @@ private struct ThreadMessageSheet: View {
                 }
                 Section("Written") {
                     Text(message.timestamp.formatted(date: .complete, time: .shortened))
+                }
+                if let at = followUpTime {
+                    Section("Follow-up") {
+                        Text("A reminder on \(at.formatted(date: .complete, time: .shortened))")
+                        if HelloReminders.followUpIsSkipped(message.id, using: modelContext) {
+                            Text("No reminder that day: another one comes the same day.")
+                                .font(.footnote).foregroundStyle(.secondary)
+                        }
+                        Button("Remove follow-up", role: .destructive) {
+                            message.followUpAt = nil
+                            try? modelContext.save()
+                            HelloReminders.refresh(using: modelContext)
+                        }
+                    }
                 }
                 Section {
                     if let contact {
@@ -507,6 +533,33 @@ private struct ThreadMessageSheet: View {
 
 // MARK: - Writing
 
+/// How long after writing to someone a follow-up reminder comes. Off unless one is chosen.
+private enum FollowUpChoice: CaseIterable, Identifiable {
+    case off, tomorrow, twoDays, threeDays, aWeek
+
+    var id: Self { self }
+
+    var days: Int? {
+        switch self {
+        case .off: return nil
+        case .tomorrow: return 1
+        case .twoDays: return 2
+        case .threeDays: return 3
+        case .aWeek: return 7
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .off: return "No follow-up"
+        case .tomorrow: return "Tomorrow"
+        case .twoDays: return "In 2 days"
+        case .threeDays: return "In 3 days"
+        case .aWeek: return "In a week"
+        }
+    }
+}
+
 /// Compose a new log entry: pick who it's about, write it or record it,
 /// then either save it privately or save and send.
 struct ThreadMessageComposer: View {
@@ -526,15 +579,49 @@ struct ThreadMessageComposer: View {
 
     @Query(sort: \SupportCalendarEntry.date) private var supportEntries: [SupportCalendarEntry]
 
+    @Query(sort: \ThreadMessage.timestamp) private var allMessages: [ThreadMessage]
+    @State private var followUp = FollowUpChoice.off
+
     private let isHello: Bool
     private let supportDay: Date?
     private let dayBefore: Bool
+    private let followUpMessageID: UUID?
 
-    init(startingContactID: UUID? = nil, isHello: Bool = false, supportDay: Date? = nil, dayBefore: Bool = false) {
+    init(startingContactID: UUID? = nil, isHello: Bool = false, supportDay: Date? = nil, dayBefore: Bool = false,
+         followUpMessageID: UUID? = nil) {
         _selectedContactID = State(initialValue: startingContactID)
         self.isHello = isHello
         self.supportDay = supportDay
         self.dayBefore = dayBefore
+        self.followUpMessageID = followUpMessageID
+    }
+
+    private var pickedContact: TrustedContact? {
+        contacts.first(where: { $0.id == selectedContactID })
+    }
+
+    private var pickedName: String {
+        pickedContact?.name.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+
+    /// Shown only when the box was opened from a follow-up reminder. Closing it does nothing and is
+    /// not recorded. It says when you wrote, as a plain fact.
+    private var followUpLine: String? {
+        guard let followUpMessageID,
+              let message = allMessages.first(where: { $0.id == followUpMessageID }),
+              !pickedName.isEmpty else { return nil }
+        return "You wrote to \(pickedName) \(Self.when(message.timestamp)). Want to say thanks, or see how they are?"
+    }
+
+    private static func when(_ date: Date, calendar: Calendar = .current) -> String {
+        let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: date),
+                                           to: calendar.startOfDay(for: .now)).day ?? 0
+        switch days {
+        case ...0: return "today"
+        case 1: return "yesterday"
+        case 2...6: return "on " + date.formatted(.dateTime.weekday(.wide))
+        default: return "on " + date.formatted(.dateTime.day().month(.abbreviated))
+        }
     }
 
     /// Shown only when the box was opened from a reminder about a Support calendar day, and only
@@ -576,6 +663,11 @@ struct ThreadMessageComposer: View {
                         if let note = day.note {
                             Text(note).font(.callout)
                         }
+                    }
+                }
+                if let line = followUpLine {
+                    Section {
+                        Text(line).font(.callout).foregroundStyle(.secondary)
                     }
                 }
                 if !contacts.isEmpty {
@@ -621,6 +713,19 @@ struct ThreadMessageComposer: View {
                     voiceSection
                 }
 
+                if !pickedName.isEmpty {
+                    Section {
+                        Picker("Follow up", selection: $followUp) {
+                            ForEach(FollowUpChoice.allCases) { choice in
+                                Text(choice.label).tag(choice)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                    } footer: {
+                        Text("Off unless you choose one. It is set when you save and send, and the lock screen never shows a name.")
+                    }
+                }
+
                 Section {
                     Button("Save privately") {
                         _ = saveOnly()
@@ -634,13 +739,13 @@ struct ThreadMessageComposer: View {
                             Button("Save & send via Messages") {
                                 let body = newMessageTrimmed
                                 let attachment = recorder.fileName.map(VoiceNoteStore.url(for:))
-                                _ = saveOnly()
+                                _ = saveOnly(sending: true)
                                 sendRequest = SendRequest(recipient: contact.phoneNumber, body: body, attachment: attachment)
                             }
                             .disabled(!canSave)
                         case .discord:
                             Button("Save & open Discord") {
-                                _ = saveOnly()
+                                _ = saveOnly(sending: true)
                                 DiscordOpener.openUser(contact.discordUserID) { message in
                                     discordFailureMessage = message
                                 }
@@ -662,6 +767,10 @@ struct ThreadMessageComposer: View {
                 }
             }
             .onAppear { textFocused = true }
+            .onChange(of: followUp) { _, choice in
+                // The system asks for notifications the first time a reminder is chosen, never before.
+                if choice != .off { NotificationScheduler.askForPermissionIfNeeded() }
+            }
             .onDisappear {
                 // Anything recorded but never saved is not kept.
                 recorder.discard()
@@ -742,11 +851,21 @@ struct ThreadMessageComposer: View {
     /// The recording is handed to the saved message, so closing the sheet
     /// afterwards does not delete it.
     @discardableResult
-    private func saveOnly() -> Bool {
+    private func saveOnly(sending: Bool = false) -> Bool {
         let trimmed = newMessageTrimmed
         let audio = recorder.take()
         guard !trimmed.isEmpty || audio != nil else { return false }
-        modelContext.insert(ThreadMessage(text: trimmed, audioFileName: audio, withContactID: selectedContactID))
+        let message = ThreadMessage(text: trimmed, audioFileName: audio, withContactID: selectedContactID)
+        // A follow-up is set only when the message is sent to the person, never when it is kept privately.
+        if sending, !pickedName.isEmpty, let days = followUp.days {
+            let today = Calendar.current.startOfDay(for: .now)
+            message.followUpAt = Calendar.current.date(byAdding: .day, value: days, to: today)
+        }
+        modelContext.insert(message)
+        if message.followUpAt != nil {
+            try? modelContext.save()
+            HelloReminders.refresh(using: modelContext)
+        }
         newMessageText = ""
         return true
     }

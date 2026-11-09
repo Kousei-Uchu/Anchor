@@ -152,6 +152,15 @@ struct SettingsView: View {
                     }
                 }
 
+                if helloContacts.contains(where: { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {
+                    Anchor.SettingsSection(
+                        title: "Follow-up reminders",
+                        footer: "Off unless you choose one when you write to someone. It comes a few days later at 10 am. It takes the place of a hello that day, and at most one comes on any day. The lock screen never shows a name."
+                    ) {
+                        FollowUpSettingsRow()
+                    }
+                }
+
                 if showsRecovery {
                     Anchor.SettingsSection(
                         title: "Recovery",
@@ -420,6 +429,40 @@ private struct SupportDayReminderSettingsRow: View {
             HelloReminders.refresh(using: modelContext)
         }
         .onChange(of: contact.supportDaysDayBefore) { _, _ in HelloReminders.refresh(using: modelContext) }
+    }
+}
+
+/// Follow-ups are chosen when a message is written, so this only shows how many are waiting and
+/// removes them all.
+private struct FollowUpSettingsRow: View {
+    @Query(sort: \ThreadMessage.timestamp) private var messages: [ThreadMessage]
+    @Environment(\.modelContext) private var modelContext
+    @State private var confirming = false
+
+    private var waiting: [ThreadMessage] {
+        messages.filter { message in
+            guard let day = message.followUpAt, let at = HelloReminders.followUpTime(on: day) else { return false }
+            return at > .now
+        }
+    }
+
+    var body: some View {
+        Group {
+            if waiting.isEmpty {
+                Text("None waiting.").foregroundStyle(.secondary)
+            } else {
+                Text(waiting.count == 1 ? "1 waiting." : "\(waiting.count) waiting.")
+                Button("Remove all follow-ups", role: .destructive) { confirming = true }
+            }
+        }
+        .confirmationDialog("Remove every follow-up?", isPresented: $confirming, titleVisibility: .visible) {
+            Button("Remove all", role: .destructive) {
+                for message in waiting { message.followUpAt = nil }
+                try? modelContext.save()
+                HelloReminders.refresh(using: modelContext)
+            }
+            Button("Keep them", role: .cancel) {}
+        }
     }
 }
 

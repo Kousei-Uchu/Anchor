@@ -140,7 +140,7 @@ struct SupportCalendarView: View {
 
     /// Days people can see decide the support day reminders, so they are planned again after a change.
     private func refreshReminders(excluding removed: SupportCalendarEntry? = nil) {
-        HelloReminders.refresh(contacts: contacts, entries: entries.filter { $0 !== removed })
+        HelloReminders.refresh(contacts: contacts, entries: entries.filter { $0 !== removed }, using: modelContext)
     }
 
     private func visibleNames(_ entry: SupportCalendarEntry) -> String {

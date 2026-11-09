@@ -970,14 +970,18 @@ final class ThreadMessage {
     var text: String
     var audioFileName: String?
     var withContactID: UUID?
+    /// The day a follow-up reminder was asked for when this was written and sent, as the start of
+    /// that day. Empty unless the person chose one. Nothing is inferred and nothing sets it by itself.
+    var followUpAt: Date?
 
     init(id: UUID = UUID(), timestamp: Date = .now, text: String,
-         audioFileName: String? = nil, withContactID: UUID? = nil) {
+         audioFileName: String? = nil, withContactID: UUID? = nil, followUpAt: Date? = nil) {
         self.id = id
         self.timestamp = timestamp
         self.text = text
         self.audioFileName = audioFileName
         self.withContactID = withContactID
+        self.followUpAt = followUpAt
     }
 }
 

@@ -1541,12 +1541,16 @@ struct FeedbackLoopDiagramDTO: Codable {
 
 struct ThreadMessageDTO: Codable {
     var id: UUID; var timestamp: Date; var text: String; var audioFileName: String?; var withContactID: UUID?
+    /// Optional so exports made before follow-up reminders existed still import.
+    var followUpAt: Date?
     init(_ m: ThreadMessage) {
         id = m.id; timestamp = m.timestamp; text = m.text
         audioFileName = m.audioFileName; withContactID = m.withContactID
+        followUpAt = m.followUpAt
     }
     func toModel() -> ThreadMessage {
-        ThreadMessage(id: id, timestamp: timestamp, text: text, audioFileName: audioFileName, withContactID: withContactID)
+        ThreadMessage(id: id, timestamp: timestamp, text: text, audioFileName: audioFileName,
+                      withContactID: withContactID, followUpAt: followUpAt)
     }
 }
 
@@ -2503,7 +2507,8 @@ extension ThreadMessage: DataBrowsable {
             .date("Timestamp", timestamp),
             .text("Text", text),
             .yesNo("Voice note", audioFileName != nil),
-            .linked("With contact", withContactID)
+            .linked("With contact", withContactID),
+            .date("Follow-up on", followUpAt)
         ]
     }
 }

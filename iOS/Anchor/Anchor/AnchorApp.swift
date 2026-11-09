@@ -444,6 +444,9 @@ enum DemoMode {
         context.insert(ThreadMessage(timestamp: ago(5, hour: 2), text: "Made it to the walk today.", withContactID: demoAlex.id))
         context.insert(ThreadMessage(timestamp: ago(4), text: "I'm not up to talking right now, but I'm safe.", withContactID: demoAlex.id))
         context.insert(ThreadMessage(timestamp: ago(3), text: "Thank you for coming over the other night.", withContactID: demoJordan.id))
+        context.insert(ThreadMessage(timestamp: ago(0, hour: 2), text: "Thinking of you. Hope the week is going alright.",
+                                     withContactID: demoJordan.id,
+                                     followUpAt: Calendar.current.startOfDay(for: now.addingTimeInterval(2 * 86_400))))
         context.insert(SupportCalendarEntry(date: now.addingTimeInterval(5 * 86_400),
                                             note: "A hard day coming up. A check-in would help.",
                                             visibleToContactIDs: [demoSam.id]))
