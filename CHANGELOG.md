@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch DOC17: the plan now records that locking voice notes and Journal photos (35d) is pushed and waiting for a build.
 - Patch 35d: voice notes and Journal photos can be locked too, as a second step on the test-build Lock my data screen once your text is locked. Each file is locked and checked on its own after a new safety copy, so a run that stops loses nothing. New recordings and photos are locked as they are saved, and a backup still holds them in a form that opens on any phone.
 - Patch DOC16: the plan now records that the task card facts (RV1a) and the after-session reminder (30p2) are pushed and waiting for a build.
 - Patch 30p2: an optional reminder after a session for each person, off until you switch it on in Settings, After-session reminders. It comes that evening or the next morning and asks whether you want to tell them how it went. The lock screen says only something for this evening or morning.
