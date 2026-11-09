@@ -259,7 +259,7 @@ extension Guide {
         GuideEntry(
             id: "plan.your-data", tab: .plan, title: "Your data", icon: "lock.shield.fill",
             whatItIs: "Everything Anchor stores about you, and what you can do with it.",
-            howToUse: "Look at what's stored asks for your lock again, then lists every kind of thing Anchor holds. It is read only, with a switch to blur what is written. Export everything is plain text without photos or voice notes, so anyone with the file can read it. Make an encrypted backup includes photos and voice notes and is locked with a password you choose. Import opens either kind. The CSV and PDF exports are for your journal and check-ins, over all time or a date range. Clear all data removes everything from this phone and cannot be undone.",
+            howToUse: "Look at what's stored asks for your lock again, then lists every kind of thing Anchor holds. It is read only, with a switch to blur what is written. Export everything is plain text without photos or voice notes, so anyone with the file can read it. Make an encrypted backup includes photos and voice notes and is locked with a password you choose. Import opens either kind. The CSV and PDF exports are for your journal, check-ins and sleep, over all time or a date range. Clear all data removes everything from this phone and cannot be undone.",
             tips: [
                 "Anchor does not keep a backup's password and cannot get it back, so keep it somewhere safe.",
                 "To share something with your psych, use the share button on Bridge instead. You choose what goes in."

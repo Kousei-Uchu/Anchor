@@ -70,6 +70,9 @@ struct ExportEntry: Identifiable {
     var lines: [String]
     var footnote: String?
     var values: [ExportValue] = []
+    /// For a night of sleep only: when it began and ended, for the CSV's own columns.
+    var bedTime: Date? = nil
+    var wakeTime: Date? = nil
 }
 
 struct ExportSection: Identifiable {
@@ -212,7 +215,8 @@ struct BridgeExportBuilder {
                     id: night.id, category: category, headline: name,
                     entry: ExportEntry(
                         id: night.id, date: night.nightDate, heading: name, lines: lines, footnote: nil,
-                        values: night.shownMinutes.map { [ExportValue(label: "Time asleep", number: Double($0))] } ?? []
+                        values: night.shownMinutes.map { [ExportValue(label: "Time asleep", number: Double($0))] } ?? [],
+                        bedTime: night.bedTime, wakeTime: night.wakeTime
                     )
                 )
             }
@@ -612,6 +616,17 @@ enum BridgeExporter {
                         y = margin
                     }
                     draw(section.category.title, font: headingFont, after: 8)
+                    if section.category == .sleep {
+                        let nights = SleepPDFChart.nights(from: section.entries)
+                        if nights.count >= 2 {
+                            if y + SleepPDFChart.height > pageHeight - margin {
+                                context.beginPage()
+                                y = margin
+                            }
+                            SleepPDFChart.draw(nights: nights, in: CGRect(x: margin, y: y, width: textWidth, height: SleepPDFChart.height))
+                            y += SleepPDFChart.height + 10
+                        }
+                    }
                     for entry in section.entries {
                         if let date = entry.date {
                             draw(date.formatted(date: .abbreviated, time: .shortened), font: smallFont, color: .gray, after: 1)
@@ -646,6 +661,82 @@ enum BridgeExporter {
     }
 }
 
+/// The plain line of time asleep drawn into the PDFs, the same rule as the web page:
+/// 0 h at the bottom, the next whole hour above the longest night at the top, no
+/// target line, and nothing drawn unless two nights have a time.
+enum SleepPDFChart {
+    struct Night {
+        let date: Date
+        let minutes: Int
+    }
+
+    static let height: CGFloat = 130
+
+    /// Nights that have a time asleep, oldest first.
+    static func nights(from entries: [ExportEntry]) -> [Night] {
+        entries.compactMap { entry -> Night? in
+            guard let date = entry.date,
+                  let value = entry.values.first(where: { $0.label == "Time asleep" }) else { return nil }
+            return Night(date: date, minutes: Int(value.number))
+        }.sorted { $0.date < $1.date }
+    }
+
+    /// The top of the chart in minutes: a whole hour, never under one.
+    static func top(of nights: [Night]) -> Int {
+        let most = nights.map(\.minutes).max() ?? 0
+        return max(60, Int((Double(most) / 60).rounded(.up)) * 60)
+    }
+
+    static func draw(nights: [Night], in rect: CGRect) {
+        guard nights.count >= 2, let first = nights.first, let last = nights.last else { return }
+        let ceiling = SleepPDFChart.top(of: nights)
+        let small = UIFont.systemFont(ofSize: 10)
+        let boldSmall = UIFont.boldSystemFont(ofSize: 10)
+
+        ("Time asleep" as NSString).draw(at: CGPoint(x: rect.minX, y: rect.minY), withAttributes: [.font: boldSmall, .foregroundColor: UIColor.black])
+
+        let noteY = rect.maxY - 14
+        let plot = CGRect(x: rect.minX + 30, y: rect.minY + 20, width: rect.width - 40, height: noteY - rect.minY - 30)
+        let gray: [NSAttributedString.Key: Any] = [.font: small, .foregroundColor: UIColor.gray]
+        ("0 h" as NSString).draw(at: CGPoint(x: rect.minX, y: plot.maxY - 6), withAttributes: gray)
+        ("\(ceiling / 60) h" as NSString).draw(at: CGPoint(x: rect.minX, y: plot.minY - 6), withAttributes: gray)
+
+        let axis = UIBezierPath()
+        axis.move(to: CGPoint(x: plot.minX, y: plot.maxY))
+        axis.addLine(to: CGPoint(x: plot.maxX, y: plot.maxY))
+        UIColor.lightGray.setStroke()
+        axis.lineWidth = 0.5
+        axis.stroke()
+
+        // Spaced evenly, one step for each night, as the web page does.
+        func point(_ night: Night, index: Int) -> CGPoint {
+            let across = Double(index) / Double(max(nights.count - 1, 1))
+            let up = min(1, max(0, Double(night.minutes) / Double(ceiling)))
+            return CGPoint(x: plot.minX + plot.width * CGFloat(across), y: plot.maxY - plot.height * CGFloat(up))
+        }
+
+        let line = UIBezierPath()
+        for (index, night) in nights.enumerated() {
+            let p = point(night, index: index)
+            if index == 0 { line.move(to: p) } else { line.addLine(to: p) }
+        }
+        UIColor.darkGray.setStroke()
+        line.lineWidth = 1.5
+        line.lineJoinStyle = .round
+        line.stroke()
+
+        UIColor.darkGray.setFill()
+        for (index, night) in nights.enumerated() {
+            let p = point(night, index: index)
+            UIBezierPath(ovalIn: CGRect(x: p.x - 2, y: p.y - 2, width: 4, height: 4)).fill()
+        }
+
+        let from = first.date.formatted(date: .abbreviated, time: .omitted)
+        let to = last.date.formatted(date: .abbreviated, time: .omitted)
+        ("\(from) to \(to). Nights with no time are left out." as NSString).draw(at: CGPoint(x: rect.minX, y: noteY), withAttributes: gray)
+    }
+}
+
 // MARK: - The web page
 
 /// A single .html file with the document inside it and a small viewer: search,
@@ -664,6 +755,8 @@ enum BridgeHTMLExporter {
         let lines: [String]
         let footnote: String?
         let values: [ValueDTO]
+        let bed: String?
+        let up: String?
     }
     /// "fraction" values run from 0 to 1 (check-ins); "minutes" is time asleep.
     private struct SectionDTO: Encodable { let key: String; let title: String; let unit: String; let entries: [EntryDTO] }
@@ -706,7 +799,9 @@ enum BridgeHTMLExporter {
                         date: entry.date.map { iso.string(from: $0) },
                         dateText: entry.date.map { $0.formatted(date: .abbreviated, time: .shortened) },
                         heading: entry.heading, lines: entry.lines, footnote: entry.footnote,
-                        values: entry.values.map { ValueDTO(label: $0.label, number: $0.number) }
+                        values: entry.values.map { ValueDTO(label: $0.label, number: $0.number) },
+                        bed: entry.bedTime.map { iso.string(from: $0) },
+                        up: entry.wakeTime.map { iso.string(from: $0) }
                     )
                 })
             }
@@ -974,10 +1069,14 @@ button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
     return '"' + s.replace(/"/g, '""') + '"';
   }
   function downloadCSV() {
-    var rows = [["section", "date", "heading", "text", "note"]];
+    var rows = [["section", "date", "heading", "text", "note", "in_bed", "up", "minutes_asleep"]];
     doc.sections.forEach(function (s) {
       s.entries.forEach(function (e) {
-        rows.push([s.title, e.date || "", e.heading || "", e.lines.join(" | "), e.footnote || ""]);
+        var asleep = "";
+        if (s.unit === "minutes") {
+          (e.values || []).forEach(function (x) { if (x.label === "Time asleep") asleep = x.number; });
+        }
+        rows.push([s.title, e.date || "", e.heading || "", e.lines.join(" | "), e.footnote || "", e.bed || "", e.up || "", asleep]);
       });
     });
     var text = "\uFEFF" + rows.map(function (r) { return r.map(csvCell).join(","); }).join("\r\n");

@@ -4,7 +4,7 @@
 //
 //  Everything the user asked for on data control in one place: see what's
 //  stored and roughly how much, export it (full JSON round-trip, or
-//  CSV/PDF scoped to Journal + Check-ins specifically — the two things
+//  CSV/PDF scoped to Journal, Check-ins and Sleep specifically — the things
 //  actually meaningful to hand a psych — either all-time or a chosen date
 //  range), import a previous Anchor export back in, and clear everything
 //  outright. Internal-only data (the mascot's pre-written line pool) is
@@ -112,13 +112,13 @@ struct DataControlView: View {
                     Button {
                         showDateRangeSheet = .csv
                     } label: {
-                        Anchor.MenuRow(icon: "tablecells", title: "Export Journal & Check-ins (CSV)",
+                        Anchor.MenuRow(icon: "tablecells", title: "Export Journal, Check-ins and Sleep (CSV)",
                                        subtitle: "For spreadsheets, or to hand to your psych", tint: Anchor.Theme.accent)
                     }
                     Button {
                         showDateRangeSheet = .pdf
                     } label: {
-                        Anchor.MenuRow(icon: "doc.richtext", title: "Export Journal & Check-ins (PDF)",
+                        Anchor.MenuRow(icon: "doc.richtext", title: "Export Journal, Check-ins and Sleep (PDF)",
                                        subtitle: "Readable printout, all-time or a date range", tint: Anchor.Theme.accent)
                     }
                 } header: {
@@ -530,20 +530,32 @@ struct DataControlView: View {
     // MARK: - CSV / PDF (Journal + Check-ins only — the two things worth handing a psych)
 
     private func exportCSV(range: ClosedRange<Date>?, includeRecovery: Bool) {
-        var lines = ["type,date,text_or_values"]
+        // Sleep has its own columns at the end, so the first three stay where they were.
+        var lines = ["type,date,text_or_values,bed_time,wake_time,minutes_asleep,feel"]
+        let noSleepColumns = ",,,,"
         for entry in filteredJournal(range) {
             let escaped = entry.text.replacingOccurrences(of: "\"", with: "\"\"").replacingOccurrences(of: "\n", with: " ")
-            lines.append("journal,\(iso(entry.createdAt)),\"\(escaped)\"")
+            lines.append("journal,\(iso(entry.createdAt)),\"\(escaped)\"\(noSleepColumns)")
         }
         for checkIn in filteredCheckIns(range) {
             let values = "energy=\(fmt(1 - checkIn.physicalExhaustion)) clarity=\(fmt(1 - checkIn.cognitiveBurnout)) space=\(fmt(1 - checkIn.mentalLoad)) moving=\(fmt(checkIn.physicalEnergy)) social=\(fmt(checkIn.socialEnergy))"
-            lines.append("checkin,\(iso(checkIn.timestamp)),\"\(values)\"")
+            lines.append("checkin,\(iso(checkIn.timestamp)),\"\(values)\"\(noSleepColumns)")
+        }
+        let feelWords = SleepFeelWords.words(from: UserDefaults.standard.string(forKey: SleepFeelWords.storageKey) ?? "")
+        for night in filteredSleep(range) {
+            let note = night.note.replacingOccurrences(of: "\"", with: "\"\"").replacingOccurrences(of: "\n", with: " ")
+            let bed = night.bedTime.map { iso($0) } ?? ""
+            let wake = night.wakeTime.map { iso($0) } ?? ""
+            let minutes = night.shownMinutes.map { String($0) } ?? ""
+            let feel = night.feel.flatMap { $0 >= 0 && $0 < feelWords.count ? feelWords[$0] : nil } ?? ""
+            let feelCell = feel.replacingOccurrences(of: "\"", with: "\"\"")
+            lines.append("sleep,\(iso(night.nightDate)),\"\(note)\",\(bed),\(wake),\(minutes),\"\(feelCell)\"")
         }
         if includeRecovery {
             for counter in activeRecoveryCounters {
                 let summary = RecoverySummary.lines(for: counter, urges: recoveryUrges, range: summaryRange(range))
                 let escaped = "\(counter.name): " + summary.joined(separator: "; ")
-                lines.append("recovery,\(iso(range?.upperBound ?? .now)),\"\(escaped.replacingOccurrences(of: "\"", with: "\"\""))\"")
+                lines.append("recovery,\(iso(range?.upperBound ?? .now)),\"\(escaped.replacingOccurrences(of: "\"", with: "\"\""))\"\(noSleepColumns)")
             }
         }
         guard let data = lines.joined(separator: "\n").data(using: .utf8) else { return }
@@ -584,6 +596,33 @@ struct DataControlView: View {
             for checkIn in filteredCheckIns(range) {
                 draw("\(checkIn.timestamp.formatted(date: .abbreviated, time: .shortened)): energy \(fmt(1 - checkIn.physicalExhaustion)), clarity \(fmt(1 - checkIn.cognitiveBurnout)), room in head \(fmt(1 - checkIn.mentalLoad)), moving \(fmt(checkIn.physicalEnergy)), social energy \(fmt(checkIn.socialEnergy))", font: bodyFont)
             }
+            let sleepNights = filteredSleep(range)
+            if !sleepNights.isEmpty {
+                draw("Sleep", font: headingFont)
+                let chartNights = sleepNights.compactMap { night -> SleepPDFChart.Night? in
+                    night.shownMinutes.map { SleepPDFChart.Night(date: night.nightDate, minutes: $0) }
+                }
+                if chartNights.count >= 2 {
+                    if y + SleepPDFChart.height > pageRect.height - 40 {
+                        context.beginPage()
+                        y = 40
+                    }
+                    SleepPDFChart.draw(nights: chartNights, in: CGRect(x: 40, y: y, width: pageRect.width - 80, height: SleepPDFChart.height))
+                    y += SleepPDFChart.height + 10
+                }
+                for night in sleepNights {
+                    var parts: [String] = []
+                    if let bed = night.bedTime, let wake = night.wakeTime {
+                        parts.append("in bed \(bed.formatted(date: .omitted, time: .shortened)), up \(wake.formatted(date: .omitted, time: .shortened))")
+                    }
+                    if let minutes = night.shownMinutes { parts.append("asleep about \(SleepEntry.describe(minutes: minutes))") }
+                    let note = night.note.trimmingCharacters(in: .whitespacesAndNewlines)
+                    var text = "Night of \(night.nightDate.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)))"
+                    if !parts.isEmpty { text += ": " + parts.joined(separator: ", ") }
+                    if !note.isEmpty { text += "\n" + note }
+                    draw(text, font: bodyFont)
+                }
+            }
             if includeRecovery {
                 draw("Recovery", font: headingFont)
                 for counter in activeRecoveryCounters {
@@ -600,6 +639,10 @@ struct DataControlView: View {
     }
     private func filteredCheckIns(_ range: ClosedRange<Date>?) -> [CheckIn] {
         checkIns.filter { range?.contains($0.timestamp) ?? true }.sorted { $0.timestamp < $1.timestamp }
+    }
+
+    private func filteredSleep(_ range: ClosedRange<Date>?) -> [SleepEntry] {
+        sleepEntries.filter { !$0.isBlank && (range?.contains($0.nightDate) ?? true) }.sorted { $0.nightDate < $1.nightDate }
     }
 
     private var activeRecoveryCounters: [RecoveryCounter] {
