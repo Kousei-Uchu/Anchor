@@ -2,7 +2,7 @@ export const SITE_URL = 'https://anchor.aspens.page';
 export const GITHUB_URL = 'https://github.com/Kousei-Uchu/Anchor';
 export const SUPPORT_EMAIL = 'anchor@aspens.page';
 
-export const ROUTE_META: Record<string, { title: string; description: string }> = {
+export const ROUTE_META: Record<string, { title: string; description: string; noindex?: boolean }> = {
   '/': {
     title: 'Anchor: a calm place for the hard days',
     description:
@@ -23,6 +23,11 @@ export const ROUTE_META: Record<string, { title: string; description: string }> 
   '/demo': {
     title: 'Anchor demo',
     description: 'A tappable demo of Anchor with made-up content. Nothing you type is saved or sent.',
+  },
+  '/beta': {
+    title: 'Join the Anchor beta',
+    description: 'Try Anchor on iPhone and iPad before it is on the App Store.',
+    noindex: true,
   },
   '/privacy': { title: 'Anchor Privacy Policy', description: 'How Anchor handles your data.' },
   '/support': { title: 'Anchor Support', description: 'Help and contact for the Anchor app.' },

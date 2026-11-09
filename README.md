@@ -7,7 +7,7 @@ Layout
 iOS/               Xcode project (open iOS/Anchor/Anchor.xcodeproj in Xcode 26 or later)
 website/           Vite and React site for anchor.aspens.page
 remotion-project/  Source for the promo video
-scripts/           make-screenshots.sh (App Store screenshots and demo video), check-all.sh (runs every check that needs no Xcode, including a Swift syntax check), check-about-content.mjs (the About copy in the app and on the website must match), sync-guide.mjs (makes the website Features page content from the in-app guide; --check fails if it is out of date), check-demo-coverage.mjs (every kind of content has made-up content for showcase mode and the screenshots), anchorbackup.py (opens an encrypted backup without the app), anchorkey.py (the key and recovery key formats, with a self-test)
+scripts/           make-screenshots.sh (App Store screenshots and demo video), check-all.sh (runs every check that needs no Xcode, including a Swift syntax check), check-about-content.mjs (the About copy in the app and on the website must match), sync-guide.mjs (makes the website Features page content from the in-app guide; --check fails if it is out of date), check-demo-coverage.mjs (every kind of content has made-up content for showcase mode and the screenshots), check-beta-hidden.mjs (the unlisted /beta page stays noindex and linked from nowhere), anchorbackup.py (opens an encrypted backup without the app), anchorkey.py (the key and recovery key formats, with a self-test)
 docs/              Release guide and App Store copy
 STATUS.md          Short current picture of the app and the repo
 ANCHOR_PATCH_PLAN.md  The patch plan, decisions and progress; docs/BUILD_STATUS_HISTORY.md is the old build log

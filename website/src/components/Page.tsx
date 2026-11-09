@@ -5,7 +5,7 @@ import { ROUTE_META } from '../content/meta';
 /** Shell for the plain reading pages (privacy, support). Server-rendered, so it works without JavaScript. */
 export function Page({ route, title, meta, children }: { route: string; title: string; meta?: string; children: ReactNode }) {
   const m = ROUTE_META[route];
-  usePageMeta(m.title, m.description);
+  usePageMeta(m.title, m.description, m.noindex);
   return (
     <main className="prose">
       <h1>{title}</h1>

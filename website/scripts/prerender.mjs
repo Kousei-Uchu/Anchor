@@ -18,6 +18,7 @@ for (const route of Object.keys(ROUTE_META)) {
     .replace(/(<meta name="description" content=")[^"]*(")/, `$1${esc(meta.description)}$2`)
     .replace(/(<meta property="og:title" content=")[^"]*(")/, `$1${esc(meta.title)}$2`)
     .replace(/(<meta property="og:description" content=")[^"]*(")/, `$1${esc(meta.description)}$2`)
+    .replace('</head>', meta.noindex ? '    <meta name="robots" content="noindex, nofollow" />\n  </head>' : '</head>')
     .replace('<div id="root"></div>', `<div id="root">${render(route)}</div>`);
   const out = route === '/' ? join(dist, 'index.html') : join(dist, route.slice(1), 'index.html');
   mkdirSync(dirname(out), { recursive: true });
