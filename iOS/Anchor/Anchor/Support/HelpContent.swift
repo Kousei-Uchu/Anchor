@@ -458,7 +458,8 @@ extension Guide {
                 "What you write is saved as you go. An entry with nothing written in it is removed when you tap Done.",
                 "A writing prompt is one of a fixed set of lines. Use this adds it to your page, Another one shows a different line, and the cross puts it away. Nothing is made up on the spot.",
                 "Formatting opens a row of buttons for the look of your words. Tap it again to put the row away.",
-                "Copying a line into Things to raise leaves the entry as it was."
+                "Copying a line into Things to raise leaves the entry as it was.",
+                "If you switch on Dictate in Settings, Journal, a microphone button joins the row of tools. It turns what you say into text on this phone, after the words already in the paragraph, and the sound is not kept. If you type while it listens, it stops and leaves your typing alone."
             ]
         ),
         GuideEntry(

@@ -391,6 +391,10 @@ struct JournalEntryEditorView: View {
     @State private var assistDraft: JournalAssistDraft?
     @State private var assistMessage: String?
     @State private var braindump: BraindumpDraft?
+    @StateObject private var dictation = DictationSession()
+    @State private var dictationTarget: DictationTarget?
+    @AppStorage(DictationSettings.enabledKey) private var dictationChosen = false
+    @Environment(\.scenePhase) private var scenePhase
     @Query(sort: \RecoveryCounter.sortOrder) private var recoveryCounters: [RecoveryCounter]
 
     init(entry: JournalEntry, onFinish: (() -> Void)? = nil) {
@@ -422,20 +426,11 @@ struct JournalEntryEditorView: View {
                         }
 
                         if let assistMessage {
-                            HStack(alignment: .top, spacing: 10) {
-                                Text(assistMessage)
-                                    .font(.subheadline)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                Spacer(minLength: 0)
-                                Button {
-                                    self.assistMessage = nil
-                                } label: {
-                                    Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
-                                }
-                                .accessibilityLabel("Dismiss")
-                            }
-                            .padding(12)
-                            .background(Anchor.Theme.accentSoft, in: RoundedRectangle(cornerRadius: 14))
+                            noticeBanner(assistMessage) { self.assistMessage = nil }
+                        }
+
+                        if let dictationMessage = dictation.message {
+                            noticeBanner(dictationMessage) { dictation.message = nil }
                         }
 
                         ForEach($blocks) { $block in
@@ -463,6 +458,12 @@ struct JournalEntryEditorView: View {
                 .onChange(of: assistDraft?.id) { _, newValue in
                     if newValue != nil {
                         withAnimation { proxy.scrollTo("assistDraft", anchor: .center) }
+                    }
+                }
+                .onChange(of: dictationTarget?.lastWritten) { _, _ in
+                    // The paragraph being dictated into stays in view as it grows.
+                    if let id = dictationTarget?.blockID {
+                        proxy.scrollTo(id, anchor: .bottom)
                     }
                 }
                 .onChange(of: blocks.count) { oldCount, newCount in
@@ -578,6 +579,17 @@ struct JournalEntryEditorView: View {
                                  sourceEntryID: entry.id)
             }
             .aiAsk(ask)
+            .onChange(of: dictation.phase) { _, phase in
+                if phase == .idle { dictationTarget = nil }
+            }
+            .onChange(of: scenePhase) { _, phase in
+                // Dictate never keeps listening while Anchor is not on screen.
+                if phase != .active { dictation.stop() }
+            }
+            .onChange(of: dictationChosen) { _, chosen in
+                if !chosen { dictation.cancel() }
+            }
+            .onDisappear { dictation.cancel() }
             .onReceive(NotificationCenter.default.publisher(for: .aiToolsTurnedOff)) { _ in
                 // Anything half done is dropped. A block already kept stays, as the person's own entry.
                 assistDraft = nil
@@ -763,6 +775,64 @@ struct JournalEntryEditorView: View {
         }
     }
 
+    // MARK: Dictate
+
+    private var showsDictate: Bool { dictationChosen && !DemoMode.isOn }
+
+    /// The paragraph words go into: the one being written in, or else the last one on the page.
+    private var dictationTargetID: UUID? {
+        if let id = activeID, blocks.contains(where: { $0.id == id && $0.isText }) { return id }
+        return blocks.last(where: { $0.isText })?.id
+    }
+
+    private func toggleDictation() {
+        switch dictation.phase {
+        case .listening:
+            dictation.stop()
+        case .idle:
+            guard let id = dictationTargetID, let block = blocks.first(where: { $0.id == id }) else { return }
+            dictationTarget = DictationTarget(blockID: id, base: block.text, lastWritten: block.text)
+            focusRequest = id
+            Task { @MainActor in
+                await dictation.start { heard in applyDictation(heard) }
+                if dictation.phase == .idle { dictationTarget = nil }
+            }
+        case .starting, .finishing:
+            break
+        }
+    }
+
+    /// Puts the words heard so far into the paragraph, after what was already there. If the person has
+    /// typed in it since the last words, dictation stops and what they typed is left alone.
+    private func applyDictation(_ heard: String) {
+        guard var target = dictationTarget else { return }
+        guard let index = blocks.firstIndex(where: { $0.id == target.blockID }),
+              blocks[index].text == target.lastWritten else {
+            dictation.stop()
+            dictationTarget = nil
+            return
+        }
+        let written = target.text(for: heard)
+        blocks[index].text = written
+        target.lastWritten = written
+        dictationTarget = target
+    }
+
+    private func noticeBanner(_ text: String, dismiss: @escaping () -> Void) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Text(text)
+                .font(.subheadline)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+            Button(action: dismiss) {
+                Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+            }
+            .accessibilityLabel("Dismiss")
+        }
+        .padding(12)
+        .background(Anchor.Theme.accentSoft, in: RoundedRectangle(cornerRadius: 14))
+    }
+
     // MARK: Prompt
 
     private func promptBlock(_ line: MascotLine) -> some View {
@@ -817,11 +887,24 @@ struct JournalEntryEditorView: View {
             if showFormatting {
                 MarkdownToolbar(pendingCommand: $pendingCommand)
             }
+            if dictation.phase == .listening {
+                Text("Listening. What you say is turned into text on this phone. Tap the microphone to stop.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+            }
             HStack(spacing: 0) {
                 toolButton("sparkles", "Journaling Suggestions") { showContextSuggestions = true }
                 toolButton("photo.on.rectangle", "Photos") { showPhotoPicker = true }
                 toolButton("pencil.tip.crop.circle", "Drawing") { showDrawingCanvas = true }
                 toolButton("lightbulb", "Writing prompt") { offerPrompt() }
+                if showsDictate {
+                    toolButton(dictation.phase == .listening ? "stop.circle.fill" : "mic",
+                               dictation.phase == .listening ? "Stop dictating" : "Dictate",
+                               highlighted: dictation.phase == .listening) { toggleDictation() }
+                }
                 toolButton("textformat", "Formatting", highlighted: showFormatting) {
                     withAnimation { showFormatting.toggle() }
                 }

@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch VN1: Dictate in the Journal. Switch it on in Settings, Journal, and a microphone button joins the row of tools on a Journal page. It turns what you say into text on your phone, after the words already in the paragraph, and keeps no sound. If your phone cannot do your language on its own it says so and does not start. Typing while it listens stops it.
 - Patch DOC21: the plan now records that AI tools on your own computer with Ollama (AI5) is pushed and waiting for a build.
 - Patch AI5: AI tools can run on your own computer with Ollama. In Settings, AI tools, Where it runs, choose On my computer, type its address on your home network and a model name, or tap Look for models. Only your own network is accepted, nothing connects until you use a tool, and the sheet that asks first shows the address.
 - Patch DOC20: the plan now records that Tidy a braindump (AI4) is pushed and waiting for a build.

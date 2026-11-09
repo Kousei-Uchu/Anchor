@@ -67,6 +67,7 @@ struct SettingsView: View {
     @AppStorage(SleepSettings.reminderEnabledKey) private var sleepReminderOn = false
     @AppStorage(SleepSettings.reminderHourKey) private var sleepReminderHour = 8
     @AppStorage(SleepSettings.reminderMinuteKey) private var sleepReminderMinute = 0
+    @AppStorage(DictationSettings.enabledKey) private var dictationOn = false
     @AppStorage(WidgetTab.plan.hiddenKey) private var planHiddenRaw = WidgetTab.plan.defaultHiddenRaw
     @Query private var sleepEntries: [SleepEntry]
 
@@ -214,6 +215,13 @@ struct SettingsView: View {
                             Anchor.SettingsTimeRow(time: timeBinding($sleepReminderHour, $sleepReminderMinute))
                         }
                     }
+                }
+
+                Anchor.SettingsSection(
+                    title: "Journal",
+                    footer: "Off until you switch it on. Dictate is a microphone button on a Journal page that turns what you say into text, on this phone only. The sound is not kept, and nothing you say is sent anywhere. If your language is not ready on the phone, Dictate says so and does not start."
+                ) {
+                    Anchor.SettingsToggle(title: "Dictate in the Journal", isOn: $dictationOn)
                 }
 
                 Anchor.SettingsSection(
