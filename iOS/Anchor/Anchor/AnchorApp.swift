@@ -23,6 +23,7 @@ struct AnchorApp: App {
         AIAskSelfTest.run()
         JournalAssistSelfTest.run()
         JournalVoiceSelfTest.run()
+        SpeakerLabelsSelfTest.run()
         AIAnswerReaderSelfTest.run()
         OllamaSelfTest.run()
         #endif

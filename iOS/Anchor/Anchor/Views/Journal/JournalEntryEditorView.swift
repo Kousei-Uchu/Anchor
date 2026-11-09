@@ -406,6 +406,10 @@ struct JournalEntryEditorView: View {
     @StateObject private var dictation = DictationSession()
     @State private var dictationTarget: DictationTarget?
     @State private var voiceKeep: DictationKeep?
+    @AppStorage(DictationSettings.labelSpeakersKey) private var labelSpeakers = false
+    @State private var renamingSpeakers = false
+    @State private var speakerOneName = ""
+    @State private var speakerTwoName = ""
     @AppStorage(DictationSettings.enabledKey) private var dictationChosen = false
     @Environment(\.scenePhase) private var scenePhase
     @Query(sort: \RecoveryCounter.sortOrder) private var recoveryCounters: [RecoveryCounter]
@@ -530,6 +534,15 @@ struct JournalEntryEditorView: View {
                             }
                             .disabled(ask.isWorking)
                         }
+                        if blocks.contains(where: { $0.isText && SpeakerLabels.isUsed(in: $0.text) }) {
+                            Button {
+                                speakerOneName = SpeakerLabels.names[0]
+                                speakerTwoName = SpeakerLabels.names[1]
+                                renamingSpeakers = true
+                            } label: {
+                                Label("Rename speakers", systemImage: "person.2")
+                            }
+                        }
                         Button {
                             showGuide = true
                         } label: {
@@ -598,6 +611,7 @@ struct JournalEntryEditorView: View {
             .aiAsk(ask)
             .onChange(of: dictation.phase) { _, phase in
                 guard phase == .idle else { return }
+                trimEmptySpeakerTurn()
                 attachVoiceNote(after: dictationTarget)
                 dictationTarget = nil
             }
@@ -614,6 +628,14 @@ struct JournalEntryEditorView: View {
                 assistDraft = nil
                 assistMessage = nil
                 braindump = nil
+            }
+            .alert("Rename speakers", isPresented: $renamingSpeakers) {
+                TextField("Speaker 1", text: $speakerOneName)
+                TextField("Speaker 2", text: $speakerTwoName)
+                Button("Rename") { renameSpeakers() }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Only the names at the start of lines on this page change. Nothing about who spoke is kept anywhere else.")
             }
             .alert("Added to Things to raise", isPresented: $addedToBridge) {
                 Button("OK", role: .cancel) {}
@@ -836,10 +858,42 @@ struct JournalEntryEditorView: View {
             dictation.stop()
             return
         }
+        target.lastHeard = heard
         let written = target.text(for: heard)
         blocks[index].text = written
         target.lastWritten = written
         dictationTarget = target
+    }
+
+    /// The person says the speaker has changed. What is heard from now on goes on a new line with the label.
+    private func startSpeakerTurn(_ label: String) {
+        guard var target = dictationTarget, dictation.phase == .listening,
+              let index = blocks.firstIndex(where: { $0.id == target.blockID }),
+              blocks[index].text == target.lastWritten else { return }
+        target.startTurn(label)
+        let written = target.text(for: target.lastHeard)
+        blocks[index].text = written
+        target.lastWritten = written
+        dictationTarget = target
+    }
+
+    /// A label tapped just before stopping, with nothing said after it, is not left on the page.
+    private func trimEmptySpeakerTurn() {
+        guard var target = dictationTarget, !target.turns.isEmpty,
+              let index = blocks.firstIndex(where: { $0.id == target.blockID }),
+              blocks[index].text == target.lastWritten else { return }
+        let trimmed = SpeakerLabels.trimmingEmptyTurn(blocks[index].text)
+        guard trimmed != blocks[index].text else { return }
+        blocks[index].text = trimmed
+        target.lastWritten = trimmed
+        dictationTarget = target
+    }
+
+    /// Changes the names at the start of lines in this entry's paragraphs. Nothing is kept anywhere else.
+    private func renameSpeakers() {
+        for index in blocks.indices where blocks[index].isText {
+            blocks[index].text = SpeakerLabels.renamed(blocks[index].text, first: speakerOneName, second: speakerTwoName)
+        }
     }
 
     /// Puts the voice note kept by the go that just ended on the page, right after the paragraph the words
@@ -969,6 +1023,24 @@ struct JournalEntryEditorView: View {
         VStack(spacing: 0) {
             if showFormatting {
                 MarkdownToolbar(pendingCommand: $pendingCommand)
+            }
+            if dictation.phase == .listening && DictationSettings.labelsSpeakers {
+                HStack(spacing: 8) {
+                    Text("Who is speaking?")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    ForEach(1...SpeakerLabels.names.count, id: \.self) { number in
+                        let name = SpeakerLabels.name(number)
+                        let current = dictationTarget?.turns.last?.label == name
+                        Button(name) { startSpeakerTurn(name) }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                            .tint(current ? Anchor.Theme.accent : .secondary)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
             }
             if dictation.phase == .listening {
                 Text("Listening. What you say is turned into text on this phone. Tap the microphone to stop.")

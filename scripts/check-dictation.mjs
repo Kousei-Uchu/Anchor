@@ -7,7 +7,9 @@
 // 4. Dictation.swift never writes sound to a file itself. A voice note kept while dictating (VN2) is written by
 //    Support/DictationAudio.swift only, which is made only when Keep a voice note while dictating is on, and
 //    that switch is off to begin with, needs Dictate to be on, and stays off in showcase mode.
-// 5. The switch is off to begin with and stays off in showcase mode and the demo store, and nothing defaults it on.
+// 5. The Keep a voice note and Label who is speaking switches are also off to begin with and need Dictate on.
+//    Nothing tells voices apart: no speaker or voice analysis is used, only the buttons the person taps.
+// 5b. The Dictate switch is off to begin with and stays off in showcase mode and the demo store, and nothing defaults it on.
 // 6. The Journal editor shows the Dictate button only through that switch.
 
 import { readFileSync, readdirSync, statSync } from "node:fs";

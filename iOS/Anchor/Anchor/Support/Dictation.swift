@@ -16,6 +16,10 @@ import Speech
 enum DictationSettings {
     static let enabledKey = "dictationEnabled"
     static let keepVoiceNoteKey = "dictationKeepsVoiceNote"
+    static let labelSpeakersKey = "dictationLabelsSpeakers"
+
+    /// Whether the person asked for Speaker 1 and Speaker 2 buttons while dictating. Off unless they turned it on.
+    static var labelsSpeakers: Bool { isEnabled && UserDefaults.standard.bool(forKey: labelSpeakersKey) }
 
     /// Whether the person asked for a voice note to be kept while dictating. Off unless they turned it on.
     static var keepsVoiceNote: Bool { isEnabled && UserDefaults.standard.bool(forKey: keepVoiceNoteKey) }
@@ -299,10 +303,49 @@ struct DictationTarget {
     let base: String
     /// What dictation last wrote. If the paragraph differs from this, the person has typed, and typing wins.
     var lastWritten: String
+    /// Everything heard so far in this go, as last handed over.
+    var lastHeard: String = ""
+    /// Where each speaker's words begin in what was heard, set when the person taps a speaker (Patch VN3).
+    var turns: [Turn] = []
+
+    struct Turn: Equatable {
+        let label: String
+        /// How many characters had been heard when the person tapped.
+        let from: Int
+    }
+
+    /// The person says the speaker has changed. Words heard from now on go on a new line with this label.
+    mutating func startTurn(_ label: String) {
+        if turns.last?.label == label { return }
+        let from = lastHeard.count
+        // Tapping again before anything was said replaces the label rather than leaving an empty one.
+        if let last = turns.last, last.from == from { turns.removeLast() }
+        if turns.last?.label == label { return }
+        turns.append(Turn(label: label, from: from))
+    }
 
     /// The paragraph's text for the words heard so far.
     func text(for heard: String) -> String {
-        let spaced = !base.isEmpty && !heard.isEmpty && !(base.last?.isWhitespace ?? true)
-        return base + (spaced ? " " : "") + heard
+        guard !turns.isEmpty else {
+            let spaced = !base.isEmpty && !heard.isEmpty && !(base.last?.isWhitespace ?? true)
+            return base + (spaced ? " " : "") + heard
+        }
+        let characters = Array(heard)
+        func words(_ start: Int, _ end: Int) -> String {
+            let from = min(start, characters.count)
+            let to = max(from, min(end, characters.count))
+            return String(characters[from..<to]).trimmingCharacters(in: .whitespaces)
+        }
+        var lines: [String] = []
+        if let first = turns.first, first.from > 0 {
+            let before = words(0, first.from)
+            if !before.isEmpty { lines.append(before) }
+        }
+        for (index, turn) in turns.enumerated() {
+            let end = index + 1 < turns.count ? turns[index + 1].from : characters.count
+            lines.append(turn.label + ": " + words(turn.from, end))
+        }
+        let joiner = base.isEmpty || base.last == "\n" ? "" : "\n"
+        return base + joiner + lines.joined(separator: "\n")
     }
 }

@@ -69,6 +69,7 @@ struct SettingsView: View {
     @AppStorage(SleepSettings.reminderMinuteKey) private var sleepReminderMinute = 0
     @AppStorage(DictationSettings.enabledKey) private var dictationOn = false
     @AppStorage(DictationSettings.keepVoiceNoteKey) private var dictationKeepsNote = false
+    @AppStorage(DictationSettings.labelSpeakersKey) private var dictationLabels = false
     @AppStorage(WidgetTab.plan.hiddenKey) private var planHiddenRaw = WidgetTab.plan.defaultHiddenRaw
     @Query private var sleepEntries: [SleepEntry]
 
@@ -220,11 +221,12 @@ struct SettingsView: View {
 
                 Anchor.SettingsSection(
                     title: "Journal",
-                    footer: "Off until you switch it on. Dictate is a microphone button on a Journal page that turns what you say into text, on this phone only. Nothing you say is sent anywhere. If your language is not ready on the phone, Dictate says so and does not start. The sound is not kept unless you also switch on Keep a voice note while dictating, which saves it on this phone as a voice note on the page and lets you choose afterwards whether to keep the words, the voice note or both."
+                    footer: "Off until you switch it on. Dictate is a microphone button on a Journal page that turns what you say into text, on this phone only. Nothing you say is sent anywhere. If your language is not ready on the phone, Dictate says so and does not start. The sound is not kept unless you also switch on Keep a voice note while dictating, which saves it on this phone as a voice note on the page and lets you choose afterwards whether to keep the words, the voice note or both. Label who is speaking adds Speaker 1 and Speaker 2 buttons while Dictate listens: you tap one when the speaker changes, and the words that follow go on a new line with that label. Anchor does not tell voices apart and keeps nothing about a voice."
                 ) {
                     Anchor.SettingsToggle(title: "Dictate in the Journal", isOn: $dictationOn)
                     if dictationOn {
                         Anchor.SettingsToggle(title: "Keep a voice note while dictating", isOn: $dictationKeepsNote)
+                        Anchor.SettingsToggle(title: "Label who is speaking", isOn: $dictationLabels)
                     }
                 }
 

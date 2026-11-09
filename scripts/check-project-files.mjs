@@ -42,7 +42,7 @@ const widgetBlock = widgetPhase.find((block) => block.includes("AnchorWidget.swi
 for (const name of ["AnchorModels.swift", "RecoveryModels.swift", "LockedFields.swift"]) {
   if (!widgetBlock.includes(`${name} in Sources`)) problems.push(`${name} is not built by the widget extension.`);
 }
-for (const name of ["AppLock.swift", "SafetyCopy.swift", "AIGate.swift", "AIProviders.swift", "AIAsk.swift", "AIConsentSheet.swift", "AIBraindumpSheet.swift", "LockMyData.swift", "LockMyDataView.swift", "JournalAssist.swift", "Dictation.swift", "DictationAudio.swift", "JournalVoice.swift"]) {
+for (const name of ["AppLock.swift", "SafetyCopy.swift", "AIGate.swift", "AIProviders.swift", "AIAsk.swift", "AIConsentSheet.swift", "AIBraindumpSheet.swift", "LockMyData.swift", "LockMyDataView.swift", "JournalAssist.swift", "Dictation.swift", "DictationAudio.swift", "JournalVoice.swift", "SpeakerLabels.swift"]) {
   if (widgetBlock.includes(`${name} in Sources`)) problems.push(`${name} must not be built by the widget extension (it holds key or app-only code).`);
 }
 
