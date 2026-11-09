@@ -169,3 +169,42 @@ To switch the diary to secret code, the app has to change how the file is laid o
 - Whether locking is automatic or a switch you turn on in Settings. I lean towards a switch, so you see the recovery key at the moment you turn it on.
 
 **Answered:** B, see the top of this section.
+
+---
+
+## Questions you asked on 9 Nov 2026, in plain words
+
+Your answers to D16 to D31 are recorded in section 0.4 of the plan. These are the ones you said you did not follow or asked about.
+
+### D17. What shows on the lock screen for a trigger window reminder
+
+A trigger window is a time you marked as hard, such as Sunday evening. Anchor can remind you when it starts. Today that reminder shows two things on the locked phone: the window's name, and one line taken from your safety plan. Anyone who picks the phone up can read both without unlocking it. Every other Anchor reminder already says only "Anchor" and a general line. The change makes this one match, so a glance at your lock screen tells nobody anything about you. You lose very little: your own words are one tap away, because the window's name and the safety plan line still show once the app is open. If you would rather keep your words on the lock screen for this one reminder, say so and it can become a switch on each window.
+
+### D18. Why I asked about the export labels
+
+The check-in has five sliders. The export names two of them wrongly: the Moving slider is called Energy, and the real Physical energy slider is left out. I asked only because the fix changes what a clinician reads in files you may already have made. The labels were mistakes, not a design choice, so the answer you gave is the one I would have picked.
+
+### D21 (e). The plain screen over the app switcher
+
+When you swipe up on an iPhone to see your recent apps, each app is shown as a small picture of the last screen it had open. In showcase mode Anchor lays a plain screen over the picture, so the switcher shows a blank card, not whichever made-up page happened to be open. Honestly, the gain is small, because the made-up pages are not private. It is there as a safety margin: it also covers the moment of switching in or out, and it means a person flicking through your apps cannot see the demo and ask what it is. It does not cover a sheet that is open. It costs nothing to keep and one overlay to remove. It stays as built until you say otherwise.
+
+### D22 (d). Why the widgets' key is a file and not a Keychain item
+
+The widgets on your home screen are a separate small program from the app, and they need to open the locked summary, so both programs need the same key. There are two ways. A Keychain item shared between the two is the tighter one, but it needs a new capability switched on in Xcode for both programs and edits to two settings files, and I cannot test any of that from here, so a mistake would show up as widgets that go blank. A key file in the folder the two programs already share, marked as left out of backups, needs none of that and I could test the format. The cost: someone with file access to a running, unlocked phone could read the key file, as they could read the summary before. It stands unless you say, and the Keychain version replaces only two functions.
+
+### D29. The two things you asked about
+
+**No sleep columns in the CSV and no sleep chart in the PDF (66).** That was an omission I offered and did not build. Sleep nights already appear in the CSV as text lines and in the PDF as lines, so I held back the extra work and asked. You asked why, so I have read it as a yes: patch SL6 gives the CSV its own sleep columns and the PDF the same plain time-asleep chart the web page has, with no target line.
+
+**The item tagged (93, 94).** Two of your review notes were very short, so I wrote down how I read them. "Tidy the toggles" was about the Apple Health card on the Sleep screen, where reading and saving were built differently (one was a button that turned into a switch, the other a plain switch, each with a long paragraph); I made them two switches of the same kind with one short line each, and moved the long explanation into the Sleep guide. "The four main tabs first" I read as the tour meeting every tab before any detail. The app has five tabs (Now, Plan, Journal, Bridge, Thread), not four, so the tour now opens with five tab pages, then each tab's screens. If you meant something else, tell me and it is a small change.
+
+### D30. The three held Bridge ideas, one by one
+
+**B4, session actions into Tasks.** After an appointment you write post-session notes. This idea would turn the lines you mark as things to do into tasks with dates. It is held because it is the one that most needs your say on how pushy it is: a date on a task can feel like a deadline, and the app's rule is no pressure. A safe version would only offer a line as a task when you tap, with no date unless you add one.
+
+**B6, a one-screen summary of how I've been.** A single page you could show a clinician in a short appointment. It is held because summarising a person means choosing what to say about them, and the app's wording rules rule out scores, labels and reading the sliders. Anything it wrote would have to be your own words and plain facts (what you logged, in your order), and then it is close to what Session prep and Export for someone already do.
+
+**B5, medication notes.** A place for your own notes about medication and side effects. It is on hold because a note about doses can be wrong in a way that matters, the app's rule is not to use medication framing unless you write the words, and a reminder or dose feature would be a medical claim. A safe shape would be a plain notes box you write in, with no reminders, no dose fields and no advice.
+
+Tell me which, if any, you want, and in what shape.
+
