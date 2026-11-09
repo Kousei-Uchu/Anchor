@@ -222,10 +222,10 @@ private struct AppLockScreenView: View {
 // Patch 39 is the machinery: while showcase mode is on the app runs on the made-up demo
 // store, the real store is not opened on that launch, and the app lock is not asked for
 // (the setting itself is left as it was and applies again afterwards). Patch 40a clears what
-// could still show real data outside the store (see ShowcaseSweep in AnchorApp.swift) and
-// leaves out the share and export controls. Patch 40b adds a passcode of its own (see
-// ShowcasePasscode below), the exit flow, and opens it to everyone in Settings, Your data and
-// help, Showcase mode.
+// could still show real data outside the store (see ShowcaseSweep in AnchorApp.swift). Patch
+// 40b adds a passcode of its own (see ShowcasePasscode below), the exit flow, and opens it to
+// everyone in Settings, Your data and help, Showcase mode. Patch SH2c lets share and export work
+// on the made-up content; only what reaches outside the made-up store stays off.
 
 enum ShowcaseMode {
     private static let defaultsKey = "anchor.showcaseOn"
@@ -400,20 +400,6 @@ enum ShowcasePasscode {
     private static func clearFailures() {
         UserDefaults.standard.removeObject(forKey: failsKey)
         UserDefaults.standard.removeObject(forKey: waitUntilKey)
-    }
-}
-
-extension View {
-    /// Leaves out a control for sharing or exporting while showcase mode is on. The system share sheet
-    /// lists the phone's own people and recent contacts, and a file made from made-up content is of
-    /// no use to anyone.
-    @ViewBuilder
-    func hiddenInShowcase() -> some View {
-        if ShowcaseMode.isOn {
-            EmptyView()
-        } else {
-            self
-        }
     }
 }
 

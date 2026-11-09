@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch SH2c: share and export work in showcase mode on the made-up content (the counter share, diagram share, Boundaries, the support calendar, Export for someone, and the JSON, CSV and PDF exports in Your data). The encrypted backup, Import and Clear all data stay switched off there.
 - Patch SH2b: while showcase mode is on the widgets show made-up content (Sam and Alex, a plan, a window and a counter) instead of being empty, and your own come back when it is turned off.
 - Patch SH2a: the showcase passcode is 4 to 6 digits on the number pad, typed twice, and the exit screen asks for it on the number pad.
 - Patch 30q: in Post-session notes a line that starts with [ ] is a thing to do, and each one has an Add as task button under the note. Nothing is added until you tap, the task has no date, and the line stays in the note. Add a thing to do starts a marked line for you.

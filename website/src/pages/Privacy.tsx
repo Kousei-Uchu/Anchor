@@ -61,7 +61,7 @@ export default function Privacy() {
 
       <h2>Showcase mode</h2>
       <p>
-        Showcase mode is an optional setting for showing the app to someone without showing them your own content. While it is on, Anchor runs on made-up content that exists only in memory and is gone when the app closes, and your real data is not opened. The widgets show made-up content in place of yours and waiting reminders are removed from the phone, and your own widgets and reminders are put back when you turn it off. The buttons for sharing and exporting are left out.
+        Showcase mode is an optional setting for showing the app to someone without showing them your own content. While it is on, Anchor runs on made-up content that exists only in memory and is gone when the app closes, and your real data is not opened. The widgets show made-up content in place of yours and waiting reminders are removed from the phone, and your own widgets and reminders are put back when you turn it off. Sharing and exporting work on the made-up content only, and the encrypted backup, importing and clearing are switched off.
       </p>
       <p>
         If you set a showcase passcode, Anchor keeps a salted hash of it in your device&rsquo;s Keychain, never the passcode itself, and it stays on this device. Your phone&rsquo;s own Face ID or passcode can always turn showcase mode off, so forgetting the showcase passcode does not lock you out. None of this is sent anywhere.

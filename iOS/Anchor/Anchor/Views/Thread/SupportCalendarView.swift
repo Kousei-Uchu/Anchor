@@ -44,7 +44,6 @@ struct SupportCalendarView: View {
                         }
                     }
                     .buttonStyle(.plain)
-                    .hiddenInShowcase()
                 }
 
                 if entries.isEmpty {

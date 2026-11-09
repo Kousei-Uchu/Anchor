@@ -110,7 +110,6 @@ struct BridgeDraftListView: View {
                     Image(systemName: "square.and.arrow.up")
                 }
                 .accessibilityLabel("Export")
-                .hiddenInShowcase()
                 Anchor.AddToolbarButton(label: "Add something") { startNew() }
             }
         }

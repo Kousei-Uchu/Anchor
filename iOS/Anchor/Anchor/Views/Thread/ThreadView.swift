@@ -156,7 +156,6 @@ struct BoundariesView: View {
                     }
                     .disabled(shareText.isEmpty)
                     .accessibilityLabel("Share the sections marked Can be shared")
-                    .hiddenInShowcase()
                 }
                 if shown.count > 1 {
                     Anchor.ReorderToolbarButton()

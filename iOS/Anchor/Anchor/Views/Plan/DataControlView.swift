@@ -89,42 +89,44 @@ struct DataControlView: View {
                 Text("What's stored")
             }
 
-            if ShowcaseMode.isOn {
-                Section {
-                    Text("Exporting, importing and clearing are switched off while showcase mode is on.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+            Section {
+                Button {
+                    exportFullJSON()
+                } label: {
+                    Anchor.MenuRow(icon: "doc.zipper", title: "Export everything (JSON)",
+                                   subtitle: "Plain text, without photos or voice notes. Anyone with the file can read it", tint: Anchor.Theme.accent)
                 }
-            } else {
-                Section {
-                    Button {
-                        exportFullJSON()
-                    } label: {
-                        Anchor.MenuRow(icon: "doc.zipper", title: "Export everything (JSON)",
-                                       subtitle: "Plain text, without photos or voice notes. Anyone with the file can read it", tint: Anchor.Theme.accent)
-                    }
+                if !ShowcaseMode.isOn {
                     Button {
                         showBackupSheet = true
                     } label: {
                         Anchor.MenuRow(icon: "lock.doc", title: "Make an encrypted backup",
                                        subtitle: "Everything, with photos and voice notes, locked with a password you choose", tint: Anchor.Theme.accent)
                     }
-                    Button {
-                        showDateRangeSheet = .csv
-                    } label: {
-                        Anchor.MenuRow(icon: "tablecells", title: "Export Journal, Check-ins and Sleep (CSV)",
-                                       subtitle: "For spreadsheets, or to hand to your psych", tint: Anchor.Theme.accent)
-                    }
-                    Button {
-                        showDateRangeSheet = .pdf
-                    } label: {
-                        Anchor.MenuRow(icon: "doc.richtext", title: "Export Journal, Check-ins and Sleep (PDF)",
-                                       subtitle: "Readable printout, all-time or a date range", tint: Anchor.Theme.accent)
-                    }
-                } header: {
-                    Text("Export")
                 }
+                Button {
+                    showDateRangeSheet = .csv
+                } label: {
+                    Anchor.MenuRow(icon: "tablecells", title: "Export Journal, Check-ins and Sleep (CSV)",
+                                   subtitle: "For spreadsheets, or to hand to your psych", tint: Anchor.Theme.accent)
+                }
+                Button {
+                    showDateRangeSheet = .pdf
+                } label: {
+                    Anchor.MenuRow(icon: "doc.richtext", title: "Export Journal, Check-ins and Sleep (PDF)",
+                                   subtitle: "Readable printout, all-time or a date range", tint: Anchor.Theme.accent)
+                }
+            } header: {
+                Text("Export")
+            }
 
+            if ShowcaseMode.isOn {
+                Section {
+                    Text("The encrypted backup, importing and clearing are switched off while showcase mode is on.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            } else {
                 Section {
                     Button {
                         showImporter = true

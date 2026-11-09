@@ -454,7 +454,6 @@ private struct ThreadMessageSheet: View {
                             ShareLink(item: VoiceNoteStore.url(for: audio)) {
                                 Label("Share voice note", systemImage: "square.and.arrow.up")
                             }
-                            .hiddenInShowcase()
                         }
                     }
                 }

@@ -44,7 +44,6 @@ struct RecoverySummaryTab: View {
                 ShareLink(item: "I'm \(counter.currentRunPhraseIn()).") {
                     actionLabel(icon: "square.and.arrow.up", title: "Share")
                 }
-                .hiddenInShowcase()
                 Button(action: onLogUrge) { actionLabel(icon: "waveform.path", title: "Log urge") }
                 Button(action: onStartAgain) { actionLabel(icon: "arrow.counterclockwise", title: "Start again") }
             }
