@@ -692,8 +692,8 @@ Decided (D10 to D14 closed, 7 Nov 2026) and part of the main release, Apple Heal
 | **49** | Demo route A: shared seed and guide data feed the React demo (parked, replaced by 55) | 25 | M | ⬜ |
 | **50** | Demo route C: CI screenshot flow and parity check (parked, 55 may use it) | 25 | M | ⬜ |
 | **51** | Unlisted TestFlight beta sign-up page (`/beta`, noindex, not in nav or sitemap) | 27 | S | ✍️ written, awaiting push |
-| **52** | Update existing Remotion promo; single source | 26 | M | ⬜ |
-| **53** | Long "full tour" video, split into per-tab scenes | 26 | L (split) | ⬜ |
+| **52** | Update existing Remotion promo; single source (the single source is already true: `remotion-project/src/Promo.tsx` is the original and `npm run sync:promo` writes the website copy, which carries a generated banner; what is left is new screenshots and the captions that go with them, which need the app run on a simulator, so it waits on you, change log 158) | 26 | M | ⬜ waits on new screenshots |
+| **53** | Long "full tour" video, split into per-tab scenes (scripted from the guide registry, as `website/src/content/guide.generated.json` now makes possible; it also needs screenshots or screen recordings of the current app) | 26 | L (split) | ⬜ waits on 52 |
 | **54** | Android decision write-up, optional prototype spike | 28 | S | ⬜ |
 | **55** | Web demo made by a script from the app and its demo data (D3). Done last, just before the Android work | 25 | L (split) | ⬜ parked to the end |
 
