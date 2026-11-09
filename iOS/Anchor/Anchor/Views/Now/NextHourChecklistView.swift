@@ -672,16 +672,61 @@ private struct TaskCard: View {
         return blockedBy.count == 1 ? "Waiting on \(first)" : "Waiting on \(first) and \(blockedBy.count - 1) more"
     }
 
-    /// Everything worth knowing at a glance, on one quiet line instead of a line each.
-    private var summary: String {
-        var parts: [String] = []
-        if !task.isDone, let due = task.dueText() { parts.append(due) }
-        if !task.isDone, let estimate = task.estimateText { parts.append(estimate) }
-        if isStarted { parts.append("Started") }
-        if !task.isDone, let energy = task.energy.cardText { parts.append(energy) }
-        if !task.isDone, !steps.isEmpty { parts.append("\(doneSteps) of \(steps.count) steps") }
-        if let focus = task.focusSummary { parts.append(focus) }
-        return parts.joined(separator: " \u{00B7} ")
+    /// The timing in as few words as will do, so it fits beside its icon. The full wording stays
+    /// in the editor and is what VoiceOver reads.
+    private var shortDue: String? {
+        guard let full = task.dueText() else { return nil }
+        switch task.dueKind {
+        case .asap:
+            return "Soon"
+        case .today, .thisWeek, .thisMonth:
+            if let end = task.dueDate, end < Date.now { return "Carried over" }
+            return full
+        case .exact:
+            let prefix = "Planned for "
+            return full.hasPrefix(prefix) ? String(full.dropFirst(prefix.count)) : full
+        default:
+            return full
+        }
+    }
+
+    private var energyIcon: String {
+        switch task.energy {
+        case .little: return "battery.25percent"
+        case .some: return "battery.50percent"
+        case .lots: return "battery.100percent"
+        case .unset: return "battery.0percent"
+        }
+    }
+
+    /// Everything worth knowing at a glance, as a few small facts that each have an icon and a few
+    /// words, and wrap onto a second row instead of being cut off.
+    private var facts: [TaskFact] {
+        var items: [TaskFact] = []
+        if !task.isDone, let due = shortDue {
+            items.append(TaskFact(id: "due", icon: "calendar", text: due, spoken: task.dueText() ?? due))
+        }
+        if !task.isDone, task.estimateMinutes > 0 {
+            items.append(TaskFact(id: "estimate", icon: "clock",
+                                  text: TaskItem.durationText(task.estimateMinutes),
+                                  spoken: task.estimateText ?? ""))
+        }
+        if isStarted {
+            items.append(TaskFact(id: "started", icon: "play.circle", text: "Started", spoken: "Started"))
+        }
+        if !task.isDone, let energy = task.energy.cardText {
+            items.append(TaskFact(id: "energy", icon: energyIcon, text: task.energy.label, spoken: energy))
+        }
+        if !task.isDone, !steps.isEmpty {
+            items.append(TaskFact(id: "steps", icon: "checklist", text: "\(doneSteps)/\(steps.count)",
+                                  spoken: "\(doneSteps) of \(steps.count) steps"))
+        }
+        if task.focusSessions > 0 {
+            items.append(TaskFact(id: "focus", icon: "timer",
+                                  text: task.focusSessions == 1 ? "1 session" : "\(task.focusSessions) sessions",
+                                  spoken: task.focusSummary ?? ""))
+        }
+        return items
     }
 
     private var showsFirstStep: Bool {
@@ -758,19 +803,83 @@ private struct TaskCard: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            if !summary.isEmpty {
-                Text(summary)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
+            if !facts.isEmpty {
+                TaskFlowLayout(spacing: 12, lineSpacing: 3) {
+                    ForEach(facts) { fact in
+                        HStack(spacing: 4) {
+                            Image(systemName: fact.icon)
+                                .imageScale(.small)
+                            Text(fact.text)
+                                .lineLimit(1)
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(fact.spoken)
+                    }
+                }
             }
             if showsFirstStep {
-                Text("Start with: \(task.firstStep)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Image(systemName: "arrow.turn.down.right")
+                        .imageScale(.small)
+                    Text(task.firstStep)
+                        .lineLimit(2)
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Start with: \(task.firstStep)")
             }
         }
+    }
+}
+
+/// One small fact on a task card: an icon and a few words, with the longer wording for VoiceOver.
+private struct TaskFact: Identifiable {
+    let id: String
+    let icon: String
+    let text: String
+    let spoken: String
+}
+
+/// Lays small items out left to right and starts a new row when one would not fit, so nothing on a
+/// task card is cut off.
+private struct TaskFlowLayout: Layout {
+    var spacing: CGFloat = 12
+    var lineSpacing: CGFloat = 3
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        arrange(width: proposal.width ?? .infinity, subviews: subviews).size
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let result = arrange(width: bounds.width, subviews: subviews)
+        for (index, origin) in result.origins.enumerated() {
+            subviews[index].place(at: CGPoint(x: bounds.minX + origin.x, y: bounds.minY + origin.y),
+                                  proposal: .unspecified)
+        }
+    }
+
+    private func arrange(width: CGFloat, subviews: Subviews) -> (origins: [CGPoint], size: CGSize) {
+        var origins: [CGPoint] = []
+        var x: CGFloat = 0
+        var y: CGFloat = 0
+        var rowHeight: CGFloat = 0
+        var widest: CGFloat = 0
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if x > 0 && x + size.width > width {
+                y += rowHeight + lineSpacing
+                x = 0
+                rowHeight = 0
+            }
+            origins.append(CGPoint(x: x, y: y))
+            x += size.width + spacing
+            rowHeight = max(rowHeight, size.height)
+            widest = max(widest, x - spacing)
+        }
+        return (origins, CGSize(width: widest, height: y + rowHeight))
     }
 }
 

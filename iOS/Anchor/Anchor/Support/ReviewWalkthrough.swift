@@ -146,7 +146,9 @@ enum ReviewStops {
         ("35a2", "Widgets' key in the Keychain", "The key that seals the widget summaries moves into a Keychain item the app and the widgets share. Test builds only. A review run cannot show it.",
          "In Xcode, open Signing and Capabilities on the Anchor and AnchorWidget targets and check Keychain Sharing lists page.aspens.anchor.widgetkey. On a normal build, check a contacts widget still shows your contacts.", 1, nil),
         ("35b1-35b3, AI0", "Safety copy, Lock my data, AI tools", "Four test-only rows in Settings: Encryption, Safety copy, Lock my data and AI tools. A safety copy and Lock my data are asked for here and run at the next start. AI tools is one switch, off, with nothing behind it yet.",
-         "Look at the four rows. In a review run the buttons that make a copy, lock your text or turn AI on are switched off on purpose, so do not try Lock my data here. The real try is on a copy of your own data: make a safety copy, check the recovery key, tick the backup box, Lock my data, restart, then look at Journal, Contacts and a Recovery counter.", 1, .settings)
+         "Look at the four rows. In a review run the buttons that make a copy, lock your text or turn AI on are switched off on purpose, so do not try Lock my data here. The real try is on a copy of your own data: make a safety copy, check the recovery key, tick the backup box, Lock my data, restart, then look at Journal, Contacts and a Recovery counter.", 1, .settings),
+        ("RV1a", "Task cards: short facts with icons", "A task card's quiet line is now a few small facts, each with an icon and a few words: the day, how long, started, the energy it needs, steps done and focus sessions. They move to a second row instead of being cut off, and the first step wraps to two lines.",
+         "Open Tasks, and try the largest text size too. Look at a task with a day, an estimate and steps: nothing should end in dots. VoiceOver reads each fact in full.", 1, .tasks)
     ])
 }
 

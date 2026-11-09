@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch RV1a: a task card's quiet line is now a few small facts with icons (the day, how long, started, the energy it needs, steps done and focus sessions) that wrap onto a second row instead of being cut off, and the first step wraps to two lines.
 - Patch DOC15: the plan now records that everything pushed through the second review round builds and works, as you confirmed.
 - Patch R3: the review walkthrough in test builds now holds only the changes added since the first 66, plus a few more that had no stop, and keeps its notes separately.
 - Patch 30p1: a hard-time reminder for each person, off until you switch it on in Settings, Hard-time reminders. You pick which of your trigger windows it is for, and at the start of each one a quiet reminder says a person you chose is one option. The lock screen says only a gentle nudge for the morning, afternoon or evening and names no one. Tapping it opens a message to that person with your starters ready. At most one reminder comes on any day.
