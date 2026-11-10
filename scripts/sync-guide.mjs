@@ -145,8 +145,7 @@ if (!screenLine) fail("Could not find Guide.screenEntries.");
 const order = screenLine[1].split("+").map((s) => s.trim());
 
 function resolve(name) {
-  if (name === "settingsEntries") return ["settingsScreenEntries", "settingsTestBuildEntries"].flatMap(resolve);
-  if (name === "settingsTestBuildEntries") return [];
+  if (name === "settingsEntries") return ["settingsScreenEntries", "settingsLockingEntries"].flatMap(resolve);
   if (!arrays[name]) fail("Guide.screenEntries names " + name + ", which was not found.");
   return arrays[name];
 }

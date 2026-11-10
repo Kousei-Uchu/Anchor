@@ -445,7 +445,7 @@ extension Guide {
 // Patch 43b. The Journal tab's own page is the tab entry, so only the two screens opened from
 // it are here: the page you write on, and Journaling Suggestions. Settings is not a tab, so its
 // entries have no tab and come last in the tour. Showcase mode keeps its own help sheet, and
-// the Encryption screen is a test build screen, so its entry is only compiled into test builds.
+// the Encryption screen has its entry here too, and it is in every build since Patch 35e.
 // The words are plain and fixed, and nothing here is scored or counted.
 
 extension Guide {
@@ -475,7 +475,7 @@ extension Guide {
         )
     ]
 
-    static let settingsEntries: [GuideEntry] = settingsScreenEntries + settingsTestBuildEntries
+    static let settingsEntries: [GuideEntry] = settingsScreenEntries + settingsLockingEntries
 
     private static let settingsScreenEntries: [GuideEntry] = [
         GuideEntry(
@@ -512,24 +512,18 @@ extension Guide {
         )
     ]
 
-    private static var settingsTestBuildEntries: [GuideEntry] {
-        #if DEBUG
-        return [
-            GuideEntry(
-                id: "settings.encryption", tab: nil, title: "Encryption (test build)", icon: "key.fill",
-                whatItIs: "The keys that will lock what Anchor stores. Nothing is locked with them yet.",
-                howToUse: "Make a key and a recovery key creates a key on this phone and shows the recovery key once, so write it down then. Check my recovery key asks you to type it back, and Make a new recovery key replaces it. Restore with your recovery key is for a phone where the key is missing.",
-                tips: [
-                    "If the key is lost and there is no recovery key, locked data cannot be opened by anyone.",
-                    "The recovery file is kept with your data so a restored phone can get the key back."
-                ],
-                inTour: false
-            )
-        ]
-        #else
-        return []
-        #endif
-    }
+    private static let settingsLockingEntries: [GuideEntry] = [
+        GuideEntry(
+            id: "settings.encryption", tab: nil, title: "Encryption", icon: "key.fill",
+            whatItIs: "The key that locks the text you write, and the recovery key that gets it back if the key is lost.",
+            howToUse: "Make a key and a recovery key creates a key on this phone and shows the recovery key once, so write it down then. Check my recovery key asks you to type it back, and Make a new recovery key replaces it. Restore with your recovery key is for a phone where the key is missing. Lock my data, a few rows down in Settings, is what uses the key to lock your text.",
+            tips: [
+                "If the key is lost and there is no recovery key, locked data cannot be opened by anyone.",
+                "The recovery file is kept with your data so a restored phone can get the key back."
+            ],
+            inTour: false
+        )
+    ]
 }
 
 /// Splits a guide's text into its separate ideas. Text written as paragraphs (blank lines

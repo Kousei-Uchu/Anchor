@@ -68,7 +68,7 @@ Each field that holds your own words is two stored properties on its model: the 
 
 ## Lock my data (Patch 35b3)
 
-One flow that locks every field in the list above on every model, after the way back exists. Settings, Lock my data (test builds only for now). The code is `Support/LockMyData.swift` and the screen is `Views/Settings/LockMyDataView.swift`.
+One flow that locks every field in the list above on every model, after the way back exists. Settings, Lock my data (in every build since Patch 35e). The code is `Support/LockMyData.swift` and the screen is `Views/Settings/LockMyDataView.swift`.
 
 **The order.**
 
@@ -95,7 +95,7 @@ One flow that locks every field in the list above on every model, after the way 
 
 ## Lock my files (Patch 35d)
 
-The second step of locking: the voice notes and Journal photos, which are files and not stored text (D31). It is on the Lock my data screen (test builds only), offered once the text is locked. The code is `LockMyFiles`, `StoredFiles` and `FileLock` in `Support/LockMyData.swift`, and `FileCipher` in `Support/AppLock.swift`.
+The second step of locking: the voice notes and Journal photos, which are files and not stored text (D31). It is on the Lock my data screen, offered once the text is locked. The code is `LockMyFiles`, `StoredFiles` and `FileLock` in `Support/LockMyData.swift`, and `FileCipher` in `Support/AppLock.swift`.
 
 **The file format.** A sealed file is the nine bytes `ANCHFILE` and `01`, then the AES-GCM nonce, ciphertext and tag, made with the same data key as the text. The authenticated context is `File.VoiceNotes/<name>` or `File.JournalAttachments/<name>`, so a sealed file cannot be renamed into another file's place. A photo starts with `FF D8` and a voice note has `ftyp` near its start, so a plain file is never taken for a sealed one. Sealed files are written with file protection until first unlock, the same as the store.
 

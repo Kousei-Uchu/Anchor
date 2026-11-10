@@ -284,23 +284,21 @@ struct SettingsView: View {
                     } label: {
                         Text("AI tools").font(.system(.subheadline, design: .rounded))
                     }
-                    #if DEBUG
                     NavigationLink {
                         EncryptionSettingsView()
                     } label: {
-                        Text("Encryption (test build)").font(.system(.subheadline, design: .rounded))
+                        Text("Encryption").font(.system(.subheadline, design: .rounded))
                     }
                     NavigationLink {
                         SafetyCopyView()
                     } label: {
-                        Text("Safety copy (test build)").font(.system(.subheadline, design: .rounded))
+                        Text("Safety copy").font(.system(.subheadline, design: .rounded))
                     }
                     NavigationLink {
                         LockMyDataView()
                     } label: {
-                        Text("Lock my data (test build)").font(.system(.subheadline, design: .rounded))
+                        Text("Lock my data").font(.system(.subheadline, design: .rounded))
                     }
-                    #endif
                 }
             }
             .anchorSettingsStyle()
@@ -861,8 +859,8 @@ struct WhatsNewView: View {
 
 // MARK: - Encryption: the data key and the recovery key
 //
-// Patch 34. Reached only from test builds for now; Patch 35 locks the stored text
-// with this key and opens the screen to everyone.
+// Patch 34. Reached from Settings. Lock my data (Patch 35b3) uses this key to lock the stored text;
+// since Patch 35e the screen is in every build.
 
 private struct ShownRecoveryKey: Identifiable {
     let id = UUID()

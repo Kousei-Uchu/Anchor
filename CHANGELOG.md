@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 35e: Encryption, Safety copy and Lock my data are now in Settings in every build, without "(test build)" in their names, and the Encryption page is in the guide and on the website.
 - Patch DOC24: the plan now says the promo video already has one source and that refreshing it waits on new screenshots.
 - Patch 51: the website has a beta page at an address that is not linked from anywhere and is kept out of search results. It explains what testing involves and has one switch for opening sign-ups, closed to begin with.
 - Patch 48: the website has an About page with the same words as the About screen in the app and what is new in each version. The Support answers now point to the right places in Settings and Your data and there are four new ones, and the privacy page says Label who is speaking keeps nothing about a voice.
