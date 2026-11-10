@@ -10,6 +10,10 @@
 //    truncation mode.
 // 6. A greyed-out button for a tool that is off (AIOffButton, Patch AI7) is only shown behind AIGate.showsOffButtons,
 //    is never offered for Make shorter (that one is hidden while AI tools are off, D41), and its file sends nothing.
+// 7. Ollama away from the home network (Patch AI8, D56): the phone's transport security exception stays the local
+//    network one (no arbitrary loads, no exception domains), an away address is never used before it is confirmed
+//    (status, generate and Look for models all ask), plain http to an away address is refused except to a Tailscale
+//    number, and the session used for the home network never uses the mobile network.
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -161,6 +165,34 @@ if (sheet) {
   const code = sheet.split("\n").filter((line) => !line.trim().startsWith("//")).join("\n");
   if (/\.lineLimit\(|\.truncationMode\(|\.prefix\(|\.minimumScaleFactor\(/.test(code)) problems.push("AIConsentSheet.swift cuts or shrinks text; the sheet must show everything that is sent");
   if (!/request\.text/.test(code)) problems.push("AIConsentSheet.swift no longer shows request.text");
+}
+
+// Ollama away from home (Patch AI8). The transport security exception must not be widened to make an address work.
+let plist = "";
+try {
+  plist = readFileSync(join(swiftRoot, "Anchor/Anchor/Info.plist"), "utf8");
+} catch {
+  problems.push("Anchor/Info.plist is missing");
+}
+if (plist) {
+  if (!/<key>NSAllowsLocalNetworking<\/key>\s*<true\/>/.test(plist)) problems.push("Info.plist no longer has the local network transport security exception");
+  if (/NSAllowsArbitraryLoads|NSExceptionDomains|NSExceptionAllowsInsecureHTTPLoads/.test(plist)) {
+    problems.push("Info.plist widens the transport security exception; an away address needs https instead (D56, AI8)");
+  }
+}
+let providers = "";
+try {
+  providers = readFileSync(join(swiftRoot, "Anchor/Anchor/Support/AIProviders.swift"), "utf8");
+} catch {
+  problems.push("Support/AIProviders.swift is missing");
+}
+if (providers) {
+  const code = providers.split("\n").filter((line) => !line.trim().startsWith("//")).join("\n");
+  if ((code.match(/guard OllamaSettings\.isConfirmed\([^)]*\) else/g) || []).length < 3) {
+    problems.push("AIProviders.swift: status, generate and Look for models must each check OllamaSettings.isConfirmed before an away address is used");
+  }
+  if (!/\.needsHTTPS/.test(code)) problems.push("AIProviders.swift no longer refuses plain http to an address away from home");
+  if (!/makeSession\(allowsCellular:\s*false\)/.test(code)) problems.push("AIProviders.swift: the session for the home network must not use the mobile network");
 }
 
 if (problems.length) {

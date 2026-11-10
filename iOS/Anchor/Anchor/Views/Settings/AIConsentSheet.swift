@@ -35,6 +35,11 @@ struct AIConsentSheet: View {
                                 .font(.system(.subheadline, design: .rounded))
                                 .textSelection(.enabled)
                         }
+                        if let note = request.destinationNote {
+                            Text(note)
+                                .font(.system(.subheadline, design: .rounded))
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
                 Anchor.SettingsSection(title: "What happens to it") {

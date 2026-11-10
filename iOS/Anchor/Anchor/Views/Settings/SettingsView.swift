@@ -1192,6 +1192,8 @@ struct AIToolsSettingsView: View {
     @State private var chosen = AIProviders.chosen
     @State private var address = OllamaSettings.address
     @State private var model = OllamaSettings.model
+    @State private var confirmedAway = OllamaSettings.confirmedAway
+    @State private var showingAwayConfirm = false
     @State private var foundModels: [String] = []
     @State private var looking = false
     @State private var lookMessage = ""
@@ -1223,7 +1225,7 @@ struct AIToolsSettingsView: View {
                     title: "Where it runs",
                     footer: chosen == .apple
                         ? "The model runs on this phone. The text you pick does not leave it."
-                        : "The model runs on your own computer with Ollama. The text you pick crosses your home network as it is and goes nowhere else."
+                        : "The model runs on your own computer with Ollama. The text you pick goes to the address you give and nowhere else."
                 ) {
                     Picker("Where it runs", selection: Binding(
                         get: { chosen },
@@ -1310,7 +1312,24 @@ struct AIToolsSettingsView: View {
                 HelpNoteToolbarButton(icon: "slider.horizontal.3", title: "About AI tools", paragraphs: AIToolsHelp.paragraphs)
             }
         }
+        .alert("Use an address away from home?", isPresented: $showingAwayConfirm) {
+            Button("Use this address") {
+                if let found = typedEndpoint {
+                    OllamaSettings.confirm(found)
+                    confirmedAway = OllamaSettings.confirmedAway
+                    refresh()
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(typedEndpoint?.reach.confirmText ?? "")
+        }
         .onAppear { refresh() }
+    }
+
+    private var typedEndpoint: OllamaEndpoint? {
+        if case .success(let found) = OllamaEndpoint.parse(address) { return found }
+        return nil
     }
 
     /// The address and model for Ollama on the person's own computer (Patch AI5). Typing here connects to nothing.
@@ -1322,7 +1341,7 @@ struct AIToolsSettingsView: View {
         }()
         return Anchor.SettingsSection(
             title: "Your computer",
-            footer: "Use your computer's address on your home network and the name of a model Ollama has. The first time Anchor connects, the phone asks whether Anchor may find devices on your local network."
+            footer: "Use your computer's address and the name of a model Ollama has. Away from home, a Tailscale number or an https address works once you confirm it. The first time Anchor connects at home, the phone asks whether Anchor may find devices on your local network."
         ) {
             TextField("Address, such as 192.168.1.20", text: $address)
                 .font(.system(.body, design: .rounded))
@@ -1331,6 +1350,8 @@ struct AIToolsSettingsView: View {
                 .keyboardType(.URL)
                 .onChange(of: address) { _, newValue in
                     OllamaSettings.address = newValue
+                    OllamaSettings.keepConfirmation(onlyFor: newValue)
+                    confirmedAway = OllamaSettings.confirmedAway
                     foundModels = []
                     lookMessage = ""
                     refresh()
@@ -1339,6 +1360,22 @@ struct AIToolsSettingsView: View {
                 Text(typedProblem.plainText)
                     .font(.system(.footnote, design: .rounded))
                     .foregroundStyle(.secondary)
+            }
+            if let away = typedEndpoint, away.isAway {
+                Text(away.reach.settingsLine)
+                    .font(.system(.footnote, design: .rounded))
+                    .foregroundStyle(.secondary)
+                if confirmedAway == away.confirmationKey {
+                    Text("You confirmed this address.")
+                        .font(.system(.footnote, design: .rounded))
+                        .foregroundStyle(.secondary)
+                } else {
+                    Button {
+                        showingAwayConfirm = true
+                    } label: {
+                        Text("Use this address").font(.system(.subheadline, design: .rounded))
+                    }
+                }
             }
             TextField("Model, such as llama3.2", text: $model)
                 .font(.system(.body, design: .rounded))
@@ -1353,7 +1390,7 @@ struct AIToolsSettingsView: View {
             } label: {
                 Text("Look for models").font(.system(.subheadline, design: .rounded))
             }
-            .disabled(looking || typedProblem != nil)
+            .disabled(looking || typedProblem != nil || !addressIsUsable)
             if looking {
                 ProgressView()
             }
@@ -1378,9 +1415,15 @@ struct AIToolsSettingsView: View {
         }
     }
 
+    /// True for an address on the home network and for an away address the person has confirmed.
+    private var addressIsUsable: Bool {
+        guard let found = typedEndpoint else { return false }
+        return OllamaSettings.isConfirmed(found)
+    }
+
     /// Asks the computer which models it has, only when the person taps the button and only while AI tools are on.
     private func lookForModels() {
-        guard AIGate.isEnabled, case .success(let endpoint) = OllamaEndpoint.parse(address) else { return }
+        guard AIGate.isEnabled, case .success(let endpoint) = OllamaEndpoint.parse(address), OllamaSettings.isConfirmed(endpoint) else { return }
         looking = true
         foundModels = []
         lookMessage = ""
