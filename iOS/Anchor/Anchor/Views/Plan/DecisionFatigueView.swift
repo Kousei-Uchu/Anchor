@@ -383,7 +383,9 @@ struct PresetsView: View {
 /// records nothing.
 struct RoutinesView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \Routine.createdAt) private var routines: [Routine]
+    @Query private var routinesStored: [Routine]
+    /// Sorted after the items are opened, because a locked value cannot be sorted by the database (Patch 35g3).
+    private var routines: [Routine] { routinesStored.sortedByKey { $0.createdAt } }
     @State private var editing: Routine?
     @State private var toDelete: Routine?
     @State private var running: Routine?
@@ -751,7 +753,9 @@ private struct ItemRef: Identifiable { let id: UUID }
 /// Item lists as cards. Tap one to open it; the plus makes a new one.
 struct ItemListsView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \ItemList.createdAt) private var lists: [ItemList]
+    @Query private var listsStored: [ItemList]
+    /// Sorted after the items are opened, because a locked value cannot be sorted by the database (Patch 35g3).
+    private var lists: [ItemList] { listsStored.sortedByKey { $0.createdAt } }
     @State private var opened: ItemList?
     @State private var pendingDelete: ItemList?
 

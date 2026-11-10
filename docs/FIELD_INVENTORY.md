@@ -84,7 +84,7 @@ Lock in: none
 
 ## GroundingTool
 
-Lock in: 35g3
+Lock in: none
 
 | Field | Type | Verdict | Today | Reason |
 | --- | --- | --- | --- | --- |
@@ -94,16 +94,16 @@ Lock in: 35g3
 | steps | String? | locked | sealed | steps you wrote |
 | deepLink | DeepLinkDestination? | plain | plain | one choice from a fixed list of places in the app |
 | sortOrder | Int | plain | plain | the order on screen |
-| relevantTimeWindows | [TimeWindowTag] | locked | to lock 35g3 | the times of day you said a tool is for |
+| relevantTimeWindows | [TimeWindowTag] | locked | sealed | the times of day you said a tool is for |
 
 ## SafetyPlan
 
-Lock in: 35g3
+Lock in: none
 
 | Field | Type | Verdict | Today | Reason |
 | --- | --- | --- | --- | --- |
 | id | UUID | plain | plain | its own id |
-| lastEditedAt | Date | locked | to lock 35g3 | when you last changed it |
+| lastEditedAt | Date | locked | sealed | when you last changed it |
 | warningSignsText | String | locked | sealed | your own words |
 | copingStrategiesText | String | locked | sealed | your own words |
 | reasonsToKeepGoingText | String | locked | sealed | your own words |
@@ -111,7 +111,7 @@ Lock in: 35g3
 
 ## SafetyPlanSection
 
-Lock in: 35g3
+Lock in: none
 
 | Field | Type | Verdict | Today | Reason |
 | --- | --- | --- | --- | --- |
@@ -123,11 +123,11 @@ Lock in: 35g3
 | sortOrder | Int | plain | plain | the order on screen |
 | isHidden | Bool | plain | plain | an on or off switch |
 | role | String | plain | plain | a fixed label that says which built-in section this is, never typed |
-| lastEditedAt | Date | locked | to lock 35g3 | when you last changed it |
+| lastEditedAt | Date | locked | sealed | when you last changed it |
 
 ## BoundarySection
 
-Lock in: 35g3
+Lock in: none
 
 | Field | Type | Verdict | Today | Reason |
 | --- | --- | --- | --- | --- |
@@ -139,7 +139,7 @@ Lock in: 35g3
 | sortOrder | Int | plain | plain | the order on screen |
 | isHidden | Bool | plain | plain | an on or off switch |
 | isShareable | Bool | plain | plain | an on or off switch for sharing, with no content in it |
-| lastEditedAt | Date | locked | to lock 35g3 | when you last changed it |
+| lastEditedAt | Date | locked | sealed | when you last changed it |
 
 ## SleepEntry
 
@@ -208,31 +208,31 @@ Lock in: none
 
 ## TriggerWindow
 
-Lock in: 35g3
+Lock in: none
 
 | Field | Type | Verdict | Today | Reason |
 | --- | --- | --- | --- | --- |
 | id | UUID | plain | plain | its own id |
 | label | String | locked | sealed | a label you typed |
-| daysOfWeek | [Int] | locked | to lock 35g3 | the days you said are hard |
-| startHour | Int | locked | to lock 35g3 | the times you said are hard |
-| startMinute | Int | locked | to lock 35g3 | the times you said are hard |
-| endHour | Int | locked | to lock 35g3 | the times you said are hard |
-| endMinute | Int | locked | to lock 35g3 | the times you said are hard |
+| daysOfWeek | [Int] | locked | sealed | the days you said are hard |
+| startHour | Int | locked | sealed | the times you said are hard |
+| startMinute | Int | locked | sealed | the times you said are hard |
+| endHour | Int | locked | sealed | the times you said are hard |
+| endMinute | Int | locked | sealed | the times you said are hard |
 | isActive | Bool | plain | plain | an on or off switch |
 
 ## AppointmentSeries
 
-Lock in: 35g3
+Lock in: none
 
 | Field | Type | Verdict | Today | Reason |
 | --- | --- | --- | --- | --- |
 | id | UUID | plain | plain | its own id |
 | clinicianLabel | String | locked | sealed | a name you typed |
-| typicalDayOfWeek | Int? | locked | to lock 35g3 | when you usually see someone |
-| typicalHour | Int? | locked | to lock 35g3 | when you usually see someone |
-| typicalMinute | Int? | locked | to lock 35g3 | when you usually see someone |
-| typicalCadenceDays | Int | locked | to lock 35g3 | how often you see someone |
+| typicalDayOfWeek | Int? | locked | sealed | when you usually see someone |
+| typicalHour | Int? | locked | sealed | when you usually see someone |
+| typicalMinute | Int? | locked | sealed | when you usually see someone |
+| typicalCadenceDays | Int | locked | sealed | how often you see someone |
 | role | String | locked | sealed | a word you typed |
 | exportLabel | String | locked | sealed | a name you typed |
 | notes | String | locked | sealed | your own words |
@@ -241,13 +241,13 @@ Lock in: 35g3
 
 ## AppointmentOccurrence
 
-Lock in: 35g3
+Lock in: none
 
 | Field | Type | Verdict | Today | Reason |
 | --- | --- | --- | --- | --- |
 | id | UUID | plain | plain | its own id |
-| scheduledDate | Date | locked | to lock 35g3 | when the session is |
-| wasMoved | Bool | locked | to lock 35g3 | records what you did with a session |
+| scheduledDate | Date | locked | sealed | when the session is |
+| wasMoved | Bool | locked | sealed | records what you did with a session |
 | prepNoteEntryID | UUID? | plain | plain | a link to another item by id, with no content |
 | postSessionNoteEntryID | UUID? | plain | plain | a link to another item by id, with no content |
 | prepChecklist | [QuickListItem] | locked | sealed | a checklist you wrote |
@@ -269,13 +269,13 @@ Lock in: none
 
 ## FeedbackLoopDiagram
 
-Lock in: 35g3
+Lock in: none
 
 | Field | Type | Verdict | Today | Reason |
 | --- | --- | --- | --- | --- |
 | id | UUID | plain | plain | its own id |
 | title | String | locked | sealed | a title you typed |
-| lastEditedAt | Date | locked | to lock 35g3 | when you last changed it |
+| lastEditedAt | Date | locked | sealed | when you last changed it |
 | graphJSON | Data | locked | sealed | the diagram you drew |
 
 ## ThreadMessage
@@ -372,64 +372,64 @@ Lock in: none
 
 ## NextHourItem
 
-Lock in: 35g3
+Lock in: none
 
 | Field | Type | Verdict | Today | Reason |
 | --- | --- | --- | --- | --- |
 | id | UUID | plain | plain | its own id |
 | text | String | locked | sealed | your own words |
-| isDone | Bool | locked | to lock 35g3 | records what you did |
-| createdAt | Date | locked | to lock 35g3 | when you made it |
+| isDone | Bool | locked | sealed | records what you did |
+| createdAt | Date | locked | sealed | when you made it |
 | reminderIdentifier | String? | plain | plain | an id that the phone's reminders gave, a link and not content |
 
 ## TaskItem
 
-Lock in: 35g3
+Lock in: none
 
 | Field | Type | Verdict | Today | Reason |
 | --- | --- | --- | --- | --- |
 | id | UUID | plain | plain | its own id |
 | title | String | locked | sealed | a title you typed |
 | notes | String | locked | sealed | your own words |
-| isDone | Bool | locked | to lock 35g3 | records what you did |
-| completedAt | Date? | locked | to lock 35g3 | when you finished it |
-| createdAt | Date | locked | to lock 35g3 | when you made it |
+| isDone | Bool | locked | sealed | records what you did |
+| completedAt | Date? | locked | sealed | when you finished it |
+| createdAt | Date | locked | sealed | when you made it |
 | sortOrder | Int | plain | plain | the order on screen |
 | reminderIdentifier | String? | plain | plain | an id that the phone's reminders gave, a link and not content |
-| dueKind | TaskDueKind | locked | to lock 35g3 | goes with the day you gave |
-| dueDate | Date? | locked | to lock 35g3 | the day you gave it |
+| dueKind | TaskDueKind | locked | sealed | goes with the day you gave |
+| dueDate | Date? | locked | sealed | the day you gave it |
 | parentID | UUID? | plain | plain | a link to another item by id, with no content |
 | subtasksCollapsed | Bool | plain | plain | whether a list of steps is folded on screen |
 | blockedByIDs | [UUID] | plain | plain | a link to another item by id, with no content |
-| status | TaskStatus | locked | to lock 35g3 | where you say a task stands |
-| energy | TaskEnergy | locked | to lock 35g3 | how much energy you say it needs |
+| status | TaskStatus | locked | sealed | where you say a task stands |
+| energy | TaskEnergy | locked | sealed | how much energy you say it needs |
 | firstStep | String | locked | sealed | your own words |
-| focusSessions | Int | locked | to lock 35g3 | how much you worked on it |
-| focusMinutes | Int | locked | to lock 35g3 | how much you worked on it |
-| estimateMinutes | Int | locked | to lock 35g3 | a time you gave it |
+| focusSessions | Int | locked | sealed | how much you worked on it |
+| focusMinutes | Int | locked | sealed | how much you worked on it |
+| estimateMinutes | Int | locked | sealed | a time you gave it |
 | sourceEntryID | UUID? | plain | plain | a link to another item by id, with no content |
 
 ## QuickList
 
-Lock in: 35g3
+Lock in: none
 
 | Field | Type | Verdict | Today | Reason |
 | --- | --- | --- | --- | --- |
 | id | UUID | plain | plain | its own id |
 | title | String | locked | sealed | a title you typed |
-| createdAt | Date | locked | to lock 35g3 | when you made it |
+| createdAt | Date | locked | sealed | when you made it |
 | items | [QuickListItem] | locked | sealed | items you wrote |
-| archivedAt | Date? | locked | to lock 35g3 | when you archived it |
+| archivedAt | Date? | locked | sealed | when you archived it |
 
 ## Routine
 
-Lock in: 35g3
+Lock in: none
 
 | Field | Type | Verdict | Today | Reason |
 | --- | --- | --- | --- | --- |
 | id | UUID | plain | plain | its own id |
 | name | String | locked | sealed | a name you typed |
-| createdAt | Date | locked | to lock 35g3 | when you made it |
+| createdAt | Date | locked | sealed | when you made it |
 | steps | [RoutineStep] | locked | sealed | steps you wrote |
 | reminderEnabled | Bool | plain | plain | an on or off switch |
 | reminderDays | [Int] | plain | plain | a reminder day; the phone's own reminder store holds it unlocked once scheduled (D69) |
@@ -438,13 +438,13 @@ Lock in: 35g3
 
 ## ItemList
 
-Lock in: 35g3
+Lock in: none
 
 | Field | Type | Verdict | Today | Reason |
 | --- | --- | --- | --- | --- |
 | id | UUID | plain | plain | its own id |
 | name | String | locked | sealed | a name you typed |
-| createdAt | Date | locked | to lock 35g3 | when you made it |
+| createdAt | Date | locked | sealed | when you made it |
 | variables | [ListVariable] | locked | sealed | words you typed |
 | items | [ListItem] | locked | sealed | items you wrote |
 

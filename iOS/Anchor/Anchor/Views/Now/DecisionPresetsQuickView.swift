@@ -14,7 +14,9 @@ import SwiftData
 
 struct DecisionPresetsQuickView: View {
     @Query(sort: \DecisionPresetCategory.sortOrder) private var categories: [DecisionPresetCategory]
-    @Query(sort: \Routine.createdAt) private var routines: [Routine]
+    @Query private var routinesStored: [Routine]
+    /// Sorted after the items are opened, because a locked value cannot be sorted by the database (Patch 35g3).
+    private var routines: [Routine] { routinesStored.sortedByKey { $0.createdAt } }
     @State private var runnerChoice: DecisionPresetChoice?
     @State private var runningRoutine: Routine?
 

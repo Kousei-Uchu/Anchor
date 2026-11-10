@@ -159,6 +159,11 @@ enum EntryOrigin: String, Codable {
 // Patch 35g2: sealed as its raw text when the entry has one (D44).
 extension EntryOrigin: LockedChoice { static var lockedPlaceholder: EntryOrigin { .manualOpen } }
 
+// Patch 35g3: the task's day kind, where it stands and how much energy it needs, each sealed as its raw text (D44).
+extension TaskDueKind: LockedChoice { static var lockedPlaceholder: TaskDueKind { .noDate } }
+extension TaskStatus: LockedChoice { static var lockedPlaceholder: TaskStatus { .notStarted } }
+extension TaskEnergy: LockedChoice { static var lockedPlaceholder: TaskEnergy { .unset } }
+
 // MARK: - Now: check-ins
 
 /// The five-slider exhaustion model, described in the user's own words.
@@ -657,7 +662,9 @@ final class GroundingTool {
     /// Which times of day this makes sense to surface (ties into the
     /// "filtered to what's near/available right now" behavior). Empty
     /// means "always relevant."
-    var relevantTimeWindows: [TimeWindowTag]
+    @Attribute(originalName: "relevantTimeWindows") var relevantTimeWindowsPlain: [TimeWindowTag]
+    /// The locked form of `relevantTimeWindows`, empty until locking is turned on. Read and written through `relevantTimeWindows` only.
+    var relevantTimeWindowsSealed: String? = nil
 
     init(id: UUID = UUID(), title: String, kind: GroundingToolKind,
          steps: String? = nil, deepLink: DeepLinkDestination? = nil,
@@ -668,7 +675,7 @@ final class GroundingTool {
         self.stepsPlain = steps
         self.deepLink = deepLink
         self.sortOrder = sortOrder
-        self.relevantTimeWindows = relevantTimeWindows
+        self.relevantTimeWindowsPlain = relevantTimeWindows
         lockNewValues()
     }
 }
@@ -692,10 +699,20 @@ extension GroundingTool {
         }
     }
 
+    var relevantTimeWindows: [TimeWindowTag] {
+        get { FieldLock.readCoded(relevantTimeWindowsPlain, sealed: relevantTimeWindowsSealed, context: "GroundingTool.relevantTimeWindows") }
+        set {
+            let kept = FieldLock.storeCoded(newValue, empty: [], context: "GroundingTool.relevantTimeWindows")
+            relevantTimeWindowsPlain = kept.plain
+            relevantTimeWindowsSealed = kept.sealed
+        }
+    }
+
     /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
     /// nothing sealed yet, and does nothing while locking is off.
     func lockNewValues() {
         guard FieldLock.isOn else { return }
+        relevantTimeWindows = relevantTimeWindowsPlain
         title = titlePlain
         steps = stepsPlain
     }
@@ -704,6 +721,7 @@ extension GroundingTool {
     /// again. It does nothing while locking is off.
     func lockExistingValues() {
         guard FieldLock.isOn else { return }
+        if relevantTimeWindowsSealed == nil { relevantTimeWindows = relevantTimeWindowsPlain }
         if titleSealed == nil { title = titlePlain }
         if stepsSealed == nil, let kept = stepsPlain { steps = kept }
     }
@@ -712,6 +730,7 @@ extension GroundingTool {
     /// before and after. It reads through the old names, so a sealed value is compared as its text.
     func lockedSnapshot() -> String {
         FieldLock.join([
+            FieldLock.describe(relevantTimeWindows),
             FieldLock.describe(title),
             FieldLock.describe(steps)
         ])
@@ -719,7 +738,8 @@ extension GroundingTool {
 
     /// True when every locked field is held sealed, with nothing left in the plain property.
     func lockedFieldsAreSealed() -> Bool {
-        titleSealed != nil && titlePlain.isEmpty
+        relevantTimeWindowsSealed != nil && relevantTimeWindowsPlain.isEmpty
+            && titleSealed != nil && titlePlain.isEmpty
             && stepsPlain == nil
     }
 }
@@ -733,7 +753,9 @@ enum TimeWindowTag: String, Codable {
 @Model
 final class SafetyPlan {
     @Attribute(.unique) var id: UUID
-    var lastEditedAt: Date
+    @Attribute(originalName: "lastEditedAt") var lastEditedAtPlain: Date
+    /// The locked form of `lastEditedAt`, empty until locking is turned on. Read and written through `lastEditedAt` only.
+    var lastEditedAtSealed: String? = nil
     @Attribute(originalName: "warningSignsText") var warningSignsTextPlain: String
     /// The locked form of `warningSignsText`, empty until locking is turned on. Read and written through `warningSignsText` only.
     var warningSignsTextSealed: String? = nil
@@ -751,7 +773,7 @@ final class SafetyPlan {
          warningSignsText: String = "", copingStrategiesText: String = "",
          reasonsToKeepGoingText: String = "", environmentSafetyStepsText: String = "") {
         self.id = id
-        self.lastEditedAt = lastEditedAt
+        self.lastEditedAtPlain = lastEditedAt
         self.warningSignsTextPlain = warningSignsText
         self.copingStrategiesTextPlain = copingStrategiesText
         self.reasonsToKeepGoingTextPlain = reasonsToKeepGoingText
@@ -795,10 +817,20 @@ extension SafetyPlan {
         }
     }
 
+    var lastEditedAt: Date {
+        get { FieldLock.readScalar(plain: lastEditedAtPlain, sealed: lastEditedAtSealed, context: "SafetyPlan.lastEditedAt") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "SafetyPlan.lastEditedAt")
+            lastEditedAtPlain = kept.plain
+            lastEditedAtSealed = kept.sealed
+        }
+    }
+
     /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
     /// nothing sealed yet, and does nothing while locking is off.
     func lockNewValues() {
         guard FieldLock.isOn else { return }
+        lastEditedAt = lastEditedAtPlain
         warningSignsText = warningSignsTextPlain
         copingStrategiesText = copingStrategiesTextPlain
         reasonsToKeepGoingText = reasonsToKeepGoingTextPlain
@@ -809,6 +841,7 @@ extension SafetyPlan {
     /// again. It does nothing while locking is off.
     func lockExistingValues() {
         guard FieldLock.isOn else { return }
+        if lastEditedAtSealed == nil { lastEditedAt = lastEditedAtPlain }
         if warningSignsTextSealed == nil { warningSignsText = warningSignsTextPlain }
         if copingStrategiesTextSealed == nil { copingStrategiesText = copingStrategiesTextPlain }
         if reasonsToKeepGoingTextSealed == nil { reasonsToKeepGoingText = reasonsToKeepGoingTextPlain }
@@ -819,6 +852,7 @@ extension SafetyPlan {
     /// before and after. It reads through the old names, so a sealed value is compared as its text.
     func lockedSnapshot() -> String {
         FieldLock.join([
+            FieldLock.describe(lastEditedAt),
             FieldLock.describe(warningSignsText),
             FieldLock.describe(copingStrategiesText),
             FieldLock.describe(reasonsToKeepGoingText),
@@ -828,7 +862,8 @@ extension SafetyPlan {
 
     /// True when every locked field is held sealed, with nothing left in the plain property.
     func lockedFieldsAreSealed() -> Bool {
-        warningSignsTextSealed != nil && warningSignsTextPlain.isEmpty
+        lastEditedAtSealed != nil && lastEditedAtPlain == Date.lockedPlaceholder
+            && warningSignsTextSealed != nil && warningSignsTextPlain.isEmpty
             && copingStrategiesTextSealed != nil && copingStrategiesTextPlain.isEmpty
             && reasonsToKeepGoingTextSealed != nil && reasonsToKeepGoingTextPlain.isEmpty
             && environmentSafetyStepsTextSealed != nil && environmentSafetyStepsTextPlain.isEmpty
@@ -855,7 +890,9 @@ final class SafetyPlanSection {
     /// Empty for an ordinary section. `reasonsRole` marks the one section that
     /// reminder quotes are taken from.
     var role: String
-    var lastEditedAt: Date
+    @Attribute(originalName: "lastEditedAt") var lastEditedAtPlain: Date
+    /// The locked form of `lastEditedAt`, empty until locking is turned on. Read and written through `lastEditedAt` only.
+    var lastEditedAtSealed: String? = nil
 
     static let reasonsRole = "reasons"
 
@@ -871,7 +908,7 @@ final class SafetyPlanSection {
         self.sortOrder = sortOrder
         self.isHidden = isHidden
         self.role = role
-        self.lastEditedAt = lastEditedAt
+        self.lastEditedAtPlain = lastEditedAt
         lockNewValues()
     }
 }
@@ -895,10 +932,20 @@ extension SafetyPlanSection {
         }
     }
 
+    var lastEditedAt: Date {
+        get { FieldLock.readScalar(plain: lastEditedAtPlain, sealed: lastEditedAtSealed, context: "SafetyPlanSection.lastEditedAt") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "SafetyPlanSection.lastEditedAt")
+            lastEditedAtPlain = kept.plain
+            lastEditedAtSealed = kept.sealed
+        }
+    }
+
     /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
     /// nothing sealed yet, and does nothing while locking is off.
     func lockNewValues() {
         guard FieldLock.isOn else { return }
+        lastEditedAt = lastEditedAtPlain
         title = titlePlain
         text = textPlain
     }
@@ -907,6 +954,7 @@ extension SafetyPlanSection {
     /// again. It does nothing while locking is off.
     func lockExistingValues() {
         guard FieldLock.isOn else { return }
+        if lastEditedAtSealed == nil { lastEditedAt = lastEditedAtPlain }
         if titleSealed == nil { title = titlePlain }
         if textSealed == nil { text = textPlain }
     }
@@ -915,6 +963,7 @@ extension SafetyPlanSection {
     /// before and after. It reads through the old names, so a sealed value is compared as its text.
     func lockedSnapshot() -> String {
         FieldLock.join([
+            FieldLock.describe(lastEditedAt),
             FieldLock.describe(title),
             FieldLock.describe(text)
         ])
@@ -922,7 +971,8 @@ extension SafetyPlanSection {
 
     /// True when every locked field is held sealed, with nothing left in the plain property.
     func lockedFieldsAreSealed() -> Bool {
-        titleSealed != nil && titlePlain.isEmpty
+        lastEditedAtSealed != nil && lastEditedAtPlain == Date.lockedPlaceholder
+            && titleSealed != nil && titlePlain.isEmpty
             && textSealed != nil && textPlain.isEmpty
     }
 }
@@ -945,7 +995,9 @@ final class BoundarySection {
     var sortOrder: Int
     var isHidden: Bool
     var isShareable: Bool
-    var lastEditedAt: Date
+    @Attribute(originalName: "lastEditedAt") var lastEditedAtPlain: Date
+    /// The locked form of `lastEditedAt`, empty until locking is turned on. Read and written through `lastEditedAt` only.
+    var lastEditedAtSealed: String? = nil
 
     init(id: UUID = UUID(), title: String = "", text: String = "",
          iconName: String = "hand.raised.fill", tintName: String = "sage",
@@ -959,7 +1011,7 @@ final class BoundarySection {
         self.sortOrder = sortOrder
         self.isHidden = isHidden
         self.isShareable = isShareable
-        self.lastEditedAt = lastEditedAt
+        self.lastEditedAtPlain = lastEditedAt
         lockNewValues()
     }
 
@@ -1008,10 +1060,20 @@ extension BoundarySection {
         }
     }
 
+    var lastEditedAt: Date {
+        get { FieldLock.readScalar(plain: lastEditedAtPlain, sealed: lastEditedAtSealed, context: "BoundarySection.lastEditedAt") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "BoundarySection.lastEditedAt")
+            lastEditedAtPlain = kept.plain
+            lastEditedAtSealed = kept.sealed
+        }
+    }
+
     /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
     /// nothing sealed yet, and does nothing while locking is off.
     func lockNewValues() {
         guard FieldLock.isOn else { return }
+        lastEditedAt = lastEditedAtPlain
         title = titlePlain
         text = textPlain
     }
@@ -1020,6 +1082,7 @@ extension BoundarySection {
     /// again. It does nothing while locking is off.
     func lockExistingValues() {
         guard FieldLock.isOn else { return }
+        if lastEditedAtSealed == nil { lastEditedAt = lastEditedAtPlain }
         if titleSealed == nil { title = titlePlain }
         if textSealed == nil { text = textPlain }
     }
@@ -1028,6 +1091,7 @@ extension BoundarySection {
     /// before and after. It reads through the old names, so a sealed value is compared as its text.
     func lockedSnapshot() -> String {
         FieldLock.join([
+            FieldLock.describe(lastEditedAt),
             FieldLock.describe(title),
             FieldLock.describe(text)
         ])
@@ -1035,7 +1099,8 @@ extension BoundarySection {
 
     /// True when every locked field is held sealed, with nothing left in the plain property.
     func lockedFieldsAreSealed() -> Bool {
-        titleSealed != nil && titlePlain.isEmpty
+        lastEditedAtSealed != nil && lastEditedAtPlain == Date.lockedPlaceholder
+            && titleSealed != nil && titlePlain.isEmpty
             && textSealed != nil && textPlain.isEmpty
     }
 }
@@ -1814,14 +1879,24 @@ final class TriggerWindow {
     @Attribute(originalName: "label") var labelPlain: String
     /// The locked form of `label`, empty until locking is turned on. Read and written through `label` only.
     var labelSealed: String? = nil
-    var daysOfWeek: [Int]      // 1 = Sunday ... 7 = Saturday, Calendar-style
+    @Attribute(originalName: "daysOfWeek") var daysOfWeekPlain: [Int]      // 1 = Sunday ... 7 = Saturday, Calendar-style
+    /// The locked form of `daysOfWeek`, empty until locking is turned on. Read and written through `daysOfWeek` only.
+    var daysOfWeekSealed: String? = nil
 
     // Stored separately because DateComponents contains Calendar internally,
     // which SwiftData cannot persist.
-    var startHour: Int
-    var startMinute: Int
-    var endHour: Int
-    var endMinute: Int
+    @Attribute(originalName: "startHour") var startHourPlain: Int
+    /// The locked form of `startHour`, empty until locking is turned on. Read and written through `startHour` only.
+    var startHourSealed: String? = nil
+    @Attribute(originalName: "startMinute") var startMinutePlain: Int
+    /// The locked form of `startMinute`, empty until locking is turned on. Read and written through `startMinute` only.
+    var startMinuteSealed: String? = nil
+    @Attribute(originalName: "endHour") var endHourPlain: Int
+    /// The locked form of `endHour`, empty until locking is turned on. Read and written through `endHour` only.
+    var endHourSealed: String? = nil
+    @Attribute(originalName: "endMinute") var endMinutePlain: Int
+    /// The locked form of `endMinute`, empty until locking is turned on. Read and written through `endMinute` only.
+    var endMinuteSealed: String? = nil
 
     var isActive: Bool
 
@@ -1835,12 +1910,12 @@ final class TriggerWindow {
     ) {
         self.id = id
         self.labelPlain = label
-        self.daysOfWeek = daysOfWeek
+        self.daysOfWeekPlain = daysOfWeek
 
-        self.startHour = startTime.hour ?? 0
-        self.startMinute = startTime.minute ?? 0
-        self.endHour = endTime.hour ?? 0
-        self.endMinute = endTime.minute ?? 0
+        self.startHourPlain = startTime.hour ?? 0
+        self.startMinutePlain = startTime.minute ?? 0
+        self.endHourPlain = endTime.hour ?? 0
+        self.endMinutePlain = endTime.minute ?? 0
 
         self.isActive = isActive
         lockNewValues()
@@ -1878,10 +1953,60 @@ extension TriggerWindow {
         }
     }
 
+    var daysOfWeek: [Int] {
+        get { FieldLock.readCoded(daysOfWeekPlain, sealed: daysOfWeekSealed, context: "TriggerWindow.daysOfWeek") }
+        set {
+            let kept = FieldLock.storeCoded(newValue, empty: [], context: "TriggerWindow.daysOfWeek")
+            daysOfWeekPlain = kept.plain
+            daysOfWeekSealed = kept.sealed
+        }
+    }
+
+    var startHour: Int {
+        get { FieldLock.readScalar(plain: startHourPlain, sealed: startHourSealed, context: "TriggerWindow.startHour") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "TriggerWindow.startHour")
+            startHourPlain = kept.plain
+            startHourSealed = kept.sealed
+        }
+    }
+
+    var startMinute: Int {
+        get { FieldLock.readScalar(plain: startMinutePlain, sealed: startMinuteSealed, context: "TriggerWindow.startMinute") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "TriggerWindow.startMinute")
+            startMinutePlain = kept.plain
+            startMinuteSealed = kept.sealed
+        }
+    }
+
+    var endHour: Int {
+        get { FieldLock.readScalar(plain: endHourPlain, sealed: endHourSealed, context: "TriggerWindow.endHour") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "TriggerWindow.endHour")
+            endHourPlain = kept.plain
+            endHourSealed = kept.sealed
+        }
+    }
+
+    var endMinute: Int {
+        get { FieldLock.readScalar(plain: endMinutePlain, sealed: endMinuteSealed, context: "TriggerWindow.endMinute") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "TriggerWindow.endMinute")
+            endMinutePlain = kept.plain
+            endMinuteSealed = kept.sealed
+        }
+    }
+
     /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
     /// nothing sealed yet, and does nothing while locking is off.
     func lockNewValues() {
         guard FieldLock.isOn else { return }
+        daysOfWeek = daysOfWeekPlain
+        startHour = startHourPlain
+        startMinute = startMinutePlain
+        endHour = endHourPlain
+        endMinute = endMinutePlain
         label = labelPlain
     }
 
@@ -1889,6 +2014,11 @@ extension TriggerWindow {
     /// again. It does nothing while locking is off.
     func lockExistingValues() {
         guard FieldLock.isOn else { return }
+        if daysOfWeekSealed == nil { daysOfWeek = daysOfWeekPlain }
+        if startHourSealed == nil { startHour = startHourPlain }
+        if startMinuteSealed == nil { startMinute = startMinutePlain }
+        if endHourSealed == nil { endHour = endHourPlain }
+        if endMinuteSealed == nil { endMinute = endMinutePlain }
         if labelSealed == nil { label = labelPlain }
     }
 
@@ -1896,13 +2026,23 @@ extension TriggerWindow {
     /// before and after. It reads through the old names, so a sealed value is compared as its text.
     func lockedSnapshot() -> String {
         FieldLock.join([
+            FieldLock.describe(daysOfWeek),
+            FieldLock.describe(startHour),
+            FieldLock.describe(startMinute),
+            FieldLock.describe(endHour),
+            FieldLock.describe(endMinute),
             FieldLock.describe(label)
         ])
     }
 
     /// True when every locked field is held sealed, with nothing left in the plain property.
     func lockedFieldsAreSealed() -> Bool {
-        labelSealed != nil && labelPlain.isEmpty
+        daysOfWeekSealed != nil && daysOfWeekPlain.isEmpty
+            && startHourSealed != nil && startHourPlain == Int.lockedPlaceholder
+            && startMinuteSealed != nil && startMinutePlain == Int.lockedPlaceholder
+            && endHourSealed != nil && endHourPlain == Int.lockedPlaceholder
+            && endMinuteSealed != nil && endMinutePlain == Int.lockedPlaceholder
+            && labelSealed != nil && labelPlain.isEmpty
     }
 }
 
@@ -1915,13 +2055,21 @@ final class AppointmentSeries {
     @Attribute(originalName: "clinicianLabel") var clinicianLabelPlain: String
     /// The locked form of `clinicianLabel`, empty until locking is turned on. Read and written through `clinicianLabel` only.
     var clinicianLabelSealed: String? = nil
-    var typicalDayOfWeek: Int?
+    @Attribute(originalName: "typicalDayOfWeek") var typicalDayOfWeekPlain: Int?
+    /// The locked form of `typicalDayOfWeek`, empty until locking is turned on. Read and written through `typicalDayOfWeek` only.
+    var typicalDayOfWeekSealed: String? = nil
 
     // Stored separately because DateComponents contains Calendar internally.
-    var typicalHour: Int?
-    var typicalMinute: Int?
+    @Attribute(originalName: "typicalHour") var typicalHourPlain: Int?
+    /// The locked form of `typicalHour`, empty until locking is turned on. Read and written through `typicalHour` only.
+    var typicalHourSealed: String? = nil
+    @Attribute(originalName: "typicalMinute") var typicalMinutePlain: Int?
+    /// The locked form of `typicalMinute`, empty until locking is turned on. Read and written through `typicalMinute` only.
+    var typicalMinuteSealed: String? = nil
 
-    var typicalCadenceDays: Int
+    @Attribute(originalName: "typicalCadenceDays") var typicalCadenceDaysPlain: Int
+    /// The locked form of `typicalCadenceDays`, empty until locking is turned on. Read and written through `typicalCadenceDays` only.
+    var typicalCadenceDaysSealed: String? = nil
 
     /// What they do, in the person's own words ("GP", "Counsellor"). Optional.
     @Attribute(originalName: "role") var rolePlain: String = ""
@@ -1955,12 +2103,12 @@ final class AppointmentSeries {
     ) {
         self.id = id
         self.clinicianLabelPlain = clinicianLabel
-        self.typicalDayOfWeek = typicalDayOfWeek
+        self.typicalDayOfWeekPlain = typicalDayOfWeek
 
-        self.typicalHour = typicalTime?.hour
-        self.typicalMinute = typicalTime?.minute
+        self.typicalHourPlain = typicalTime?.hour
+        self.typicalMinutePlain = typicalTime?.minute
 
-        self.typicalCadenceDays = typicalCadenceDays
+        self.typicalCadenceDaysPlain = typicalCadenceDays
         self.occurrences = occurrences
         self.rolePlain = role
         self.exportLabelPlain = exportLabel
@@ -2028,10 +2176,50 @@ extension AppointmentSeries {
         }
     }
 
+    var typicalDayOfWeek: Int? {
+        get { FieldLock.readOptionalScalar(plain: typicalDayOfWeekPlain, sealed: typicalDayOfWeekSealed, context: "AppointmentSeries.typicalDayOfWeek") }
+        set {
+            let kept = FieldLock.storeOptionalScalar(newValue, context: "AppointmentSeries.typicalDayOfWeek")
+            typicalDayOfWeekPlain = kept.plain
+            typicalDayOfWeekSealed = kept.sealed
+        }
+    }
+
+    var typicalHour: Int? {
+        get { FieldLock.readOptionalScalar(plain: typicalHourPlain, sealed: typicalHourSealed, context: "AppointmentSeries.typicalHour") }
+        set {
+            let kept = FieldLock.storeOptionalScalar(newValue, context: "AppointmentSeries.typicalHour")
+            typicalHourPlain = kept.plain
+            typicalHourSealed = kept.sealed
+        }
+    }
+
+    var typicalMinute: Int? {
+        get { FieldLock.readOptionalScalar(plain: typicalMinutePlain, sealed: typicalMinuteSealed, context: "AppointmentSeries.typicalMinute") }
+        set {
+            let kept = FieldLock.storeOptionalScalar(newValue, context: "AppointmentSeries.typicalMinute")
+            typicalMinutePlain = kept.plain
+            typicalMinuteSealed = kept.sealed
+        }
+    }
+
+    var typicalCadenceDays: Int {
+        get { FieldLock.readScalar(plain: typicalCadenceDaysPlain, sealed: typicalCadenceDaysSealed, context: "AppointmentSeries.typicalCadenceDays") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "AppointmentSeries.typicalCadenceDays")
+            typicalCadenceDaysPlain = kept.plain
+            typicalCadenceDaysSealed = kept.sealed
+        }
+    }
+
     /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
     /// nothing sealed yet, and does nothing while locking is off.
     func lockNewValues() {
         guard FieldLock.isOn else { return }
+        typicalDayOfWeek = typicalDayOfWeekPlain
+        typicalHour = typicalHourPlain
+        typicalMinute = typicalMinutePlain
+        typicalCadenceDays = typicalCadenceDaysPlain
         clinicianLabel = clinicianLabelPlain
         role = rolePlain
         exportLabel = exportLabelPlain
@@ -2042,6 +2230,10 @@ extension AppointmentSeries {
     /// again. It does nothing while locking is off.
     func lockExistingValues() {
         guard FieldLock.isOn else { return }
+        if typicalDayOfWeekSealed == nil { typicalDayOfWeek = typicalDayOfWeekPlain }
+        if typicalHourSealed == nil { typicalHour = typicalHourPlain }
+        if typicalMinuteSealed == nil { typicalMinute = typicalMinutePlain }
+        if typicalCadenceDaysSealed == nil { typicalCadenceDays = typicalCadenceDaysPlain }
         if clinicianLabelSealed == nil { clinicianLabel = clinicianLabelPlain }
         if roleSealed == nil { role = rolePlain }
         if exportLabelSealed == nil { exportLabel = exportLabelPlain }
@@ -2052,6 +2244,10 @@ extension AppointmentSeries {
     /// before and after. It reads through the old names, so a sealed value is compared as its text.
     func lockedSnapshot() -> String {
         FieldLock.join([
+            FieldLock.describe(typicalDayOfWeek),
+            FieldLock.describe(typicalHour),
+            FieldLock.describe(typicalMinute),
+            FieldLock.describe(typicalCadenceDays),
             FieldLock.describe(clinicianLabel),
             FieldLock.describe(role),
             FieldLock.describe(exportLabel),
@@ -2061,7 +2257,11 @@ extension AppointmentSeries {
 
     /// True when every locked field is held sealed, with nothing left in the plain property.
     func lockedFieldsAreSealed() -> Bool {
-        clinicianLabelSealed != nil && clinicianLabelPlain.isEmpty
+        typicalDayOfWeekSealed != nil && typicalDayOfWeekPlain == nil
+            && typicalHourSealed != nil && typicalHourPlain == nil
+            && typicalMinuteSealed != nil && typicalMinutePlain == nil
+            && typicalCadenceDaysSealed != nil && typicalCadenceDaysPlain == Int.lockedPlaceholder
+            && clinicianLabelSealed != nil && clinicianLabelPlain.isEmpty
             && roleSealed != nil && rolePlain.isEmpty
             && exportLabelSealed != nil && exportLabelPlain.isEmpty
             && notesSealed != nil && notesPlain.isEmpty
@@ -2071,8 +2271,12 @@ extension AppointmentSeries {
 @Model
 final class AppointmentOccurrence {
     @Attribute(.unique) var id: UUID
-    var scheduledDate: Date       // editable independent of the series rule
-    var wasMoved: Bool
+    @Attribute(originalName: "scheduledDate") var scheduledDatePlain: Date       // editable independent of the series rule
+    /// The locked form of `scheduledDate`, empty until locking is turned on. Read and written through `scheduledDate` only.
+    var scheduledDateSealed: String? = nil
+    @Attribute(originalName: "wasMoved") var wasMovedPlain: Bool
+    /// The locked form of `wasMoved`, empty until locking is turned on. Read and written through `wasMoved` only.
+    var wasMovedSealed: String? = nil
     var prepNoteEntryID: UUID?    // links to a Journal/Bridge prep entry
     var postSessionNoteEntryID: UUID?
     /// What the person wants to have with them for this one session, written
@@ -2086,8 +2290,8 @@ final class AppointmentOccurrence {
          prepNoteEntryID: UUID? = nil, postSessionNoteEntryID: UUID? = nil,
          prepChecklist: [QuickListItem] = []) {
         self.id = id
-        self.scheduledDate = scheduledDate
-        self.wasMoved = wasMoved
+        self.scheduledDatePlain = scheduledDate
+        self.wasMovedPlain = wasMoved
         self.prepNoteEntryID = prepNoteEntryID
         self.postSessionNoteEntryID = postSessionNoteEntryID
         self.prepChecklistPlain = prepChecklist
@@ -2106,10 +2310,30 @@ extension AppointmentOccurrence {
         }
     }
 
+    var scheduledDate: Date {
+        get { FieldLock.readScalar(plain: scheduledDatePlain, sealed: scheduledDateSealed, context: "AppointmentOccurrence.scheduledDate") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "AppointmentOccurrence.scheduledDate")
+            scheduledDatePlain = kept.plain
+            scheduledDateSealed = kept.sealed
+        }
+    }
+
+    var wasMoved: Bool {
+        get { FieldLock.readScalar(plain: wasMovedPlain, sealed: wasMovedSealed, context: "AppointmentOccurrence.wasMoved") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "AppointmentOccurrence.wasMoved")
+            wasMovedPlain = kept.plain
+            wasMovedSealed = kept.sealed
+        }
+    }
+
     /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
     /// nothing sealed yet, and does nothing while locking is off.
     func lockNewValues() {
         guard FieldLock.isOn else { return }
+        scheduledDate = scheduledDatePlain
+        wasMoved = wasMovedPlain
         prepChecklist = prepChecklistPlain
     }
 
@@ -2117,6 +2341,8 @@ extension AppointmentOccurrence {
     /// again. It does nothing while locking is off.
     func lockExistingValues() {
         guard FieldLock.isOn else { return }
+        if scheduledDateSealed == nil { scheduledDate = scheduledDatePlain }
+        if wasMovedSealed == nil { wasMoved = wasMovedPlain }
         if prepChecklistSealed == nil { prepChecklist = prepChecklistPlain }
     }
 
@@ -2124,13 +2350,17 @@ extension AppointmentOccurrence {
     /// before and after. It reads through the old names, so a sealed value is compared as its text.
     func lockedSnapshot() -> String {
         FieldLock.join([
+            FieldLock.describe(scheduledDate),
+            FieldLock.describe(wasMoved),
             FieldLock.describe(prepChecklist)
         ])
     }
 
     /// True when every locked field is held sealed, with nothing left in the plain property.
     func lockedFieldsAreSealed() -> Bool {
-        prepChecklistSealed != nil && prepChecklistPlain.isEmpty
+        scheduledDateSealed != nil && scheduledDatePlain == Date.lockedPlaceholder
+            && wasMovedSealed != nil && wasMovedPlain == Bool.lockedPlaceholder
+            && prepChecklistSealed != nil && prepChecklistPlain.isEmpty
     }
 }
 
@@ -2308,7 +2538,9 @@ final class FeedbackLoopDiagram {
     @Attribute(originalName: "title") var titlePlain: String
     /// The locked form of `title`, empty until locking is turned on. Read and written through `title` only.
     var titleSealed: String? = nil
-    var lastEditedAt: Date
+    @Attribute(originalName: "lastEditedAt") var lastEditedAtPlain: Date
+    /// The locked form of `lastEditedAt`, empty until locking is turned on. Read and written through `lastEditedAt` only.
+    var lastEditedAtSealed: String? = nil
     /// Serialized node/edge graph the user builds to externalize their own
     /// systems metaphors (e.g. the "like Cloudflare" defense model). Stored
     /// as JSON so the diagram editor can be swapped out without migrating data.
@@ -2319,7 +2551,7 @@ final class FeedbackLoopDiagram {
     init(id: UUID = UUID(), title: String, lastEditedAt: Date = .now, graphJSON: Data) {
         self.id = id
         self.titlePlain = title
-        self.lastEditedAt = lastEditedAt
+        self.lastEditedAtPlain = lastEditedAt
         self.graphJSONPlain = graphJSON
         lockNewValues()
     }
@@ -2344,10 +2576,20 @@ extension FeedbackLoopDiagram {
         }
     }
 
+    var lastEditedAt: Date {
+        get { FieldLock.readScalar(plain: lastEditedAtPlain, sealed: lastEditedAtSealed, context: "FeedbackLoopDiagram.lastEditedAt") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "FeedbackLoopDiagram.lastEditedAt")
+            lastEditedAtPlain = kept.plain
+            lastEditedAtSealed = kept.sealed
+        }
+    }
+
     /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
     /// nothing sealed yet, and does nothing while locking is off.
     func lockNewValues() {
         guard FieldLock.isOn else { return }
+        lastEditedAt = lastEditedAtPlain
         title = titlePlain
         graphJSON = graphJSONPlain
     }
@@ -2356,6 +2598,7 @@ extension FeedbackLoopDiagram {
     /// again. It does nothing while locking is off.
     func lockExistingValues() {
         guard FieldLock.isOn else { return }
+        if lastEditedAtSealed == nil { lastEditedAt = lastEditedAtPlain }
         if titleSealed == nil { title = titlePlain }
         if graphJSONSealed == nil { graphJSON = graphJSONPlain }
     }
@@ -2364,6 +2607,7 @@ extension FeedbackLoopDiagram {
     /// before and after. It reads through the old names, so a sealed value is compared as its text.
     func lockedSnapshot() -> String {
         FieldLock.join([
+            FieldLock.describe(lastEditedAt),
             FieldLock.describe(title),
             FieldLock.describe(graphJSON)
         ])
@@ -2371,7 +2615,8 @@ extension FeedbackLoopDiagram {
 
     /// True when every locked field is held sealed, with nothing left in the plain property.
     func lockedFieldsAreSealed() -> Bool {
-        titleSealed != nil && titlePlain.isEmpty
+        lastEditedAtSealed != nil && lastEditedAtPlain == Date.lockedPlaceholder
+            && titleSealed != nil && titlePlain.isEmpty
             && graphJSONSealed != nil && graphJSONPlain.isEmpty
     }
 }
@@ -3053,15 +3298,19 @@ final class NextHourItem {
     @Attribute(originalName: "text") var textPlain: String
     /// The locked form of `text`, empty until locking is turned on. Read and written through `text` only.
     var textSealed: String? = nil
-    var isDone: Bool
-    var createdAt: Date
+    @Attribute(originalName: "isDone") var isDonePlain: Bool
+    /// The locked form of `isDone`, empty until locking is turned on. Read and written through `isDone` only.
+    var isDoneSealed: String? = nil
+    @Attribute(originalName: "createdAt") var createdAtPlain: Date
+    /// The locked form of `createdAt`, empty until locking is turned on. Read and written through `createdAt` only.
+    var createdAtSealed: String? = nil
     var reminderIdentifier: String?
 
     init(id: UUID = UUID(), text: String, isDone: Bool = false, createdAt: Date = .now, reminderIdentifier: String? = nil) {
         self.id = id
         self.textPlain = text
-        self.isDone = isDone
-        self.createdAt = createdAt
+        self.isDonePlain = isDone
+        self.createdAtPlain = createdAt
         self.reminderIdentifier = reminderIdentifier
         lockNewValues()
     }
@@ -3078,10 +3327,30 @@ extension NextHourItem {
         }
     }
 
+    var isDone: Bool {
+        get { FieldLock.readScalar(plain: isDonePlain, sealed: isDoneSealed, context: "NextHourItem.isDone") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "NextHourItem.isDone")
+            isDonePlain = kept.plain
+            isDoneSealed = kept.sealed
+        }
+    }
+
+    var createdAt: Date {
+        get { FieldLock.readScalar(plain: createdAtPlain, sealed: createdAtSealed, context: "NextHourItem.createdAt") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "NextHourItem.createdAt")
+            createdAtPlain = kept.plain
+            createdAtSealed = kept.sealed
+        }
+    }
+
     /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
     /// nothing sealed yet, and does nothing while locking is off.
     func lockNewValues() {
         guard FieldLock.isOn else { return }
+        isDone = isDonePlain
+        createdAt = createdAtPlain
         text = textPlain
     }
 
@@ -3089,6 +3358,8 @@ extension NextHourItem {
     /// again. It does nothing while locking is off.
     func lockExistingValues() {
         guard FieldLock.isOn else { return }
+        if isDoneSealed == nil { isDone = isDonePlain }
+        if createdAtSealed == nil { createdAt = createdAtPlain }
         if textSealed == nil { text = textPlain }
     }
 
@@ -3096,13 +3367,17 @@ extension NextHourItem {
     /// before and after. It reads through the old names, so a sealed value is compared as its text.
     func lockedSnapshot() -> String {
         FieldLock.join([
+            FieldLock.describe(isDone),
+            FieldLock.describe(createdAt),
             FieldLock.describe(text)
         ])
     }
 
     /// True when every locked field is held sealed, with nothing left in the plain property.
     func lockedFieldsAreSealed() -> Bool {
-        textSealed != nil && textPlain.isEmpty
+        isDoneSealed != nil && isDonePlain == Bool.lockedPlaceholder
+            && createdAtSealed != nil && createdAtPlain == Date.lockedPlaceholder
+            && textSealed != nil && textPlain.isEmpty
     }
 }
 
@@ -3121,16 +3396,26 @@ final class TaskItem {
     @Attribute(originalName: "notes") var notesPlain: String = ""
     /// The locked form of `notes`, empty until locking is turned on. Read and written through `notes` only.
     var notesSealed: String? = nil
-    var isDone: Bool = false
-    var completedAt: Date? = nil
-    var createdAt: Date = Date.now
+    @Attribute(originalName: "isDone") var isDonePlain: Bool = false
+    /// The locked form of `isDone`, empty until locking is turned on. Read and written through `isDone` only.
+    var isDoneSealed: String? = nil
+    @Attribute(originalName: "completedAt") var completedAtPlain: Date? = nil
+    /// The locked form of `completedAt`, empty until locking is turned on. Read and written through `completedAt` only.
+    var completedAtSealed: String? = nil
+    @Attribute(originalName: "createdAt") var createdAtPlain: Date = Date.now
+    /// The locked form of `createdAt`, empty until locking is turned on. Read and written through `createdAt` only.
+    var createdAtSealed: String? = nil
     var sortOrder: Int = 0
     var reminderIdentifier: String? = nil
     /// How the task is timed. `dueDate` holds the exact day for `.exact`, and
     /// the last moment of the day, week or month for those loose choices, so
     /// that a plan which has passed can be told apart from one still ahead.
-    var dueKind: TaskDueKind = TaskDueKind.noDate
-    var dueDate: Date? = nil
+    @Attribute(originalName: "dueKind") var dueKindPlain: TaskDueKind = TaskDueKind.noDate
+    /// The locked form of `dueKind`, empty until locking is turned on. Read and written through `dueKind` only.
+    var dueKindSealed: String? = nil
+    @Attribute(originalName: "dueDate") var dueDatePlain: Date? = nil
+    /// The locked form of `dueDate`, empty until locking is turned on. Read and written through `dueDate` only.
+    var dueDateSealed: String? = nil
     /// A step is a task with a `parentID`: the id of the task it belongs to.
     /// Steps share this model so ticking, ordering, export and import all
     /// work as they do for tasks, and no store migration is needed.
@@ -3144,10 +3429,14 @@ final class TaskItem {
     /// Where the task is in your own words: not started, started, or set aside
     /// for now. Done stays `isDone`. A task with a step ticked off also counts
     /// as started without you having to say so (see `isStarted`).
-    var status: TaskStatus = TaskStatus.notStarted
+    @Attribute(originalName: "status") var statusPlain: TaskStatus = TaskStatus.notStarted
+    /// The locked form of `status`, empty until locking is turned on. Read and written through `status` only.
+    var statusSealed: String? = nil
     /// How much energy the task needs, if you have said. Only used to narrow
     /// the list on a low day; nothing is scored or compared.
-    var energy: TaskEnergy = TaskEnergy.unset
+    @Attribute(originalName: "energy") var energyPlain: TaskEnergy = TaskEnergy.unset
+    /// The locked form of `energy`, empty until locking is turned on. Read and written through `energy` only.
+    var energySealed: String? = nil
     /// The smallest way to begin, in a few words. Separate from steps so it
     /// can be a single line.
     @Attribute(originalName: "firstStep") var firstStepPlain: String = ""
@@ -3156,11 +3445,17 @@ final class TaskItem {
     /// How many focus sessions have run to the end on this task, and the
     /// minutes they added up to. A plain record: nothing is scored, compared
     /// or shown against a goal.
-    var focusSessions: Int = 0
-    var focusMinutes: Int = 0
+    @Attribute(originalName: "focusSessions") var focusSessionsPlain: Int = 0
+    /// The locked form of `focusSessions`, empty until locking is turned on. Read and written through `focusSessions` only.
+    var focusSessionsSealed: String? = nil
+    @Attribute(originalName: "focusMinutes") var focusMinutesPlain: Int = 0
+    /// The locked form of `focusMinutes`, empty until locking is turned on. Read and written through `focusMinutes` only.
+    var focusMinutesSealed: String? = nil
     /// A rough guess at how long the task takes, in minutes. 0 means no
     /// estimate. Only used to add up a day's plan; nothing is checked against it.
-    var estimateMinutes: Int = 0
+    @Attribute(originalName: "estimateMinutes") var estimateMinutesPlain: Int = 0
+    /// The locked form of `estimateMinutes`, empty until locking is turned on. Read and written through `estimateMinutes` only.
+    var estimateMinutesSealed: String? = nil
     /// The Journal entry this task was made from, when a tool made it from one (Patch AI3; Tidy a braindump sets it,
     /// Patch AI4). Nothing reads the entry through it: it is only a trace back to the words the task came from,
     /// and the entry is never changed. A deleted entry leaves it pointing at nothing.
@@ -3191,22 +3486,22 @@ final class TaskItem {
         self.id = id
         self.titlePlain = title
         self.notesPlain = notes
-        self.isDone = isDone
-        self.completedAt = completedAt
-        self.createdAt = createdAt
+        self.isDonePlain = isDone
+        self.completedAtPlain = completedAt
+        self.createdAtPlain = createdAt
         self.sortOrder = sortOrder
         self.reminderIdentifier = reminderIdentifier
-        self.dueKind = dueKind
-        self.dueDate = dueDate
+        self.dueKindPlain = dueKind
+        self.dueDatePlain = dueDate
         self.parentID = parentID
         self.subtasksCollapsed = subtasksCollapsed
         self.blockedByIDs = blockedByIDs
-        self.status = status
-        self.energy = energy
+        self.statusPlain = status
+        self.energyPlain = energy
         self.firstStepPlain = firstStep
-        self.focusSessions = focusSessions
-        self.focusMinutes = focusMinutes
-        self.estimateMinutes = estimateMinutes
+        self.focusSessionsPlain = focusSessions
+        self.focusMinutesPlain = focusMinutes
+        self.estimateMinutesPlain = estimateMinutes
         self.sourceEntryID = sourceEntryID
         lockNewValues()
     }
@@ -3245,10 +3540,110 @@ extension TaskItem {
         }
     }
 
+    var isDone: Bool {
+        get { FieldLock.readScalar(plain: isDonePlain, sealed: isDoneSealed, context: "TaskItem.isDone") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "TaskItem.isDone")
+            isDonePlain = kept.plain
+            isDoneSealed = kept.sealed
+        }
+    }
+
+    var completedAt: Date? {
+        get { FieldLock.readOptionalScalar(plain: completedAtPlain, sealed: completedAtSealed, context: "TaskItem.completedAt") }
+        set {
+            let kept = FieldLock.storeOptionalScalar(newValue, context: "TaskItem.completedAt")
+            completedAtPlain = kept.plain
+            completedAtSealed = kept.sealed
+        }
+    }
+
+    var createdAt: Date {
+        get { FieldLock.readScalar(plain: createdAtPlain, sealed: createdAtSealed, context: "TaskItem.createdAt") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "TaskItem.createdAt")
+            createdAtPlain = kept.plain
+            createdAtSealed = kept.sealed
+        }
+    }
+
+    var dueKind: TaskDueKind {
+        get { FieldLock.readChoice(plain: dueKindPlain, sealed: dueKindSealed, context: "TaskItem.dueKind") }
+        set {
+            let kept = FieldLock.storeChoice(newValue, context: "TaskItem.dueKind")
+            dueKindPlain = kept.plain
+            dueKindSealed = kept.sealed
+        }
+    }
+
+    var dueDate: Date? {
+        get { FieldLock.readOptionalScalar(plain: dueDatePlain, sealed: dueDateSealed, context: "TaskItem.dueDate") }
+        set {
+            let kept = FieldLock.storeOptionalScalar(newValue, context: "TaskItem.dueDate")
+            dueDatePlain = kept.plain
+            dueDateSealed = kept.sealed
+        }
+    }
+
+    var status: TaskStatus {
+        get { FieldLock.readChoice(plain: statusPlain, sealed: statusSealed, context: "TaskItem.status") }
+        set {
+            let kept = FieldLock.storeChoice(newValue, context: "TaskItem.status")
+            statusPlain = kept.plain
+            statusSealed = kept.sealed
+        }
+    }
+
+    var energy: TaskEnergy {
+        get { FieldLock.readChoice(plain: energyPlain, sealed: energySealed, context: "TaskItem.energy") }
+        set {
+            let kept = FieldLock.storeChoice(newValue, context: "TaskItem.energy")
+            energyPlain = kept.plain
+            energySealed = kept.sealed
+        }
+    }
+
+    var focusSessions: Int {
+        get { FieldLock.readScalar(plain: focusSessionsPlain, sealed: focusSessionsSealed, context: "TaskItem.focusSessions") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "TaskItem.focusSessions")
+            focusSessionsPlain = kept.plain
+            focusSessionsSealed = kept.sealed
+        }
+    }
+
+    var focusMinutes: Int {
+        get { FieldLock.readScalar(plain: focusMinutesPlain, sealed: focusMinutesSealed, context: "TaskItem.focusMinutes") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "TaskItem.focusMinutes")
+            focusMinutesPlain = kept.plain
+            focusMinutesSealed = kept.sealed
+        }
+    }
+
+    var estimateMinutes: Int {
+        get { FieldLock.readScalar(plain: estimateMinutesPlain, sealed: estimateMinutesSealed, context: "TaskItem.estimateMinutes") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "TaskItem.estimateMinutes")
+            estimateMinutesPlain = kept.plain
+            estimateMinutesSealed = kept.sealed
+        }
+    }
+
     /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
     /// nothing sealed yet, and does nothing while locking is off.
     func lockNewValues() {
         guard FieldLock.isOn else { return }
+        isDone = isDonePlain
+        completedAt = completedAtPlain
+        createdAt = createdAtPlain
+        dueKind = dueKindPlain
+        dueDate = dueDatePlain
+        status = statusPlain
+        energy = energyPlain
+        focusSessions = focusSessionsPlain
+        focusMinutes = focusMinutesPlain
+        estimateMinutes = estimateMinutesPlain
         title = titlePlain
         notes = notesPlain
         firstStep = firstStepPlain
@@ -3258,6 +3653,16 @@ extension TaskItem {
     /// again. It does nothing while locking is off.
     func lockExistingValues() {
         guard FieldLock.isOn else { return }
+        if isDoneSealed == nil { isDone = isDonePlain }
+        if completedAtSealed == nil { completedAt = completedAtPlain }
+        if createdAtSealed == nil { createdAt = createdAtPlain }
+        if dueKindSealed == nil { dueKind = dueKindPlain }
+        if dueDateSealed == nil { dueDate = dueDatePlain }
+        if statusSealed == nil { status = statusPlain }
+        if energySealed == nil { energy = energyPlain }
+        if focusSessionsSealed == nil { focusSessions = focusSessionsPlain }
+        if focusMinutesSealed == nil { focusMinutes = focusMinutesPlain }
+        if estimateMinutesSealed == nil { estimateMinutes = estimateMinutesPlain }
         if titleSealed == nil { title = titlePlain }
         if notesSealed == nil { notes = notesPlain }
         if firstStepSealed == nil { firstStep = firstStepPlain }
@@ -3267,6 +3672,16 @@ extension TaskItem {
     /// before and after. It reads through the old names, so a sealed value is compared as its text.
     func lockedSnapshot() -> String {
         FieldLock.join([
+            FieldLock.describe(isDone),
+            FieldLock.describe(completedAt),
+            FieldLock.describe(createdAt),
+            FieldLock.describe(dueKind),
+            FieldLock.describe(dueDate),
+            FieldLock.describe(status),
+            FieldLock.describe(energy),
+            FieldLock.describe(focusSessions),
+            FieldLock.describe(focusMinutes),
+            FieldLock.describe(estimateMinutes),
             FieldLock.describe(title),
             FieldLock.describe(notes),
             FieldLock.describe(firstStep)
@@ -3275,7 +3690,17 @@ extension TaskItem {
 
     /// True when every locked field is held sealed, with nothing left in the plain property.
     func lockedFieldsAreSealed() -> Bool {
-        titleSealed != nil && titlePlain.isEmpty
+        isDoneSealed != nil && isDonePlain == Bool.lockedPlaceholder
+            && completedAtSealed != nil && completedAtPlain == nil
+            && createdAtSealed != nil && createdAtPlain == Date.lockedPlaceholder
+            && dueKindSealed != nil && dueKindPlain == TaskDueKind.lockedPlaceholder
+            && dueDateSealed != nil && dueDatePlain == nil
+            && statusSealed != nil && statusPlain == TaskStatus.lockedPlaceholder
+            && energySealed != nil && energyPlain == TaskEnergy.lockedPlaceholder
+            && focusSessionsSealed != nil && focusSessionsPlain == Int.lockedPlaceholder
+            && focusMinutesSealed != nil && focusMinutesPlain == Int.lockedPlaceholder
+            && estimateMinutesSealed != nil && estimateMinutesPlain == Int.lockedPlaceholder
+            && titleSealed != nil && titlePlain.isEmpty
             && notesSealed != nil && notesPlain.isEmpty
             && firstStepSealed != nil && firstStepPlain.isEmpty
     }
@@ -3587,7 +4012,9 @@ enum TaskMigration {
         guard AnchorSchema.openedPersistentStore,
               !UserDefaults.standard.bool(forKey: flagKey) else { return }
         let context = container.mainContext
-        guard let old = try? context.fetch(FetchDescriptor<NextHourItem>(sortBy: [SortDescriptor(\.createdAt)])) else { return }
+        // Sorted after the items are opened, because a locked date cannot be sorted by the database (Patch 35g3).
+        guard let fetched = try? context.fetch(FetchDescriptor<NextHourItem>()) else { return }
+        let old = fetched.sortedByKey { $0.createdAt }
         let existing = (try? context.fetchCount(FetchDescriptor<TaskItem>())) ?? 0
         for (index, item) in old.enumerated() {
             context.insert(TaskItem(
@@ -3635,21 +4062,25 @@ final class QuickList {
     @Attribute(originalName: "title") var titlePlain: String
     /// The locked form of `title`, empty until locking is turned on. Read and written through `title` only.
     var titleSealed: String? = nil
-    var createdAt: Date = Date.now
+    @Attribute(originalName: "createdAt") var createdAtPlain: Date = Date.now
+    /// The locked form of `createdAt`, empty until locking is turned on. Read and written through `createdAt` only.
+    var createdAtSealed: String? = nil
     @Attribute(originalName: "items") var itemsPlain: [QuickListItem] = []
     /// The locked form of `items`, empty until locking is turned on. Read and written through `items` only.
     var itemsSealed: String? = nil
     /// Set when the last open item is ticked, and cleared again when one is
     /// unticked or a new item is added. nil while the list is still in use.
-    var archivedAt: Date? = nil
+    @Attribute(originalName: "archivedAt") var archivedAtPlain: Date? = nil
+    /// The locked form of `archivedAt`, empty until locking is turned on. Read and written through `archivedAt` only.
+    var archivedAtSealed: String? = nil
 
     init(id: UUID = UUID(), title: String, createdAt: Date = .now,
          items: [QuickListItem] = [], archivedAt: Date? = nil) {
         self.id = id
         self.titlePlain = title
-        self.createdAt = createdAt
+        self.createdAtPlain = createdAt
         self.itemsPlain = items
-        self.archivedAt = archivedAt
+        self.archivedAtPlain = archivedAt
         lockNewValues()
     }
 }
@@ -3673,10 +4104,30 @@ extension QuickList {
         }
     }
 
+    var createdAt: Date {
+        get { FieldLock.readScalar(plain: createdAtPlain, sealed: createdAtSealed, context: "QuickList.createdAt") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "QuickList.createdAt")
+            createdAtPlain = kept.plain
+            createdAtSealed = kept.sealed
+        }
+    }
+
+    var archivedAt: Date? {
+        get { FieldLock.readOptionalScalar(plain: archivedAtPlain, sealed: archivedAtSealed, context: "QuickList.archivedAt") }
+        set {
+            let kept = FieldLock.storeOptionalScalar(newValue, context: "QuickList.archivedAt")
+            archivedAtPlain = kept.plain
+            archivedAtSealed = kept.sealed
+        }
+    }
+
     /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
     /// nothing sealed yet, and does nothing while locking is off.
     func lockNewValues() {
         guard FieldLock.isOn else { return }
+        createdAt = createdAtPlain
+        archivedAt = archivedAtPlain
         title = titlePlain
         items = itemsPlain
     }
@@ -3685,6 +4136,8 @@ extension QuickList {
     /// again. It does nothing while locking is off.
     func lockExistingValues() {
         guard FieldLock.isOn else { return }
+        if createdAtSealed == nil { createdAt = createdAtPlain }
+        if archivedAtSealed == nil { archivedAt = archivedAtPlain }
         if titleSealed == nil { title = titlePlain }
         if itemsSealed == nil { items = itemsPlain }
     }
@@ -3693,6 +4146,8 @@ extension QuickList {
     /// before and after. It reads through the old names, so a sealed value is compared as its text.
     func lockedSnapshot() -> String {
         FieldLock.join([
+            FieldLock.describe(createdAt),
+            FieldLock.describe(archivedAt),
             FieldLock.describe(title),
             FieldLock.describe(items)
         ])
@@ -3700,7 +4155,9 @@ extension QuickList {
 
     /// True when every locked field is held sealed, with nothing left in the plain property.
     func lockedFieldsAreSealed() -> Bool {
-        titleSealed != nil && titlePlain.isEmpty
+        createdAtSealed != nil && createdAtPlain == Date.lockedPlaceholder
+            && archivedAtSealed != nil && archivedAtPlain == nil
+            && titleSealed != nil && titlePlain.isEmpty
             && itemsSealed != nil && itemsPlain.isEmpty
     }
 }
@@ -3836,7 +4293,9 @@ final class Routine {
     @Attribute(originalName: "name") var namePlain: String
     /// The locked form of `name`, empty until locking is turned on. Read and written through `name` only.
     var nameSealed: String? = nil
-    var createdAt: Date = Date.now
+    @Attribute(originalName: "createdAt") var createdAtPlain: Date = Date.now
+    /// The locked form of `createdAt`, empty until locking is turned on. Read and written through `createdAt` only.
+    var createdAtSealed: String? = nil
     @Attribute(originalName: "steps") var stepsPlain: [RoutineStep] = []
     /// The locked form of `steps`, empty until locking is turned on. Read and written through `steps` only.
     var stepsSealed: String? = nil
@@ -3852,7 +4311,7 @@ final class Routine {
          reminderHour: Int = 8, reminderMinute: Int = 0) {
         self.id = id
         self.namePlain = name
-        self.createdAt = createdAt
+        self.createdAtPlain = createdAt
         self.stepsPlain = steps
         self.reminderEnabled = reminderEnabled
         self.reminderDays = reminderDays
@@ -3881,10 +4340,20 @@ extension Routine {
         }
     }
 
+    var createdAt: Date {
+        get { FieldLock.readScalar(plain: createdAtPlain, sealed: createdAtSealed, context: "Routine.createdAt") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "Routine.createdAt")
+            createdAtPlain = kept.plain
+            createdAtSealed = kept.sealed
+        }
+    }
+
     /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
     /// nothing sealed yet, and does nothing while locking is off.
     func lockNewValues() {
         guard FieldLock.isOn else { return }
+        createdAt = createdAtPlain
         name = namePlain
         steps = stepsPlain
     }
@@ -3893,6 +4362,7 @@ extension Routine {
     /// again. It does nothing while locking is off.
     func lockExistingValues() {
         guard FieldLock.isOn else { return }
+        if createdAtSealed == nil { createdAt = createdAtPlain }
         if nameSealed == nil { name = namePlain }
         if stepsSealed == nil { steps = stepsPlain }
     }
@@ -3901,6 +4371,7 @@ extension Routine {
     /// before and after. It reads through the old names, so a sealed value is compared as its text.
     func lockedSnapshot() -> String {
         FieldLock.join([
+            FieldLock.describe(createdAt),
             FieldLock.describe(name),
             FieldLock.describe(steps)
         ])
@@ -3908,7 +4379,8 @@ extension Routine {
 
     /// True when every locked field is held sealed, with nothing left in the plain property.
     func lockedFieldsAreSealed() -> Bool {
-        nameSealed != nil && namePlain.isEmpty
+        createdAtSealed != nil && createdAtPlain == Date.lockedPlaceholder
+            && nameSealed != nil && namePlain.isEmpty
             && stepsSealed != nil && stepsPlain.isEmpty
     }
 }
@@ -4024,7 +4496,9 @@ final class ItemList {
     @Attribute(originalName: "name") var namePlain: String
     /// The locked form of `name`, empty until locking is turned on. Read and written through `name` only.
     var nameSealed: String? = nil
-    var createdAt: Date = Date.now
+    @Attribute(originalName: "createdAt") var createdAtPlain: Date = Date.now
+    /// The locked form of `createdAt`, empty until locking is turned on. Read and written through `createdAt` only.
+    var createdAtSealed: String? = nil
     @Attribute(originalName: "variables") var variablesPlain: [ListVariable] = []
     /// The locked form of `variables`, empty until locking is turned on. Read and written through `variables` only.
     var variablesSealed: String? = nil
@@ -4036,7 +4510,7 @@ final class ItemList {
          variables: [ListVariable] = [], items: [ListItem] = []) {
         self.id = id
         self.namePlain = name
-        self.createdAt = createdAt
+        self.createdAtPlain = createdAt
         self.variablesPlain = variables
         self.itemsPlain = items
         lockNewValues()
@@ -4070,10 +4544,20 @@ extension ItemList {
         }
     }
 
+    var createdAt: Date {
+        get { FieldLock.readScalar(plain: createdAtPlain, sealed: createdAtSealed, context: "ItemList.createdAt") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "ItemList.createdAt")
+            createdAtPlain = kept.plain
+            createdAtSealed = kept.sealed
+        }
+    }
+
     /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
     /// nothing sealed yet, and does nothing while locking is off.
     func lockNewValues() {
         guard FieldLock.isOn else { return }
+        createdAt = createdAtPlain
         name = namePlain
         variables = variablesPlain
         items = itemsPlain
@@ -4083,6 +4567,7 @@ extension ItemList {
     /// again. It does nothing while locking is off.
     func lockExistingValues() {
         guard FieldLock.isOn else { return }
+        if createdAtSealed == nil { createdAt = createdAtPlain }
         if nameSealed == nil { name = namePlain }
         if variablesSealed == nil { variables = variablesPlain }
         if itemsSealed == nil { items = itemsPlain }
@@ -4092,6 +4577,7 @@ extension ItemList {
     /// before and after. It reads through the old names, so a sealed value is compared as its text.
     func lockedSnapshot() -> String {
         FieldLock.join([
+            FieldLock.describe(createdAt),
             FieldLock.describe(name),
             FieldLock.describe(variables),
             FieldLock.describe(items)
@@ -4100,7 +4586,8 @@ extension ItemList {
 
     /// True when every locked field is held sealed, with nothing left in the plain property.
     func lockedFieldsAreSealed() -> Bool {
-        nameSealed != nil && namePlain.isEmpty
+        createdAtSealed != nil && createdAtPlain == Date.lockedPlaceholder
+            && nameSealed != nil && namePlain.isEmpty
             && variablesSealed != nil && variablesPlain.isEmpty
             && itemsSealed != nil && itemsPlain.isEmpty
     }

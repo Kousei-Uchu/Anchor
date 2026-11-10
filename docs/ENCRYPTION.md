@@ -130,6 +130,16 @@ The second group, 25 fields on ten models. `docs/FIELD_INVENTORY.md` has the lis
 - **Sorting moved.** Eighteen lists no longer ask the database to sort on a locked field: the Journal timeline, the appointment preparation and one-page summary lists, Bridge's draft list, the messages, support days, future notes and unsent drafts on Thread, their summaries in Settings, and the widgets on the tabs. Each fetches the items and sorts them after they are opened. Nine places that sort or filter in the database on a field still to lock are left, all in 35g3.
 - **Left plain, with the reason in the list:** ids and the links between items, the order on screen, the on or off switches for reminders, one fixed choice such as how to reach a person, and the days and times of a regular hello, which the phone's reminder store holds anyway (D69).
 
+## Plans, tasks, lists and sessions (Patch 35g3, D44)
+
+The third group, 32 fields on thirteen models. `docs/FIELD_INVENTORY.md` has the list.
+
+- **TaskItem:** when you finished it, when you made it, whether it is done, the day you gave it and how loosely, where it stands, how much energy you said it needs, the focus sessions and minutes, and your time estimate. **NextHourItem, QuickList, Routine, ItemList:** when each was made, and for a quick list when it was archived. **TriggerWindow:** the days and the start and end times. **AppointmentSeries:** the usual day, time and how often. **AppointmentOccurrence:** the date and whether it was moved. **SafetyPlan, SafetyPlanSection, BoundarySection, FeedbackLoopDiagram:** when each was last changed. **GroundingTool:** the times of day it is for.
+- **Three choices from a fixed list.** The day kind, where a task stands and its energy are each sealed as their raw text, like the other choices (`FieldLock.readChoice`, `storeChoice`).
+- **Level 4.** `LockMyData.currentLevel` is 4. A store locked at level 1, 2 or 3 is offered More to lock, and the line says which parts it adds.
+- **Sorting moved.** The routines, quick lists, item lists, hard times and diagrams lists no longer ask the database to sort on a locked field. Each fetches the items and sorts them after they are opened, and so does the one-time move of old Next hour rows. No place is left that sorts or filters in the database on a field still to lock.
+- **Left plain, with the reason in the list:** ids and the links between items, the order on screen, the on or off switches for reminders, a routine's reminder days and time, and a task's folded or open steps (D69).
+
 ## Lock my files (Patch 35d)
 
 The second step of locking: the voice notes and Journal photos, which are files and not stored text (D31). It is on the Lock my data screen, offered once the text is locked. The code is `LockMyFiles`, `StoredFiles` and `FileLock` in `Support/LockMyData.swift`, and `FileCipher` in `Support/AppLock.swift`.

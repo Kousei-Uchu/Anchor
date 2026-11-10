@@ -1,6 +1,6 @@
 # Anchor: what is left
 
-*Only what is still to do. When something is finished, confirmed or answered, it is deleted from this file in the same patch, never moved to a done list. Finished work is in the Progress table of `ANCHOR_PATCH_PLAN.md` and in `docs/PLAN_CHANGELOG.md`. Last updated: 10 Nov 2026, after 35g2.*
+*Only what is still to do. When something is finished, confirmed or answered, it is deleted from this file in the same patch, never moved to a done list. Finished work is in the Progress table of `ANCHOR_PATCH_PLAN.md` and in `docs/PLAN_CHANGELOG.md`. Last updated: 10 Nov 2026, after 35g3.*
 
 ## 1. Waiting on you
 
@@ -40,26 +40,26 @@ Quickest way to check many at once: `scripts/review-on-device.sh` (the numbered 
 - AI6: Settings, AI tools, Where it runs, Other (a third choice, empty to begin with). Type an address starting with https://, a key and a model name for a service you already use; a plain http address, a name with no dot and an address with a ? in it should each be refused with a line. The key shows as dots and Remove key clears it. Use a tool with Other chosen: the sheet should show the address and model, say Anchor cannot see how it keeps the text, and have no Don't ask again. A wrong key should say the provider did not accept it. Also say how the store should read the privacy answers for it (D68).
 - 47: the website's Features and Philosophy pages.
 - 48: the website's About page, the Support answers and the Privacy page.
-- 35g1a, 35g1b and 35g2: Settings, Lock my data. If your text is already locked it should show More to lock with Lock the rest; take the safety copy first, close and open the app, and read the result under Last time. Then open check-ins in the Journal, Sleep in Plan and Bridge, a Recovery counter with its savings, milestones, urges and the day review: everything should look as it did. Record a slip and check Times still adds up. Make a new check-in, night and urge and check they show. For 35g2 also open the Journal timeline, bookmark an entry, look at Thread (messages, support days, future notes, unsent drafts), Bridge's lists and a contact's available hours, and check the tab widgets. Use Go back in Safety copy once to check the way back. They need a build first: the generated accessors have never been compiled.
+- 35g1a, 35g1b, 35g2 and 35g3: Settings, Lock my data. If your text is already locked it should show More to lock with Lock the rest; take the safety copy first, close and open the app, and read the result under Last time. Then open check-ins in the Journal, Sleep in Plan and Bridge, a Recovery counter with its savings, milestones, urges and the day review: everything should look as it did. Record a slip and check Times still adds up. Make a new check-in, night and urge and check they show. For 35g2 also open the Journal timeline, bookmark an entry, look at Thread (messages, support days, future notes, unsent drafts), Bridge's lists and a contact's available hours, and check the tab widgets. Use Go back in Safety copy once to check the way back. They need a build first: the generated accessors have never been compiled.
+- 35g3: after the steps above, also open Tasks (a task with a due day, one with none, one set aside, one with an energy tag, focus totals and an estimate, ticking one done and back), Plan's safety plan and boundaries, Trigger windows (days and times, in Settings too) and Appointments (a usual day and time, moving one session), the quick lists and routines on Now and in Plan (their order newest first), and the diagrams on the Plan widget. Everything should look as it did. Make a new task and a new hard time and check they show.
 - 51: the website's `/beta` page. Sign-ups stay closed until you change the flag in `website/src/content/beta.ts`, and the TestFlight link there is empty.
 
 The website patches (47, 48, 51) were typechecked and built in a scratch copy only; no Swift changed in them.
 
 ## 3. Not started, in order
 
-1. **35g3**: the same for plans, tasks, lists and sessions (32 fields), and the 9 places that are left where the database sorts on a locked date are sorted after opening instead. Size M+, may be split. After 35g2 is checked on your phone.
-2. **35g4**: the nine typed settings, each checked for whatever reads it while the phone is locked. Size S. After 35g3.
-3. **SY0**: sync groundwork. Drop the unique constraint from all 34 models, keep ids from doubling up, safety copy first. Size M+.
-4. **SY1**: the iCloud sync switch. Off by default, the private database, per-device things stay per-device, sleep nights synced except any Apple Health already holds (D39), Clear everything says it clears every device. After SY0.
-5. **SY2**: voice notes and Journal photos in sync. After SY1.
-6. **SY3**: the recovery key shown as a QR code and scanned on the new device, with the typed key still the default (D40). With SY1.
-7. **VN4a**: find who is speaking with a speaker-separation model on the recording, used in memory against the other voices in that one recording only, labelling Person 1, Person 2 and so on, then a people screen (how many were heard, a name for each beside a transcript preview, openable again later). The model ships inside the app; its size is measured first. Nothing is stored. Size L, to be split.
-8. **VN4b**: replay and tap, for the more privacy-minded: play the recording back and tap where each new person starts, with no model. After VN4a.
-9. **VN4c**: the words as a backup or beside the model: a language model reads only the transcript and suggests where the speaker changes, on the phone and through Ollama on your own computer, behind the AI switch. After VN4a.
-10. **VN5**: speaker tags in exports, per entry and per person: include the name, hide it, or leave that person's words out. After VN4a.
-11. **52**: refresh the Remotion promo with new screenshots and captions. The single source is already true (`remotion-project/src/Promo.tsx`, `npm run sync:promo`); what is left needs the app run on a simulator.
-12. **53**: the long full-tour video, split into per-tab scenes, scripted from `website/src/content/guide.generated.json`. Waits on 52. Size L, to be split.
-13. **54**: Android decision write-up, optional prototype spike. Android itself is far future (D4).
+1. **35g4**: the nine typed settings, each checked for whatever reads it while the phone is locked. Size S. After 35g3.
+2. **SY0**: sync groundwork. Drop the unique constraint from all 34 models, keep ids from doubling up, safety copy first. Size M+.
+3. **SY1**: the iCloud sync switch. Off by default, the private database, per-device things stay per-device, sleep nights synced except any Apple Health already holds (D39), Clear everything says it clears every device. After SY0.
+4. **SY2**: voice notes and Journal photos in sync. After SY1.
+5. **SY3**: the recovery key shown as a QR code and scanned on the new device, with the typed key still the default (D40). With SY1.
+6. **VN4a**: find who is speaking with a speaker-separation model on the recording, used in memory against the other voices in that one recording only, labelling Person 1, Person 2 and so on, then a people screen (how many were heard, a name for each beside a transcript preview, openable again later). The model ships inside the app; its size is measured first. Nothing is stored. Size L, to be split.
+7. **VN4b**: replay and tap, for the more privacy-minded: play the recording back and tap where each new person starts, with no model. After VN4a.
+8. **VN4c**: the words as a backup or beside the model: a language model reads only the transcript and suggests where the speaker changes, on the phone and through Ollama on your own computer, behind the AI switch. After VN4a.
+9. **VN5**: speaker tags in exports, per entry and per person: include the name, hide it, or leave that person's words out. After VN4a.
+10. **52**: refresh the Remotion promo with new screenshots and captions. The single source is already true (`remotion-project/src/Promo.tsx`, `npm run sync:promo`); what is left needs the app run on a simulator.
+11. **53**: the long full-tour video, split into per-tab scenes, scripted from `website/src/content/guide.generated.json`. Waits on 52. Size L, to be split.
+12. **54**: Android decision write-up, optional prototype spike. Android itself is far future (D4).
 
 **Parked on purpose**
 

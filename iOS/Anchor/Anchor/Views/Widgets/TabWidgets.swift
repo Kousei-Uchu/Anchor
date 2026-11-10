@@ -582,7 +582,9 @@ struct ReframingWidget: View {
 }
 
 struct FeedbackLoopsWidget: View {
-    @Query(sort: \FeedbackLoopDiagram.lastEditedAt, order: .reverse) private var diagrams: [FeedbackLoopDiagram]
+    @Query private var diagramsStored: [FeedbackLoopDiagram]
+    /// Sorted after the items are opened, because a locked value cannot be sorted by the database (Patch 35g3).
+    private var diagrams: [FeedbackLoopDiagram] { diagramsStored.sortedByKey(descending: true) { $0.lastEditedAt } }
 
     var body: some View {
         Anchor.Widget(icon: "point.3.connected.trianglepath.dotted", title: "Feedback loops", tint: Anchor.Theme.sage, fillsHeight: true) {

@@ -334,7 +334,9 @@ struct TasksNowCard: View {
 struct TasksView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \TaskItem.sortOrder) private var tasks: [TaskItem]
-    @Query(sort: \QuickList.createdAt, order: .reverse) private var quickLists: [QuickList]
+    @Query private var quickListsStored: [QuickList]
+    /// Sorted after the items are opened, because a locked value cannot be sorted by the database (Patch 35g3).
+    private var quickLists: [QuickList] { quickListsStored.sortedByKey(descending: true) { $0.createdAt } }
     @State private var editing: TaskItem?
     @State private var toDelete: TaskItem?
     @State private var quickRoute: QuickRoute?
@@ -2571,7 +2573,9 @@ private struct QuickListView: View {
 /// item (or use Start again) to use it again.
 private struct QuickListArchiveView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \QuickList.createdAt, order: .reverse) private var lists: [QuickList]
+    @Query private var listsStored: [QuickList]
+    /// Sorted after the items are opened, because a locked value cannot be sorted by the database (Patch 35g3).
+    private var lists: [QuickList] { listsStored.sortedByKey(descending: true) { $0.createdAt } }
     @State private var opened: QuickList?
     @State private var toDelete: QuickList?
 

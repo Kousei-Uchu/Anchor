@@ -34,7 +34,9 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \RecoveryCounter.sortOrder) private var allCounters: [RecoveryCounter]
-    @Query(sort: \Routine.createdAt) private var routines: [Routine]
+    @Query private var routinesStored: [Routine]
+    /// Sorted after the items are opened, because a locked value cannot be sorted by the database (Patch 35g3).
+    private var routines: [Routine] { routinesStored.sortedByKey { $0.createdAt } }
     @Query(sort: \TrustedContact.sortOrder) private var helloContacts: [TrustedContact]
 
     @StateObject private var appLock = AppLock.shared
@@ -486,7 +488,9 @@ private struct SupportDayReminderSettingsRow: View {
 /// One person's hard-time reminder in Settings: the switch, then the trigger windows it is for once it is on.
 private struct CompanionSettingsRow: View {
     @Bindable var contact: TrustedContact
-    @Query(sort: \TriggerWindow.startHour) private var windows: [TriggerWindow]
+    @Query private var windowsStored: [TriggerWindow]
+    /// Sorted after the items are opened, because a locked value cannot be sorted by the database (Patch 35g3).
+    private var windows: [TriggerWindow] { windowsStored.sortedByKey { $0.startHour } }
     @Environment(\.modelContext) private var modelContext
 
     private var activeWindows: [TriggerWindow] { windows.filter { $0.isActive } }

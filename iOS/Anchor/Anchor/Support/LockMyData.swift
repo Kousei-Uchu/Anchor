@@ -53,9 +53,9 @@ enum LockMyData {
     // MARK: Levels (Patch 35g1a, D44)
 
     /// How much there is to lock. Level 1 is the words, which Patch 35b locks. Each part of 35g adds fields and raises
-    /// this by one: 35g1b made it 2 (check-ins, sleep and Recovery), 35g2 makes it 3 (the Journal, messages and people). A store that was locked at an earlier level is
+    /// this by one: 35g1b made it 2 (check-ins, sleep and Recovery), 35g2 made it 3 (the Journal, messages and people), 35g3 makes it 4 (plans, tasks, lists and sessions). A store that was locked at an earlier level is
     /// still locked, and Lock my data offers to lock the rest, with a new safety copy first.
-    static let currentLevel = 3
+    static let currentLevel = 4
 
     /// What the last finished run locked. 0 when nothing is locked. A store locked before levels existed has no
     /// saved number and counts as level 1.
@@ -78,6 +78,7 @@ enum LockMyData {
         var parts: [String] = []
         if level < 2 { parts.append("check-ins, sleep and Recovery") }
         if level < 3 { parts.append("the Journal, messages and people") }
+        if level < 4 { parts.append("plans, tasks, lists and sessions") }
         if parts.isEmpty { return "More of what Anchor keeps can be locked now." }
         return "Dates, numbers and marks in " + parts.joined(separator: " and ") + " can be locked now."
     }
@@ -783,6 +784,10 @@ enum LockMyDataSelfTest {
         let checkIn = CheckIn(timestamp: when, physicalExhaustion: 0.25, cognitiveBurnout: 0.5, mentalLoad: 0.75, physicalEnergy: 0.1, socialEnergy: 0.9)
         let night = SleepEntry(nightDate: when, bedTime: when.addingTimeInterval(-28_800), wakeTime: nil, minutesAsleep: 450, feel: 1)
         let urge = RecoveryUrge(counterID: counter.id, date: when, strength: .intense)
+        let task = TaskItem(title: "Plain task", dueKind: .exact, dueDate: when, status: .inProgress, energy: .some, focusSessions: 2, focusMinutes: 50, estimateMinutes: 30)
+        let window = TriggerWindow(label: "Evenings", daysOfWeek: [2, 4], startTime: DateComponents(hour: 17, minute: 30), endTime: DateComponents(hour: 21, minute: 0))
+        context.insert(task)
+        context.insert(window)
         context.insert(entry)
         context.insert(contact)
         context.insert(list)
@@ -801,7 +806,7 @@ enum LockMyDataSelfTest {
         // Lock them.
         FieldLock.isOn = true
         guard let report = try? LockMyData.lockAll(in: container) else { fatalError("Lock my data self-test: locking threw.") }
-        check(report.items == 7, "the number of locked items was \(report.items), not 7.")
+        check(report.items == 9, "the number of locked items was \(report.items), not 9.")
         check(entry.text == "plain journal words" && entry.textPlain.isEmpty && entry.lockedFieldsAreSealed(), "a journal entry was not locked and readable.")
         check(contact.name == "Sam" && contact.discordUserID == "42" && contact.lockedFieldsAreSealed(), "a contact was not locked and readable.")
         check(list.items.count == 1 && list.items[0].text == "keys" && list.lockedFieldsAreSealed(), "a list was not locked and readable.")
@@ -815,6 +820,10 @@ enum LockMyDataSelfTest {
         check(entry.isFavorited && entry.linkedContext == .checkInSlider && !entry.isFavoritedPlain && entry.linkedContextPlain == nil && entry.createdAtPlain == Date.lockedPlaceholder, "a journal entry kept a mark or a date in plain, or did not read back.")
         check(contact.escalationWindowMinutes == 45 && contact.timeZoneIdentifier == "Australia/Sydney" && contact.availableFromHour == 9 && contact.availableToHour == nil, "a contact's hours were not locked and readable.")
         check(contact.escalationWindowMinutesPlain == nil && contact.timeZoneIdentifierPlain == nil && contact.availableFromHourPlain == nil && contact.availableToHourSealed != nil, "a contact kept a value in plain, or nothing was not sealed as nothing.")
+        check(task.dueKind == .exact && task.dueDate == when && task.status == .inProgress && task.energy == .some && task.focusSessions == 2 && task.focusMinutes == 50 && task.estimateMinutes == 30 && !task.isDone && task.completedAt == nil && task.lockedFieldsAreSealed(), "a task was not locked and readable.")
+        check(task.dueKindPlain == .noDate && task.statusPlain == .notStarted && task.energyPlain == .unset && task.dueDatePlain == nil && task.completedAtPlain == nil && task.createdAtPlain == Date.lockedPlaceholder && task.focusMinutesPlain == 0 && task.completedAtSealed != nil, "a task kept a value in plain, or nothing was not sealed as nothing.")
+        check(window.daysOfWeek == [2, 4] && window.startTime.hour == 17 && window.startTime.minute == 30 && window.endTime.hour == 21 && window.endTime.minute == 0 && window.lockedFieldsAreSealed(), "a hard time was not locked and readable.")
+        check(window.daysOfWeekPlain.isEmpty && window.startHourPlain == 0 && window.endMinutePlain == 0, "a hard time kept a value in plain.")
         check(urge.date == when && urge.strength == .intense && urge.strengthPlain == .mild && urge.lockedFieldsAreSealed(), "an urge was not locked and readable.")
 
         // Again: nothing is sealed twice and nothing changes.

@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 35g3: the dates, times, numbers and marks in tasks, lists, routines, hard times, appointments and the plan are locked too, and Lock the rest offers them to a store that is already locked.
 - Patch 35g2: the dates, times, numbers and marks in the Journal, messages and the people you list are locked too, and Lock the rest offers them to a store that is already locked.
 - Patch 35g1b: the dates, times, numbers and choices in check-ins, sleep and Recovery are locked too. On a store that is already locked, Settings, Lock my data offers Lock the rest, with a new safety copy first.
 - Patch 35g1a: groundwork for locking dates, numbers and marks. Lock my data can now be run a second time on a store whose text is already locked, with a new safety copy first and the way back if it fails, and the text stays locked throughout. Nothing new is locked yet.
