@@ -1,6 +1,6 @@
 # Anchor: what is left
 
-*Only what is still to do. When something is finished, confirmed or answered, it is deleted from this file in the same patch, never moved to a done list. Finished work is in the Progress table of `ANCHOR_PATCH_PLAN.md` and in `docs/PLAN_CHANGELOG.md`. Last updated: 10 Nov 2026, after DOC26.*
+*Only what is still to do. When something is finished, confirmed or answered, it is deleted from this file in the same patch, never moved to a done list. Finished work is in the Progress table of `ANCHOR_PATCH_PLAN.md` and in `docs/PLAN_CHANGELOG.md`. Last updated: 10 Nov 2026, after DOC27.*
 
 ## 1. Waiting on you
 
@@ -11,15 +11,9 @@
 
 **Open questions** (none of them blocks the patch in front of it; the number is the row in 0.4 of the plan)
 
-- D39, before SY0: does sleep sync through iCloud? Recommended: leave all sleep out of sync in the first version, typed nights too.
-- D40, before SY1: how does a second device get the data key? Recommended: the recovery key typed on the new device, with iCloud Keychain as a switch you turn on yourself.
-- D38: say if "per-person voice identification" meant recognising someone across recordings (it would need a stored voiceprint). Read for now as Speaker 1 and Speaker 2 inside one recording.
-- D41: where the AI switch lives and what shows when it is off. Built as described unless you change it.
-- D42: providers and asking. If you want no cloud provider at all, say so and AI6 is dropped.
-- D43: AI Optimised blocks in exports. Built as described, with a tick on both exports.
-- D44: which fields are locked. Built as described.
-- D45: show Lock my data to everyone in Settings, but only after you have tried it once on a copy of your data, including Go back.
-- D56: should an address that is not on a home network (a Tailscale number, an IPv6 address) be accepted for Ollama? Recommended: leave them refused.
+- D63: how the speaker-separation model's files reach the phone for VN4, shipped inside the app or fetched once after you tap. Also say if my readings of your 10 Nov answers are off.
+- D43: AI Optimised blocks in exports. You asked how it is built and what else it could be; explained in chat. Say if it stays as built.
+- D44: which fields are locked. You asked what the question is; explained in chat. Say if the list is right.
 
 **Things only you can try**
 
@@ -49,13 +43,18 @@ The website patches (47, 48, 51) were typechecked and built in a scratch copy on
 
 ## 3. Not started, in order
 
-1. **AI6**: other AI provider with your own key over https, under its own heading, never named or suggested in the app. Only if you still want it (D42). Size S.
-2. **SY0**: sync groundwork. Drop the unique constraint from all 34 models, keep ids from doubling up, safety copy first. Needs D39 and D40 answered. Size M+.
-3. **SY1**: the iCloud sync switch. Off by default, the private database, per-device things stay per-device, Clear everything says it clears every device. After SY0.
-4. **SY2**: voice notes and Journal photos in sync. After SY1.
-5. **52**: refresh the Remotion promo with new screenshots and captions. The single source is already true (`remotion-project/src/Promo.tsx`, `npm run sync:promo`); what is left needs the app run on a simulator.
-6. **53**: the long full-tour video, split into per-tab scenes, scripted from `website/src/content/guide.generated.json`. Waits on 52. Size L, to be split.
-7. **54**: Android decision write-up, optional prototype spike. Android itself is far future (D4).
+1. **35e**: show Encryption, Safety copy and Lock my data to everyone in Settings, with no option and without "(test build)" in their names (D45). Size S.
+2. **AI7**: with AI tools off, Make shorter stays hidden, and Tidy a braindump, Break into steps and Estimate time stay on screen greyed out, saying where the switch is (D41). Size S.
+3. **AI8**: Ollama addresses off the home network, such as Tailscale or IPv6, accepted after a prompt and a confirmation (D56). Size S.
+4. **AI6**: other AI provider as a plain setting: address, key and model in the OpenAI API format, off and empty to begin with, never suggested or named in the app (D42). Size S.
+5. **SY0**: sync groundwork. Drop the unique constraint from all 34 models, keep ids from doubling up, safety copy first. Size M+.
+6. **SY1**: the iCloud sync switch. Off by default, the private database, per-device things stay per-device, sleep nights synced except any Apple Health already holds (D39), Clear everything says it clears every device. After SY0.
+7. **SY2**: voice notes and Journal photos in sync. After SY1.
+8. **SY3**: the recovery key shown as a QR code and scanned on the new device, with the typed key still the default (D40). With SY1.
+9. **VN4**: find who is speaking with a speaker-separation model on the recording, labelling Person 1, Person 2 and so on, then a people screen (how many were heard, a name for each beside a transcript preview, openable again later). The manual taps from VN3 stay. Waits on D63. Size L, to be split.
+10. **52**: refresh the Remotion promo with new screenshots and captions. The single source is already true (`remotion-project/src/Promo.tsx`, `npm run sync:promo`); what is left needs the app run on a simulator.
+11. **53**: the long full-tour video, split into per-tab scenes, scripted from `website/src/content/guide.generated.json`. Waits on 52. Size L, to be split.
+12. **54**: Android decision write-up, optional prototype spike. Android itself is far future (D4).
 
 **Parked on purpose**
 
@@ -64,4 +63,4 @@ The website patches (47, 48, 51) were typechecked and built in a scratch copy on
 
 ## 4. Offered but not built
 
-Nothing here is queued. Tell me which you want and it becomes a patch. The full list, by area, is Appendix D of `ANCHOR_PATCH_PLAN.md`. Two items depend on answers above: showing Lock my data to everyone (D45) and turning locking off in place (an Unlock my data). The medication notes idea (B5) is held at your word and is not a to-do.
+Nothing here is queued. Tell me which you want and it becomes a patch. The full list, by area, is Appendix D of `ANCHOR_PATCH_PLAN.md`. One item is tied to a patch above: turning locking off in place (an Unlock my data). The medication notes idea (B5) is held at your word and is not a to-do.
