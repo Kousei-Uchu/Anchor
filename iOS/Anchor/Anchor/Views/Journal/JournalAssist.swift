@@ -191,15 +191,21 @@ private struct JournalAssistFrame<Content: View>: View {
 }
 
 extension JournalBlocks {
+    /// The label above the words a rewrite was made from, in something handed to someone else (Patch AI9, D43).
+    static let originalLabel = "[Original: the writer's own words]"
+    /// The label above a rewrite, in something handed to someone else.
+    static let assistLabel = "[AI Optimised: a shorter version made by a tool, not the writer's own words]"
+
     /// An entry as words for something handed to someone else. AI Optimised blocks are left out, so a rewrite
-    /// is never passed off as the person's own words (D43). When they are ticked in, each is labelled.
+    /// is never passed off as the person's own words (D43). When they are ticked in, the rewrite and the words it
+    /// was made from come as two entries, each labelled (Patch AI9).
     static func sharedText(_ text: String, includeAssist: Bool) -> String {
         var lines: [String] = []
+        var labelled = Set<String>()
         for line in text.components(separatedBy: "\n") {
             if let assist = JournalAssist(line: line) {
                 if includeAssist {
-                    lines.append("[AI Optimised: a shorter version made by a tool, not the writer's own words]")
-                    lines.append(assist.rewrite)
+                    appendLabelledPair(for: assist, to: &lines, labelled: &labelled)
                 }
             } else if JournalVoice.isBlockLine(line) {
                 // Sound is never handed over in the words of an entry, only the file name would show.
@@ -211,6 +217,49 @@ extension JournalBlocks {
         return lines.joined(separator: "\n")
     }
 
+    /// Adds the labelled rewrite, and labels the words it was made from. A kept block sits straight after the
+    /// paragraph it came from, so those words are usually the lines just written; then the label goes above them
+    /// where they are and they are not printed twice. If they are not there (they were edited since, or the rewrite
+    /// was of the whole entry with photos between), the original is added after its label as the block holds it.
+    /// An original already labelled for an earlier block is not labelled again.
+    private static func appendLabelledPair(for assist: JournalAssist, to lines: inout [String], labelled: inout Set<String>) {
+        let wanted = significantLines(assist.original)
+        let key = wanted.joined(separator: "\n")
+        if !wanted.isEmpty && !labelled.contains(key) {
+            if let first = startOfLines(wanted, endingAt: lines) {
+                lines.insert(originalLabel, at: first)
+            } else {
+                lines.append(originalLabel)
+                lines.append(assist.original.trimmingCharacters(in: .whitespacesAndNewlines))
+            }
+            labelled.insert(key)
+        }
+        lines.append(assistLabel)
+        lines.append(assist.rewrite)
+    }
+
+    /// The lines of a text without blank ones or the spaces around them.
+    private static func significantLines(_ text: String) -> [String] {
+        text.components(separatedBy: "\n")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+    }
+
+    /// Where, in `lines`, the last lines written begin, when they are exactly `wanted` (blank lines ignored).
+    /// nil when they are anything else.
+    private static func startOfLines(_ wanted: [String], endingAt lines: [String]) -> Int? {
+        var matched = 0
+        var index = lines.count
+        while index > 0 && matched < wanted.count {
+            index -= 1
+            let trimmed = lines[index].trimmingCharacters(in: .whitespaces)
+            if trimmed.isEmpty { continue }
+            guard trimmed == wanted[wanted.count - 1 - matched] else { return nil }
+            matched += 1
+        }
+        return matched == wanted.count ? index : nil
+    }
+
     static func hasAssist(_ text: String) -> Bool {
         text.contains("](anchorassist://")
     }
@@ -219,7 +268,8 @@ extension JournalBlocks {
 #if DEBUG
 /// Checks, in a test build, that an AI Optimised block survives being stored: any text round trips through the
 /// line, an entry with the block in it serialises back to exactly what was read, an older reader (the card
-/// parser) leaves the line alone, and leaving it out of a shared text leaves the writer's own words untouched.
+/// parser) leaves the line alone, leaving it out of a shared text leaves the writer's own words untouched, and
+/// ticking it in gives the rewrite and its original as two labelled entries (Patch AI9).
 enum JournalAssistSelfTest {
     private static var hasRun = false
 
@@ -249,6 +299,19 @@ enum JournalAssistSelfTest {
         check(!left.contains("anchorassist") && left.contains("First paragraph.") && left.contains("Last words."), "left out when not ticked")
         let kept = JournalBlocks.sharedText(entry, includeAssist: true)
         check(kept.contains("Short & sweet (really)") && kept.contains("not the writer's own words") && !kept.contains("anchorassist"), "labelled when ticked")
+        check(kept.contains(JournalBlocks.originalLabel) && kept.contains("indented"), "the words it was made from are there and labelled too")
+
+        // Patch AI9: a rewrite and its original are two labelled entries, and the original is not printed twice.
+        let paragraph = "I did not sleep.\nI felt wrong all day."
+        let pair = JournalAssist(rewrite: "Slept badly, felt wrong.", original: paragraph)
+        let both = "Intro line.\n" + paragraph + "\n" + pair.markdownLine + "\nEnd."
+        check(JournalBlocks.sharedText(both, includeAssist: false) == "Intro line.\n" + paragraph + "\nEnd.", "unticked is as before")
+        let ticked = "Intro line.\n" + JournalBlocks.originalLabel + "\n" + paragraph + "\n" + JournalBlocks.assistLabel + "\nSlept badly, felt wrong.\nEnd."
+        check(JournalBlocks.sharedText(both, includeAssist: true) == ticked, "the original is labelled where it is, not repeated")
+        let twice = paragraph + "\n" + JournalAssist(rewrite: "Second.", original: paragraph).markdownLine + "\n" + pair.markdownLine
+        let sharedTwice = JournalBlocks.sharedText(twice, includeAssist: true)
+        check(sharedTwice.components(separatedBy: JournalBlocks.originalLabel).count == 2, "one original is labelled once")
+        check(sharedTwice.contains("Second.") && sharedTwice.contains("Slept badly, felt wrong."), "both rewrites are in")
     }
 }
 #endif

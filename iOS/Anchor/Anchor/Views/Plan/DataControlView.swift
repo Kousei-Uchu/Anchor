@@ -780,7 +780,7 @@ private struct DateRangeExportSheet: View {
                         Toggle("Include AI Optimised versions", isOn: $includeAssist)
                             .tint(Anchor.Theme.accent)
                     } footer: {
-                        Text("Off unless you switch it on, every time. They are shorter versions made by a tool, not your own words, so they are labelled when they are in.")
+                        Text("Off unless you switch it on, every time. They are shorter versions made by a tool, not your own words. When they are in, each comes as its own entry beside the words it was made from, and both are labelled.")
                     }
                 }
                 if hasRecovery {
