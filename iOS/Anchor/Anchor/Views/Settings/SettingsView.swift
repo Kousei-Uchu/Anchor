@@ -449,7 +449,9 @@ private struct HelloReminderSettingsRow: View {
 private struct SupportDayReminderSettingsRow: View {
     @Bindable var contact: TrustedContact
     let all: [TrustedContact]
-    @Query(sort: \SupportCalendarEntry.date) private var entries: [SupportCalendarEntry]
+    @Query private var entriesStored: [SupportCalendarEntry]
+    /// Sorted after the items are opened, because a locked date cannot be sorted by the database (Patch 35g2).
+    private var entries: [SupportCalendarEntry] { entriesStored.sortedByKey { $0.date } }
     @Environment(\.modelContext) private var modelContext
 
     private var skippedNote: String? {
@@ -557,7 +559,9 @@ private struct AfterSessionSettingsRow: View {
 /// Follow-ups are chosen when a message is written, so this only shows how many are waiting and
 /// removes them all.
 private struct FollowUpSettingsRow: View {
-    @Query(sort: \ThreadMessage.timestamp) private var messages: [ThreadMessage]
+    @Query private var messagesStored: [ThreadMessage]
+    /// Sorted after the items are opened, because a locked timestamp cannot be sorted by the database (Patch 35g2).
+    private var messages: [ThreadMessage] { messagesStored.sortedByKey { $0.timestamp } }
     @Environment(\.modelContext) private var modelContext
     @State private var confirming = false
 

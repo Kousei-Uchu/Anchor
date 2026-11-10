@@ -53,9 +53,9 @@ enum LockMyData {
     // MARK: Levels (Patch 35g1a, D44)
 
     /// How much there is to lock. Level 1 is the words, which Patch 35b locks. Each part of 35g adds fields and raises
-    /// this by one: 35g1b makes it 2 (check-ins, sleep and Recovery). A store that was locked at an earlier level is
+    /// this by one: 35g1b made it 2 (check-ins, sleep and Recovery), 35g2 makes it 3 (the Journal, messages and people). A store that was locked at an earlier level is
     /// still locked, and Lock my data offers to lock the rest, with a new safety copy first.
-    static let currentLevel = 2
+    static let currentLevel = 3
 
     /// What the last finished run locked. 0 when nothing is locked. A store locked before levels existed has no
     /// saved number and counts as level 1.
@@ -75,10 +75,11 @@ enum LockMyData {
 
     /// What a new run would lock beyond what is locked now, in plain words for the Lock my data screen.
     static var moreToLock: String {
-        switch currentLevel {
-        case 2: return "Dates, numbers and marks in check-ins, sleep and Recovery can be locked now."
-        default: return "More of what Anchor keeps can be locked now."
-        }
+        var parts: [String] = []
+        if level < 2 { parts.append("check-ins, sleep and Recovery") }
+        if level < 3 { parts.append("the Journal, messages and people") }
+        if parts.isEmpty { return "More of what Anchor keeps can be locked now." }
+        return "Dates, numbers and marks in " + parts.joined(separator: " and ") + " can be locked now."
     }
 
     struct Status {
@@ -789,6 +790,11 @@ enum LockMyDataSelfTest {
         context.insert(checkIn)
         context.insert(night)
         context.insert(urge)
+        entry.isFavorited = true
+        entry.linkedContext = .checkInSlider
+        contact.escalationWindowMinutes = 45
+        contact.timeZoneIdentifier = "Australia/Sydney"
+        contact.availableFromHour = 9
         try? context.save()
         check(entry.textSealed == nil && !entry.lockedFieldsAreSealed(), "an item was sealed while locking was off.")
 
@@ -806,6 +812,9 @@ enum LockMyDataSelfTest {
         check(checkIn.timestampPlain == Date.lockedPlaceholder && checkIn.mentalLoadPlain == 0, "a check-in kept a value in plain.")
         check(night.nightDate == when && night.bedTime == when.addingTimeInterval(-28_800) && night.wakeTime == nil && night.minutesAsleep == 450 && night.feel == 1 && night.lockedFieldsAreSealed(), "a night was not locked and readable.")
         check(night.bedTimePlain == nil && night.minutesAsleepPlain == nil && night.wakeTimeSealed != nil, "a night kept a value in plain, or nothing was not sealed as nothing.")
+        check(entry.isFavorited && entry.linkedContext == .checkInSlider && !entry.isFavoritedPlain && entry.linkedContextPlain == nil && entry.createdAtPlain == Date.lockedPlaceholder, "a journal entry kept a mark or a date in plain, or did not read back.")
+        check(contact.escalationWindowMinutes == 45 && contact.timeZoneIdentifier == "Australia/Sydney" && contact.availableFromHour == 9 && contact.availableToHour == nil, "a contact's hours were not locked and readable.")
+        check(contact.escalationWindowMinutesPlain == nil && contact.timeZoneIdentifierPlain == nil && contact.availableFromHourPlain == nil && contact.availableToHourSealed != nil, "a contact kept a value in plain, or nothing was not sealed as nothing.")
         check(urge.date == when && urge.strength == .intense && urge.strengthPlain == .mild && urge.lockedFieldsAreSealed(), "an urge was not locked and readable.")
 
         // Again: nothing is sealed twice and nothing changes.

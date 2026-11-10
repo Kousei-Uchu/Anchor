@@ -268,7 +268,9 @@ struct SessionOnePageSheet: View {
     @Query private var allNightsStored: [SleepEntry]
     /// Sorted after the items are opened, because a locked nightDate cannot be sorted by the database (Patch 35g1b).
     private var allNights: [SleepEntry] { allNightsStored.sortedByKey(descending: true) { $0.nightDate } }
-    @Query(sort: \BridgeDraftItem.createdAt) private var allItems: [BridgeDraftItem]
+    @Query private var allItemsStored: [BridgeDraftItem]
+    /// Sorted after the items are opened, because a locked createdAt cannot be sorted by the database (Patch 35g2).
+    private var allItems: [BridgeDraftItem] { allItemsStored.sortedByKey { $0.createdAt } }
     @Query(sort: \AppointmentSeries.sortOrder) private var providers: [AppointmentSeries]
 
     /// In the order they are printed: what the person wrote first, then the plain tallies.

@@ -16,7 +16,9 @@ import SwiftData
 
 struct BridgeDraftListView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \BridgeDraftItem.createdAt, order: .reverse) private var items: [BridgeDraftItem]
+    @Query private var itemsStored: [BridgeDraftItem]
+    /// Sorted after the items are opened, because a locked createdAt cannot be sorted by the database (Patch 35g2).
+    private var items: [BridgeDraftItem] { itemsStored.sortedByKey(descending: true) { $0.createdAt } }
     @Query(sort: \AppointmentSeries.sortOrder) private var providers: [AppointmentSeries]
     @State private var editing: BridgeDraftItem?
     @State private var toDelete: BridgeDraftItem?

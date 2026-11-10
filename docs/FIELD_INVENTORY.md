@@ -25,15 +25,15 @@ One section per SwiftData model. `Lock in` names the 35g patch that locks what i
 
 ## JournalEntry
 
-Lock in: 35g2
+Lock in: none
 
 | Field | Type | Verdict | Today | Reason |
 | --- | --- | --- | --- | --- |
 | id | UUID | plain | plain | its own id |
-| createdAt | Date | locked | to lock 35g2 | when you made it |
+| createdAt | Date | locked | sealed | when you made it |
 | text | String | locked | sealed | your own words |
-| isFavorited | Bool | locked | to lock 35g2 | a mark you put on your own entry |
-| linkedContext | EntryOrigin? | locked | to lock 35g2 | how the entry was started, which says what you were doing |
+| isFavorited | Bool | locked | sealed | a mark you put on your own entry |
+| linkedContext | EntryOrigin? | locked | sealed | how the entry was started, which says what you were doing |
 | audioFileName | String? | plain | plain | the name of a voice note file, a generated id; the file itself is sealed by Lock my files (35d) |
 
 ## CheckIn
@@ -53,7 +53,7 @@ Lock in: none
 
 ## TrustedContact
 
-Lock in: 35g2
+Lock in: none
 
 | Field | Type | Verdict | Today | Reason |
 | --- | --- | --- | --- | --- |
@@ -62,15 +62,15 @@ Lock in: 35g2
 | phoneNumber | String | locked | sealed | a phone number |
 | sortOrder | Int | plain | plain | the order on screen |
 | escalationEnabled | Bool | plain | plain | an on or off switch |
-| escalationWindowMinutes | Int? | locked | to lock 35g2 | a time you set for a person |
+| escalationWindowMinutes | Int? | locked | sealed | a time you set for a person |
 | messageTemplates | [MessageTemplate] | locked | sealed | messages you wrote |
 | contactMethod | ContactMethod | plain | plain | one choice from a fixed list that decides which app opens |
 | discordUserID | String? | locked | sealed | an id you typed |
-| timeZoneIdentifier | String? | locked | to lock 35g2 | where a person is |
-| availableFromHour | Int? | locked | to lock 35g2 | the hours a person can be reached |
-| availableFromMinute | Int? | locked | to lock 35g2 | the hours a person can be reached |
-| availableToHour | Int? | locked | to lock 35g2 | the hours a person can be reached |
-| availableToMinute | Int? | locked | to lock 35g2 | the hours a person can be reached |
+| timeZoneIdentifier | String? | locked | sealed | where a person is |
+| availableFromHour | Int? | locked | sealed | the hours a person can be reached |
+| availableFromMinute | Int? | locked | sealed | the hours a person can be reached |
+| availableToHour | Int? | locked | sealed | the hours a person can be reached |
+| availableToMinute | Int? | locked | sealed | the hours a person can be reached |
 | helloEnabled | Bool | plain | plain | an on or off switch |
 | helloDays | [Int] | plain | plain | a reminder day; the phone's own reminder store holds it unlocked once scheduled, so locking it here hides nothing (D69) |
 | helloHour | Int | plain | plain | a reminder time; the phone's own reminder store holds it unlocked once scheduled (D69) |
@@ -161,7 +161,7 @@ Lock in: none
 
 ## PersonSection
 
-Lock in: 35g2
+Lock in: none
 
 | Field | Type | Verdict | Today | Reason |
 | --- | --- | --- | --- | --- |
@@ -173,22 +173,22 @@ Lock in: 35g2
 | tintName | String | plain | plain | an icon or colour name from a fixed set |
 | sortOrder | Int | plain | plain | the order on screen |
 | isHidden | Bool | plain | plain | an on or off switch |
-| lastEditedAt | Date | locked | to lock 35g2 | when you last changed it |
+| lastEditedAt | Date | locked | sealed | when you last changed it |
 
 ## PersonalGoal
 
-Lock in: 35g2
+Lock in: none
 
 | Field | Type | Verdict | Today | Reason |
 | --- | --- | --- | --- | --- |
 | id | UUID | plain | plain | its own id |
 | title | String | locked | sealed | a title you typed |
 | why | String | locked | sealed | your own words |
-| statusRaw | String | locked | to lock 35g2 | where you say a goal stands |
+| statusRaw | String | locked | sealed | where you say a goal stands |
 | notes | [GoalNote] | locked | sealed | your own words |
 | sortOrder | Int | plain | plain | the order on screen |
-| createdAt | Date | locked | to lock 35g2 | when you made it |
-| lastEditedAt | Date | locked | to lock 35g2 | when you last changed it |
+| createdAt | Date | locked | sealed | when you made it |
+| lastEditedAt | Date | locked | sealed | when you last changed it |
 | usesSMART | Bool | plain | plain | an on or off switch |
 | smartSpecific | String | locked | sealed | your own words |
 | smartMeasurable | String | locked | sealed | your own words |
@@ -197,14 +197,14 @@ Lock in: 35g2
 
 ## MessageStarter
 
-Lock in: 35g2
+Lock in: none
 
 | Field | Type | Verdict | Today | Reason |
 | --- | --- | --- | --- | --- |
 | id | UUID | plain | plain | its own id |
 | text | String | locked | sealed | your own words |
 | sortOrder | Int | plain | plain | the order on screen |
-| lastEditedAt | Date | locked | to lock 35g2 | when you last changed it |
+| lastEditedAt | Date | locked | sealed | when you last changed it |
 
 ## TriggerWindow
 
@@ -254,15 +254,15 @@ Lock in: 35g3
 
 ## BridgeDraftItem
 
-Lock in: 35g2
+Lock in: none
 
 | Field | Type | Verdict | Today | Reason |
 | --- | --- | --- | --- | --- |
 | id | UUID | plain | plain | its own id |
-| createdAt | Date | locked | to lock 35g2 | when you made it |
+| createdAt | Date | locked | sealed | when you made it |
 | text | String | locked | sealed | your own words |
-| isResolved | Bool | locked | to lock 35g2 | records that you raised something |
-| isQuestion | Bool | locked | to lock 35g2 | which kind of item you wrote |
+| isResolved | Bool | locked | sealed | records that you raised something |
+| isQuestion | Bool | locked | sealed | which kind of item you wrote |
 | answer | String | locked | sealed | your own words |
 | providerID | UUID? | plain | plain | a link to another item by id, with no content |
 | sourceEntryID | UUID? | plain | plain | a link to another item by id, with no content |
@@ -280,52 +280,52 @@ Lock in: 35g3
 
 ## ThreadMessage
 
-Lock in: 35g2
+Lock in: none
 
 | Field | Type | Verdict | Today | Reason |
 | --- | --- | --- | --- | --- |
 | id | UUID | plain | plain | its own id |
-| timestamp | Date | locked | to lock 35g2 | when it was recorded |
+| timestamp | Date | locked | sealed | when it was recorded |
 | text | String | locked | sealed | your own words |
 | audioFileName | String? | plain | plain | the name of a voice note file, a generated id; the file itself is sealed by Lock my files (35d) |
 | withContactID | UUID? | plain | plain | a link to another item by id, with no content |
-| followUpAt | Date? | locked | to lock 35g2 | when you asked to be reminded |
+| followUpAt | Date? | locked | sealed | when you asked to be reminded |
 
 ## SupportCalendarEntry
 
-Lock in: 35g2
+Lock in: none
 
 | Field | Type | Verdict | Today | Reason |
 | --- | --- | --- | --- | --- |
 | id | UUID | plain | plain | its own id |
-| date | Date | locked | to lock 35g2 | the day it is about |
+| date | Date | locked | sealed | the day it is about |
 | note | String | locked | sealed | your own words |
 | visibleToContactIDs | [UUID] | plain | plain | a link to another item by id, with no content |
 
 ## FutureNote
 
-Lock in: 35g2
+Lock in: none
 
 | Field | Type | Verdict | Today | Reason |
 | --- | --- | --- | --- | --- |
 | id | UUID | plain | plain | its own id |
-| writtenAt | Date | locked | to lock 35g2 | when you wrote it |
-| unlockDate | Date | locked | to lock 35g2 | when you chose for it to open |
+| writtenAt | Date | locked | sealed | when you wrote it |
+| unlockDate | Date | locked | sealed | when you chose for it to open |
 | text | String | locked | sealed | your own words |
-| isUnlocked | Bool | locked | to lock 35g2 | follows the date you chose, so it would give that date away |
+| isUnlocked | Bool | locked | sealed | follows the date you chose, so it would give that date away |
 | openWhen | String | locked | sealed | your own words |
 
 ## UnsentDraft
 
-Lock in: 35g2
+Lock in: none
 
 | Field | Type | Verdict | Today | Reason |
 | --- | --- | --- | --- | --- |
 | id | UUID | plain | plain | its own id |
-| createdAt | Date | locked | to lock 35g2 | when you made it |
+| createdAt | Date | locked | sealed | when you made it |
 | recipientLabel | String | locked | sealed | a name you typed |
 | text | String | locked | sealed | your own words |
-| wasSent | Bool | locked | to lock 35g2 | records what you did with a draft |
+| wasSent | Bool | locked | sealed | records what you did with a draft |
 
 ## DecisionPresetCategory
 

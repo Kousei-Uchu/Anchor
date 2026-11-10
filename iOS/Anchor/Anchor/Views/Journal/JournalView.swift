@@ -37,7 +37,9 @@ struct JournalDayCount {
 
 struct JournalView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \JournalEntry.createdAt) private var entries: [JournalEntry]
+    @Query private var entriesStored: [JournalEntry]
+    /// Sorted after the items are opened, because a locked createdAt cannot be sorted by the database (Patch 35g2).
+    private var entries: [JournalEntry] { entriesStored.sortedByKey { $0.createdAt } }
     @Query private var checkInsStored: [CheckIn]
     /// Sorted after the items are opened, because a locked timestamp cannot be sorted by the database (Patch 35g1b).
     private var checkIns: [CheckIn] { checkInsStored.sortedByKey { $0.timestamp } }

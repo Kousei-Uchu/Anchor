@@ -180,6 +180,20 @@ extension FieldLock {
         return (value, nil)
     }
 
+    /// The same, when there may be no choice: sealed as "-" for none and "=" and the raw text for one.
+    static func readOptionalChoice<T: LockedChoice>(plain: T?, sealed: String?, context: String) -> T? {
+        guard let sealed, !sealed.isEmpty, let opened = opener?(sealed, context) else { return plain }
+        if opened == "-" { return nil }
+        guard opened.hasPrefix("="), let value = T(rawValue: String(opened.dropFirst())) else { return plain }
+        return value
+    }
+
+    static func storeOptionalChoice<T: LockedChoice>(_ value: T?, context: String) -> (plain: T?, sealed: String?) {
+        let text = value.map { "=" + $0.rawValue } ?? "-"
+        if isOn, let sealed = sealer?(text, context) { return (nil, sealed) }
+        return (value, nil)
+    }
+
     // MARK: Describing a value for the Lock my data check
 
     static func describe(_ value: Date) -> String { "t:" + value.lockedText }
@@ -189,6 +203,7 @@ extension FieldLock {
     static func describe(_ value: Double) -> String { "n:" + value.lockedText }
     static func describe(_ value: Bool) -> String { "b:" + value.lockedText }
     static func describe<T: LockedChoice>(_ value: T) -> String { "c:" + value.rawValue }
+    static func describe<T: LockedChoice>(_ value: T?) -> String { value.map { "c:" + $0.rawValue } ?? "nil" }
 }
 
 extension Sequence {

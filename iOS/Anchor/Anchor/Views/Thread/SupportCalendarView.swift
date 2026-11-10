@@ -18,7 +18,9 @@ import SwiftData
 
 struct SupportCalendarView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \SupportCalendarEntry.date) private var entries: [SupportCalendarEntry]
+    @Query private var entriesStored: [SupportCalendarEntry]
+    /// Sorted after the items are opened, because a locked date cannot be sorted by the database (Patch 35g2).
+    private var entries: [SupportCalendarEntry] { entriesStored.sortedByKey { $0.date } }
     @Query(sort: \TrustedContact.sortOrder) private var contacts: [TrustedContact]
     @State private var editingEntry: SupportCalendarEntry?
     @State private var entryToDelete: SupportCalendarEntry?

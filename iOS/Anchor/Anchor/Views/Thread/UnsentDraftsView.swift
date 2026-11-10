@@ -15,7 +15,9 @@ import SwiftUI
 import SwiftData
 
 struct UnsentDraftsView: View {
-    @Query(sort: \UnsentDraft.createdAt, order: .reverse) private var drafts: [UnsentDraft]
+    @Query private var draftsStored: [UnsentDraft]
+    /// Sorted after the items are opened, because a locked createdAt cannot be sorted by the database (Patch 35g2).
+    private var drafts: [UnsentDraft] { draftsStored.sortedByKey(descending: true) { $0.createdAt } }
     @Environment(\.modelContext) private var modelContext
     @State private var editingDraft: UnsentDraft?
     @State private var draftToDelete: UnsentDraft?

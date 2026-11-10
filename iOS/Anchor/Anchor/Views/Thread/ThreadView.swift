@@ -415,9 +415,12 @@ struct PersonPageView: View {
 
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \PersonSection.sortOrder) private var allSections: [PersonSection]
-    @Query(sort: \ThreadMessage.timestamp, order: .reverse) private var allMessages: [ThreadMessage]
-    @Query(sort: \SupportCalendarEntry.date) private var allEntries: [SupportCalendarEntry]
-
+    @Query private var allMessagesStored: [ThreadMessage]
+    /// Sorted after the items are opened, because a locked timestamp cannot be sorted by the database (Patch 35g2).
+    private var allMessages: [ThreadMessage] { allMessagesStored.sortedByKey(descending: true) { $0.timestamp } }
+    @Query private var allEntriesStored: [SupportCalendarEntry]
+    /// Sorted after the items are opened, because a locked date cannot be sorted by the database (Patch 35g2).
+    private var allEntries: [SupportCalendarEntry] { allEntriesStored.sortedByKey { $0.date } }
     @State private var editing: PersonSection?
     @State private var lastOpened: PersonSection?
     @State private var justAddedID: UUID?

@@ -258,7 +258,9 @@ struct MessageComposerRequest: Identifiable {
 
 struct ThreadMessagesView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \ThreadMessage.timestamp, order: .reverse) private var messages: [ThreadMessage]
+    @Query private var messagesStored: [ThreadMessage]
+    /// Sorted after the items are opened, because a locked timestamp cannot be sorted by the database (Patch 35g2).
+    private var messages: [ThreadMessage] { messagesStored.sortedByKey(descending: true) { $0.timestamp } }
     @Query(sort: \TrustedContact.sortOrder) private var contacts: [TrustedContact]
 
     @StateObject private var player = VoiceNotePlayer()
@@ -616,9 +618,16 @@ struct ThreadMessageComposer: View {
     @State private var sendRequest: SendRequest?
     @State private var discordFailureMessage: String?
 
-    @Query(sort: \SupportCalendarEntry.date) private var supportEntries: [SupportCalendarEntry]
+    @Query private var supportEntriesStored: [SupportCalendarEntry]
 
-    @Query(sort: \ThreadMessage.timestamp) private var allMessages: [ThreadMessage]
+    /// Sorted after the items are opened, because a locked date cannot be sorted by the database (Patch 35g2).
+
+    private var supportEntries: [SupportCalendarEntry] { supportEntriesStored.sortedByKey { $0.date } }
+    @Query private var allMessagesStored: [ThreadMessage]
+
+    /// Sorted after the items are opened, because a locked timestamp cannot be sorted by the database (Patch 35g2).
+
+    private var allMessages: [ThreadMessage] { allMessagesStored.sortedByKey { $0.timestamp } }
     @State private var followUp = FollowUpChoice.off
 
     private let isHello: Bool

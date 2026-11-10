@@ -11,7 +11,9 @@ import SwiftData
 
 struct FutureNoteListView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \FutureNote.unlockDate) private var notes: [FutureNote]
+    @Query private var notesStored: [FutureNote]
+    /// Sorted after the items are opened, because a locked unlockDate cannot be sorted by the database (Patch 35g2).
+    private var notes: [FutureNote] { notesStored.sortedByKey { $0.unlockDate } }
     @State private var showingComposer = false
     @State private var openedNote: FutureNote?
     @State private var noteToDelete: FutureNote?

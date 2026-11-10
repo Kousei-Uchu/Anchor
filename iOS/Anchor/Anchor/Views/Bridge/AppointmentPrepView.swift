@@ -260,7 +260,11 @@ struct JournalSessionSummaryCard: View {
     let excluding: Set<UUID>
     let onAddToNotes: (String) -> Void
 
-    @Query(sort: \JournalEntry.createdAt, order: .reverse) private var allEntries: [JournalEntry]
+    @Query private var allEntriesStored: [JournalEntry]
+
+    /// Sorted after the items are opened, because a locked createdAt cannot be sorted by the database (Patch 35g2).
+
+    private var allEntries: [JournalEntry] { allEntriesStored.sortedByKey(descending: true) { $0.createdAt } }
     @Query private var allCheckIns: [CheckIn]
     @State private var showingList = false
     @State private var chosen: Set<UUID> = []
@@ -547,7 +551,11 @@ struct RaiseSessionCard: View {
     let providerID: UUID
     let onAddToNotes: (String) -> Void
 
-    @Query(sort: \BridgeDraftItem.createdAt) private var allItems: [BridgeDraftItem]
+    @Query private var allItemsStored: [BridgeDraftItem]
+
+    /// Sorted after the items are opened, because a locked createdAt cannot be sorted by the database (Patch 35g2).
+
+    private var allItems: [BridgeDraftItem] { allItemsStored.sortedByKey { $0.createdAt } }
     @Query(sort: \AppointmentSeries.sortOrder) private var providers: [AppointmentSeries]
     @State private var added = false
 

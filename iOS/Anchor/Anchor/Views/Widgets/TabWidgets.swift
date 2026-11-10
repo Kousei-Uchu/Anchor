@@ -472,8 +472,9 @@ struct TasksWidget: View {
 // MARK: - Bridge widgets
 
 struct ThingsToRaiseWidget: View {
-    @Query(sort: \BridgeDraftItem.createdAt, order: .reverse) private var items: [BridgeDraftItem]
-
+    @Query private var itemsStored: [BridgeDraftItem]
+    /// Sorted after the items are opened, because a locked createdAt cannot be sorted by the database (Patch 35g2).
+    private var items: [BridgeDraftItem] { itemsStored.sortedByKey(descending: true) { $0.createdAt } }
     private var open: [BridgeDraftItem] { items.filter { !$0.isResolved } }
 
     var body: some View {
@@ -602,7 +603,9 @@ struct FeedbackLoopsWidget: View {
 // MARK: - Thread widgets
 
 struct MessageLogWidget: View {
-    @Query(sort: \ThreadMessage.timestamp, order: .reverse) private var messages: [ThreadMessage]
+    @Query private var messagesStored: [ThreadMessage]
+    /// Sorted after the items are opened, because a locked timestamp cannot be sorted by the database (Patch 35g2).
+    private var messages: [ThreadMessage] { messagesStored.sortedByKey(descending: true) { $0.timestamp } }
     @State private var composerRequest: MessageComposerRequest?
 
     var body: some View {
@@ -672,8 +675,9 @@ struct SupportCalendarWidget: View {
 }
 
 struct FutureNotesWidget: View {
-    @Query(sort: \FutureNote.unlockDate) private var notes: [FutureNote]
-
+    @Query private var notesStored: [FutureNote]
+    /// Sorted after the items are opened, because a locked unlockDate cannot be sorted by the database (Patch 35g2).
+    private var notes: [FutureNote] { notesStored.sortedByKey { $0.unlockDate } }
     var body: some View {
         let dated = notes.filter { !$0.isOpenWhenLetter }
         let ready = dated.filter { $0.unlockDate <= .now }.count

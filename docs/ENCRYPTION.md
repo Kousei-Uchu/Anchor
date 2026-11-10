@@ -120,6 +120,16 @@ The first group of dates, numbers and marks, 28 fields on six models, locked wit
 - **New values before the second run.** Once the words are locked, a value saved in one of these fields is sealed as it is saved, even before Lock the rest has been run on the older items, and every read takes whichever form is there.
 - **A value that will not open** (the key is missing) reads as the fixed placeholder: the 1 Jan 2001 date, zero, no value, or the first choice. It is never written back unless you change that field yourself. The key gate (Patch 35b3) stands in front of the app in that case.
 
+## The Journal, messages and people (Patch 35g2, D44)
+
+The second group, 25 fields on ten models. `docs/FIELD_INVENTORY.md` has the list.
+
+- **JournalEntry:** when it was made, whether you bookmarked it, and how it was started. **ThreadMessage:** when it was recorded and when you asked to be reminded. **SupportCalendarEntry:** the day. **FutureNote:** when it was written, when you chose for it to open, and whether it has. **UnsentDraft:** when it was made and whether it was sent. **BridgeDraftItem:** when it was made, whether you raised it and whether it is a question. **TrustedContact:** the minutes before an escalation reminder, the time zone, and the hours the person can be reached. **PersonSection, MessageStarter:** when each was last changed. **PersonalGoal:** where the goal stands, when it was made and when it was last changed.
+- **A choice that may be missing.** How an entry was started is one of a fixed list or nothing, so it is sealed as `-` for nothing or `=` and its raw text, like an optional date. This is the one new kind of sealed value in this patch (`FieldLock.readOptionalChoice`, `storeOptionalChoice`).
+- **Level 3.** `LockMyData.currentLevel` is 3. A store locked at level 1 or 2 is offered More to lock, and the line says which parts it adds.
+- **Sorting moved.** Eighteen lists no longer ask the database to sort on a locked field: the Journal timeline, the appointment preparation and one-page summary lists, Bridge's draft list, the messages, support days, future notes and unsent drafts on Thread, their summaries in Settings, and the widgets on the tabs. Each fetches the items and sorts them after they are opened. Nine places that sort or filter in the database on a field still to lock are left, all in 35g3.
+- **Left plain, with the reason in the list:** ids and the links between items, the order on screen, the on or off switches for reminders, one fixed choice such as how to reach a person, and the days and times of a regular hello, which the phone's reminder store holds anyway (D69).
+
 ## Lock my files (Patch 35d)
 
 The second step of locking: the voice notes and Journal photos, which are files and not stored text (D31). It is on the Lock my data screen, offered once the text is locked. The code is `LockMyFiles`, `StoredFiles` and `FileLock` in `Support/LockMyData.swift`, and `FileCipher` in `Support/AppLock.swift`.
