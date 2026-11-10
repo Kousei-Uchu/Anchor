@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch AI7: with AI tools off, Make shorter is hidden, and Tidy a braindump, Break into steps and Estimate time stay on screen greyed out, and tapping one says AI tools are off and where to turn them on.
 - Patch 35e: Encryption, Safety copy and Lock my data are now in Settings in every build, without "(test build)" in their names, and the Encryption page is in the guide and on the website.
 - Patch DOC24: the plan now says the promo video already has one source and that refreshing it waits on new screenshots.
 - Patch 51: the website has a beta page at an address that is not linked from anywhere and is kept out of search results. It explains what testing involves and has one switch for opening sign-ups, closed to begin with.

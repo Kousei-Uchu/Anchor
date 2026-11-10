@@ -26,6 +26,12 @@ enum AIGate {
         return isChosen
     }
 
+    /// Whether a greyed-out button should stand in for an AI tool that is off (Patch AI7, D41). A button that is
+    /// the feature itself (Tidy a braindump, Break into steps, Estimate time) stays on screen while AI tools are
+    /// off, greyed, and tapping it says where to turn them on. A button that only improves what the person wrote
+    /// (Make shorter) is simply not shown. In showcase mode there is nothing to turn on, so nothing is shown.
+    static var showsOffButtons: Bool { !isEnabled && !DemoMode.isOn }
+
     /// Turning it off also tells listeners to drop anything half done.
     static func setChosen(_ on: Bool) {
         UserDefaults.standard.set(on, forKey: storageKey)

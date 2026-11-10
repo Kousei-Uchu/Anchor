@@ -1202,7 +1202,7 @@ struct AIToolsSettingsView: View {
                 title: "AI tools",
                 footer: DemoMode.isOn
                     ? "Off while showcase mode is on."
-                    : "Off to begin with. While it is off, nothing in Anchor uses AI and no AI buttons show anywhere."
+                    : "Off to begin with. While it is off, nothing in Anchor uses AI and nothing is sent anywhere. The few buttons that need it stay on screen, greyed out."
             ) {
                 Toggle(isOn: Binding(
                     get: { isOn },

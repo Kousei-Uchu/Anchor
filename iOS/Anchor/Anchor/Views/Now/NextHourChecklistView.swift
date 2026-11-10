@@ -119,6 +119,7 @@ private struct AddSeveralSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var text = ""
     @State private var showBraindump = false
+    @State private var showAIOff = false
     let onAdd: (String) -> Void
 
     private var lines: [TaskListParser.Line] { TaskListParser.parse(text) }
@@ -134,12 +135,18 @@ private struct AddSeveralSheet: View {
                 } footer: {
                     Text("Indent a line to make it a step of the one above, as deep as you like. Dashes, bullets and numbers are dropped, so you can paste a list from anywhere.")
                 }
-                if AIGate.isEnabled && !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                if (AIGate.isEnabled || AIGate.showsOffButtons) && !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     Section {
-                        Button {
-                            showBraindump = true
-                        } label: {
-                            Label("Tidy a braindump", systemImage: "list.bullet.clipboard")
+                        if AIGate.isEnabled {
+                            Button {
+                                showBraindump = true
+                            } label: {
+                                Label("Tidy a braindump", systemImage: "list.bullet.clipboard")
+                            }
+                        } else {
+                            AIOffButton { showAIOff = true } content: {
+                                Label("Tidy a braindump", systemImage: "list.bullet.clipboard")
+                            }
                         }
                     }
                 }
@@ -171,6 +178,7 @@ private struct AddSeveralSheet: View {
             .sheet(isPresented: $showBraindump) {
                 AIBraindumpSheet(text: text, canEdit: true, destinations: [.tasks], onAdded: { text = "" })
             }
+            .aiOffAlert(isPresented: $showAIOff)
         }
     }
 }
@@ -980,6 +988,7 @@ private struct TaskEditorSheet: View {
     @State private var editMode: EditMode = .inactive
     @State private var showFocus = false
     @State private var showMore = false
+    @State private var showAIOff = false
     @State private var editingStep: TaskItem?
     @State private var stepToDelete: TaskItem?
     @StateObject private var ask = AIAsk()
@@ -1080,6 +1089,7 @@ private struct TaskEditorSheet: View {
             loadSource()
         }
         .aiAsk(ask)
+        .aiOffAlert(isPresented: $showAIOff)
         .onReceive(NotificationCenter.default.publisher(for: .aiToolsTurnedOff)) { _ in
             // Anything half done is dropped. Steps already added stay, as the person's own.
             suggestedSteps = []
@@ -1214,8 +1224,9 @@ private struct TaskEditorSheet: View {
 
     private var hasWords: Bool { !task.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 
-    /// Two plain buttons, only while AI tools are on. Each works on this task's own words, through `AIAsk`, so the
-    /// person sees exactly what is sent first. What comes back is a suggestion until they tap to use it.
+    /// Two plain buttons. While AI tools are on, each works on this task's own words, through `AIAsk`, so the
+    /// person sees exactly what is sent first. What comes back is a suggestion until they tap to use it. While
+    /// they are off, the buttons are greyed out and say where the switch is.
     @ViewBuilder private var helperSection: some View {
         if AIGate.isEnabled && hasWords {
             Section {
@@ -1278,6 +1289,17 @@ private struct TaskEditorSheet: View {
             } footer: {
                 if !suggestedSteps.isEmpty || suggestedMinutes != nil {
                     Text("These are suggestions. Nothing is added until you tap.")
+                }
+            }
+        } else if AIGate.showsOffButtons && hasWords {
+            // While AI tools are off the two buttons stay on screen, greyed out. Tapping one says where the
+            // switch is and does nothing else (D41).
+            Section {
+                AIOffButton { showAIOff = true } content: {
+                    Label(AIFeature.breakIntoSteps.title, systemImage: "list.bullet.indent")
+                }
+                AIOffButton { showAIOff = true } content: {
+                    Label(AIFeature.estimateTime.title, systemImage: "clock")
                 }
             }
         }

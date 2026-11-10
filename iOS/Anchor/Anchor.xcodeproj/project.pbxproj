@@ -14,6 +14,7 @@
 		25D53E264D1F99304DF6A72B /* LockMyDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85B27412DFF5FC3D964C3D85 /* LockMyDataView.swift */; };
 		7777FCE0AEFF93FA6147EC1C /* AIConsentSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDD6F1CF970D62BC5CDBABF7 /* AIConsentSheet.swift */; };
 		95FBA5A7AC4BEC75F6456822 /* AIBraindumpSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F125C7F526ED24028B46F94 /* AIBraindumpSheet.swift */; };
+		FBE4E15F99C3E6CE0C415894 /* AIOffNotice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06B6C1312DD7B78D1CE65DF5 /* AIOffNotice.swift */; };
 		60A074630CC7C6188746A45F /* SafetyCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 905C4FDA487AB3F8365B7465 /* SafetyCopy.swift */; };
 		0CAA287DC6AAD87AC93CC178 /* LockMyData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92D593B269EB6B064DC986FE /* LockMyData.swift */; };
 		383D93D08A9CDB63AB066AD1 /* AIGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60E32204EBCB9844F599B451 /* AIGate.swift */; };
@@ -145,6 +146,7 @@
 		85B27412DFF5FC3D964C3D85 /* LockMyDataView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockMyDataView.swift; sourceTree = "<group>"; };
 		BDD6F1CF970D62BC5CDBABF7 /* AIConsentSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIConsentSheet.swift; sourceTree = "<group>"; };
 		9F125C7F526ED24028B46F94 /* AIBraindumpSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIBraindumpSheet.swift; sourceTree = "<group>"; };
+		06B6C1312DD7B78D1CE65DF5 /* AIOffNotice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIOffNotice.swift; sourceTree = "<group>"; };
 		905C4FDA487AB3F8365B7465 /* SafetyCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafetyCopy.swift; sourceTree = "<group>"; };
 		92D593B269EB6B064DC986FE /* LockMyData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockMyData.swift; sourceTree = "<group>"; };
 		60E32204EBCB9844F599B451 /* AIGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIGate.swift; sourceTree = "<group>"; };
@@ -277,6 +279,7 @@
 				85B27412DFF5FC3D964C3D85 /* LockMyDataView.swift */,
 				BDD6F1CF970D62BC5CDBABF7 /* AIConsentSheet.swift */,
 				9F125C7F526ED24028B46F94 /* AIBraindumpSheet.swift */,
+				06B6C1312DD7B78D1CE65DF5 /* AIOffNotice.swift */,
 				A1B2C3D4E5F60718293A4B5C /* SettingsView.swift */,
 			);
 			path = Settings;
@@ -659,6 +662,7 @@
 				25D53E264D1F99304DF6A72B /* LockMyDataView.swift in Sources */,
 				7777FCE0AEFF93FA6147EC1C /* AIConsentSheet.swift in Sources */,
 				95FBA5A7AC4BEC75F6456822 /* AIBraindumpSheet.swift in Sources */,
+				FBE4E15F99C3E6CE0C415894 /* AIOffNotice.swift in Sources */,
 				60A074630CC7C6188746A45F /* SafetyCopy.swift in Sources */,
 				0CAA287DC6AAD87AC93CC178 /* LockMyData.swift in Sources */,
 				383D93D08A9CDB63AB066AD1 /* AIGate.swift in Sources */,

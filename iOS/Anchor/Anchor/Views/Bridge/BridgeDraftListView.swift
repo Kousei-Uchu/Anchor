@@ -22,6 +22,7 @@ struct BridgeDraftListView: View {
     @State private var toDelete: BridgeDraftItem?
     @State private var showingExport = false
     @State private var showBraindump = false
+    @State private var showAIOff = false
     /// Whose things are shown. Nil shows everything. Not remembered.
     @State private var filterID: UUID?
 
@@ -97,6 +98,11 @@ struct BridgeDraftListView: View {
                         Image(systemName: "list.bullet.clipboard")
                     }
                     .accessibilityLabel("Tidy a braindump")
+                } else if AIGate.showsOffButtons {
+                    AIOffButton { showAIOff = true } content: {
+                        Image(systemName: "list.bullet.clipboard")
+                    }
+                    .accessibilityLabel("Tidy a braindump")
                 }
                 if providers.count > 1 {
                     Menu {
@@ -131,6 +137,7 @@ struct BridgeDraftListView: View {
         .sheet(isPresented: $showBraindump) {
             AIBraindumpSheet(text: "", canEdit: true, destinations: [.thingsToRaise], providerID: filterProvider?.id)
         }
+        .aiOffAlert(isPresented: $showAIOff)
     }
 
     private func startNew() {

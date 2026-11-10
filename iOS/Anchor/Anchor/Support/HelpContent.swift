@@ -798,7 +798,7 @@ enum LockMyDataHelp {
 
 enum AIToolsHelp {
     static let paragraphs: [String] = [
-        "AI tools are off unless you turn them on here. While this is off, nothing in Anchor uses AI, no AI buttons show anywhere, and nothing is sent to any service.",
+        "AI tools are off unless you turn them on here. While this is off, nothing in Anchor uses AI and nothing is sent to any service. Make shorter is hidden. Tidy a braindump, Break into steps and Estimate time stay where they are, greyed out, and tapping one tells you AI tools are off and where to turn them on.",
         "When it is on, Anchor may offer a few plain buttons, such as making a long entry shorter. Each one works only on the text you pick.",
         "Before anything is sent you see the exact text, the instruction that goes with it, where it goes and what happens to it, and you choose Send or Cancel. On that screen, Don't ask again skips it for that one tool in that one place. Any you turn on are listed here under Asking, where you can turn them off.",
         "Under Where it runs you choose On this phone or On my computer. On this phone uses Apple's on-device model, on phones that support Apple Intelligence with it turned on in the phone's Settings, and the text you pick does not leave the phone.",
@@ -808,7 +808,7 @@ enum AIToolsHelp {
         "Tidy a braindump is in the same Journal menu, in Add several on Tasks, and at the top of Things to raise. You pick the words, and then you pick what to make of them: Turn into tasks or Turn into things to raise. Anchor never chooses for you. You see exactly what is sent first, then a list to tick, and only the ticked lines are added, as plain tasks with no day or other details or as things to raise. Ones made from a Journal entry show a quiet line saying which entry, and the entry itself is never changed.",
         "A kept block is folded, with the shorter version inside and your original one tap away. Use the original text in its menu puts your own words back and removes the shorter version. Exports leave AI Optimised versions out unless you switch them on for that export, and label them when they are in.",
         "Anchor keeps what you wrote exactly as it was. Anything an AI tool suggests is only a suggestion until you keep it.",
-        "Turning this off removes every AI button at once and drops anything half done. It is off while showcase mode is on."
+        "Turning this off hides Make shorter, greys out the other buttons and drops anything half done. It is off while showcase mode is on, and then those buttons are not shown at all."
     ]
 }
 

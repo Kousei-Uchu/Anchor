@@ -1,6 +1,6 @@
 # Optional extras: iCloud sync, voice, and AI tools
 
-Written 9 Nov 2026 (change log 123). Built so far: the one switch (AI0) the consent sheet with the Apple on-device provider (AI1, change log 141), the AI Optimised block in the Journal (AI2, change log 143, D52), Break into steps and Estimate time on a task (AI3, change log 144, D53), Tidy a braindump (AI4, change log 146, D54), Ollama on your own computer (AI5, change log 148, D55), and dictation in the Journal (VN1, change log 150, D57); the rest is not built. Every claim about the code was checked in the repo; claims about Apple's frameworks are from memory and are marked **check** where a spike must confirm them before a patch promises anything. The patches are in Phase I of `ANCHOR_PATCH_PLAN.md`, the questions are D38 to D43 in section 0.4.
+Written 9 Nov 2026 (change log 123). Built so far: the one switch (AI0) the consent sheet with the Apple on-device provider (AI1, change log 141), the AI Optimised block in the Journal (AI2, change log 143, D52), Break into steps and Estimate time on a task (AI3, change log 144, D53), Tidy a braindump (AI4, change log 146, D54), Ollama on your own computer (AI5, change log 148, D55), dictation in the Journal (VN1, change log 150, D57), and the greyed-out buttons while AI tools are off (AI7, change log 164, D65); the rest is not built. Every claim about the code was checked in the repo; claims about Apple's frameworks are from memory and are marked **check** where a spike must confirm them before a patch promises anything. The patches are in Phase I of `ANCHOR_PATCH_PLAN.md`, the questions are D38 to D43 in section 0.4.
 
 ## The rules that apply to all of it
 
@@ -86,13 +86,15 @@ Written 9 Nov 2026 (change log 123). Built so far: the one switch (AI0) the cons
 
 **Settings, AI tools, Use AI tools: off by default.** When it is off:
 
-- no AI button appears anywhere, and no screen mentions AI apart from this one row and its own short help;
+- Make shorter, which only improves what was written, is hidden. The buttons that are the feature itself (Tidy a braindump, Break into steps, Estimate time) stay where they are, greyed out, and tapping one says AI tools are off and where to turn them on (D41, AI7). Nothing else on screen mentions AI apart from this one row and its own short help;
 - no model is loaded, no network connection to any AI provider is opened, and no Local Network permission is asked;
 - the guide, the tour and onboarding say nothing about it.
 
 When it is turned off, anything half done is dropped, and the person's saved AI Optimised blocks stay as the text they are (they are the person's entries now). A separate, clearly named choice offers to turn them back into the original text, one entry at a time.
 
 **How it is enforced.** One function, `AIGate.isEnabled`, that every AI entry point must call before it does anything. A script, `scripts/check-ai-gate.mjs`, in the same spirit as the existing check scripts, fails if a file that talks to a provider does not go through the gate. The first patch (AI0) builds the switch and the check before there is anything behind them, so no later patch can skip it. Showcase mode keeps it off. Until the first tool exists the row in Settings is in test builds only. AI1 (the consent sheet and the provider) is not a tool, so the first real tool, AI2 or AI3, is the patch that makes the row visible in every build.
+
+**As built in AI7.** While AI tools are off, a greyed-out button (`AIOffButton`, `Views/Settings/AIOffNotice.swift`) stands in for Tidy a braindump in the Journal page's three dots, in Add several on Tasks (once words are typed) and at the top of Things to raise, and for Break into steps and Estimate time under a task's steps (once the task has a name). It is greyed but not disabled, because a button that cannot be tapped cannot explain itself. Tapping it opens an alert, AI tools are off, You can turn them on in Settings, under AI tools. It sends nothing, loads no model and opens no connection, and `scripts/check-ai-gate.mjs` fails if its file reaches a provider, if a greyed button is shown without `AIGate.showsOffButtons`, or if Make shorter is ever greyed rather than hidden. In showcase mode the buttons are not shown at all, because there is nothing to turn on there. **Not tried:** nothing was compiled or run on a phone, and a menu item may not take the grey; if it does not, the alert still says why it does nothing.
 
 ## Providers
 

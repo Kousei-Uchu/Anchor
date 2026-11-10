@@ -8,6 +8,8 @@
 //    person (unless they said not to be asked), and only then sends.
 // 5. The consent sheet shows the whole text: its file must not cut text with a line limit, a prefix or a
 //    truncation mode.
+// 6. A greyed-out button for a tool that is off (AIOffButton, Patch AI7) is only shown behind AIGate.showsOffButtons,
+//    is never offered for Make shorter (that one is hidden while AI tools are off, D41), and its file sends nothing.
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -77,6 +79,23 @@ for (const file of files) {
     problems.push(`${rel}: calls a provider's generate directly; go through AIAsk.run so the person is asked first`);
   }
 
+  // A greyed-out button stands in for a tool that is off (Patch AI7, D41). It must sit behind the off-state check, and
+  // Make shorter, which only improves what was written, is hidden while AI tools are off, never greyed.
+  if (!rel.endsWith("Views/Settings/AIOffNotice.swift") && /\bAIOffButton\b/.test(text)) {
+    if (!/AIGate\.showsOffButtons/.test(text)) {
+      problems.push(`${rel}: shows a greyed-out AI button without checking AIGate.showsOffButtons`);
+    }
+    const lines = text.split("\n");
+    lines.forEach((line, i) => {
+      if (/\bAIOffButton\b/.test(line) && !line.trim().startsWith("//")) {
+        const near = lines.slice(i, i + 6).join("\n");
+        if (/makeShorter|Make shorter/.test(near)) {
+          problems.push(`${rel}: line ${i + 1} shows Make shorter greyed out; it must be hidden while AI tools are off`);
+        }
+      }
+    });
+  }
+
   // Nothing may default the switch to on.
   if (/@AppStorage\(\s*AIGate\.storageKey\s*\)[^\n]*=\s*true/.test(text)) {
     problems.push(`${rel}: sets the AI switch to on by default`);
@@ -114,6 +133,21 @@ if (ask) {
   else if (gateAt < 0 || gateAt > send) problems.push("AIAsk.swift sends before it checks the gate");
   else if (skipAt < 0 || askAt < 0 || skipAt > askAt || askAt > send) problems.push("AIAsk.swift sends before it has asked the person, or no longer checks Don't ask again before asking");
   if (!/AIGate\.isEnabled/.test(ask)) problems.push("AIAsk.swift no longer defaults to AIGate.isEnabled");
+}
+
+// The greyed-out button's file only sets a flag and shows an alert. It sends nothing and opens nothing.
+let offFile = join(swiftRoot, "Anchor/Anchor/Views/Settings/AIOffNotice.swift");
+let off = "";
+try {
+  off = readFileSync(offFile, "utf8");
+} catch {
+  problems.push("Views/Settings/AIOffNotice.swift is missing");
+}
+if (off) {
+  const code = off.split("\n").filter((line) => !line.trim().startsWith("//")).join("\n");
+  if (providerSigns.some((sign) => sign.test(code)) || /AIAsk|\.generate\(|AIProviders/.test(code)) {
+    problems.push("AIOffNotice.swift reaches a provider; a greyed-out button must send nothing");
+  }
 }
 
 // The consent sheet shows everything it is sending.

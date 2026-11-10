@@ -398,6 +398,7 @@ struct JournalEntryEditorView: View {
     @State private var showDrawingCanvas = false
     @State private var showContextSuggestions = false
     @State private var addedToBridge = false
+    @State private var showingAIOff = false
     @State private var showGuide = false
     @StateObject private var ask = AIAsk()
     @State private var assistDraft: JournalAssistDraft?
@@ -533,6 +534,12 @@ struct JournalEntryEditorView: View {
                                 Label("Tidy a braindump", systemImage: "list.bullet.clipboard")
                             }
                             .disabled(ask.isWorking)
+                        } else if AIGate.showsOffButtons {
+                            // Make shorter only improves what was written, so it is hidden while AI tools are
+                            // off. Tidy a braindump is the feature itself, so it stays, greyed out (D41).
+                            AIOffButton { showingAIOff = true } content: {
+                                Label("Tidy a braindump", systemImage: "list.bullet.clipboard")
+                            }
                         }
                         if blocks.contains(where: { $0.isText && SpeakerLabels.isUsed(in: $0.text) }) {
                             Button {
@@ -642,6 +649,7 @@ struct JournalEntryEditorView: View {
             } message: {
                 Text("You can reword it in Bridge. The journal entry is unchanged.")
             }
+            .aiOffAlert(isPresented: $showingAIOff)
         }
     }
 

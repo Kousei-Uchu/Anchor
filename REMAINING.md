@@ -1,6 +1,6 @@
 # Anchor: what is left
 
-*Only what is still to do. When something is finished, confirmed or answered, it is deleted from this file in the same patch, never moved to a done list. Finished work is in the Progress table of `ANCHOR_PATCH_PLAN.md` and in `docs/PLAN_CHANGELOG.md`. Last updated: 10 Nov 2026, after 35e.*
+*Only what is still to do. When something is finished, confirmed or answered, it is deleted from this file in the same patch, never moved to a done list. Finished work is in the Progress table of `ANCHOR_PATCH_PLAN.md` and in `docs/PLAN_CHANGELOG.md`. Last updated: 10 Nov 2026, after AI7.*
 
 ## 1. Waiting on you
 
@@ -30,6 +30,7 @@ Quickest way to check many at once: `scripts/review-on-device.sh` (the numbered 
 - VN2: Settings, Journal, Keep a voice note while dictating.
 - VN3: Label who is speaking while dictating, and Rename speakers.
 - 35e: Settings now shows Encryption, Safety copy and Lock my data in every build. Open each from Settings and check the names; the Encryption guide page (the question mark) now opens. A new check on the website: Features should show an Encryption entry.
+- AI7: with AI tools off (Settings, AI tools), a Journal page's three dots should show Tidy a braindump greyed and no Make shorter; Things to raise, Add several (after typing words) and a named task's steps should show the greyed buttons; tapping one should say AI tools are off and where to turn them on. Turn AI tools on and the real buttons should be back. A menu item may not look grey.
 - 47: the website's Features and Philosophy pages.
 - 48: the website's About page, the Support answers and the Privacy page.
 - 51: the website's `/beta` page. Sign-ups stay closed until you change the flag in `website/src/content/beta.ts`, and the TestFlight link there is empty.
@@ -38,23 +39,22 @@ The website patches (47, 48, 51) were typechecked and built in a scratch copy on
 
 ## 3. Not started, in order
 
-1. **AI7**: with AI tools off, Make shorter stays hidden, and Tidy a braindump, Break into steps and Estimate time stay on screen greyed out, saying where the switch is (D41). Size S.
-2. **AI8**: Ollama addresses off the home network, such as Tailscale or IPv6, accepted after a prompt and a confirmation (D56). Size S.
-3. **AI9**: AI Optimised blocks in exports as two labelled entries when you tick them in (D43). Size S.
-4. **AI6**: other AI provider as a plain setting: address, key (kept in the Keychain) and model in the OpenAI API format, off and empty to begin with, never suggested or named in the app (D42). Size S.
-5. **35f**: a list of every stored field in all 34 models and every typed setting, each marked locked or plain with the reason, and a check that keeps the list and the code in step (D44). Size S.
-6. **35g**: lock the rest, which is dates, numbers and typed settings, in groups of models, each with a safety copy and the way back first (D44). Size M+, to be split.
-7. **SY0**: sync groundwork. Drop the unique constraint from all 34 models, keep ids from doubling up, safety copy first. Size M+.
-8. **SY1**: the iCloud sync switch. Off by default, the private database, per-device things stay per-device, sleep nights synced except any Apple Health already holds (D39), Clear everything says it clears every device. After SY0.
-9. **SY2**: voice notes and Journal photos in sync. After SY1.
-10. **SY3**: the recovery key shown as a QR code and scanned on the new device, with the typed key still the default (D40). With SY1.
-11. **VN4a**: find who is speaking with a speaker-separation model on the recording, used in memory against the other voices in that one recording only, labelling Person 1, Person 2 and so on, then a people screen (how many were heard, a name for each beside a transcript preview, openable again later). The model ships inside the app; its size is measured first. Nothing is stored. Size L, to be split.
-12. **VN4b**: replay and tap, for the more privacy-minded: play the recording back and tap where each new person starts, with no model. After VN4a.
-13. **VN4c**: the words as a backup or beside the model: a language model reads only the transcript and suggests where the speaker changes, on the phone and through Ollama on your own computer, behind the AI switch. After VN4a.
-14. **VN5**: speaker tags in exports, per entry and per person: include the name, hide it, or leave that person's words out. After VN4a.
-15. **52**: refresh the Remotion promo with new screenshots and captions. The single source is already true (`remotion-project/src/Promo.tsx`, `npm run sync:promo`); what is left needs the app run on a simulator.
-16. **53**: the long full-tour video, split into per-tab scenes, scripted from `website/src/content/guide.generated.json`. Waits on 52. Size L, to be split.
-17. **54**: Android decision write-up, optional prototype spike. Android itself is far future (D4).
+1. **AI8**: Ollama addresses off the home network, such as Tailscale or IPv6, accepted after a prompt and a confirmation (D56). Size S.
+2. **AI9**: AI Optimised blocks in exports as two labelled entries when you tick them in (D43). Size S.
+3. **AI6**: other AI provider as a plain setting: address, key (kept in the Keychain) and model in the OpenAI API format, off and empty to begin with, never suggested or named in the app (D42). Size S.
+4. **35f**: a list of every stored field in all 34 models and every typed setting, each marked locked or plain with the reason, and a check that keeps the list and the code in step (D44). Size S.
+5. **35g**: lock the rest, which is dates, numbers and typed settings, in groups of models, each with a safety copy and the way back first (D44). Size M+, to be split.
+6. **SY0**: sync groundwork. Drop the unique constraint from all 34 models, keep ids from doubling up, safety copy first. Size M+.
+7. **SY1**: the iCloud sync switch. Off by default, the private database, per-device things stay per-device, sleep nights synced except any Apple Health already holds (D39), Clear everything says it clears every device. After SY0.
+8. **SY2**: voice notes and Journal photos in sync. After SY1.
+9. **SY3**: the recovery key shown as a QR code and scanned on the new device, with the typed key still the default (D40). With SY1.
+10. **VN4a**: find who is speaking with a speaker-separation model on the recording, used in memory against the other voices in that one recording only, labelling Person 1, Person 2 and so on, then a people screen (how many were heard, a name for each beside a transcript preview, openable again later). The model ships inside the app; its size is measured first. Nothing is stored. Size L, to be split.
+11. **VN4b**: replay and tap, for the more privacy-minded: play the recording back and tap where each new person starts, with no model. After VN4a.
+12. **VN4c**: the words as a backup or beside the model: a language model reads only the transcript and suggests where the speaker changes, on the phone and through Ollama on your own computer, behind the AI switch. After VN4a.
+13. **VN5**: speaker tags in exports, per entry and per person: include the name, hide it, or leave that person's words out. After VN4a.
+14. **52**: refresh the Remotion promo with new screenshots and captions. The single source is already true (`remotion-project/src/Promo.tsx`, `npm run sync:promo`); what is left needs the app run on a simulator.
+15. **53**: the long full-tour video, split into per-tab scenes, scripted from `website/src/content/guide.generated.json`. Waits on 52. Size L, to be split.
+16. **54**: Android decision write-up, optional prototype spike. Android itself is far future (D4).
 
 **Parked on purpose**
 
