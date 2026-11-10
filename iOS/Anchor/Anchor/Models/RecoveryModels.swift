@@ -89,6 +89,13 @@ enum RecoveryText {
     static func days(_ n: Int) -> String { "\(n) \(n == 1 ? "day" : "days")" }
 }
 
+// Patch 35g1a: the choices on these models can be sealed as their raw text (D44). The case named here is only what
+// the plain property holds while the real choice is sealed; it says nothing about anyone.
+extension DayCountMode: LockedChoice { static var lockedPlaceholder: DayCountMode { .runAndTotal } }
+extension SavingsPeriod: LockedChoice { static var lockedPlaceholder: SavingsPeriod { .day } }
+extension MotivationKind: LockedChoice { static var lockedPlaceholder: MotivationKind { .person } }
+extension UrgeStrength: LockedChoice { static var lockedPlaceholder: UrgeStrength { .mild } }
+
 // MARK: - Milestones
 
 enum RecoveryMilestones {

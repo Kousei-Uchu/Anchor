@@ -80,6 +80,130 @@ enum FieldLock {
     }
 }
 
+// MARK: - Dates, numbers, marks and choices (Patch 35g1a, D44)
+
+/// A single value that is sealed as a short piece of text: a date, a whole number, a decimal number or a mark.
+/// The text must give back exactly the same value, so a locked date is the same moment when it is opened.
+protocol LockedScalar {
+    /// The value written as text.
+    var lockedText: String { get }
+    /// The value from that text, or nil if the text is not one.
+    static func fromLockedText(_ text: String) -> Self?
+    /// What the plain property holds while the real value is sealed. It is the same for every item, so the stored
+    /// file says nothing about any of them.
+    static var lockedPlaceholder: Self { get }
+}
+
+extension Date: LockedScalar {
+    var lockedText: String { String(timeIntervalSinceReferenceDate) }
+    static func fromLockedText(_ text: String) -> Date? {
+        Double(text).map { Date(timeIntervalSinceReferenceDate: $0) }
+    }
+    static var lockedPlaceholder: Date { Date(timeIntervalSinceReferenceDate: 0) }
+}
+
+extension Int: LockedScalar {
+    var lockedText: String { String(self) }
+    static func fromLockedText(_ text: String) -> Int? { Int(text) }
+    static var lockedPlaceholder: Int { 0 }
+}
+
+extension Double: LockedScalar {
+    var lockedText: String { String(self) }
+    static func fromLockedText(_ text: String) -> Double? { Double(text) }
+    static var lockedPlaceholder: Double { 0 }
+}
+
+extension Bool: LockedScalar {
+    var lockedText: String { self ? "1" : "0" }
+    static func fromLockedText(_ text: String) -> Bool? {
+        switch text {
+        case "1": return true
+        case "0": return false
+        default: return nil
+        }
+    }
+    static var lockedPlaceholder: Bool { false }
+}
+
+/// One choice from a fixed list, such as how strong an urge was, sealed as its raw text. A model that locks one
+/// says which case the plain property holds while the real choice is sealed.
+protocol LockedChoice: RawRepresentable where RawValue == String {
+    static var lockedPlaceholder: Self { get }
+}
+
+extension FieldLock {
+    // MARK: Dates, whole numbers, decimal numbers and marks
+
+    static func readScalar<T: LockedScalar>(plain: T, sealed: String?, context: String) -> T {
+        guard let sealed, !sealed.isEmpty,
+              let opened = opener?(sealed, context),
+              let value = T.fromLockedText(opened) else { return plain }
+        return value
+    }
+
+    /// What to keep for a new value: the value in the plain property, or the placeholder and the sealed text. If
+    /// sealing is wanted but fails, the value stays plain, so a write is never lost.
+    static func storeScalar<T: LockedScalar>(_ value: T, context: String) -> (plain: T, sealed: String?) {
+        if isOn, let sealed = sealer?(value.lockedText, context) { return (T.lockedPlaceholder, sealed) }
+        return (value, nil)
+    }
+
+    // MARK: The same, when there may be no value
+
+    /// A sealed value that is nothing is kept as "-" and one that is something as "=" and its text, so the sealed
+    /// twin is there either way and "nothing" does not look like "not locked yet".
+    static func readOptionalScalar<T: LockedScalar>(plain: T?, sealed: String?, context: String) -> T? {
+        guard let sealed, !sealed.isEmpty, let opened = opener?(sealed, context) else { return plain }
+        if opened == "-" { return nil }
+        guard opened.hasPrefix("="), let value = T.fromLockedText(String(opened.dropFirst())) else { return plain }
+        return value
+    }
+
+    static func storeOptionalScalar<T: LockedScalar>(_ value: T?, context: String) -> (plain: T?, sealed: String?) {
+        let text = value.map { "=" + $0.lockedText } ?? "-"
+        if isOn, let sealed = sealer?(text, context) { return (nil, sealed) }
+        return (value, nil)
+    }
+
+    // MARK: One choice from a fixed list
+
+    static func readChoice<T: LockedChoice>(plain: T, sealed: String?, context: String) -> T {
+        guard let sealed, !sealed.isEmpty,
+              let opened = opener?(sealed, context),
+              let value = T(rawValue: opened) else { return plain }
+        return value
+    }
+
+    static func storeChoice<T: LockedChoice>(_ value: T, context: String) -> (plain: T, sealed: String?) {
+        if isOn, let sealed = sealer?(value.rawValue, context) { return (T.lockedPlaceholder, sealed) }
+        return (value, nil)
+    }
+
+    // MARK: Describing a value for the Lock my data check
+
+    static func describe(_ value: Date) -> String { "t:" + value.lockedText }
+    static func describe(_ value: Date?) -> String { value.map { "t:" + $0.lockedText } ?? "nil" }
+    static func describe(_ value: Int) -> String { "i:" + value.lockedText }
+    static func describe(_ value: Int?) -> String { value.map { "i:" + $0.lockedText } ?? "nil" }
+    static func describe(_ value: Double) -> String { "n:" + value.lockedText }
+    static func describe(_ value: Bool) -> String { "b:" + value.lockedText }
+    static func describe<T: LockedChoice>(_ value: T) -> String { "c:" + value.rawValue }
+}
+
+extension Sequence {
+    /// Sorts by a key that is worked out once for each item, not at every comparison, and keeps items with the same
+    /// key in the order they came. A locked date or number is opened every time it is read, so a screen that sorts
+    /// on one uses this and not a comparison that reads it again and again (Patch 35g1a).
+    func sortedByKey<K: Comparable>(descending: Bool = false, _ key: (Element) -> K) -> [Element] {
+        let keyed = enumerated().map { (index: $0.offset, key: key($0.element), element: $0.element) }
+        return keyed.sorted { a, b in
+            if a.key == b.key { return a.index < b.index }
+            return descending ? a.key > b.key : a.key < b.key
+        }.map { $0.element }
+    }
+}
+
 // MARK: - Locking what is already stored (Patch 35b3)
 
 /// A model with locked fields, as Lock my data sees it (`Support/LockMyData.swift`). The three methods are written

@@ -13,6 +13,7 @@ struct LockMyDataView: View {
     @State private var backupKept = false
     @State private var showCheck = false
     @State private var confirmLock = false
+    @State private var confirmLockMore = false
 
     private var keyReady: Bool { keys.status == .ready && keys.hasRecoveryFile }
     private var canLock: Bool {
@@ -22,15 +23,19 @@ struct LockMyDataView: View {
     private var canLockFiles: Bool {
         keyReady && !DemoMode.isOn && AnchorSchema.openedPersistentStore
     }
+    /// The same goes for locking the rest of what Anchor keeps (Patch 35g1a).
+    private var canLockMore: Bool { canLockFiles }
 
     var body: some View {
         Form {
             if status.waiting {
                 Anchor.SettingsSection(
                     title: "Waiting",
-                    footer: "Close Anchor from the app switcher and open it again. The safety copy is made first, then your text is locked, before any screen opens."
+                    footer: status.isOn
+                        ? "Close Anchor from the app switcher and open it again. A new safety copy is made first, then the rest is locked, before any screen opens."
+                        : "Close Anchor from the app switcher and open it again. The safety copy is made first, then your text is locked, before any screen opens."
                 ) {
-                    Text("Your text will be locked on the next start.")
+                    Text(status.isOn ? "The rest of your data will be locked on the next start." : "Your text will be locked on the next start.")
                         .font(.system(.subheadline, design: .rounded))
                     Button {
                         LockMyData.cancelRequest()
@@ -106,6 +111,15 @@ struct LockMyDataView: View {
         } message: {
             Text("A safety copy is made first. If anything does not check out afterwards, Anchor goes back to it.")
         }
+        .confirmationDialog("Lock the rest of your data on the next start?", isPresented: $confirmLockMore, titleVisibility: .visible) {
+            Button("Lock on the next start") {
+                LockMyData.request()
+                refresh()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("A new safety copy is made first. If anything does not check out afterwards, Anchor goes back to it, and your text stays locked.")
+        }
         .confirmationDialog("Lock your voice notes and photos on the next start?", isPresented: $confirmLockFiles, titleVisibility: .visible) {
             Button("Lock on the next start") {
                 LockMyFiles.request()
@@ -167,6 +181,24 @@ struct LockMyDataView: View {
 
     @ViewBuilder
     private var lockedSection: some View {
+        if status.needsMore && !status.waiting {
+            Anchor.SettingsSection(
+                title: "More to lock",
+                footer: DemoMode.isOn
+                    ? "Off while showcase mode is on."
+                    : "A new safety copy is made first, and Anchor goes back to it if anything does not check out. The safety copy holds these unlocked until you delete it."
+            ) {
+                Text(LockMyData.moreToLock)
+                    .font(.system(.subheadline, design: .rounded))
+                Button {
+                    confirmLockMore = true
+                } label: {
+                    Text("Lock the rest").font(.system(.subheadline, design: .rounded).weight(.semibold))
+                }
+                .disabled(!canLockMore)
+            }
+        }
+
         Anchor.SettingsSection(
             title: "Locked",
             footer: status.scrubWaiting

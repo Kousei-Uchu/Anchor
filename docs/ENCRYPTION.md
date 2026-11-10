@@ -93,6 +93,22 @@ One flow that locks every field in the list above on every model, after the way 
 - **Turning it off.** There is no switch that unlocks in place. The way back is the safety copy (Go back), or an encrypted backup. If you would like an in-place unlock, say so.
 - **The tidy-up of the file** relies on SQLite's VACUUM on the store file before the app opens it. It has not been run on a real store.
 
+## Locking more than the words (Patch 35g1a, D44)
+
+Your answer to D44 on 10 Nov 2026 was to lock dates, numbers and marks too. `docs/FIELD_INVENTORY.md` lists every field and what is done to it. Patch 35g1a is the groundwork and changes no stored field; the fields themselves are locked in 35g1b to 35g4.
+
+**Sealing a date, a number, a mark or a choice.** A locked field of these kinds is the same two stored properties as a locked word: the plain one, which keeps the old name as its `originalName`, and a sealed twin that is a string. The old name is a computed property that goes through `FieldLock`. The value is written as a short piece of text, sealed with the data key in the same format as sealed text (context `Model.field`), and the plain property is set to one fixed value, the same for every item, so the stored file tells nothing. A date is its seconds since the reference date, a decimal number is written so it reads back exactly, a mark is `1` or `0`, and a choice from a fixed list is its raw text. A value that may be missing is sealed as `-` for nothing or `=` and the value, so a sealed twin is there either way.
+
+**The same rules as for words.** While locking is off the value stays plain and the twin is empty. If sealing is wanted and fails, the value stays plain, so a write is never lost. A sealed value that will not open reads as the plain property holds it and is never written back. A value cannot move to another field, because the field's name is part of what is sealed.
+
+**Sorting.** The database cannot sort or filter on a sealed value. A screen that sorted on a date will fetch the items and sort them after they are opened, with `sortedByKey`, which opens each value once. `scripts/check-locked-fields.mjs` fails on any sort or filter on a locked field, and since 35g1a it reads the model a line names, so a field with the same name on another model is not flagged by mistake.
+
+**Levels.** A finished run records the level it locked (`lockMyData.level`). Level 1 is the words (Patch 35b). 35g1b raises it to 2, and each later part raises it again. A store locked at an earlier level is still locked, and Lock my data shows More to lock, with Lock the rest. It is the same flow as the first run: safety copy first, the lock on the next start before any screen opens, every item read again and compared in a fresh context, every locked field held sealed. Locking an item seals only what is still plain.
+
+**If the second run fails or is stopped.** The words stay locked all the while: the state and `FieldLock.isOn` stay on. A failed run asks for the safety copy made just before it to be put back on the next start. A run the app was closed in the middle of is noticed on the next start (`lockMyData.upgradeRunning`) and does the same, before the database is opened. At the end of a good run the run is marked over, then the level is kept, then the state, so if the app stops between them the data is locked all the way and the level is still the old one, and asking again just does it again.
+
+**What the safety copy holds.** The copy for a second run holds the newer fields unlocked until it is deleted, as the first copy held the words.
+
 ## Lock my files (Patch 35d)
 
 The second step of locking: the voice notes and Journal photos, which are files and not stored text (D31). It is on the Lock my data screen, offered once the text is locked. The code is `LockMyFiles`, `StoredFiles` and `FileLock` in `Support/LockMyData.swift`, and `FileCipher` in `Support/AppLock.swift`.

@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 35g1a: groundwork for locking dates, numbers and marks. Lock my data can now be run a second time on a store whose text is already locked, with a new safety copy first and the way back if it fails, and the text stays locked throughout. Nothing new is locked yet.
 - Patch 35f: a list of every field and setting the app keeps, locked or plain with the reason (docs/FIELD_INVENTORY.md), and a check that fails when the list and the code drift apart.
 - Patch AI6: Settings, AI tools has a third place, Other, for a service you choose yourself: an https address, a key kept in this phone's Keychain and a model name, empty to begin with, never suggested or named, always asking before it sends, with no Don't ask again.
 - Patch AI9: when you tick in AI Optimised versions for an export, the shorter version and the words it was made from come as two entries, each labelled, and nothing is printed twice.

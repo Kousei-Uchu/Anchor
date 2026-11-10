@@ -1,6 +1,6 @@
 # Anchor: what is left
 
-*Only what is still to do. When something is finished, confirmed or answered, it is deleted from this file in the same patch, never moved to a done list. Finished work is in the Progress table of `ANCHOR_PATCH_PLAN.md` and in `docs/PLAN_CHANGELOG.md`. Last updated: 10 Nov 2026, after 35f.*
+*Only what is still to do. When something is finished, confirmed or answered, it is deleted from this file in the same patch, never moved to a done list. Finished work is in the Progress table of `ANCHOR_PATCH_PLAN.md` and in `docs/PLAN_CHANGELOG.md`. Last updated: 10 Nov 2026, after 35g1a.*
 
 ## 1. Waiting on you
 
@@ -40,14 +40,15 @@ Quickest way to check many at once: `scripts/review-on-device.sh` (the numbered 
 - AI6: Settings, AI tools, Where it runs, Other (a third choice, empty to begin with). Type an address starting with https://, a key and a model name for a service you already use; a plain http address, a name with no dot and an address with a ? in it should each be refused with a line. The key shows as dots and Remove key clears it. Use a tool with Other chosen: the sheet should show the address and model, say Anchor cannot see how it keeps the text, and have no Don't ask again. A wrong key should say the provider did not accept it. Also say how the store should read the privacy answers for it (D68).
 - 47: the website's Features and Philosophy pages.
 - 48: the website's About page, the Support answers and the Privacy page.
+- 35g1a: nothing to look at yet. It is groundwork for locking dates and numbers, and the new More to lock part of Settings, Lock my data shows only once 35g1b gives it something to lock. It needs a build to be sure it compiles.
 - 51: the website's `/beta` page. Sign-ups stay closed until you change the flag in `website/src/content/beta.ts`, and the TestFlight link there is empty.
 
 The website patches (47, 48, 51) were typechecked and built in a scratch copy only; no Swift changed in them.
 
 ## 3. Not started, in order
 
-1. **35g1**: lock the dates, numbers and marks in check-ins, sleep and Recovery (28 fields in CheckIn, SleepEntry, RecoveryCounter, RecoveryMotivation, RecoveryDayEntry, RecoveryUrge), with a safety copy and the way back first (D44). Size M.
-2. **35g2**: the same for Journal, messages and people (25 fields). Size M. After 35g1 is checked on your phone.
+1. **35g1b**: lock the dates, numbers and marks in check-ins, sleep and Recovery (28 fields in CheckIn, SleepEntry, RecoveryCounter, RecoveryMotivation, RecoveryDayEntry, RecoveryUrge), move the 8 places that sort or filter on them in the database to a sort after opening, and raise the Lock my data level to 2, so a store that is already locked is offered Lock the rest (D44). Size M.
+2. **35g2**: the same for Journal, messages and people (25 fields). Size M. After 35g1b is checked on your phone.
 3. **35g3**: the same for plans, tasks, lists and sessions (32 fields), and the 37 places where the database sorts on a locked date are sorted after opening instead. Size M+, may be split. After 35g2.
 4. **35g4**: the nine typed settings, each checked for whatever reads it while the phone is locked. Size S. After 35g3.
 5. **SY0**: sync groundwork. Drop the unique constraint from all 34 models, keep ids from doubling up, safety copy first. Size M+.

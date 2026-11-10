@@ -20,6 +20,12 @@ import SwiftData
 ///    text can stay in unused space in the file until it is rebuilt.
 ///
 /// Nothing here runs while the app is in use except step 4, which runs once at the start, before any screen.
+///
+/// Levels (Patch 35g1a, D44): what there is to lock grows in steps. A run records the level it locked (`currentLevel`).
+/// When the words are locked at an earlier level, `needsMore` is true and the same flow can be run again to lock the
+/// rest, with a new safety copy first. Locking an item seals only what is still plain, so running it again changes
+/// nothing that is sealed already. If that second run fails, the safety copy is put back on the next start, and the
+/// words stay locked all the while.
 enum LockMyData {
     // MARK: State
 
@@ -33,6 +39,8 @@ enum LockMyData {
     private static let resultKey = "lockMyData.lastResult"
     private static let lockedAtKey = "lockMyData.lockedAt"
     private static let itemsKey = "lockMyData.items"
+    private static let levelKey = "lockMyData.level"
+    private static let upgradeRunningKey = "lockMyData.upgradeRunning"
     private static let defaults = UserDefaults.standard
 
     private static var stored: Stored {
@@ -42,8 +50,40 @@ enum LockMyData {
     /// True once a run has finished and every item has checked out. This is what turns `FieldLock.isOn` on at launch.
     static var isOn: Bool { stored == .on }
 
+    // MARK: Levels (Patch 35g1a, D44)
+
+    /// How much there is to lock. Level 1 is the words, which Patch 35b locks. Each part of 35g adds fields and raises
+    /// this by one: 35g1b makes it 2 (check-ins, sleep and Recovery). A store that was locked at an earlier level is
+    /// still locked, and Lock my data offers to lock the rest, with a new safety copy first.
+    static let currentLevel = 1
+
+    /// What the last finished run locked. 0 when nothing is locked. A store locked before levels existed has no
+    /// saved number and counts as level 1.
+    static var level: Int {
+        guard stored == .on else { return 0 }
+        let saved = defaults.integer(forKey: levelKey)
+        return saved > 0 ? saved : 1
+    }
+
+    /// True when the words are locked but newer fields are not yet.
+    static var needsMore: Bool { levelNeedsMore(isOn: isOn, savedLevel: level, current: currentLevel) }
+
+    /// The rule behind `needsMore`, apart from what is saved, so it can be checked on its own.
+    static func levelNeedsMore(isOn: Bool, savedLevel: Int, current: Int) -> Bool {
+        isOn && savedLevel < current
+    }
+
+    /// What a new run would lock beyond what is locked now, in plain words for the Lock my data screen.
+    static var moreToLock: String {
+        switch currentLevel {
+        case 2: return "Dates, numbers and marks in check-ins, sleep and Recovery can be locked now."
+        default: return "More of what Anchor keeps can be locked now."
+        }
+    }
+
     struct Status {
         var isOn = false
+        var needsMore = false
         var lockedAt: Date?
         var items = 0
         var waiting = false
@@ -54,6 +94,7 @@ enum LockMyData {
     static func status() -> Status {
         var status = Status()
         status.isOn = isOn
+        status.needsMore = needsMore
         status.lockedAt = (defaults.object(forKey: lockedAtKey) as? Double).map(Date.init(timeIntervalSince1970:))
         status.items = defaults.integer(forKey: itemsKey)
         status.waiting = defaults.object(forKey: requestedKey) != nil
@@ -74,7 +115,7 @@ enum LockMyData {
 
     /// Records the job and asks for a safety copy. The lock itself waits for the next start.
     static func request() {
-        guard !isOn else { return }
+        guard !isOn || needsMore else { return }
         defaults.set(Date().timeIntervalSince1970, forKey: requestedKey)
         SafetyCopy.request(.make)
     }
@@ -90,6 +131,16 @@ enum LockMyData {
     /// safety copy that was made just before it began. Nothing was written in between, so going back loses nothing.
     /// Must run before `SafetyCopy.runAtLaunch`, which does the going back.
     static func recoverInterruptedRun() {
+        // A run that locks the rest of a store that is already locked: the words stay locked, so the state stays on,
+        // and only the safety copy made just before the run is put back.
+        if defaults.bool(forKey: upgradeRunningKey) {
+            defaults.removeObject(forKey: upgradeRunningKey)
+            defaults.removeObject(forKey: requestedKey)
+            defaults.removeObject(forKey: scrubKey)
+            SafetyCopy.request(.goBack)
+            setResult("Locking the rest was stopped before it was checked, so Anchor went back to the safety copy made just before it began. Your text stays locked. Safety copy says how that went.")
+            return
+        }
         guard stored == .running else { return }
         defaults.set(Stored.off.rawValue, forKey: stateKey)
         defaults.removeObject(forKey: requestedKey)
@@ -106,7 +157,7 @@ enum LockMyData {
         var db: OpaquePointer?
         guard sqlite3_open_v2(SafetyCopy.liveStoreURL.path, &db, SQLITE_OPEN_READWRITE, nil) == SQLITE_OK else {
             sqlite3_close(db)
-            setResult("Your text is locked. Clearing the old plain copies out of the database file did not run, because the file could not be opened for it.")
+            setResult("Your data is locked. Clearing the old plain copies out of the database file did not run, because the file could not be opened for it.")
             return
         }
         defer { sqlite3_close(db) }
@@ -119,11 +170,11 @@ enum LockMyData {
         ]
         for sql in steps {
             if sqlite3_exec(db, sql, nil, nil, nil) != SQLITE_OK {
-                setResult("Your text is locked. Clearing the old plain copies out of the database file did not finish, so some may still be in it. Nothing was lost.")
+                setResult("Your data is locked. Clearing the old plain copies out of the database file did not finish, so some may still be in it. Nothing was lost.")
                 return
             }
         }
-        setResult("Your text is locked, and the database file was rebuilt so the old plain copies are gone from it. The safety copy still holds your text unlocked, so delete it when you are happy.")
+        setResult("Your data is locked, and the database file was rebuilt so the old plain copies are gone from it. The safety copy still holds what it held before the run, unlocked, so delete it when you are happy.")
     }
 
     // MARK: The run, once the database is open
@@ -176,10 +227,13 @@ enum LockMyData {
             setResult("Nothing was locked, because Anchor could not open your saved data this time.")
             return
         }
-        guard !isOn else {
+        guard !isOn || needsMore else {
             setResult("Your text was already locked, so nothing was done.")
             return
         }
+        // Locking the rest of a store whose text is already locked (Patch 35g1a) is the same run, with one difference
+        // that matters: if it fails, the text is still locked, so the lock stays on and the state stays on.
+        let upgrading = isOn
         // The way back has to exist, and be the one made for this run.
         let copy = SafetyCopy.status()
         guard copy.exists, let made = copy.createdAt, made.addingTimeInterval(2) >= requested else {
@@ -198,22 +252,35 @@ enum LockMyData {
             return
         }
 
-        defaults.set(Stored.running.rawValue, forKey: stateKey)
+        if upgrading {
+            defaults.set(true, forKey: upgradeRunningKey)
+        } else {
+            defaults.set(Stored.running.rawValue, forKey: stateKey)
+        }
         FieldLock.isOn = true
         do {
             let report = try lockAll(in: container)
-            // One write turns it on, and the same write ends the run.
+            // The run is over first, then the level is kept, then the state. If the app stops between these, the
+            // data is locked all the way and the level is still the old one, so asking again just does it again.
+            defaults.removeObject(forKey: upgradeRunningKey)
             defaults.set(Date().timeIntervalSince1970, forKey: lockedAtKey)
             defaults.set(report.items, forKey: itemsKey)
             defaults.set(true, forKey: scrubKey)
+            defaults.set(currentLevel, forKey: levelKey)
             defaults.set(Stored.on.rawValue, forKey: stateKey)
             setResult("Locked \(report.items) \(report.items == 1 ? "item" : "items") and checked every one. Close Anchor and open it again to finish: the old plain copies are cleared out of the database file on that start.")
         } catch {
-            FieldLock.isOn = false
-            defaults.set(Stored.off.rawValue, forKey: stateKey)
-            SafetyCopy.request(.goBack)
             let reason = (error as? Failure)?.message ?? "Something did not work."
-            setResult("\(reason) Nothing is kept: Anchor will go back to the safety copy the next time it starts. Close it from the app switcher and open it again, and do not add anything before that.")
+            if upgrading {
+                defaults.removeObject(forKey: upgradeRunningKey)
+                SafetyCopy.request(.goBack)
+                setResult("\(reason) Nothing new is kept: Anchor will go back to the safety copy the next time it starts, and your text stays locked. Close it from the app switcher and open it again, and do not add anything before that.")
+            } else {
+                FieldLock.isOn = false
+                defaults.set(Stored.off.rawValue, forKey: stateKey)
+                SafetyCopy.request(.goBack)
+                setResult("\(reason) Nothing is kept: Anchor will go back to the safety copy the next time it starts. Close it from the app switcher and open it again, and do not add anything before that.")
+            }
         }
     }
 
@@ -730,6 +797,45 @@ enum LockMyDataSelfTest {
         let stored = entry.textSealed
         guard (try? LockMyData.lockAll(in: container)) != nil else { fatalError("Lock my data self-test: a second run threw.") }
         check(entry.textSealed == stored, "a second run changed a sealed value.")
+
+        // Levels (Patch 35g1a): more is offered only when the text is locked and the saved level is lower.
+        check(!LockMyData.levelNeedsMore(isOn: false, savedLevel: 0, current: 2), "more was offered while nothing was locked.")
+        check(LockMyData.levelNeedsMore(isOn: true, savedLevel: 1, current: 2), "more was not offered at an earlier level.")
+        check(!LockMyData.levelNeedsMore(isOn: true, savedLevel: 2, current: 2), "more was offered at the current level.")
+        check(!LockMyData.levelNeedsMore(isOn: true, savedLevel: 3, current: 2), "more was offered at a higher level.")
+
+        // Dates, numbers, marks and choices (Patch 35g1a): sealed as text, read back exactly, nothing readable left in
+        // the plain property, and a value that cannot be sealed or opened is never made up.
+        let moment = Date(timeIntervalSinceReferenceDate: 784_111_777.123_456)
+        let sealedMoment = FieldLock.storeScalar(moment, context: "Test.date")
+        check(sealedMoment.plain == Date.lockedPlaceholder && sealedMoment.sealed != nil, "a date was not sealed.")
+        check(FieldLock.readScalar(plain: sealedMoment.plain, sealed: sealedMoment.sealed, context: "Test.date") == moment, "a date did not read back exactly.")
+        check(FieldLock.readScalar(plain: sealedMoment.plain, sealed: sealedMoment.sealed, context: "Test.other") == Date.lockedPlaceholder, "a date opened in another field.")
+        let sum = 0.1 + 0.2
+        let sealedNumber = FieldLock.storeScalar(sum, context: "Test.number")
+        check(FieldLock.readScalar(plain: sealedNumber.plain, sealed: sealedNumber.sealed, context: "Test.number") == sum, "a decimal number did not read back exactly.")
+        let sealedWhole = FieldLock.storeScalar(-42, context: "Test.whole")
+        check(sealedWhole.plain == 0 && FieldLock.readScalar(plain: sealedWhole.plain, sealed: sealedWhole.sealed, context: "Test.whole") == -42, "a whole number did not read back.")
+        let sealedMark = FieldLock.storeScalar(true, context: "Test.mark")
+        check(sealedMark.plain == false && FieldLock.readScalar(plain: sealedMark.plain, sealed: sealedMark.sealed, context: "Test.mark") == true, "a mark did not read back.")
+        let someDate = FieldLock.storeOptionalScalar(Date?.some(moment), context: "Test.maybe")
+        let noDate = FieldLock.storeOptionalScalar(Date?.none, context: "Test.maybe")
+        check(someDate.plain == nil && someDate.sealed != nil && noDate.plain == nil && noDate.sealed != nil, "an optional date was not sealed, or something was left plain.")
+        check(FieldLock.readOptionalScalar(plain: someDate.plain, sealed: someDate.sealed, context: "Test.maybe") == moment, "an optional date did not read back.")
+        check(FieldLock.readOptionalScalar(plain: noDate.plain, sealed: noDate.sealed, context: "Test.maybe") == nil, "no date did not read back as no date.")
+        let sealedChoice = FieldLock.storeChoice(DayCountMode.classicStreak, context: "Test.choice")
+        check(sealedChoice.plain == .runAndTotal && FieldLock.readChoice(plain: sealedChoice.plain, sealed: sealedChoice.sealed, context: "Test.choice") == .classicStreak, "a choice did not read back.")
+        let workingSealer = FieldLock.sealer
+        FieldLock.sealer = { _, _ in nil }
+        let unsealed = FieldLock.storeScalar(moment, context: "Test.date")
+        check(unsealed.plain == moment && unsealed.sealed == nil, "a date was lost when it could not be sealed.")
+        FieldLock.sealer = workingSealer
+        let ascending = [3, 1, 2, 1].sortedByKey { $0 }
+        let descending = [3, 1, 2].sortedByKey(descending: true) { $0 }
+        check(ascending == [1, 1, 2, 3] && descending == [3, 2, 1], "sortedByKey did not sort.")
+        let tied = [(1, "a"), (0, "b"), (1, "c")].sortedByKey { $0.0 }
+        let tiedNames = tied.map { $0.1 }
+        check(tiedNames == ["b", "a", "c"], "sortedByKey changed the order of items with the same key.")
 
         // When sealing is not possible, it says so instead of leaving things half done and calling it good.
         let other = JournalEntry(text: "made while the key worked")

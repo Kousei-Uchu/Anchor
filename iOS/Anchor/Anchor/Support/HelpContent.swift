@@ -791,6 +791,7 @@ enum LockMyDataHelp {
         "Before it starts you check your recovery key and say you have kept an encrypted backup somewhere other than this phone. Then Anchor makes a safety copy first, and locks on the next start, before any screen opens.",
         "After locking, Anchor reads everything again and checks that every item is still there and reads exactly as it did. If anything is off, nothing is kept: the next start goes back to the safety copy by itself.",
         "The safety copy still holds your text unlocked, so delete it when you are happy. If this phone is lost, the key goes with it, and your recovery key and an encrypted backup are the only way back.",
+        "When a newer version of Anchor can lock more than the one before, this screen offers Lock the rest. It works the same way: a new safety copy first, the lock on the next start, every item checked, and the safety copy put back by itself if anything is off. Your text stays locked the whole time.",
         "Voice notes and Journal photos are files, not text, so they have a second step. Once your text is locked, Lock voice notes and photos makes a new safety copy and then locks each file on its own, checking it before it replaces the original. If it stops partway, nothing is lost and every file still opens.",
         "A backup made in Your data holds your voice notes and photos unlocked, so it can be opened on any phone. Its password is what protects it. A voice note you share or send through Messages goes as a plain file, made only for that moment and removed afterwards."
     ]

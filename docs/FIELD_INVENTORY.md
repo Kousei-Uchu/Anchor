@@ -602,6 +602,8 @@ Every key the app keeps in the phone's settings (UserDefaults and `@AppStorage`)
 | safetyCopy.pending | a job waiting for the next start | plain | plain | an on or off style flag for a job |
 | lockMyData.lockedAt | when the lock run finished | plain | plain | a time the app did something, not something you entered |
 | lockMyFiles.lockedAt | when the lock run finished | plain | plain | a time the app did something, not something you entered |
+| lockMyData.level | how much the last finished lock run locked, as a number | plain | plain | a number the app keeps about its own work, with nothing of yours in it |
+| lockMyData.upgradeRunning | a run that locks the rest of an already locked store is in progress | plain | plain | an on or off style flag for a job |
 | lockMyData.items | how many items the last lock run checked | plain | plain | a count the app made of its own work |
 | lockMyFiles.items | how many items the last lock run checked | plain | plain | a count the app made of its own work |
 | lockMyData.lastResult | a plain line saying how the last run went | plain | plain | the app's own message, with no content of yours in it |

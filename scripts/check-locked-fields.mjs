@@ -72,7 +72,6 @@ for (const file of modelFiles) {
 }
 
 const twins = new Set(locked.flatMap((f) => [`${f.name}Plain`, `${f.name}Sealed`]));
-const names = new Set(locked.map((f) => f.name));
 for (const file of swiftFiles(swiftRoot)) {
   const rel = relative(root, file);
   const text = readFileSync(file, "utf8");
@@ -82,17 +81,24 @@ for (const file of swiftFiles(swiftRoot)) {
     }
   }
   // 4. Sorting or filtering on a locked field: a key path such as \\Class.field, an unqualified \\.field in a
-  // sort, or $0.field inside a predicate.
+  // sort, or $0.field inside a predicate. An unqualified key path or $0 is about the model the line names, in
+  // FetchDescriptor<Model> or in the type of the property (: [Model]); when the line names none, it counts against
+  // every model, as it always did (Patch 35g1a).
+  const modelOfLine = (line) => (line.match(/(?:FetchDescriptor|#Predicate)<(\w+)>/) || line.match(/:\s*\[(\w+)\]/) || [])[1] || null;
   for (const line of text.split("\n")) {
+    const lineModel = modelOfLine(line);
     if (/SortDescriptor|@Query\(|sortBy/.test(line)) {
       for (const m of line.matchAll(/\\(\w*)\.(\w+)/g)) {
-        const hit = locked.some((f) => f.name === m[2] && (m[1] === "" || m[1] === f.cls));
-        if (hit) problems.push(`${rel}: sorts on the locked field ${m[1] ? m[1] + "." : ""}${m[2]}.`);
+        const owner = m[1] || lineModel;
+        const hit = locked.some((f) => f.name === m[2] && (owner === null || owner === f.cls));
+        if (hit) problems.push(`${rel}: sorts on the locked field ${owner ? owner + "." : ""}${m[2]}.`);
       }
     }
     if (/#Predicate/.test(line)) {
       for (const m of line.matchAll(/\$0\.(\w+)/g)) {
-        if (names.has(m[1])) problems.push(`${rel}: a predicate reads ${m[1]}, which is a locked field.`);
+        if (locked.some((f) => f.name === m[1] && (lineModel === null || lineModel === f.cls))) {
+          problems.push(`${rel}: a predicate reads ${m[1]}, which is a locked field${lineModel ? " of " + lineModel : ""}.`);
+        }
       }
     }
   }
