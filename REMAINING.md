@@ -1,6 +1,6 @@
 # Anchor: what is left
 
-*Only what is still to do. When something is finished, confirmed or answered, it is deleted from this file in the same patch, never moved to a done list. Finished work is in the Progress table of `ANCHOR_PATCH_PLAN.md` and in `docs/PLAN_CHANGELOG.md`. Last updated: 10 Nov 2026, after 35g1a.*
+*Only what is still to do. When something is finished, confirmed or answered, it is deleted from this file in the same patch, never moved to a done list. Finished work is in the Progress table of `ANCHOR_PATCH_PLAN.md` and in `docs/PLAN_CHANGELOG.md`. Last updated: 10 Nov 2026, after 35g1b.*
 
 ## 1. Waiting on you
 
@@ -40,28 +40,27 @@ Quickest way to check many at once: `scripts/review-on-device.sh` (the numbered 
 - AI6: Settings, AI tools, Where it runs, Other (a third choice, empty to begin with). Type an address starting with https://, a key and a model name for a service you already use; a plain http address, a name with no dot and an address with a ? in it should each be refused with a line. The key shows as dots and Remove key clears it. Use a tool with Other chosen: the sheet should show the address and model, say Anchor cannot see how it keeps the text, and have no Don't ask again. A wrong key should say the provider did not accept it. Also say how the store should read the privacy answers for it (D68).
 - 47: the website's Features and Philosophy pages.
 - 48: the website's About page, the Support answers and the Privacy page.
-- 35g1a: nothing to look at yet. It is groundwork for locking dates and numbers, and the new More to lock part of Settings, Lock my data shows only once 35g1b gives it something to lock. It needs a build to be sure it compiles.
+- 35g1a and 35g1b: Settings, Lock my data. If your text is already locked it should show More to lock with Lock the rest; take the safety copy first, close and open the app, and read the result under Last time. Then open check-ins in the Journal, Sleep in Plan and Bridge, a Recovery counter with its savings, milestones, urges and the day review: everything should look as it did. Record a slip and check Times still adds up. Make a new check-in, night and urge and check they show. Use Go back in Safety copy once to check the way back. They need a build first: the generated accessors have never been compiled.
 - 51: the website's `/beta` page. Sign-ups stay closed until you change the flag in `website/src/content/beta.ts`, and the TestFlight link there is empty.
 
 The website patches (47, 48, 51) were typechecked and built in a scratch copy only; no Swift changed in them.
 
 ## 3. Not started, in order
 
-1. **35g1b**: lock the dates, numbers and marks in check-ins, sleep and Recovery (28 fields in CheckIn, SleepEntry, RecoveryCounter, RecoveryMotivation, RecoveryDayEntry, RecoveryUrge), move the 8 places that sort or filter on them in the database to a sort after opening, and raise the Lock my data level to 2, so a store that is already locked is offered Lock the rest (D44). Size M.
-2. **35g2**: the same for Journal, messages and people (25 fields). Size M. After 35g1b is checked on your phone.
-3. **35g3**: the same for plans, tasks, lists and sessions (32 fields), and the 37 places where the database sorts on a locked date are sorted after opening instead. Size M+, may be split. After 35g2.
-4. **35g4**: the nine typed settings, each checked for whatever reads it while the phone is locked. Size S. After 35g3.
-5. **SY0**: sync groundwork. Drop the unique constraint from all 34 models, keep ids from doubling up, safety copy first. Size M+.
-6. **SY1**: the iCloud sync switch. Off by default, the private database, per-device things stay per-device, sleep nights synced except any Apple Health already holds (D39), Clear everything says it clears every device. After SY0.
-7. **SY2**: voice notes and Journal photos in sync. After SY1.
-8. **SY3**: the recovery key shown as a QR code and scanned on the new device, with the typed key still the default (D40). With SY1.
-9. **VN4a**: find who is speaking with a speaker-separation model on the recording, used in memory against the other voices in that one recording only, labelling Person 1, Person 2 and so on, then a people screen (how many were heard, a name for each beside a transcript preview, openable again later). The model ships inside the app; its size is measured first. Nothing is stored. Size L, to be split.
-10. **VN4b**: replay and tap, for the more privacy-minded: play the recording back and tap where each new person starts, with no model. After VN4a.
-11. **VN4c**: the words as a backup or beside the model: a language model reads only the transcript and suggests where the speaker changes, on the phone and through Ollama on your own computer, behind the AI switch. After VN4a.
-12. **VN5**: speaker tags in exports, per entry and per person: include the name, hide it, or leave that person's words out. After VN4a.
-13. **52**: refresh the Remotion promo with new screenshots and captions. The single source is already true (`remotion-project/src/Promo.tsx`, `npm run sync:promo`); what is left needs the app run on a simulator.
-14. **53**: the long full-tour video, split into per-tab scenes, scripted from `website/src/content/guide.generated.json`. Waits on 52. Size L, to be split.
-15. **54**: Android decision write-up, optional prototype spike. Android itself is far future (D4).
+1. **35g2**: the same for Journal, messages and people (25 fields). Size M. After 35g1b is checked on your phone.
+2. **35g3**: the same for plans, tasks, lists and sessions (32 fields), and the 27 places that are left where the database sorts on a locked date are sorted after opening instead. Size M+, may be split. After 35g2.
+3. **35g4**: the nine typed settings, each checked for whatever reads it while the phone is locked. Size S. After 35g3.
+4. **SY0**: sync groundwork. Drop the unique constraint from all 34 models, keep ids from doubling up, safety copy first. Size M+.
+5. **SY1**: the iCloud sync switch. Off by default, the private database, per-device things stay per-device, sleep nights synced except any Apple Health already holds (D39), Clear everything says it clears every device. After SY0.
+6. **SY2**: voice notes and Journal photos in sync. After SY1.
+7. **SY3**: the recovery key shown as a QR code and scanned on the new device, with the typed key still the default (D40). With SY1.
+8. **VN4a**: find who is speaking with a speaker-separation model on the recording, used in memory against the other voices in that one recording only, labelling Person 1, Person 2 and so on, then a people screen (how many were heard, a name for each beside a transcript preview, openable again later). The model ships inside the app; its size is measured first. Nothing is stored. Size L, to be split.
+9. **VN4b**: replay and tap, for the more privacy-minded: play the recording back and tap where each new person starts, with no model. After VN4a.
+10. **VN4c**: the words as a backup or beside the model: a language model reads only the transcript and suggests where the speaker changes, on the phone and through Ollama on your own computer, behind the AI switch. After VN4a.
+11. **VN5**: speaker tags in exports, per entry and per person: include the name, hide it, or leave that person's words out. After VN4a.
+12. **52**: refresh the Remotion promo with new screenshots and captions. The single source is already true (`remotion-project/src/Promo.tsx`, `npm run sync:promo`); what is left needs the app run on a simulator.
+13. **53**: the long full-tour video, split into per-tab scenes, scripted from `website/src/content/guide.generated.json`. Waits on 52. Size L, to be split.
+14. **54**: Android decision write-up, optional prototype spike. Android itself is far future (D4).
 
 **Parked on purpose**
 

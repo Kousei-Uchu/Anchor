@@ -787,7 +787,7 @@ enum SafetyCopyHelp {
 
 enum LockMyDataHelp {
     static let paragraphs: [String] = [
-        "Lock my data locks the words you have written, in every part of Anchor, with the key on this phone. After it, a copy of Anchor's files shows scrambled text instead of your words. You notice nothing as you use the app.",
+        "Lock my data locks the words you have written, in every part of Anchor, with the key on this phone. In check-ins, sleep and Recovery it also locks the dates, times, numbers and choices you gave. After it, a copy of Anchor's files shows scrambled text instead. You notice nothing as you use the app.",
         "Before it starts you check your recovery key and say you have kept an encrypted backup somewhere other than this phone. Then Anchor makes a safety copy first, and locks on the next start, before any screen opens.",
         "After locking, Anchor reads everything again and checks that every item is still there and reads exactly as it did. If anything is off, nothing is kept: the next start goes back to the safety copy by itself.",
         "The safety copy still holds your text unlocked, so delete it when you are happy. If this phone is lost, the key goes with it, and your recovery key and an encrypted backup are the only way back.",

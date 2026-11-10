@@ -237,8 +237,9 @@ private extension Collection where Element == SleepEntry {
 }
 
 struct SleepWidget: View {
-    @Query(sort: \SleepEntry.nightDate, order: .reverse) private var entries: [SleepEntry]
-
+    @Query private var entriesStored: [SleepEntry]
+    /// Sorted after the items are opened, because a locked nightDate cannot be sorted by the database (Patch 35g1b).
+    private var entries: [SleepEntry] { entriesStored.sortedByKey(descending: true) { $0.nightDate } }
     private var caption: String {
         if let latest = entries.first(where: { $0.shownMinutes != nil }), let minutes = latest.shownMinutes {
             return "Last logged: " + SleepEntry.describe(minutes: minutes)
@@ -263,7 +264,9 @@ struct SleepWidget: View {
 /// or to show someone, not something to be graded on.
 struct SleepView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \SleepEntry.nightDate, order: .reverse) private var entries: [SleepEntry]
+    @Query private var entriesStored: [SleepEntry]
+    /// Sorted after the items are opened, because a locked nightDate cannot be sorted by the database (Patch 35g1b).
+    private var entries: [SleepEntry] { entriesStored.sortedByKey(descending: true) { $0.nightDate } }
     @AppStorage(SleepFeelWords.storageKey) private var wordsRaw = ""
 
     @State private var editing: SleepEntry?
@@ -1301,7 +1304,9 @@ enum SleepSettings {
 /// opening it and closing it leaves nothing behind.
 struct SleepLogSheetHost: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \SleepEntry.nightDate, order: .reverse) private var entries: [SleepEntry]
+    @Query private var entriesStored: [SleepEntry]
+    /// Sorted after the items are opened, because a locked nightDate cannot be sorted by the database (Patch 35g1b).
+    private var entries: [SleepEntry] { entriesStored.sortedByKey(descending: true) { $0.nightDate } }
     @AppStorage(SleepFeelWords.storageKey) private var wordsRaw = ""
     @State private var entry: SleepEntry?
     @State private var deleting = false
@@ -1342,7 +1347,9 @@ struct SleepLogSheetHost: View {
 struct SleepMorningCard: View {
     @AppStorage(SleepSettings.nowCardKey) private var enabled = false
     @AppStorage(SleepSettings.nowDismissedKey) private var dismissedDay = ""
-    @Query(sort: \SleepEntry.nightDate, order: .reverse) private var entries: [SleepEntry]
+    @Query private var entriesStored: [SleepEntry]
+    /// Sorted after the items are opened, because a locked nightDate cannot be sorted by the database (Patch 35g1b).
+    private var entries: [SleepEntry] { entriesStored.sortedByKey(descending: true) { $0.nightDate } }
     @State private var logging = false
 
     init() {}

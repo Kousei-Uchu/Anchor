@@ -15,7 +15,9 @@ struct RecoveryUrgesTab: View {
     let onLog: () -> Void
 
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \RecoveryUrge.date, order: .reverse) private var allUrges: [RecoveryUrge]
+    @Query private var allUrgesStored: [RecoveryUrge]
+    /// Sorted after the items are opened, because a locked date cannot be sorted by the database (Patch 35g1b).
+    private var allUrges: [RecoveryUrge] { allUrgesStored.sortedByKey(descending: true) { $0.date } }
     @Query private var triggerWindows: [TriggerWindow]
     @State private var newWindow: TriggerWindow?
     /// "Not now" switches the suggestion off for good. Trigger windows can still be added from Plan.

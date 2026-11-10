@@ -38,17 +38,17 @@ Lock in: 35g2
 
 ## CheckIn
 
-Lock in: 35g1
+Lock in: none
 
 | Field | Type | Verdict | Today | Reason |
 | --- | --- | --- | --- | --- |
 | id | UUID | plain | plain | its own id |
-| timestamp | Date | locked | to lock 35g1 | when it was recorded |
-| physicalExhaustion | Double | locked | to lock 35g1 | how you rated yourself |
-| cognitiveBurnout | Double | locked | to lock 35g1 | how you rated yourself |
-| mentalLoad | Double | locked | to lock 35g1 | how you rated yourself |
-| physicalEnergy | Double | locked | to lock 35g1 | how you rated yourself |
-| socialEnergy | Double | locked | to lock 35g1 | how you rated yourself |
+| timestamp | Date | locked | sealed | when it was recorded |
+| physicalExhaustion | Double | locked | sealed | how you rated yourself |
+| cognitiveBurnout | Double | locked | sealed | how you rated yourself |
+| mentalLoad | Double | locked | sealed | how you rated yourself |
+| physicalEnergy | Double | locked | sealed | how you rated yourself |
+| socialEnergy | Double | locked | sealed | how you rated yourself |
 | expandedEntryID | UUID? | plain | plain | a link to another item by id, with no content |
 
 ## TrustedContact
@@ -143,21 +143,21 @@ Lock in: 35g3
 
 ## SleepEntry
 
-Lock in: 35g1
+Lock in: none
 
 | Field | Type | Verdict | Today | Reason |
 | --- | --- | --- | --- | --- |
 | id | UUID | plain | plain | its own id |
-| nightDate | Date | locked | to lock 35g1 | which night you slept |
-| bedTime | Date? | locked | to lock 35g1 | when you went to bed |
-| wakeTime | Date? | locked | to lock 35g1 | when you woke |
-| minutesAsleep | Int? | locked | to lock 35g1 | how long you slept |
-| feel | Int? | locked | to lock 35g1 | how you said the night felt |
+| nightDate | Date | locked | sealed | which night you slept |
+| bedTime | Date? | locked | sealed | when you went to bed |
+| wakeTime | Date? | locked | sealed | when you woke |
+| minutesAsleep | Int? | locked | sealed | how long you slept |
+| feel | Int? | locked | sealed | how you said the night felt |
 | note | String | locked | sealed | your own words |
 | sourceRaw | String | plain | plain | typed or from Apple Health, which only decides how the night is treated |
 | externalID | String? | plain | plain | an id that Apple Health gave the night, a link and not content |
-| createdAt | Date | locked | to lock 35g1 | when you made it |
-| lastEditedAt | Date | locked | to lock 35g1 | when you last changed it |
+| createdAt | Date | locked | sealed | when you made it |
+| lastEditedAt | Date | locked | sealed | when you last changed it |
 
 ## PersonSection
 
@@ -462,7 +462,7 @@ Lock in: none
 
 ## RecoveryCounter
 
-Lock in: 35g1
+Lock in: none
 
 | Field | Type | Verdict | Today | Reason |
 | --- | --- | --- | --- | --- |
@@ -470,55 +470,55 @@ Lock in: 35g1
 | name | String | locked | sealed | a name you typed |
 | discreetLabel | String | locked | sealed | a label you typed |
 | showNameOutsideApp | Bool | plain | plain | an on or off switch |
-| mode | DayCountMode | locked | to lock 35g1 | what kind of count it is |
+| mode | DayCountMode | locked | sealed | what kind of count it is |
 | runsData | Data | locked | sealed | the start and end dates of the counter, kept as data |
-| savingsAmount | Double | locked | to lock 35g1 | a number you entered |
-| savingsPeriod | SavingsPeriod | locked | to lock 35g1 | goes with the amount you entered |
-| currencyCode | String | locked | to lock 35g1 | goes with the amount you entered |
-| acknowledgedMilestones | [Int] | locked | to lock 35g1 | which milestones you have reached |
+| savingsAmount | Double | locked | sealed | a number you entered |
+| savingsPeriod | SavingsPeriod | locked | sealed | goes with the amount you entered |
+| currencyCode | String | locked | sealed | goes with the amount you entered |
+| acknowledgedMilestones | [Int] | locked | sealed | which milestones you have reached |
 | sortOrder | Int | plain | plain | the order on screen |
-| createdAt | Date | locked | to lock 35g1 | when you made it |
+| createdAt | Date | locked | sealed | when you made it |
 | isArchived | Bool | plain | plain | an on or off switch for showing it |
-| priorTimesPerDay | Int | locked | to lock 35g1 | a number you entered |
+| priorTimesPerDay | Int | locked | sealed | a number you entered |
 
 ## RecoveryMotivation
 
-Lock in: 35g1
+Lock in: none
 
 | Field | Type | Verdict | Today | Reason |
 | --- | --- | --- | --- | --- |
 | id | UUID | plain | plain | its own id |
-| kind | MotivationKind | locked | to lock 35g1 | which kind of reason you wrote |
+| kind | MotivationKind | locked | sealed | which kind of reason you wrote |
 | text | String | locked | sealed | your own words |
 | sortOrder | Int | plain | plain | the order on screen |
-| createdAt | Date | locked | to lock 35g1 | when you made it |
+| createdAt | Date | locked | sealed | when you made it |
 
 ## RecoveryDayEntry
 
-Lock in: 35g1
+Lock in: none
 
 | Field | Type | Verdict | Today | Reason |
 | --- | --- | --- | --- | --- |
 | id | UUID | plain | plain | its own id |
 | counterID | UUID | plain | plain | a link to another item by id, with no content |
-| day | Date | locked | to lock 35g1 | the day it is about |
-| pledgedAt | Date? | locked | to lock 35g1 | when you made the pledge |
-| reviewedAt | Date? | locked | to lock 35g1 | when you did the review |
+| day | Date | locked | sealed | the day it is about |
+| pledgedAt | Date? | locked | sealed | when you made the pledge |
+| reviewedAt | Date? | locked | sealed | when you did the review |
 | helped | String | locked | sealed | your own words |
 | hard | String | locked | sealed | your own words |
 | tomorrow | String | locked | sealed | your own words |
-| slipTimes | Int | locked | to lock 35g1 | a number you entered |
+| slipTimes | Int | locked | sealed | a number you entered |
 
 ## RecoveryUrge
 
-Lock in: 35g1
+Lock in: none
 
 | Field | Type | Verdict | Today | Reason |
 | --- | --- | --- | --- | --- |
 | id | UUID | plain | plain | its own id |
 | counterID | UUID | plain | plain | a link to another item by id, with no content |
-| date | Date | locked | to lock 35g1 | the day it is about |
-| strength | UrgeStrength | locked | to lock 35g1 | how strong you said an urge was |
+| date | Date | locked | sealed | the day it is about |
+| strength | UrgeStrength | locked | sealed | how strong you said an urge was |
 | note | String | locked | sealed | your own words |
 
 ## Settings and other stored values

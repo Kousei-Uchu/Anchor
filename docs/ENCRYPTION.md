@@ -109,6 +109,17 @@ Your answer to D44 on 10 Nov 2026 was to lock dates, numbers and marks too. `doc
 
 **What the safety copy holds.** The copy for a second run holds the newer fields unlocked until it is deleted, as the first copy held the words.
 
+## Check-ins, sleep and Recovery (Patch 35g1b, D44)
+
+The first group of dates, numbers and marks, 28 fields on six models, locked with the groundwork above. The list is in `docs/FIELD_INVENTORY.md`.
+
+- **CheckIn:** when it was recorded and the five slider values. **SleepEntry:** the night, bed time, wake time, minutes asleep, the feel word chosen, when it was made and when it was last changed. **RecoveryCounter:** what kind of count it is, the savings amount, its period and currency, the milestones seen, when it was made and the times a day it used to happen. **RecoveryMotivation:** which kind of reason, and when it was made. **RecoveryDayEntry:** the day, when the pledge and the review were done, and the times a slip happened. **RecoveryUrge:** the day and how strong it was.
+- **Left plain, with the reason in the list:** ids and the links between items, the order on screen, whether a counter is archived or shows its name outside the app, and where a night came from.
+- **Level 2.** `LockMyData.currentLevel` is now 2. A store locked at level 1 is offered More to lock, with Lock the rest. A store not yet locked gets everything in its first run.
+- **Sorting moved.** Ten places no longer ask the database to sort or match on a locked field: the Journal's check-ins and nights, the four sleep lists in Plan, the sleep lists in Bridge's appointment preparation and one-page summary, the urges list, and the check for an existing Recovery day when a slip is recorded. Each now fetches the items and sorts or picks after they are opened, with `sortedByKey` or a filter. A long list is therefore opened (decrypted) each time its screen redraws; if that turns out slow on a real phone it can be cached.
+- **New values before the second run.** Once the words are locked, a value saved in one of these fields is sealed as it is saved, even before Lock the rest has been run on the older items, and every read takes whichever form is there.
+- **A value that will not open** (the key is missing) reads as the fixed placeholder: the 1 Jan 2001 date, zero, no value, or the first choice. It is never written back unless you change that field yourself. The key gate (Patch 35b3) stands in front of the app in that case.
+
 ## Lock my files (Patch 35d)
 
 The second step of locking: the voice notes and Journal photos, which are files and not stored text (D31). It is on the Lock my data screen, offered once the text is locked. The code is `LockMyFiles`, `StoredFiles` and `FileLock` in `Support/LockMyData.swift`, and `FileCipher` in `Support/AppLock.swift`.

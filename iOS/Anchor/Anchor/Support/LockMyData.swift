@@ -55,7 +55,7 @@ enum LockMyData {
     /// How much there is to lock. Level 1 is the words, which Patch 35b locks. Each part of 35g adds fields and raises
     /// this by one: 35g1b makes it 2 (check-ins, sleep and Recovery). A store that was locked at an earlier level is
     /// still locked, and Lock my data offers to lock the rest, with a new safety copy first.
-    static let currentLevel = 1
+    static let currentLevel = 2
 
     /// What the last finished run locked. 0 when nothing is locked. A store locked before levels existed has no
     /// saved number and counts as level 1.
@@ -211,7 +211,7 @@ enum LockMyData {
             kind(UnsentDraft.self), kind(DecisionPresetCategory.self), kind(DecisionPresetChoice.self),
             kind(DeEscalationScript.self), kind(Affirmation.self), kind(NextHourItem.self),
             kind(TaskItem.self), kind(QuickList.self), kind(Routine.self), kind(ItemList.self),
-            kind(RecoveryCounter.self), kind(RecoveryMotivation.self), kind(RecoveryDayEntry.self),
+            kind(CheckIn.self), kind(RecoveryCounter.self), kind(RecoveryMotivation.self), kind(RecoveryDayEntry.self),
             kind(RecoveryUrge.self)
         ]
     }
@@ -775,23 +775,38 @@ enum LockMyDataSelfTest {
         let entry = JournalEntry(text: "plain journal words")
         let contact = TrustedContact(name: "Sam", phoneNumber: "0400 000 000", sortOrder: 0, discordUserID: "42")
         let list = QuickList(title: "Bag", items: [QuickListItem(text: "keys")])
-        let counter = RecoveryCounter(name: "Mine")
+        let counter = RecoveryCounter(name: "Mine", savingsAmount: 12.5, savingsPeriod: .week, currencyCode: "AUD")
         let runs = counter.runsData
+        counter.acknowledgedMilestones = [1, 3]
+        let when = Date(timeIntervalSinceReferenceDate: 700_000_000.25)
+        let checkIn = CheckIn(timestamp: when, physicalExhaustion: 0.25, cognitiveBurnout: 0.5, mentalLoad: 0.75, physicalEnergy: 0.1, socialEnergy: 0.9)
+        let night = SleepEntry(nightDate: when, bedTime: when.addingTimeInterval(-28_800), wakeTime: nil, minutesAsleep: 450, feel: 1)
+        let urge = RecoveryUrge(counterID: counter.id, date: when, strength: .intense)
         context.insert(entry)
         context.insert(contact)
         context.insert(list)
         context.insert(counter)
+        context.insert(checkIn)
+        context.insert(night)
+        context.insert(urge)
         try? context.save()
         check(entry.textSealed == nil && !entry.lockedFieldsAreSealed(), "an item was sealed while locking was off.")
 
         // Lock them.
         FieldLock.isOn = true
         guard let report = try? LockMyData.lockAll(in: container) else { fatalError("Lock my data self-test: locking threw.") }
-        check(report.items == 4, "the number of locked items was \(report.items), not 4.")
+        check(report.items == 7, "the number of locked items was \(report.items), not 7.")
         check(entry.text == "plain journal words" && entry.textPlain.isEmpty && entry.lockedFieldsAreSealed(), "a journal entry was not locked and readable.")
         check(contact.name == "Sam" && contact.discordUserID == "42" && contact.lockedFieldsAreSealed(), "a contact was not locked and readable.")
         check(list.items.count == 1 && list.items[0].text == "keys" && list.lockedFieldsAreSealed(), "a list was not locked and readable.")
         check(counter.runsData == runs && counter.lockedFieldsAreSealed(), "a counter was not locked and readable.")
+        check(counter.savingsAmount == 12.5 && counter.savingsPeriod == .week && counter.currencyCode == "AUD" && counter.acknowledgedMilestones == [1, 3], "a counter's numbers were not locked and readable.")
+        check(counter.savingsAmountPlain == 0 && counter.currencyCodePlain.isEmpty && counter.acknowledgedMilestonesPlain.isEmpty, "a counter kept a number in plain.")
+        check(checkIn.timestamp == when && checkIn.mentalLoad == 0.75 && checkIn.socialEnergy == 0.9 && checkIn.lockedFieldsAreSealed(), "a check-in was not locked and readable.")
+        check(checkIn.timestampPlain == Date.lockedPlaceholder && checkIn.mentalLoadPlain == 0, "a check-in kept a value in plain.")
+        check(night.nightDate == when && night.bedTime == when.addingTimeInterval(-28_800) && night.wakeTime == nil && night.minutesAsleep == 450 && night.feel == 1 && night.lockedFieldsAreSealed(), "a night was not locked and readable.")
+        check(night.bedTimePlain == nil && night.minutesAsleepPlain == nil && night.wakeTimeSealed != nil, "a night kept a value in plain, or nothing was not sealed as nothing.")
+        check(urge.date == when && urge.strength == .intense && urge.strengthPlain == .mild && urge.lockedFieldsAreSealed(), "an urge was not locked and readable.")
 
         // Again: nothing is sealed twice and nothing changes.
         let stored = entry.textSealed

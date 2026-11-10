@@ -144,26 +144,40 @@ final class RecoveryCounter {
     var discreetLabelSealed: String? = nil
     var showNameOutsideApp: Bool
 
-    var mode: DayCountMode
+    @Attribute(originalName: "mode") var modePlain: DayCountMode
 
     /// JSON-encoded `[RecoveryRun]`. Stored as data so the schema stays simple.
+    /// The locked form of `mode`, empty until locking is turned on. Read and written through `mode` only.
+    var modeSealed: String? = nil
     @Attribute(originalName: "runsData") var runsDataPlain: Data
     /// The locked form of `runsData`, empty until locking is turned on. Read and written through `runsData` only.
     var runsDataSealed: String? = nil
 
-    var savingsAmount: Double
-    var savingsPeriod: SavingsPeriod
-    var currencyCode: String
+    @Attribute(originalName: "savingsAmount") var savingsAmountPlain: Double
+    /// The locked form of `savingsAmount`, empty until locking is turned on. Read and written through `savingsAmount` only.
+    var savingsAmountSealed: String? = nil
+    @Attribute(originalName: "savingsPeriod") var savingsPeriodPlain: SavingsPeriod
+    /// The locked form of `savingsPeriod`, empty until locking is turned on. Read and written through `savingsPeriod` only.
+    var savingsPeriodSealed: String? = nil
+    @Attribute(originalName: "currencyCode") var currencyCodePlain: String
 
     /// Milestones (in days) the user has already seen, so each is marked once.
-    var acknowledgedMilestones: [Int]
+    /// The locked form of `currencyCode`, empty until locking is turned on. Read and written through `currencyCode` only.
+    var currencyCodeSealed: String? = nil
+    @Attribute(originalName: "acknowledgedMilestones") var acknowledgedMilestonesPlain: [Int]
+    /// The locked form of `acknowledgedMilestones`, empty until locking is turned on. Read and written through `acknowledgedMilestones` only.
+    var acknowledgedMilestonesSealed: String? = nil
 
     var sortOrder: Int
-    var createdAt: Date
+    @Attribute(originalName: "createdAt") var createdAtPlain: Date
+    /// The locked form of `createdAt`, empty until locking is turned on. Read and written through `createdAt` only.
+    var createdAtSealed: String? = nil
     var isArchived: Bool
 
     /// "Before tracking, on a typical day, how many times did it happen?" Just a reference note.
-    var priorTimesPerDay: Int = 0
+    @Attribute(originalName: "priorTimesPerDay") var priorTimesPerDayPlain: Int = 0
+    /// The locked form of `priorTimesPerDay`, empty until locking is turned on. Read and written through `priorTimesPerDay` only.
+    var priorTimesPerDaySealed: String? = nil
 
     static var defaultCurrencyCode: String { Locale.current.currency?.identifier ?? "USD" }
 
@@ -182,16 +196,16 @@ final class RecoveryCounter {
         self.namePlain = name
         self.discreetLabelPlain = discreetLabel
         self.showNameOutsideApp = showNameOutsideApp
-        self.mode = mode
+        self.modePlain = mode
         self.runsDataPlain = (try? JSONEncoder().encode([RecoveryRun(start: startDate, end: nil)])) ?? Data()
-        self.savingsAmount = savingsAmount
-        self.savingsPeriod = savingsPeriod
-        self.currencyCode = currencyCode
-        self.acknowledgedMilestones = []
+        self.savingsAmountPlain = savingsAmount
+        self.savingsPeriodPlain = savingsPeriod
+        self.currencyCodePlain = currencyCode
+        self.acknowledgedMilestonesPlain = []
         self.sortOrder = sortOrder
-        self.createdAt = createdAt
+        self.createdAtPlain = createdAt
         self.isArchived = false
-        self.priorTimesPerDay = 0
+        self.priorTimesPerDayPlain = 0
         lockNewValues()
     }
 
@@ -313,10 +327,74 @@ extension RecoveryCounter {
         }
     }
 
+    var mode: DayCountMode {
+        get { FieldLock.readChoice(plain: modePlain, sealed: modeSealed, context: "RecoveryCounter.mode") }
+        set {
+            let kept = FieldLock.storeChoice(newValue, context: "RecoveryCounter.mode")
+            modePlain = kept.plain
+            modeSealed = kept.sealed
+        }
+    }
+    var savingsAmount: Double {
+        get { FieldLock.readScalar(plain: savingsAmountPlain, sealed: savingsAmountSealed, context: "RecoveryCounter.savingsAmount") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "RecoveryCounter.savingsAmount")
+            savingsAmountPlain = kept.plain
+            savingsAmountSealed = kept.sealed
+        }
+    }
+    var savingsPeriod: SavingsPeriod {
+        get { FieldLock.readChoice(plain: savingsPeriodPlain, sealed: savingsPeriodSealed, context: "RecoveryCounter.savingsPeriod") }
+        set {
+            let kept = FieldLock.storeChoice(newValue, context: "RecoveryCounter.savingsPeriod")
+            savingsPeriodPlain = kept.plain
+            savingsPeriodSealed = kept.sealed
+        }
+    }
+    var currencyCode: String {
+        get { FieldLock.read(plain: currencyCodePlain, sealed: currencyCodeSealed, context: "RecoveryCounter.currencyCode") }
+        set {
+            let kept = FieldLock.store(newValue, context: "RecoveryCounter.currencyCode")
+            currencyCodePlain = kept.plain
+            currencyCodeSealed = kept.sealed
+        }
+    }
+    var acknowledgedMilestones: [Int] {
+        get { FieldLock.readCoded(acknowledgedMilestonesPlain, sealed: acknowledgedMilestonesSealed, context: "RecoveryCounter.acknowledgedMilestones") }
+        set {
+            let kept = FieldLock.storeCoded(newValue, empty: [], context: "RecoveryCounter.acknowledgedMilestones")
+            acknowledgedMilestonesPlain = kept.plain
+            acknowledgedMilestonesSealed = kept.sealed
+        }
+    }
+    var createdAt: Date {
+        get { FieldLock.readScalar(plain: createdAtPlain, sealed: createdAtSealed, context: "RecoveryCounter.createdAt") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "RecoveryCounter.createdAt")
+            createdAtPlain = kept.plain
+            createdAtSealed = kept.sealed
+        }
+    }
+    var priorTimesPerDay: Int {
+        get { FieldLock.readScalar(plain: priorTimesPerDayPlain, sealed: priorTimesPerDaySealed, context: "RecoveryCounter.priorTimesPerDay") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "RecoveryCounter.priorTimesPerDay")
+            priorTimesPerDayPlain = kept.plain
+            priorTimesPerDaySealed = kept.sealed
+        }
+    }
+
     /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
     /// nothing sealed yet, and does nothing while locking is off.
     func lockNewValues() {
         guard FieldLock.isOn else { return }
+        mode = modePlain
+        savingsAmount = savingsAmountPlain
+        savingsPeriod = savingsPeriodPlain
+        currencyCode = currencyCodePlain
+        acknowledgedMilestones = acknowledgedMilestonesPlain
+        createdAt = createdAtPlain
+        priorTimesPerDay = priorTimesPerDayPlain
         name = namePlain
         discreetLabel = discreetLabelPlain
         runsData = runsDataPlain
@@ -326,6 +404,13 @@ extension RecoveryCounter {
     /// again. It does nothing while locking is off.
     func lockExistingValues() {
         guard FieldLock.isOn else { return }
+        if modeSealed == nil { mode = modePlain }
+        if savingsAmountSealed == nil { savingsAmount = savingsAmountPlain }
+        if savingsPeriodSealed == nil { savingsPeriod = savingsPeriodPlain }
+        if currencyCodeSealed == nil { currencyCode = currencyCodePlain }
+        if acknowledgedMilestonesSealed == nil { acknowledgedMilestones = acknowledgedMilestonesPlain }
+        if createdAtSealed == nil { createdAt = createdAtPlain }
+        if priorTimesPerDaySealed == nil { priorTimesPerDay = priorTimesPerDayPlain }
         if nameSealed == nil { name = namePlain }
         if discreetLabelSealed == nil { discreetLabel = discreetLabelPlain }
         if runsDataSealed == nil { runsData = runsDataPlain }
@@ -335,6 +420,13 @@ extension RecoveryCounter {
     /// before and after. It reads through the old names, so a sealed value is compared as its text.
     func lockedSnapshot() -> String {
         FieldLock.join([
+            FieldLock.describe(mode),
+            FieldLock.describe(savingsAmount),
+            FieldLock.describe(savingsPeriod),
+            FieldLock.describe(currencyCode),
+            FieldLock.describe(acknowledgedMilestones),
+            FieldLock.describe(createdAt),
+            FieldLock.describe(priorTimesPerDay),
             FieldLock.describe(name),
             FieldLock.describe(discreetLabel),
             FieldLock.describe(runsData)
@@ -343,7 +435,14 @@ extension RecoveryCounter {
 
     /// True when every locked field is held sealed, with nothing left in the plain property.
     func lockedFieldsAreSealed() -> Bool {
-        nameSealed != nil && namePlain.isEmpty
+        modeSealed != nil && modePlain == DayCountMode.lockedPlaceholder
+            && savingsAmountSealed != nil && savingsAmountPlain == Double.lockedPlaceholder
+            && savingsPeriodSealed != nil && savingsPeriodPlain == SavingsPeriod.lockedPlaceholder
+            && currencyCodeSealed != nil && currencyCodePlain.isEmpty
+            && acknowledgedMilestonesSealed != nil && acknowledgedMilestonesPlain.isEmpty
+            && createdAtSealed != nil && createdAtPlain == Date.lockedPlaceholder
+            && priorTimesPerDaySealed != nil && priorTimesPerDayPlain == Int.lockedPlaceholder
+            && nameSealed != nil && namePlain.isEmpty
             && discreetLabelSealed != nil && discreetLabelPlain.isEmpty
             && runsDataSealed != nil && runsDataPlain.isEmpty
     }
@@ -355,19 +454,23 @@ extension RecoveryCounter {
 @Model
 final class RecoveryMotivation {
     @Attribute(.unique) var id: UUID
-    var kind: MotivationKind
+    @Attribute(originalName: "kind") var kindPlain: MotivationKind
+    /// The locked form of `kind`, empty until locking is turned on. Read and written through `kind` only.
+    var kindSealed: String? = nil
     @Attribute(originalName: "text") var textPlain: String
     /// The locked form of `text`, empty until locking is turned on. Read and written through `text` only.
     var textSealed: String? = nil
     var sortOrder: Int
-    var createdAt: Date
+    @Attribute(originalName: "createdAt") var createdAtPlain: Date
+    /// The locked form of `createdAt`, empty until locking is turned on. Read and written through `createdAt` only.
+    var createdAtSealed: String? = nil
 
     init(id: UUID = UUID(), kind: MotivationKind, text: String, sortOrder: Int = 0, createdAt: Date = .now) {
         self.id = id
-        self.kind = kind
+        self.kindPlain = kind
         self.textPlain = text
         self.sortOrder = sortOrder
-        self.createdAt = createdAt
+        self.createdAtPlain = createdAt
         lockNewValues()
     }
 }
@@ -383,10 +486,29 @@ extension RecoveryMotivation {
         }
     }
 
+    var kind: MotivationKind {
+        get { FieldLock.readChoice(plain: kindPlain, sealed: kindSealed, context: "RecoveryMotivation.kind") }
+        set {
+            let kept = FieldLock.storeChoice(newValue, context: "RecoveryMotivation.kind")
+            kindPlain = kept.plain
+            kindSealed = kept.sealed
+        }
+    }
+    var createdAt: Date {
+        get { FieldLock.readScalar(plain: createdAtPlain, sealed: createdAtSealed, context: "RecoveryMotivation.createdAt") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "RecoveryMotivation.createdAt")
+            createdAtPlain = kept.plain
+            createdAtSealed = kept.sealed
+        }
+    }
+
     /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
     /// nothing sealed yet, and does nothing while locking is off.
     func lockNewValues() {
         guard FieldLock.isOn else { return }
+        kind = kindPlain
+        createdAt = createdAtPlain
         text = textPlain
     }
 
@@ -394,6 +516,8 @@ extension RecoveryMotivation {
     /// again. It does nothing while locking is off.
     func lockExistingValues() {
         guard FieldLock.isOn else { return }
+        if kindSealed == nil { kind = kindPlain }
+        if createdAtSealed == nil { createdAt = createdAtPlain }
         if textSealed == nil { text = textPlain }
     }
 
@@ -401,13 +525,17 @@ extension RecoveryMotivation {
     /// before and after. It reads through the old names, so a sealed value is compared as its text.
     func lockedSnapshot() -> String {
         FieldLock.join([
+            FieldLock.describe(kind),
+            FieldLock.describe(createdAt),
             FieldLock.describe(text)
         ])
     }
 
     /// True when every locked field is held sealed, with nothing left in the plain property.
     func lockedFieldsAreSealed() -> Bool {
-        textSealed != nil && textPlain.isEmpty
+        kindSealed != nil && kindPlain == MotivationKind.lockedPlaceholder
+            && createdAtSealed != nil && createdAtPlain == Date.lockedPlaceholder
+            && textSealed != nil && textPlain.isEmpty
     }
 }
 
@@ -418,9 +546,15 @@ extension RecoveryMotivation {
 final class RecoveryDayEntry {
     @Attribute(.unique) var id: UUID
     var counterID: UUID
-    var day: Date               // start of day
-    var pledgedAt: Date?
-    var reviewedAt: Date?
+    @Attribute(originalName: "day") var dayPlain: Date               // start of day
+    /// The locked form of `day`, empty until locking is turned on. Read and written through `day` only.
+    var daySealed: String? = nil
+    @Attribute(originalName: "pledgedAt") var pledgedAtPlain: Date?
+    /// The locked form of `pledgedAt`, empty until locking is turned on. Read and written through `pledgedAt` only.
+    var pledgedAtSealed: String? = nil
+    @Attribute(originalName: "reviewedAt") var reviewedAtPlain: Date?
+    /// The locked form of `reviewedAt`, empty until locking is turned on. Read and written through `reviewedAt` only.
+    var reviewedAtSealed: String? = nil
     @Attribute(originalName: "helped") var helpedPlain: String
     /// The locked form of `helped`, empty until locking is turned on. Read and written through `helped` only.
     var helpedSealed: String? = nil
@@ -432,19 +566,21 @@ final class RecoveryDayEntry {
     var tomorrowSealed: String? = nil
 
     /// How many times a slip happened on this day (0 = none). Powers the "Times" list.
-    var slipTimes: Int = 0
+    @Attribute(originalName: "slipTimes") var slipTimesPlain: Int = 0
+    /// The locked form of `slipTimes`, empty until locking is turned on. Read and written through `slipTimes` only.
+    var slipTimesSealed: String? = nil
 
     init(id: UUID = UUID(), counterID: UUID, day: Date, pledgedAt: Date? = nil, reviewedAt: Date? = nil,
          helped: String = "", hard: String = "", tomorrow: String = "", slipTimes: Int = 0) {
         self.id = id
         self.counterID = counterID
-        self.day = day
-        self.pledgedAt = pledgedAt
-        self.reviewedAt = reviewedAt
+        self.dayPlain = day
+        self.pledgedAtPlain = pledgedAt
+        self.reviewedAtPlain = reviewedAt
         self.helpedPlain = helped
         self.hardPlain = hard
         self.tomorrowPlain = tomorrow
-        self.slipTimes = slipTimes
+        self.slipTimesPlain = slipTimes
         lockNewValues()
     }
 }
@@ -476,10 +612,47 @@ extension RecoveryDayEntry {
         }
     }
 
+    var day: Date {
+        get { FieldLock.readScalar(plain: dayPlain, sealed: daySealed, context: "RecoveryDayEntry.day") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "RecoveryDayEntry.day")
+            dayPlain = kept.plain
+            daySealed = kept.sealed
+        }
+    }
+    var pledgedAt: Date? {
+        get { FieldLock.readOptionalScalar(plain: pledgedAtPlain, sealed: pledgedAtSealed, context: "RecoveryDayEntry.pledgedAt") }
+        set {
+            let kept = FieldLock.storeOptionalScalar(newValue, context: "RecoveryDayEntry.pledgedAt")
+            pledgedAtPlain = kept.plain
+            pledgedAtSealed = kept.sealed
+        }
+    }
+    var reviewedAt: Date? {
+        get { FieldLock.readOptionalScalar(plain: reviewedAtPlain, sealed: reviewedAtSealed, context: "RecoveryDayEntry.reviewedAt") }
+        set {
+            let kept = FieldLock.storeOptionalScalar(newValue, context: "RecoveryDayEntry.reviewedAt")
+            reviewedAtPlain = kept.plain
+            reviewedAtSealed = kept.sealed
+        }
+    }
+    var slipTimes: Int {
+        get { FieldLock.readScalar(plain: slipTimesPlain, sealed: slipTimesSealed, context: "RecoveryDayEntry.slipTimes") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "RecoveryDayEntry.slipTimes")
+            slipTimesPlain = kept.plain
+            slipTimesSealed = kept.sealed
+        }
+    }
+
     /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
     /// nothing sealed yet, and does nothing while locking is off.
     func lockNewValues() {
         guard FieldLock.isOn else { return }
+        day = dayPlain
+        pledgedAt = pledgedAtPlain
+        reviewedAt = reviewedAtPlain
+        slipTimes = slipTimesPlain
         helped = helpedPlain
         hard = hardPlain
         tomorrow = tomorrowPlain
@@ -489,6 +662,10 @@ extension RecoveryDayEntry {
     /// again. It does nothing while locking is off.
     func lockExistingValues() {
         guard FieldLock.isOn else { return }
+        if daySealed == nil { day = dayPlain }
+        if pledgedAtSealed == nil { pledgedAt = pledgedAtPlain }
+        if reviewedAtSealed == nil { reviewedAt = reviewedAtPlain }
+        if slipTimesSealed == nil { slipTimes = slipTimesPlain }
         if helpedSealed == nil { helped = helpedPlain }
         if hardSealed == nil { hard = hardPlain }
         if tomorrowSealed == nil { tomorrow = tomorrowPlain }
@@ -498,6 +675,10 @@ extension RecoveryDayEntry {
     /// before and after. It reads through the old names, so a sealed value is compared as its text.
     func lockedSnapshot() -> String {
         FieldLock.join([
+            FieldLock.describe(day),
+            FieldLock.describe(pledgedAt),
+            FieldLock.describe(reviewedAt),
+            FieldLock.describe(slipTimes),
             FieldLock.describe(helped),
             FieldLock.describe(hard),
             FieldLock.describe(tomorrow)
@@ -506,7 +687,11 @@ extension RecoveryDayEntry {
 
     /// True when every locked field is held sealed, with nothing left in the plain property.
     func lockedFieldsAreSealed() -> Bool {
-        helpedSealed != nil && helpedPlain.isEmpty
+        daySealed != nil && dayPlain == Date.lockedPlaceholder
+            && pledgedAtSealed != nil && pledgedAtPlain == nil
+            && reviewedAtSealed != nil && reviewedAtPlain == nil
+            && slipTimesSealed != nil && slipTimesPlain == Int.lockedPlaceholder
+            && helpedSealed != nil && helpedPlain.isEmpty
             && hardSealed != nil && hardPlain.isEmpty
             && tomorrowSealed != nil && tomorrowPlain.isEmpty
     }
@@ -531,8 +716,12 @@ enum UrgeStrength: String, Codable, CaseIterable, Identifiable {
 final class RecoveryUrge {
     @Attribute(.unique) var id: UUID
     var counterID: UUID
-    var date: Date
-    var strength: UrgeStrength
+    @Attribute(originalName: "date") var datePlain: Date
+    /// The locked form of `date`, empty until locking is turned on. Read and written through `date` only.
+    var dateSealed: String? = nil
+    @Attribute(originalName: "strength") var strengthPlain: UrgeStrength
+    /// The locked form of `strength`, empty until locking is turned on. Read and written through `strength` only.
+    var strengthSealed: String? = nil
     @Attribute(originalName: "note") var notePlain: String
     /// The locked form of `note`, empty until locking is turned on. Read and written through `note` only.
     var noteSealed: String? = nil
@@ -540,8 +729,8 @@ final class RecoveryUrge {
     init(id: UUID = UUID(), counterID: UUID, date: Date = .now, strength: UrgeStrength = .strong, note: String = "") {
         self.id = id
         self.counterID = counterID
-        self.date = date
-        self.strength = strength
+        self.datePlain = date
+        self.strengthPlain = strength
         self.notePlain = note
         lockNewValues()
     }
@@ -558,10 +747,29 @@ extension RecoveryUrge {
         }
     }
 
+    var date: Date {
+        get { FieldLock.readScalar(plain: datePlain, sealed: dateSealed, context: "RecoveryUrge.date") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "RecoveryUrge.date")
+            datePlain = kept.plain
+            dateSealed = kept.sealed
+        }
+    }
+    var strength: UrgeStrength {
+        get { FieldLock.readChoice(plain: strengthPlain, sealed: strengthSealed, context: "RecoveryUrge.strength") }
+        set {
+            let kept = FieldLock.storeChoice(newValue, context: "RecoveryUrge.strength")
+            strengthPlain = kept.plain
+            strengthSealed = kept.sealed
+        }
+    }
+
     /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
     /// nothing sealed yet, and does nothing while locking is off.
     func lockNewValues() {
         guard FieldLock.isOn else { return }
+        date = datePlain
+        strength = strengthPlain
         note = notePlain
     }
 
@@ -569,6 +777,8 @@ extension RecoveryUrge {
     /// again. It does nothing while locking is off.
     func lockExistingValues() {
         guard FieldLock.isOn else { return }
+        if dateSealed == nil { date = datePlain }
+        if strengthSealed == nil { strength = strengthPlain }
         if noteSealed == nil { note = notePlain }
     }
 
@@ -576,13 +786,17 @@ extension RecoveryUrge {
     /// before and after. It reads through the old names, so a sealed value is compared as its text.
     func lockedSnapshot() -> String {
         FieldLock.join([
+            FieldLock.describe(date),
+            FieldLock.describe(strength),
             FieldLock.describe(note)
         ])
     }
 
     /// True when every locked field is held sealed, with nothing left in the plain property.
     func lockedFieldsAreSealed() -> Bool {
-        noteSealed != nil && notePlain.isEmpty
+        dateSealed != nil && datePlain == Date.lockedPlaceholder
+            && strengthSealed != nil && strengthPlain == UrgeStrength.lockedPlaceholder
+            && noteSealed != nil && notePlain.isEmpty
     }
 }
 

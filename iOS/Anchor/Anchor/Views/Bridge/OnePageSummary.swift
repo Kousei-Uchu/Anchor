@@ -265,7 +265,9 @@ struct SessionOnePageSheet: View {
     @Query private var allUrges: [RecoveryUrge]
     @Query private var allEntries: [JournalEntry]
     @Query private var allCheckIns: [CheckIn]
-    @Query(sort: \SleepEntry.nightDate, order: .reverse) private var allNights: [SleepEntry]
+    @Query private var allNightsStored: [SleepEntry]
+    /// Sorted after the items are opened, because a locked nightDate cannot be sorted by the database (Patch 35g1b).
+    private var allNights: [SleepEntry] { allNightsStored.sortedByKey(descending: true) { $0.nightDate } }
     @Query(sort: \BridgeDraftItem.createdAt) private var allItems: [BridgeDraftItem]
     @Query(sort: \AppointmentSeries.sortOrder) private var providers: [AppointmentSeries]
 

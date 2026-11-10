@@ -38,9 +38,13 @@ struct JournalDayCount {
 struct JournalView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \JournalEntry.createdAt) private var entries: [JournalEntry]
-    @Query(sort: \CheckIn.timestamp) private var checkIns: [CheckIn]
+    @Query private var checkInsStored: [CheckIn]
+    /// Sorted after the items are opened, because a locked timestamp cannot be sorted by the database (Patch 35g1b).
+    private var checkIns: [CheckIn] { checkInsStored.sortedByKey { $0.timestamp } }
     @Query(sort: \RecoveryCounter.sortOrder) private var recoveryCounters: [RecoveryCounter]
-    @Query(sort: \SleepEntry.nightDate) private var sleepEntries: [SleepEntry]
+    @Query private var sleepEntriesStored: [SleepEntry]
+    /// Sorted after the items are opened, because a locked nightDate cannot be sorted by the database (Patch 35g1b).
+    private var sleepEntries: [SleepEntry] { sleepEntriesStored.sortedByKey { $0.nightDate } }
     @AppStorage(SleepSettings.journalKey) private var showsSleep = false
     @State private var sleepToEdit: SleepEntry?
     @State private var searchText = ""

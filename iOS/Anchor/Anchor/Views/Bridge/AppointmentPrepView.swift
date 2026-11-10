@@ -427,7 +427,11 @@ struct SleepSessionSummaryCard: View {
     let sinceIsLastSession: Bool
     let onAddToNotes: (String) -> Void
 
-    @Query(sort: \SleepEntry.nightDate, order: .reverse) private var allNights: [SleepEntry]
+    @Query private var allNightsStored: [SleepEntry]
+
+    /// Sorted after the items are opened, because a locked nightDate cannot be sorted by the database (Patch 35g1b).
+
+    private var allNights: [SleepEntry] { allNightsStored.sortedByKey(descending: true) { $0.nightDate } }
     @State private var added = false
 
     /// Nights with something written down, from the day of the last session on.

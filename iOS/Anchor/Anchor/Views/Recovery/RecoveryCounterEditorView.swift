@@ -234,8 +234,10 @@ struct RecoverySlipView: View {
     private func recordTimes() {
         let day = Calendar.current.startOfDay(for: slipDate)
         let id = counter.id
-        let existing = try? modelContext.fetch(FetchDescriptor<RecoveryDayEntry>(predicate: #Predicate { $0.counterID == id && $0.day == day }))
-        let entry = existing?.first ?? {
+        // The day is locked, so the database cannot match on it: fetch this counter's days and pick the day here.
+        let forCounter = (try? modelContext.fetch(FetchDescriptor<RecoveryDayEntry>(predicate: #Predicate { $0.counterID == id }))) ?? []
+        let existing = forCounter.first { $0.day == day }
+        let entry = existing ?? {
             let created = RecoveryDayEntry(counterID: id, day: day)
             modelContext.insert(created)
             return created

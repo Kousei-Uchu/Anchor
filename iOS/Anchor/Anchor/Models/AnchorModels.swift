@@ -121,18 +121,30 @@ enum EntryOrigin: String, Codable {
 @Model
 final class CheckIn {
     @Attribute(.unique) var id: UUID
-    var timestamp: Date
+    @Attribute(originalName: "timestamp") var timestampPlain: Date
 
     // Each is a private 0...1 continuous value the user sets by feel,
+    /// The locked form of `timestamp`, empty until locking is turned on. Read and written through `timestamp` only.
+    var timestampSealed: String? = nil
     // not a labeled 1-10 "score." No aggregate/average is ever computed
     // or displayed — that would just be a score by another name.
-    var physicalExhaustion: Double
-    var cognitiveBurnout: Double
-    var mentalLoad: Double
-    var physicalEnergy: Double
-    var socialEnergy: Double
+    @Attribute(originalName: "physicalExhaustion") var physicalExhaustionPlain: Double
+    /// The locked form of `physicalExhaustion`, empty until locking is turned on. Read and written through `physicalExhaustion` only.
+    var physicalExhaustionSealed: String? = nil
+    @Attribute(originalName: "cognitiveBurnout") var cognitiveBurnoutPlain: Double
+    /// The locked form of `cognitiveBurnout`, empty until locking is turned on. Read and written through `cognitiveBurnout` only.
+    var cognitiveBurnoutSealed: String? = nil
+    @Attribute(originalName: "mentalLoad") var mentalLoadPlain: Double
+    /// The locked form of `mentalLoad`, empty until locking is turned on. Read and written through `mentalLoad` only.
+    var mentalLoadSealed: String? = nil
+    @Attribute(originalName: "physicalEnergy") var physicalEnergyPlain: Double
+    /// The locked form of `physicalEnergy`, empty until locking is turned on. Read and written through `physicalEnergy` only.
+    var physicalEnergySealed: String? = nil
+    @Attribute(originalName: "socialEnergy") var socialEnergyPlain: Double
 
     /// Optional link to a journal entry if the user expanded this check-in
+    /// The locked form of `socialEnergy`, empty until locking is turned on. Read and written through `socialEnergy` only.
+    var socialEnergySealed: String? = nil
     /// into free writing.
     var expandedEntryID: UUID?
 
@@ -140,13 +152,113 @@ final class CheckIn {
          physicalExhaustion: Double, cognitiveBurnout: Double, mentalLoad: Double,
          physicalEnergy: Double, socialEnergy: Double, expandedEntryID: UUID? = nil) {
         self.id = id
-        self.timestamp = timestamp
-        self.physicalExhaustion = physicalExhaustion
-        self.cognitiveBurnout = cognitiveBurnout
-        self.mentalLoad = mentalLoad
-        self.physicalEnergy = physicalEnergy
-        self.socialEnergy = socialEnergy
+        self.timestampPlain = timestamp
+        self.physicalExhaustionPlain = physicalExhaustion
+        self.cognitiveBurnoutPlain = cognitiveBurnout
+        self.mentalLoadPlain = mentalLoad
+        self.physicalEnergyPlain = physicalEnergy
+        self.socialEnergyPlain = socialEnergy
         self.expandedEntryID = expandedEntryID
+        lockNewValues()
+    }
+}
+
+// Patch 35g1b: the old names, read and written through FieldLock so a locked value reads as its value.
+extension CheckIn {
+    var timestamp: Date {
+        get { FieldLock.readScalar(plain: timestampPlain, sealed: timestampSealed, context: "CheckIn.timestamp") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "CheckIn.timestamp")
+            timestampPlain = kept.plain
+            timestampSealed = kept.sealed
+        }
+    }
+    var physicalExhaustion: Double {
+        get { FieldLock.readScalar(plain: physicalExhaustionPlain, sealed: physicalExhaustionSealed, context: "CheckIn.physicalExhaustion") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "CheckIn.physicalExhaustion")
+            physicalExhaustionPlain = kept.plain
+            physicalExhaustionSealed = kept.sealed
+        }
+    }
+    var cognitiveBurnout: Double {
+        get { FieldLock.readScalar(plain: cognitiveBurnoutPlain, sealed: cognitiveBurnoutSealed, context: "CheckIn.cognitiveBurnout") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "CheckIn.cognitiveBurnout")
+            cognitiveBurnoutPlain = kept.plain
+            cognitiveBurnoutSealed = kept.sealed
+        }
+    }
+    var mentalLoad: Double {
+        get { FieldLock.readScalar(plain: mentalLoadPlain, sealed: mentalLoadSealed, context: "CheckIn.mentalLoad") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "CheckIn.mentalLoad")
+            mentalLoadPlain = kept.plain
+            mentalLoadSealed = kept.sealed
+        }
+    }
+    var physicalEnergy: Double {
+        get { FieldLock.readScalar(plain: physicalEnergyPlain, sealed: physicalEnergySealed, context: "CheckIn.physicalEnergy") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "CheckIn.physicalEnergy")
+            physicalEnergyPlain = kept.plain
+            physicalEnergySealed = kept.sealed
+        }
+    }
+    var socialEnergy: Double {
+        get { FieldLock.readScalar(plain: socialEnergyPlain, sealed: socialEnergySealed, context: "CheckIn.socialEnergy") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "CheckIn.socialEnergy")
+            socialEnergyPlain = kept.plain
+            socialEnergySealed = kept.sealed
+        }
+    }
+
+    /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
+    /// nothing sealed yet, and does nothing while locking is off.
+    func lockNewValues() {
+        guard FieldLock.isOn else { return }
+        timestamp = timestampPlain
+        physicalExhaustion = physicalExhaustionPlain
+        cognitiveBurnout = cognitiveBurnoutPlain
+        mentalLoad = mentalLoadPlain
+        physicalEnergy = physicalEnergyPlain
+        socialEnergy = socialEnergyPlain
+    }
+
+    /// Seals what is stored plain and leaves anything already sealed alone, so it is safe to run again. It does
+    /// nothing while locking is off.
+    func lockExistingValues() {
+        guard FieldLock.isOn else { return }
+        if timestampSealed == nil { timestamp = timestampPlain }
+        if physicalExhaustionSealed == nil { physicalExhaustion = physicalExhaustionPlain }
+        if cognitiveBurnoutSealed == nil { cognitiveBurnout = cognitiveBurnoutPlain }
+        if mentalLoadSealed == nil { mentalLoad = mentalLoadPlain }
+        if physicalEnergySealed == nil { physicalEnergy = physicalEnergyPlain }
+        if socialEnergySealed == nil { socialEnergy = socialEnergyPlain }
+    }
+
+    /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
+    /// before and after. It reads through the old names, so a sealed value is compared as its value.
+    func lockedSnapshot() -> String {
+        FieldLock.join([
+            FieldLock.describe(timestamp),
+            FieldLock.describe(physicalExhaustion),
+            FieldLock.describe(cognitiveBurnout),
+            FieldLock.describe(mentalLoad),
+            FieldLock.describe(physicalEnergy),
+            FieldLock.describe(socialEnergy)
+        ])
+    }
+
+    /// True when every locked field is held sealed, with nothing left in the plain property.
+    func lockedFieldsAreSealed() -> Bool {
+        timestampSealed != nil && timestampPlain == Date.lockedPlaceholder
+            && physicalExhaustionSealed != nil && physicalExhaustionPlain == Double.lockedPlaceholder
+            && cognitiveBurnoutSealed != nil && cognitiveBurnoutPlain == Double.lockedPlaceholder
+            && mentalLoadSealed != nil && mentalLoadPlain == Double.lockedPlaceholder
+            && physicalEnergySealed != nil && physicalEnergyPlain == Double.lockedPlaceholder
+            && socialEnergySealed != nil && socialEnergyPlain == Double.lockedPlaceholder
     }
 }
 
@@ -804,14 +916,24 @@ extension BoundarySection {
 final class SleepEntry {
     @Attribute(.unique) var id: UUID
     /// The night this belongs to, as the start of the day you woke up on.
-    var nightDate: Date
-    var bedTime: Date? = nil
-    var wakeTime: Date? = nil
+    @Attribute(originalName: "nightDate") var nightDatePlain: Date
+    /// The locked form of `nightDate`, empty until locking is turned on. Read and written through `nightDate` only.
+    var nightDateSealed: String? = nil
+    @Attribute(originalName: "bedTime") var bedTimePlain: Date? = nil
+    /// The locked form of `bedTime`, empty until locking is turned on. Read and written through `bedTime` only.
+    var bedTimeSealed: String? = nil
+    @Attribute(originalName: "wakeTime") var wakeTimePlain: Date? = nil
     /// Time asleep, in minutes, when it was typed. Nil means it is worked out
+    /// The locked form of `wakeTime`, empty until locking is turned on. Read and written through `wakeTime` only.
+    var wakeTimeSealed: String? = nil
     /// from the two times, if both are there.
-    var minutesAsleep: Int? = nil
+    @Attribute(originalName: "minutesAsleep") var minutesAsleepPlain: Int? = nil
     /// Which of the three feel words, 0 to 2. Nil means nothing was chosen.
-    var feel: Int? = nil
+    /// The locked form of `minutesAsleep`, empty until locking is turned on. Read and written through `minutesAsleep` only.
+    var minutesAsleepSealed: String? = nil
+    @Attribute(originalName: "feel") var feelPlain: Int? = nil
+    /// The locked form of `feel`, empty until locking is turned on. Read and written through `feel` only.
+    var feelSealed: String? = nil
     @Attribute(originalName: "note") var notePlain: String = ""
     /// The locked form of `note`, empty until locking is turned on. Read and written through `note` only.
     var noteSealed: String? = nil
@@ -820,24 +942,28 @@ final class SleepEntry {
     /// For a night that came from somewhere else, that source's own id, so
     /// the same night is never added twice. Nil for typed nights.
     var externalID: String? = nil
-    var createdAt: Date = Date.now
-    var lastEditedAt: Date = Date.now
+    @Attribute(originalName: "createdAt") var createdAtPlain: Date = Date.now
+    /// The locked form of `createdAt`, empty until locking is turned on. Read and written through `createdAt` only.
+    var createdAtSealed: String? = nil
+    @Attribute(originalName: "lastEditedAt") var lastEditedAtPlain: Date = Date.now
+    /// The locked form of `lastEditedAt`, empty until locking is turned on. Read and written through `lastEditedAt` only.
+    var lastEditedAtSealed: String? = nil
 
     init(id: UUID = UUID(), nightDate: Date = Calendar.current.startOfDay(for: .now),
          bedTime: Date? = nil, wakeTime: Date? = nil, minutesAsleep: Int? = nil,
          feel: Int? = nil, note: String = "", sourceRaw: String = "typed",
          externalID: String? = nil, createdAt: Date = .now, lastEditedAt: Date = .now) {
         self.id = id
-        self.nightDate = nightDate
-        self.bedTime = bedTime
-        self.wakeTime = wakeTime
-        self.minutesAsleep = minutesAsleep
-        self.feel = feel
+        self.nightDatePlain = nightDate
+        self.bedTimePlain = bedTime
+        self.wakeTimePlain = wakeTime
+        self.minutesAsleepPlain = minutesAsleep
+        self.feelPlain = feel
         self.notePlain = note
         self.sourceRaw = sourceRaw
         self.externalID = externalID
-        self.createdAt = createdAt
-        self.lastEditedAt = lastEditedAt
+        self.createdAtPlain = createdAt
+        self.lastEditedAtPlain = lastEditedAt
         lockNewValues()
     }
 
@@ -894,10 +1020,74 @@ extension SleepEntry {
         }
     }
 
+    var nightDate: Date {
+        get { FieldLock.readScalar(plain: nightDatePlain, sealed: nightDateSealed, context: "SleepEntry.nightDate") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "SleepEntry.nightDate")
+            nightDatePlain = kept.plain
+            nightDateSealed = kept.sealed
+        }
+    }
+    var bedTime: Date? {
+        get { FieldLock.readOptionalScalar(plain: bedTimePlain, sealed: bedTimeSealed, context: "SleepEntry.bedTime") }
+        set {
+            let kept = FieldLock.storeOptionalScalar(newValue, context: "SleepEntry.bedTime")
+            bedTimePlain = kept.plain
+            bedTimeSealed = kept.sealed
+        }
+    }
+    var wakeTime: Date? {
+        get { FieldLock.readOptionalScalar(plain: wakeTimePlain, sealed: wakeTimeSealed, context: "SleepEntry.wakeTime") }
+        set {
+            let kept = FieldLock.storeOptionalScalar(newValue, context: "SleepEntry.wakeTime")
+            wakeTimePlain = kept.plain
+            wakeTimeSealed = kept.sealed
+        }
+    }
+    var minutesAsleep: Int? {
+        get { FieldLock.readOptionalScalar(plain: minutesAsleepPlain, sealed: minutesAsleepSealed, context: "SleepEntry.minutesAsleep") }
+        set {
+            let kept = FieldLock.storeOptionalScalar(newValue, context: "SleepEntry.minutesAsleep")
+            minutesAsleepPlain = kept.plain
+            minutesAsleepSealed = kept.sealed
+        }
+    }
+    var feel: Int? {
+        get { FieldLock.readOptionalScalar(plain: feelPlain, sealed: feelSealed, context: "SleepEntry.feel") }
+        set {
+            let kept = FieldLock.storeOptionalScalar(newValue, context: "SleepEntry.feel")
+            feelPlain = kept.plain
+            feelSealed = kept.sealed
+        }
+    }
+    var createdAt: Date {
+        get { FieldLock.readScalar(plain: createdAtPlain, sealed: createdAtSealed, context: "SleepEntry.createdAt") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "SleepEntry.createdAt")
+            createdAtPlain = kept.plain
+            createdAtSealed = kept.sealed
+        }
+    }
+    var lastEditedAt: Date {
+        get { FieldLock.readScalar(plain: lastEditedAtPlain, sealed: lastEditedAtSealed, context: "SleepEntry.lastEditedAt") }
+        set {
+            let kept = FieldLock.storeScalar(newValue, context: "SleepEntry.lastEditedAt")
+            lastEditedAtPlain = kept.plain
+            lastEditedAtSealed = kept.sealed
+        }
+    }
+
     /// Seals the fields of a value that was only just made, when locking is on. It is for a new value, which holds
     /// nothing sealed yet, and does nothing while locking is off.
     func lockNewValues() {
         guard FieldLock.isOn else { return }
+        nightDate = nightDatePlain
+        bedTime = bedTimePlain
+        wakeTime = wakeTimePlain
+        minutesAsleep = minutesAsleepPlain
+        feel = feelPlain
+        createdAt = createdAtPlain
+        lastEditedAt = lastEditedAtPlain
         note = notePlain
     }
 
@@ -905,6 +1095,13 @@ extension SleepEntry {
     /// again. It does nothing while locking is off.
     func lockExistingValues() {
         guard FieldLock.isOn else { return }
+        if nightDateSealed == nil { nightDate = nightDatePlain }
+        if bedTimeSealed == nil { bedTime = bedTimePlain }
+        if wakeTimeSealed == nil { wakeTime = wakeTimePlain }
+        if minutesAsleepSealed == nil { minutesAsleep = minutesAsleepPlain }
+        if feelSealed == nil { feel = feelPlain }
+        if createdAtSealed == nil { createdAt = createdAtPlain }
+        if lastEditedAtSealed == nil { lastEditedAt = lastEditedAtPlain }
         if noteSealed == nil { note = notePlain }
     }
 
@@ -912,13 +1109,27 @@ extension SleepEntry {
     /// before and after. It reads through the old names, so a sealed value is compared as its text.
     func lockedSnapshot() -> String {
         FieldLock.join([
+            FieldLock.describe(nightDate),
+            FieldLock.describe(bedTime),
+            FieldLock.describe(wakeTime),
+            FieldLock.describe(minutesAsleep),
+            FieldLock.describe(feel),
+            FieldLock.describe(createdAt),
+            FieldLock.describe(lastEditedAt),
             FieldLock.describe(note)
         ])
     }
 
     /// True when every locked field is held sealed, with nothing left in the plain property.
     func lockedFieldsAreSealed() -> Bool {
-        noteSealed != nil && notePlain.isEmpty
+        nightDateSealed != nil && nightDatePlain == Date.lockedPlaceholder
+            && bedTimeSealed != nil && bedTimePlain == nil
+            && wakeTimeSealed != nil && wakeTimePlain == nil
+            && minutesAsleepSealed != nil && minutesAsleepPlain == nil
+            && feelSealed != nil && feelPlain == nil
+            && createdAtSealed != nil && createdAtPlain == Date.lockedPlaceholder
+            && lastEditedAtSealed != nil && lastEditedAtPlain == Date.lockedPlaceholder
+            && noteSealed != nil && notePlain.isEmpty
     }
 }
 
@@ -3726,6 +3937,7 @@ enum AnchorSchema {
 
 // Patch 35b3: every model with locked fields can be locked in place, and checked, by Lock my data.
 extension JournalEntry: LockableModel {}
+extension CheckIn: LockableModel {}
 extension TrustedContact: LockableModel {}
 extension GroundingTool: LockableModel {}
 extension SafetyPlan: LockableModel {}
