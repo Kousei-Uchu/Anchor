@@ -14,6 +14,9 @@
 //    network one (no arbitrary loads, no exception domains), an away address is never used before it is confirmed
 //    (status, generate and Look for models all ask), plain http to an away address is refused except to a Tailscale
 //    number, and the session used for the home network never uses the mobile network.
+// 8. An Other provider (Patch AI6, D42): never chosen unless the person chose it, never offers Don't ask again, its
+//    key lives only in the Keychain (this phone only), is read only by the provider file and the Settings screen and
+//    goes only in the Authorization line, its address must be https, and its requests never follow a redirect.
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -193,6 +196,43 @@ if (providers) {
   }
   if (!/\.needsHTTPS/.test(code)) problems.push("AIProviders.swift no longer refuses plain http to an address away from home");
   if (!/makeSession\(allowsCellular:\s*false\)/.test(code)) problems.push("AIProviders.swift: the session for the home network must not use the mobile network");
+}
+
+// An Other provider (Patch AI6). The key is a secret, so where it is kept and read is checked closely.
+if (providers) {
+  const code = providers.split("\n").filter((line) => !line.trim().startsWith("//")).join("\n");
+  if (!/AIProviderKind\(rawValue:[^\n]*\?\?\s*\.apple/.test(code)) {
+    problems.push("AIProviders.swift: the chosen provider no longer falls back to Apple's model, so Other could be chosen for the person");
+  }
+  if (!/var offersDontAskAgain: Bool \{[\s\S]*?case \.other: return false/.test(code)) {
+    problems.push("AIProviders.swift: Don't ask again must never be offered for an Other provider (D42)");
+  }
+  if (!/kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly/.test(code)) {
+    problems.push("AIProviders.swift: the Other provider's key must be kept in the Keychain on this phone only, so it is not in a backup");
+  }
+  if (/aiOtherKey|UserDefaults[^\n]*(otherKey|ProviderKey)/i.test(code)) {
+    problems.push("AIProviders.swift: the Other provider's key must not be kept in the phone's settings; only the Keychain");
+  }
+  if ((code.match(/OtherSettings\.key\b/g) || []).length !== 1) {
+    problems.push("AIProviders.swift: the Other provider's key must be read in exactly one place, where a request is made");
+  }
+  if ((code.match(/"Bearer "/g) || []).length !== 1 || !/setValue\("Bearer " \+ key, forHTTPHeaderField: "Authorization"\)/.test(code)) {
+    problems.push("AIProviders.swift: the Other provider's key must go in the Authorization line, once, and nowhere else");
+  }
+  if (!/parts\.scheme\?\.lowercased\(\) == "https"/.test(code) || !/hasPrefix\("http:\/\/"\) \{ return \.failure\(\.needsHTTPS\)/.test(code)) {
+    problems.push("AIProviders.swift: an Other provider's address must be https, because a key goes with every request");
+  }
+  if (!/willPerformHTTPRedirection[\s\S]*?completionHandler\(nil\)/.test(code) || !/delegate:\s*OtherNoRedirect\(\)/.test(code)) {
+    problems.push("AIProviders.swift: an Other provider's requests must never follow a redirect, because the key would go with them");
+  }
+}
+for (const file of files) {
+  const rel = relative(root, file);
+  if (rel.endsWith(networkFile) || rel.endsWith("Views/Settings/SettingsView.swift")) continue;
+  const text = readFileSync(file, "utf8");
+  if (/OtherSettings\.key\b|OtherKeychain\.read/.test(text)) {
+    problems.push(`${rel}: reads the Other provider's key; only the provider file and the AI tools screen in Settings may`);
+  }
 }
 
 if (problems.length) {

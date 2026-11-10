@@ -26,6 +26,7 @@ struct AnchorApp: App {
         SpeakerLabelsSelfTest.run()
         AIAnswerReaderSelfTest.run()
         OllamaSelfTest.run()
+        OtherProviderSelfTest.run()
         #endif
         if !DemoMode.isOn {
             // A lock run that was stopped in the middle asks for the safety copy to be put back.

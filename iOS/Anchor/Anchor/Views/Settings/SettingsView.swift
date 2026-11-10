@@ -1193,6 +1193,10 @@ struct AIToolsSettingsView: View {
     @State private var address = OllamaSettings.address
     @State private var model = OllamaSettings.model
     @State private var confirmedAway = OllamaSettings.confirmedAway
+    @State private var otherAddress = OtherSettings.address
+    @State private var otherModel = OtherSettings.model
+    @State private var otherKey = ""
+    @State private var otherHasKey = false
     @State private var showingAwayConfirm = false
     @State private var foundModels: [String] = []
     @State private var looking = false
@@ -1223,20 +1227,20 @@ struct AIToolsSettingsView: View {
             if let status {
                 Anchor.SettingsSection(
                     title: "Where it runs",
-                    footer: chosen == .apple
-                        ? "The model runs on this phone. The text you pick does not leave it."
-                        : "The model runs on your own computer with Ollama. The text you pick goes to the address you give and nowhere else."
+                    footer: runsFooter
                 ) {
                     Picker("Where it runs", selection: Binding(
                         get: { chosen },
                         set: { newValue in
                             chosen = newValue
                             AIProviders.setChosen(newValue)
+                            loadOtherKey()
                             refresh()
                         }
                     )) {
                         Text(AIProviderKind.apple.placeName).tag(AIProviderKind.apple)
                         Text(AIProviderKind.ollama.placeName).tag(AIProviderKind.ollama)
+                        Text(AIProviderKind.other.placeName).tag(AIProviderKind.other)
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
@@ -1265,6 +1269,10 @@ struct AIToolsSettingsView: View {
 
                 if chosen == .ollama {
                     ollamaSection
+                }
+
+                if chosen == .other {
+                    otherSection
                 }
 
                 Anchor.SettingsSection(
@@ -1324,7 +1332,25 @@ struct AIToolsSettingsView: View {
         } message: {
             Text(typedEndpoint?.reach.confirmText ?? "")
         }
-        .onAppear { refresh() }
+        .onAppear {
+            loadOtherKey()
+            refresh()
+        }
+    }
+
+    private var runsFooter: String {
+        switch chosen {
+        case .apple: return "The model runs on this phone. The text you pick does not leave it."
+        case .ollama: return "The model runs on your own computer with Ollama. The text you pick goes to the address you give and nowhere else."
+        case .other: return "The text you pick goes over the internet to the address you give, with your key, and nowhere else."
+        }
+    }
+
+    /// The key is read from the Keychain only while AI tools are on and Other is the chosen place, to fill the field.
+    private func loadOtherKey() {
+        guard AIGate.isEnabled, chosen == .other, otherKey.isEmpty else { return }
+        otherKey = OtherSettings.key
+        otherHasKey = !otherKey.isEmpty
     }
 
     private var typedEndpoint: OllamaEndpoint? {
@@ -1411,6 +1437,61 @@ struct AIToolsSettingsView: View {
                 Text(lookMessage)
                     .font(.system(.footnote, design: .rounded))
                     .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    /// A service the person chose themselves, in the common chat completions format (Patch AI6). It is empty to begin
+    /// with, and typing here connects to nothing.
+    private var otherSection: some View {
+        let typedProblem: OtherAddressProblem? = {
+            if case .failure(let problem) = OtherEndpoint.parse(otherAddress) { return problem }
+            return nil
+        }()
+        return Anchor.SettingsSection(
+            title: "Other provider",
+            footer: "For a service that takes requests in the chat completions format. Anchor does not choose or suggest one, and cannot see how the one you pick keeps your text. The address must be https. The key is kept in this phone's Keychain, is not in a backup, and goes only to this address."
+        ) {
+            TextField("Address, starting with https://", text: $otherAddress)
+                .font(.system(.body, design: .rounded))
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .keyboardType(.URL)
+                .onChange(of: otherAddress) { _, newValue in
+                    OtherSettings.address = newValue
+                    refresh()
+                }
+            if let typedProblem, typedProblem != .empty {
+                Text(typedProblem.plainText)
+                    .font(.system(.footnote, design: .rounded))
+                    .foregroundStyle(.secondary)
+            }
+            SecureField("Key", text: $otherKey)
+                .font(.system(.body, design: .rounded))
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .onChange(of: otherKey) { _, newValue in
+                    OtherSettings.setKey(newValue)
+                    otherHasKey = !newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    refresh()
+                }
+            TextField("Model name", text: $otherModel)
+                .font(.system(.body, design: .rounded))
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .onChange(of: otherModel) { _, newValue in
+                    OtherSettings.model = newValue
+                    refresh()
+                }
+            if otherHasKey {
+                Button(role: .destructive) {
+                    OtherSettings.removeKey()
+                    otherKey = ""
+                    otherHasKey = false
+                    refresh()
+                } label: {
+                    Text("Remove key").font(.system(.subheadline, design: .rounded))
+                }
             }
         }
     }

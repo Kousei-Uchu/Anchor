@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch AI6: Settings, AI tools has a third place, Other, for a service you choose yourself: an https address, a key kept in this phone's Keychain and a model name, empty to begin with, never suggested or named, always asking before it sends, with no Don't ask again.
 - Patch AI9: when you tick in AI Optimised versions for an export, the shorter version and the words it was made from come as two entries, each labelled, and nothing is printed twice.
 - Patch AI8: Ollama on your own computer can be reached from away from home, through a Tailscale number or an https address, but only after you confirm that exact address, and the consent sheet says the computer is away and that it can use mobile data.
 - Patch AI7: with AI tools off, Make shorter is hidden, and Tidy a braindump, Break into steps and Estimate time stay on screen greyed out, and tapping one says AI tools are off and where to turn them on.

@@ -1,4 +1,5 @@
 import Foundation
+import Security
 #if canImport(FoundationModels)
 import FoundationModels
 #endif
@@ -41,16 +42,19 @@ enum AIFeature: String, CaseIterable {
     }
 }
 
-/// Where a tool can run. Apple's model on the phone, and Ollama on the person's own computer (Patch AI5). A
-/// provider the person adds themselves (AI6) is added here when it is built.
+/// Where a tool can run. Apple's model on the phone, Ollama on the person's own computer (Patch AI5), and a
+/// provider the person adds themselves, with their own key (Patch AI6, D42). The last is empty to begin with and
+/// is never suggested, named or chosen for the person.
 enum AIProviderKind: String, CaseIterable {
     case apple
     case ollama
+    case other
 
     var name: String {
         switch self {
         case .apple: return "Apple's on-device model"
         case .ollama: return "Ollama on your computer"
+        case .other: return "Other provider"
         }
     }
 
@@ -59,6 +63,7 @@ enum AIProviderKind: String, CaseIterable {
         switch self {
         case .apple: return "On this phone"
         case .ollama: return "On my computer"
+        case .other: return "Other"
         }
     }
 
@@ -67,6 +72,7 @@ enum AIProviderKind: String, CaseIterable {
         switch self {
         case .apple: return "On this phone. The text does not leave it."
         case .ollama: return "On your own computer, at the address below. The text goes there as it is and nowhere else."
+        case .other: return "Over the internet, to the address below, with the key you gave. The text goes there as it is and nowhere else."
         }
     }
 
@@ -75,6 +81,7 @@ enum AIProviderKind: String, CaseIterable {
         switch self {
         case .apple: return "It is held in memory on this phone until you keep or discard the answer. Anchor keeps no log of it."
         case .ollama: return "Ollama holds it on your computer while it works. Anchor keeps no log of it. What Ollama keeps is set on your computer, and Anchor cannot see it."
+        case .other: return "The provider receives it with your key. Anchor keeps no log of it, and cannot see or check how the provider keeps it or whether it is used for anything else. Any zero retention setting is yours, with the provider."
         }
     }
 
@@ -83,6 +90,7 @@ enum AIProviderKind: String, CaseIterable {
         switch self {
         case .apple: return true
         case .ollama: return true
+        case .other: return false
         }
     }
 }
@@ -97,6 +105,7 @@ enum AIProviderStatus: Equatable {
     case aiToolsOff
     case notSetUp
     case addressNotConfirmed
+    case otherNotSetUp
 
     var plainText: String {
         switch self {
@@ -108,6 +117,7 @@ enum AIProviderStatus: Equatable {
         case .aiToolsOff: return "AI tools are off"
         case .notSetUp: return "Add your computer's address and a model name"
         case .addressNotConfirmed: return "Confirm the address in Settings, AI tools"
+        case .otherNotSetUp: return "Add an address, a key and a model name"
         }
     }
 }
@@ -122,6 +132,10 @@ enum AIError: Error, Equatable {
     case failed
     case cannotReach
     case modelNotFound
+    case keyRefused
+    case providerNotFound
+    case providerBusy
+    case cannotReachProvider
 
     var plainText: String {
         switch self {
@@ -134,6 +148,10 @@ enum AIError: Error, Equatable {
         case .failed: return "It could not make an answer. Nothing was kept."
         case .cannotReach: return "Anchor could not reach your computer. Check the address, that Ollama is running, that you are on the same network, and that Local Network is on for Anchor in the phone's Settings. Nothing was kept."
         case .modelNotFound: return "Ollama on your computer does not have that model. Check the name in Settings, AI tools. Nothing was kept."
+        case .keyRefused: return "The provider did not accept the key. Check it in Settings, AI tools. Nothing was kept."
+        case .providerNotFound: return "The provider did not find that address or model. Check both in Settings, AI tools. Nothing was kept."
+        case .providerBusy: return "The provider says there are too many requests, or the account has no credit left. Try again later. Nothing was kept."
+        case .cannotReachProvider: return "Anchor could not reach the provider. Check the address and your connection. Nothing was kept."
         }
     }
 }
@@ -175,6 +193,7 @@ enum AIProviders {
         switch kind {
         case .apple: return AppleOnDeviceProvider()
         case .ollama: return OllamaProvider()
+        case .other: return OtherProvider()
         }
     }
 }
@@ -620,6 +639,289 @@ struct OllamaProvider: AIProviding {
     }
 }
 
+/// Why a typed address for an Other provider is not accepted (Patch AI6).
+enum OtherAddressProblem: Equatable {
+    case empty
+    case notAnAddress
+    case needsHTTPS
+    case thisPhone
+
+    var plainText: String {
+        switch self {
+        case .empty: return "Type the address of the service, starting with https://."
+        case .notAnAddress: return "That does not look like an address Anchor can use. It needs a name with a dot in it, and no name, password, question mark or # in it."
+        case .needsHTTPS: return "The address has to start with https://, because your key goes with it."
+        case .thisPhone: return "That points at this phone. Use the address of the service."
+        }
+    }
+}
+
+/// The address of an Other provider, in the common chat completions format. Only https is accepted, because a key
+/// goes with every request. Anything typed after the host, such as /v1, is kept, and `/chat/completions` is added
+/// to it (and is not added twice if it was typed). Nothing here connects to anything (Patch AI6).
+struct OtherEndpoint: Equatable {
+    let url: URL
+    let display: String
+
+    static func parse(_ typed: String) -> Result<OtherEndpoint, OtherAddressProblem> {
+        var text = typed.trimmingCharacters(in: .whitespacesAndNewlines)
+        if text.isEmpty { return .failure(.empty) }
+        let lower = text.lowercased()
+        if lower.hasPrefix("http://") { return .failure(.needsHTTPS) }
+        if !lower.hasPrefix("https://") {
+            if text.contains("://") { return .failure(.notAnAddress) }
+            text = "https://" + text
+        }
+        guard let parts = URLComponents(string: text), parts.scheme?.lowercased() == "https",
+              let rawHost = parts.host, !rawHost.isEmpty
+        else { return .failure(.notAnAddress) }
+        guard parts.user == nil, parts.password == nil, parts.query == nil, parts.fragment == nil else {
+            return .failure(.notAnAddress)
+        }
+        let host = rawHost.lowercased()
+        if host == "localhost" || host.hasPrefix("127.") || host == "0.0.0.0" || host == "::1" || host == "::" {
+            return .failure(.thisPhone)
+        }
+        let allowed = Set("abcdefghijklmnopqrstuvwxyz0123456789-.")
+        guard host.allSatisfy({ allowed.contains($0) }), host.contains("."), !host.hasPrefix("."), !host.hasSuffix("."),
+              !host.hasPrefix("-"), !host.contains("..")
+        else { return .failure(.notAnAddress) }
+        var port: Int?
+        if let given = parts.port {
+            guard given >= 1 && given <= 65535 else { return .failure(.notAnAddress) }
+            port = given
+        }
+        var path = parts.path
+        while path.hasSuffix("/") { path.removeLast() }
+        if path.lowercased().hasSuffix("/chat/completions") {
+            path.removeLast("/chat/completions".count)
+            while path.hasSuffix("/") { path.removeLast() }
+        }
+        if !path.isEmpty && !path.hasPrefix("/") { return .failure(.notAnAddress) }
+        var build = URLComponents()
+        build.scheme = "https"
+        build.host = host
+        build.port = port
+        build.path = path + "/chat/completions"
+        guard let url = build.url else { return .failure(.notAnAddress) }
+        let shown = "https://" + host + (port.map { ":" + String($0) } ?? "") + path
+        return .success(OtherEndpoint(url: url, display: shown))
+    }
+}
+
+/// The key for an Other provider is kept in the phone's Keychain, on this phone only: it is not in a backup, not in
+/// the settings the app keeps, and never in an export (Patch AI6). It is read only to go in the Authorization line of
+/// a request that the person has just agreed to send, and to fill the key field in Settings, AI tools.
+enum OtherKeychain {
+    static let service = "page.aspens.anchor.ai"
+    static let defaultAccount = "otherProviderKey"
+
+    private static func query(_ account: String) -> [String: Any] {
+        [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account
+        ]
+    }
+
+    static func read(account: String = defaultAccount) -> String {
+        var request = query(account)
+        request[kSecReturnData as String] = true
+        request[kSecMatchLimit as String] = kSecMatchLimitOne
+        var result: CFTypeRef?
+        guard SecItemCopyMatching(request as CFDictionary, &result) == errSecSuccess, let data = result as? Data else { return "" }
+        return String(data: data, encoding: .utf8) ?? ""
+    }
+
+    /// Saves the key, or removes it when nothing is left after trimming spaces and new lines.
+    @discardableResult
+    static func write(_ key: String, account: String = defaultAccount) -> Bool {
+        let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return remove(account: account) }
+        guard let data = trimmed.data(using: .utf8) else { return false }
+        var attributes = query(account)
+        attributes[kSecValueData as String] = data
+        attributes[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        var status = SecItemAdd(attributes as CFDictionary, nil)
+        if status == errSecDuplicateItem {
+            let change: [String: Any] = [kSecValueData as String: data]
+            status = SecItemUpdate(query(account) as CFDictionary, change as CFDictionary)
+        }
+        return status == errSecSuccess
+    }
+
+    @discardableResult
+    static func remove(account: String = defaultAccount) -> Bool {
+        let status = SecItemDelete(query(account) as CFDictionary)
+        return status == errSecSuccess || status == errSecItemNotFound
+    }
+}
+
+/// What the person typed for an Other provider. The address and model name are kept in the phone's settings like
+/// the AI switch (not in a backup, and Clear all data leaves them). The key is in the Keychain (`OtherKeychain`).
+/// All three are empty to begin with, and nothing connects to the address while AI tools are off.
+enum OtherSettings {
+    static let addressKey = "aiOtherAddress"
+    static let modelKey = "aiOtherModel"
+
+    static var address: String {
+        get { UserDefaults.standard.string(forKey: addressKey) ?? "" }
+        set { UserDefaults.standard.set(newValue, forKey: addressKey) }
+    }
+
+    static var model: String {
+        get { UserDefaults.standard.string(forKey: modelKey) ?? "" }
+        set { UserDefaults.standard.set(newValue, forKey: modelKey) }
+    }
+
+    static var key: String { OtherKeychain.read() }
+
+    static var hasKey: Bool { !OtherKeychain.read().isEmpty }
+
+    static func setKey(_ newValue: String) {
+        OtherKeychain.write(newValue)
+    }
+
+    static func removeKey() {
+        OtherKeychain.remove()
+    }
+}
+
+private struct OtherChatRequest: Encodable {
+    struct Message: Encodable {
+        let role: String
+        let content: String
+    }
+    let model: String
+    let messages: [Message]
+    let stream: Bool
+}
+
+private struct OtherChatReply: Decodable {
+    struct Choice: Decodable {
+        struct Message: Decodable {
+            let content: String?
+        }
+        let message: Message?
+    }
+    let choices: [Choice]?
+}
+
+/// Never follows a redirect. A request that carries a key goes to the address the person typed and nowhere else,
+/// so an answer that points somewhere new is treated as a failure (Patch AI6).
+private final class OtherNoRedirect: NSObject, URLSessionTaskDelegate {
+    func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
+        completionHandler(nil)
+    }
+}
+
+/// How Anchor talks to an Other provider: one request to ask for an answer, only through `OtherProvider` and only
+/// after the consent sheet. It uses a private session that keeps nothing, no cookies and no cache.
+enum OtherClient {
+    private static let session: URLSession = {
+        let config = URLSessionConfiguration.ephemeral
+        config.allowsCellularAccess = true
+        config.waitsForConnectivity = false
+        config.timeoutIntervalForRequest = 180
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData
+        config.urlCache = nil
+        config.httpCookieStorage = nil
+        config.httpShouldSetCookies = false
+        return URLSession(configuration: config, delegate: OtherNoRedirect(), delegateQueue: nil)
+    }()
+
+    /// The request for one answer. The key goes in the Authorization line and nowhere else.
+    static func makeRequest(endpoint: OtherEndpoint, key: String, model: String, instruction: String, text: String) throws -> URLRequest {
+        var request = URLRequest(url: endpoint.url)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 180
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer " + key, forHTTPHeaderField: "Authorization")
+        request.httpBody = try JSONEncoder().encode(OtherChatRequest(
+            model: model,
+            messages: [
+                .init(role: "system", content: instruction),
+                .init(role: "user", content: text)
+            ],
+            stream: false
+        ))
+        return request
+    }
+
+    /// The answer in a reply, with any thinking taken off, or nil when the reply holds none.
+    static func answer(in data: Data) -> String? {
+        guard let reply = try? JSONDecoder().decode(OtherChatReply.self, from: data),
+              let content = reply.choices?.first?.message?.content
+        else { return nil }
+        return OllamaClient.cleaned(content)
+    }
+
+    fileprivate static func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+        do {
+            let (data, response) = try await session.data(for: request)
+            guard let http = response as? HTTPURLResponse else { throw AIError.failed }
+            return (data, http)
+        } catch let error as URLError {
+            if error.code == .cancelled { throw CancellationError() }
+            throw AIError.cannotReachProvider
+        }
+    }
+}
+
+/// A provider the person added themselves, in the common chat completions format (Patch AI6, D42). It is empty to
+/// begin with and is never suggested, named or chosen for the person. `AIAsk` calls it after the consent sheet,
+/// which is shown every time and never offers Don't ask again for this provider.
+struct OtherProvider: AIProviding {
+    let kind = AIProviderKind.other
+
+    /// A guess to be checked with a real provider, held the same as Ollama's.
+    let maxCharacters = 8000
+
+    let address: String
+    let model: String
+
+    init(address: String = OtherSettings.address, model: String = OtherSettings.model) {
+        self.address = address
+        self.model = model
+    }
+
+    private var modelName: String { model.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    private var parsedEndpoint: OtherEndpoint? {
+        if case .success(let found) = OtherEndpoint.parse(address) { return found }
+        return nil
+    }
+
+    var destination: String? {
+        guard let found = parsedEndpoint else { return nil }
+        return found.display + ", model " + modelName
+    }
+
+    func status() -> AIProviderStatus {
+        guard AIGate.isEnabled else { return .aiToolsOff }
+        guard parsedEndpoint != nil, !modelName.isEmpty, OtherSettings.hasKey else { return .otherNotSetUp }
+        return .ready
+    }
+
+    func generate(instruction: String, text: String) async throws -> String {
+        guard AIGate.isEnabled else { throw AIError.off }
+        guard let endpoint = parsedEndpoint, !modelName.isEmpty else { throw AIError.unavailable(.otherNotSetUp) }
+        let key = OtherSettings.key
+        guard !key.isEmpty else { throw AIError.unavailable(.otherNotSetUp) }
+        let request = try OtherClient.makeRequest(endpoint: endpoint, key: key, model: modelName, instruction: instruction, text: text)
+        let (data, http) = try await OtherClient.send(request)
+        switch http.statusCode {
+        case 200: break
+        case 401, 403: throw AIError.keyRefused
+        case 404: throw AIError.providerNotFound
+        case 429: throw AIError.providerBusy
+        default: throw AIError.failed
+        }
+        guard let answer = OtherClient.answer(in: data) else { throw AIError.failed }
+        return answer
+    }
+}
+
 #if DEBUG
 /// Checks, in a test build, which typed addresses are accepted for Ollama, which are away from home, that a
 /// confirmation belongs to one address, and that its thinking is taken off an answer. Nothing here connects to
@@ -702,6 +1004,92 @@ enum OllamaSelfTest {
         check(OllamaClient.cleaned("<think>hmm</think>\nHello there ") == "Hello there", "thinking comes off")
         check(OllamaClient.cleaned("Plain answer") == "Plain answer", "a plain answer is left alone")
         check(OllamaClient.cleaned("<think>never closed Hello") == "<think>never closed Hello", "an unclosed tag is left alone")
+    }
+}
+#endif
+
+#if DEBUG
+/// Checks, in a test build, which typed addresses are accepted for an Other provider, that the request carries the
+/// key only in the Authorization line, that an answer is read out of a reply, that the key is kept in the
+/// Keychain and can be removed, and that Don't ask again is never kept for this provider. Nothing here connects to
+/// anything, and the Keychain test uses its own entry, never the real key. Patch AI6.
+enum OtherProviderSelfTest {
+    private static var hasRun = false
+
+    private static func check(_ condition: Bool, _ message: String) {
+        if !condition { fatalError("Other provider self-test: \(message)") }
+    }
+
+    private static func display(_ typed: String) -> String? {
+        if case .success(let endpoint) = OtherEndpoint.parse(typed) { return endpoint.display }
+        return nil
+    }
+
+    private static func url(_ typed: String) -> String? {
+        if case .success(let endpoint) = OtherEndpoint.parse(typed) { return endpoint.url.absoluteString }
+        return nil
+    }
+
+    private static func problem(_ typed: String) -> OtherAddressProblem? {
+        if case .failure(let problem) = OtherEndpoint.parse(typed) { return problem }
+        return nil
+    }
+
+    static func run() {
+        if hasRun { return }
+        hasRun = true
+        check(url("https://api.example.com/v1") == "https://api.example.com/v1/chat/completions", "the path is kept and the chat address is added")
+        check(url(" https://API.example.com/v1/ ") == "https://api.example.com/v1/chat/completions", "spaces, capitals and a trailing slash are tidied")
+        check(url("https://api.example.com/v1/chat/completions") == "https://api.example.com/v1/chat/completions", "the chat address is not added twice")
+        check(url("api.example.com/v1") == "https://api.example.com/v1/chat/completions", "no scheme means https")
+        check(url("https://api.example.com") == "https://api.example.com/chat/completions", "no path is allowed")
+        check(display("https://api.example.com:8443/v1") == "https://api.example.com:8443/v1", "a port is kept and shown")
+        check(problem("http://api.example.com/v1") == .needsHTTPS, "plain http is refused")
+        check(problem("HTTP://192.168.1.20") == .needsHTTPS, "plain http is refused in capitals and to a home number")
+        check(problem("") == .empty && problem("   ") == .empty, "nothing typed")
+        check(problem("https://localhost/v1") == .thisPhone && problem("https://127.0.0.1") == .thisPhone, "this phone is refused")
+        check(problem("https://user:pw@api.example.com") == .notAnAddress, "a name and password are refused")
+        check(problem("https://api.example.com/v1?key=abc") == .notAnAddress, "a question mark is refused, so no key rides in the address")
+        check(problem("https://api.example.com/v1#top") == .notAnAddress, "a # is refused")
+        check(problem("https://myserver") == .notAnAddress, "a name with no dot is refused")
+        check(problem("ftp://api.example.com") == .notAnAddress, "only https")
+        check(problem("https://api.example.com:99999") == .notAnAddress, "a port out of range")
+        check(problem("https://api example.com") == .notAnAddress, "a space inside the name")
+
+        guard case .success(let endpoint) = OtherEndpoint.parse("https://api.example.com/v1"),
+              let request = try? OtherClient.makeRequest(endpoint: endpoint, key: "sk-test-123", model: "some-model", instruction: "Do it.", text: "Hello")
+        else { check(false, "the request should be made"); return }
+        check(request.httpMethod == "POST" && request.url == endpoint.url, "it is a post to the chat address")
+        check(request.value(forHTTPHeaderField: "Authorization") == "Bearer sk-test-123", "the key is in the Authorization line")
+        check(!(request.url?.absoluteString ?? "").contains("sk-test-123"), "the key is not in the address")
+        let body = String(data: request.httpBody ?? Data(), encoding: .utf8) ?? ""
+        check(!body.contains("sk-test-123"), "the key is not in the body")
+        check(body.contains("\"model\":\"some-model\"") && body.contains("\"stream\":false") && body.contains("\"role\":\"system\"") && body.contains("Hello"), "the body holds the model, the instruction and the text")
+
+        check(OtherClient.answer(in: Data(#"{"choices":[{"message":{"role":"assistant","content":"<think>hm</think> Short."}}]}"#.utf8)) == "Short.", "the answer is read and its thinking taken off")
+        check(OtherClient.answer(in: Data(#"{"choices":[]}"#.utf8)) == nil, "no choice, no answer")
+        check(OtherClient.answer(in: Data(#"{"choices":[{"message":{"content":null}}]}"#.utf8)) == nil, "an empty content is no answer")
+        check(OtherClient.answer(in: Data("not json".utf8)) == nil, "something else is no answer")
+
+        let testAccount = "otherProviderKey.selftest"
+        OtherKeychain.remove(account: testAccount)
+        check(OtherKeychain.read(account: testAccount).isEmpty, "no key to begin with")
+        check(OtherKeychain.write("  abc123 \n", account: testAccount) && OtherKeychain.read(account: testAccount) == "abc123", "a key is kept, trimmed")
+        check(OtherKeychain.write("def456", account: testAccount) && OtherKeychain.read(account: testAccount) == "def456", "a key can be replaced")
+        check(OtherKeychain.write("   ", account: testAccount) && OtherKeychain.read(account: testAccount).isEmpty, "an emptied key is removed")
+        OtherKeychain.remove(account: testAccount)
+
+        check(!AIProviderKind.other.offersDontAskAgain, "Don't ask again is never offered for this provider")
+        let suite = "page.aspens.anchor.other-selftest"
+        if let defaults = UserDefaults(suiteName: suite) {
+            defaults.removePersistentDomain(forName: suite)
+            let store = AIConsentStore(defaults: defaults)
+            store.setSkipsAsking(true, .makeShorter, .other)
+            check(!store.skipsAsking(.makeShorter, .other) && store.all.isEmpty, "a skip is never kept for this provider")
+            defaults.set(["makeShorter|other"], forKey: AIConsentStore.key)
+            check(!store.skipsAsking(.makeShorter, .other) && store.all.isEmpty, "a skip written by hand is ignored")
+            defaults.removePersistentDomain(forName: suite)
+        }
     }
 }
 #endif
