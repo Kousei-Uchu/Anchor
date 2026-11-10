@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 35f: a list of every field and setting the app keeps, locked or plain with the reason (docs/FIELD_INVENTORY.md), and a check that fails when the list and the code drift apart.
 - Patch AI6: Settings, AI tools has a third place, Other, for a service you choose yourself: an https address, a key kept in this phone's Keychain and a model name, empty to begin with, never suggested or named, always asking before it sends, with no Don't ask again.
 - Patch AI9: when you tick in AI Optimised versions for an export, the shorter version and the words it was made from come as two entries, each labelled, and nothing is printed twice.
 - Patch AI8: Ollama on your own computer can be reached from away from home, through a Tailscale number or an https address, but only after you confirm that exact address, and the consent sheet says the computer is away and that it can use mobile data.
