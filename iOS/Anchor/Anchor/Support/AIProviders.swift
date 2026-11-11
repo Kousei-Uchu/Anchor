@@ -31,7 +31,7 @@ enum AIFeature: String, CaseIterable {
     var instruction: String {
         switch self {
         case .makeShorter:
-            return "Make this text shorter. Keep every concrete detail, name, number and date, and keep who said what. Add nothing: no advice, no comment on feelings, no new facts. Use the same voice and the same language as the text. Reply with the shorter text only."
+            return "Rewrite this text so it is clearly shorter, about half its length. Cut repetition, filler, hedging and sentences that only say a point again. Keep every name, number and date, and keep who said what. Add nothing: no advice, no comment on feelings, no new facts. Use the same voice and the same language as the text. Reply with the shorter text only."
         case .breakIntoSteps:
             return "Break this task into a short list of small steps, in the order they would be done. Use only what the text says or plainly needs. Add no dates, no priorities, no advice and no comment on feelings. Write one step per line, with no numbers, bullets or other words, and at most 8 lines. Use the same language as the text."
         case .estimateTime:
@@ -234,13 +234,35 @@ struct AppleOnDeviceProvider: AIProviding {
         #endif
     }
 
+    /// The text set apart from the instruction, so the model treats it as something to work on and not to continue.
+    static func framed(_ text: String) -> String {
+        "Text to work on:\n\n" + text
+    }
+
+    /// True when a reply is the text it was given, ignoring case and spacing. Only for text long enough that an
+    /// identical answer cannot be right (a one-line task can come back as itself).
+    static func isUnchangedCopy(_ reply: String, of text: String) -> Bool {
+        func squash(_ value: String) -> String {
+            value.lowercased().split(whereSeparator: { $0.isWhitespace }).joined(separator: " ")
+        }
+        let original = squash(text)
+        return original.count >= 120 && squash(reply) == original
+    }
+
     func generate(instruction: String, text: String) async throws -> String {
         guard AIGate.isEnabled else { throw AIError.off }
         #if canImport(FoundationModels)
         guard #available(iOS 26.0, *) else { throw AIError.unavailable(.notOnThisPhone) }
         let session = LanguageModelSession(instructions: instruction)
-        let response = try await session.respond(to: text)
-        return response.content
+        var reply = try await session.respond(to: Self.framed(text)).content
+        // The small on-device model sometimes returns the text it was given. Try once more, firmly; if it still
+        // does, say so instead of showing an unchanged copy as if it were a result.
+        if Self.isUnchangedCopy(reply, of: text) {
+            let firm = LanguageModelSession(instructions: instruction + " Your reply must not be a copy of the text. Do what the instructions say to it.")
+            reply = try await firm.respond(to: Self.framed(text)).content
+            if Self.isUnchangedCopy(reply, of: text) { throw AIError.failed }
+        }
+        return reply
         #else
         throw AIError.unavailable(.unavailable)
         #endif
