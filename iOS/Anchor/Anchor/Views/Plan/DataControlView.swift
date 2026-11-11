@@ -213,7 +213,9 @@ struct DataControlView: View {
             Button("Clear everything", role: .destructive) { clearAllData() }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This deletes everything on this device. Export first if you want to keep a copy.")
+            Text(CloudSync.isOn
+                 ? "This deletes everything, and because iCloud sync is on it clears every device signed in to this iCloud account. Export first if you want to keep a copy."
+                 : "This deletes everything on this device. Export first if you want to keep a copy.")
         }
         .alert("Data cleared", isPresented: $showClearedAlert) {
             Button("OK", role: .cancel) {}
@@ -729,6 +731,7 @@ struct DataControlView: View {
         LockMyData.cancelRequest()
         LockMyFiles.cancelRequest()
         SafetyCopy.deleteEverything()
+        CloudSync.removeCloudCopies()
         showClearedAlert = true
     }
 

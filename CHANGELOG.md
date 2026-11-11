@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch SY1b: Settings, iCloud sync, off until you turn it on. It uses your own private iCloud only, starts once everything is locked, and a second device gets the recovery file from iCloud and you type the recovery key there. Nights from Apple Health are kept out while it is on.
 - Patch 35g5: Lock the rest no longer stops when one saved setting was locked with a key that no longer opens it. It is left as it was and the result says so.
 - Patch DOC29: the plan and status now record that everything through R4 builds and launches on an iPhone 14 Pro, with the two fixes that got it there: the AI tools build errors, and the app closing at launch because iCloud was switched on by default. iCloud sync stays off until SY1b.
 - Patch SY1a: every item Anchor keeps now has a default for each value, another step toward iCloud sync. It changes nothing you see.

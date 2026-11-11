@@ -4821,14 +4821,26 @@ enum AnchorSchema {
         // No model declares a unique id any more (Patch SY0), so a second row with the same id is kept and not merged.
         // Where Anchor adds rows from outside (the backup import), it skips an id it already has. See
         // scripts/check-no-unique-ids.mjs.
-        // Local-first: CloudKit is switched off explicitly (cloudKitDatabase: .none), because the iCloud entitlement is now present and the default would otherwise try to sync and validate the schema (Patch FIX2). No sync service. Data moves
-        // only through explicit export/import, never a required third-party cloud.
-        let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false, cloudKitDatabase: .none)
+        // Local-first: CloudKit is off unless the person switched iCloud sync on and everything is locked (Patch SY1b,
+        // `CloudSync.shouldSyncAtLaunch`). Every other store in the app says `cloudKitDatabase: .none` (Patch FIX2), because the
+        // iCloud entitlement is present and the default would otherwise try to sync.
+        let wantsSync = CloudSync.shouldSyncAtLaunch
+        let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false, cloudKitDatabase: wantsSync ? .private(CloudSync.containerID) : .none)
         do {
             let container = try ModelContainer(for: schema, configurations: [configuration])
+            CloudSync.openedWithSync = wantsSync
             applyDataProtection(at: configuration.url)
             return container
         } catch {
+            if wantsSync {
+                // Sync would not start. Open the same store without it, so nothing is hidden or lost.
+                CloudSync.syncFailedToStart = true
+                let local = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false, cloudKitDatabase: .none)
+                if let container = try? ModelContainer(for: schema, configurations: [local]) {
+                    applyDataProtection(at: local.url)
+                    return container
+                }
+            }
             openedPersistentStore = false
             let temporary = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true, cloudKitDatabase: .none)
             do {

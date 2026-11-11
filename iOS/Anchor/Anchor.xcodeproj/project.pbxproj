@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		03341B23D1B41EB29A286F8D /* SafetyCopyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87A893C8C649E0DA82BF5434 /* SafetyCopyView.swift */; };
+		5357347FF47C55576D8D3104 /* SyncSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DC8C700FDC1CB81DCA414DC /* SyncSettingsView.swift */; };
 		035010293EE54573AECF8B65 /* CrisisNumbersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23872821DD004B2493E86D8F /* CrisisNumbersView.swift */; };
 		07033D98FCBCC16228F86C85 /* LockedFields.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8FC090AB9CDA60DC7E77AF2 /* LockedFields.swift */; };
 		07F174CB78A6BBEEF965D4F0 /* RecoveryDailyViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D549DC46C03C21BB00FA9EA /* RecoveryDailyViews.swift */; };
@@ -40,6 +41,7 @@
 		5E39536252994C52BA23EB63 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 84BE718902E34AC5BD3C4A36 /* SwiftUI.framework */; };
 		5ECEDA94452645569E4857AA /* AnchorModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15ACBC80FF724521BB7AE9FF /* AnchorModels.swift */; };
 		60A074630CC7C6188746A45F /* SafetyCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 905C4FDA487AB3F8365B7465 /* SafetyCopy.swift */; };
+		5D8CD457D6400371B991BDA2 /* CloudSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92467451520AC73206018CEC /* CloudSync.swift */; };
 		60E16D624DA94736AA1C8E13 /* NotificationDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C21816FFAD0B409A88F1D941 /* NotificationDelegate.swift */; };
 		621ABFDCE22D492A88CCABE0 /* GroundingToolsEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2AA5399254246FC897A81A7 /* GroundingToolsEditorView.swift */; };
 		66F8C2F61BC14462BF3E5005 /* QuickContactsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D814F7C294EE47FE8A60BC30 /* QuickContactsView.swift */; };
@@ -186,8 +188,10 @@
 		858B92E9C32D46358B7278A5 /* ContactsEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsEditorView.swift; sourceTree = "<group>"; };
 		85B27412DFF5FC3D964C3D85 /* LockMyDataView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockMyDataView.swift; sourceTree = "<group>"; };
 		87A893C8C649E0DA82BF5434 /* SafetyCopyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafetyCopyView.swift; sourceTree = "<group>"; };
+		0DC8C700FDC1CB81DCA414DC /* SyncSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncSettingsView.swift; sourceTree = "<group>"; };
 		8B14E6D0A93F42C5B7D1E028 /* DictationAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationAudio.swift; sourceTree = "<group>"; };
 		905C4FDA487AB3F8365B7465 /* SafetyCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafetyCopy.swift; sourceTree = "<group>"; };
+		92467451520AC73206018CEC /* CloudSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSync.swift; sourceTree = "<group>"; };
 		92D593B269EB6B064DC986FE /* LockMyData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockMyData.swift; sourceTree = "<group>"; };
 		94ECF0E537016231C42D3609 /* AIAsk.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIAsk.swift; sourceTree = "<group>"; };
 		988D389A938F4784B62E6999 /* JournalEntryEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalEntryEditorView.swift; sourceTree = "<group>"; };
@@ -338,6 +342,7 @@
 			isa = PBXGroup;
 			children = (
 				905C4FDA487AB3F8365B7465 /* SafetyCopy.swift */,
+				92467451520AC73206018CEC /* CloudSync.swift */,
 				92D593B269EB6B064DC986FE /* LockMyData.swift */,
 				60E32204EBCB9844F599B451 /* AIGate.swift */,
 				94ECF0E537016231C42D3609 /* AIAsk.swift */,
@@ -416,6 +421,7 @@
 			isa = PBXGroup;
 			children = (
 				87A893C8C649E0DA82BF5434 /* SafetyCopyView.swift */,
+				0DC8C700FDC1CB81DCA414DC /* SyncSettingsView.swift */,
 				85B27412DFF5FC3D964C3D85 /* LockMyDataView.swift */,
 				BDD6F1CF970D62BC5CDBABF7 /* AIConsentSheet.swift */,
 				9F125C7F526ED24028B46F94 /* AIBraindumpSheet.swift */,
@@ -659,11 +665,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				03341B23D1B41EB29A286F8D /* SafetyCopyView.swift in Sources */,
+				5357347FF47C55576D8D3104 /* SyncSettingsView.swift in Sources */,
 				25D53E264D1F99304DF6A72B /* LockMyDataView.swift in Sources */,
 				7777FCE0AEFF93FA6147EC1C /* AIConsentSheet.swift in Sources */,
 				95FBA5A7AC4BEC75F6456822 /* AIBraindumpSheet.swift in Sources */,
 				FBE4E15F99C3E6CE0C415894 /* AIOffNotice.swift in Sources */,
 				60A074630CC7C6188746A45F /* SafetyCopy.swift in Sources */,
+				5D8CD457D6400371B991BDA2 /* CloudSync.swift in Sources */,
 				0CAA287DC6AAD87AC93CC178 /* LockMyData.swift in Sources */,
 				383D93D08A9CDB63AB066AD1 /* AIGate.swift in Sources */,
 				FDBD68869E5A11B99B6BED27 /* AIAsk.swift in Sources */,

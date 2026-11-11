@@ -794,6 +794,8 @@ final class DataKeyManager: ObservableObject {
     }
 
     func refresh() {
+        // With iCloud sync on, a device with no key takes the recovery file from iCloud (Patch SY1b).
+        if CloudSync.isOn, case .missing = DataKeyStore.lookup() { CloudSync.pullRecoveryFile() }
         hasRecoveryFile = RecoveryFile.exists
         switch DataKeyStore.lookup() {
         case .found:
@@ -825,6 +827,7 @@ final class DataKeyManager: ObservableObject {
             throw DataKeyError.storage
         }
         refresh()
+        CloudSync.publishForOtherDevices()
         return RecoveryKeyText.text(for: recovery)
     }
 
@@ -840,6 +843,7 @@ final class DataKeyManager: ObservableObject {
             throw DataKeyError.storage
         }
         refresh()
+        CloudSync.publishForOtherDevices()
         return RecoveryKeyText.text(for: recovery)
     }
 

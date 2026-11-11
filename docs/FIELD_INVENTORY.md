@@ -550,6 +550,9 @@ Every key the app keeps in the phone's settings (UserDefaults and `@AppStorage`)
 | anchor.sleep.checkIn | the sleep question in the check-in | plain | plain | an on or off switch |
 | anchor.sleep.nowCard | the Last night card on Now | plain | plain | an on or off switch |
 | anchor.sleep.health.read | reading sleep from Apple Health | plain | plain | an on or off switch |
+| anchor.sync.icloud | iCloud sync | plain | plain | an on or off switch, read when Anchor starts and kept on this device only |
+| anchor.sync.recoveryfile | the recovery file, put in iCloud's key-value store for a second device | plain | plain | already sealed under the recovery key, so it holds nothing readable and is no use without that key |
+| anchor.sync.locklevel | how much is locked, put in iCloud's key-value store for a second device | plain | plain | a single number with no content |
 | anchor.sleep.health.write | saving typed nights to Apple Health | plain | plain | an on or off switch |
 | reminders.appointment.dayBefore | the day-before session reminder | plain | plain | an on or off switch |
 | reminders.appointment.sameDay | the same-day session reminder | plain | plain | an on or off switch |

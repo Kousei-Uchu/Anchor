@@ -292,6 +292,11 @@ struct SettingsView: View {
                         Text("Encryption").font(.system(.subheadline, design: .rounded))
                     }
                     NavigationLink {
+                        SyncSettingsView()
+                    } label: {
+                        Text("iCloud sync").font(.system(.subheadline, design: .rounded))
+                    }
+                    NavigationLink {
                         SafetyCopyView()
                     } label: {
                         Text("Safety copy").font(.system(.subheadline, design: .rounded))

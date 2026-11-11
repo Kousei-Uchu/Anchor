@@ -797,7 +797,7 @@ final class SleepHealthReader {
     /// Asks for read access to sleep, which is when iOS shows its own
     /// question, then brings in the last 30 days.
     func connect(context: ModelContext) async {
-        guard isAvailable, !DemoMode.isOn, let type = sleepType else { return }
+        guard isAvailable, !DemoMode.isOn, !CloudSync.isOn, let type = sleepType else { return }
         do {
             try await store.requestAuthorization(toShare: [], read: [type])
         } catch {
@@ -868,7 +868,9 @@ final class SleepHealthReader {
     /// then what is new. It does nothing unless the person has connected.
     func sync(context: ModelContext, full: Bool = false) async {
         let defaults = UserDefaults.standard
-        guard defaults.bool(forKey: SleepHealthSettings.connectedKey),
+        // With iCloud sync on, nights from Apple Health are not brought in, because Apple Health information is not kept
+        // in iCloud (D39, Patch SY1b).
+        guard defaults.bool(forKey: SleepHealthSettings.connectedKey), !CloudSync.isOn,
               isAvailable, !DemoMode.isOn, !isWorking, let type = sleepType else { return }
         isWorking = true
         defer { isWorking = false }

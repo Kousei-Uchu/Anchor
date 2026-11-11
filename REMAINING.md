@@ -1,6 +1,6 @@
 # Anchor: what is left
 
-*Only what is still to do. When something is finished, confirmed or answered, it is deleted from this file in the same patch, never moved to a done list. Finished work is in the Progress table of `ANCHOR_PATCH_PLAN.md` and in `docs/PLAN_CHANGELOG.md`. Last updated: 11 Nov 2026, after SY1b-pre.*
+*Only what is still to do. When something is finished, confirmed or answered, it is deleted from this file in the same patch, never moved to a done list. Finished work is in the Progress table of `ANCHOR_PATCH_PLAN.md` and in `docs/PLAN_CHANGELOG.md`. Last updated: 11 Nov 2026, after SY1b.*
 
 ## 1. Waiting on you
 
@@ -8,11 +8,6 @@
 
 - The words for the About screen's creator section (D23, 1).
 - The licence files you said you would attach, so the `LICENSE` file can be written (D23, 2). Nothing is written yet.
-
-**Needed before SY1b can be written (iCloud sync switch)**
-
-- The iCloud capability and the container `iCloud.page.aspens.anchor` are in `Anchor.entitlements`, registered and ticked on the app target (you confirmed 11 Nov), and you have two devices to try it on. Nothing from you is outstanding for SY1b except the recovery-key screen below, which I check myself.
-- How the second device gets the data key: D40 says the recovery key is typed on the new device. I have not checked that a screen for typing it in on a new device exists; that is the first thing I will look at once the above is in place.
 
 **Things to read and answer**
 
@@ -30,6 +25,7 @@ Everything here builds and launches on your phone (confirmed 11 Nov 2026, after 
 
 **Can be tried in the review run** (`scripts/review-on-device.sh`, made-up content)
 
+- SY1b: Settings, iCloud sync, the switch. **Cannot be tried in the review run** (it uses a throwaway store), and it needs both your devices, signed in to the same Apple ID. First device: Encryption set up, Lock my data done, then turn on iCloud sync, close Anchor from the app switcher and open it again. Second device, with nothing in Anchor yet: Settings, iCloud sync, Use this as a second device, type the recovery key, Finish setting up this device, close and open again. Then add a task or write a journal entry on one and watch it arrive on the other, and check it reads as text on both. Make the safety copy first. Known to check: the default items Anchor adds itself (decision presets, de-escalation scripts, mascot lines) may appear twice on the second device; tell me what you see. Nights from Apple Health are removed from Anchor when sync is turned on, and Anchor stops bringing them in while it is on (D39).
 - SY1b-pre: Plan, Appointments and Decision presets, the two links CloudKit needs to be optional with an inverse. Make the safety copy first, and open the new build on a copy of your data if you can: every provider's sessions and every preset group's options should still be there.
 - R5: the check-in and sleep fixes, six stops at the end of the review bar. Make the safety copy first: a check-in gets a new locked field for its answers. Check-in exports do not carry those answers yet.
 - RV1a: Task cards, the quiet line is now a few small facts that wrap instead of being cut off.
@@ -66,16 +62,15 @@ Everything here builds and launches on your phone (confirmed 11 Nov 2026, after 
 
 ## 3. Not started, in order
 
-1. **SY1b**: the iCloud sync switch. It must also remove `cloudKitDatabase: .none` from every store (FIX2), or sync stays off. Off by default, the private database, per-device things stay per-device, sleep nights synced except any Apple Health already holds (D39), Clear everything says it clears every device. The two relationships are now optional with an inverse (SY1b-pre). After SY1a and SY1b-pre are checked on your phone.
-2. **SY2**: voice notes and Journal photos in sync. After SY1.
-3. **SY3**: the recovery key shown as a QR code and scanned on the new device, with the typed key still the default (D40). With SY1.
-4. **VN4a**: find who is speaking with a speaker-separation model on the recording, used in memory against the other voices in that one recording only, labelling Person 1, Person 2 and so on, then a people screen (how many were heard, a name for each beside a transcript preview, openable again later). The model ships inside the app; its size is measured first. Nothing is stored. Size L, to be split.
-5. **VN4b**: replay and tap, for the more privacy-minded: play the recording back and tap where each new person starts, with no model. After VN4a.
-6. **VN4c**: the words as a backup or beside the model: a language model reads only the transcript and suggests where the speaker changes, on the phone and through Ollama on your own computer, behind the AI switch. After VN4a.
-7. **VN5**: speaker tags in exports, per entry and per person: include the name, hide it, or leave that person's words out. After VN4a.
-8. **52**: refresh the Remotion promo with new screenshots and captions. The single source is already true (`remotion-project/src/Promo.tsx`, `npm run sync:promo`); what is left needs the app run on a simulator.
-9. **53**: the long full-tour video, split into per-tab scenes, scripted from `website/src/content/guide.generated.json`. Waits on 52. Size L, to be split.
-10. **54**: Android decision write-up, optional prototype spike. Android itself is far future (D4).
+1. **SY2**: voice notes and Journal photos in sync. After SY1.
+2. **SY3**: the recovery key shown as a QR code and scanned on the new device, with the typed key still the default (D40). With SY1.
+3. **VN4a**: find who is speaking with a speaker-separation model on the recording, used in memory against the other voices in that one recording only, labelling Person 1, Person 2 and so on, then a people screen (how many were heard, a name for each beside a transcript preview, openable again later). The model ships inside the app; its size is measured first. Nothing is stored. Size L, to be split.
+4. **VN4b**: replay and tap, for the more privacy-minded: play the recording back and tap where each new person starts, with no model. After VN4a.
+5. **VN4c**: the words as a backup or beside the model: a language model reads only the transcript and suggests where the speaker changes, on the phone and through Ollama on your own computer, behind the AI switch. After VN4a.
+6. **VN5**: speaker tags in exports, per entry and per person: include the name, hide it, or leave that person's words out. After VN4a.
+7. **52**: refresh the Remotion promo with new screenshots and captions. The single source is already true (`remotion-project/src/Promo.tsx`, `npm run sync:promo`); what is left needs the app run on a simulator.
+8. **53**: the long full-tour video, split into per-tab scenes, scripted from `website/src/content/guide.generated.json`. Waits on 52. Size L, to be split.
+9. **54**: Android decision write-up, optional prototype spike. Android itself is far future (D4).
 
 **Parked on purpose**
 

@@ -73,6 +73,14 @@ enum LockMyData {
         isOn && savedLevel < current
     }
 
+    /// Patch SY1b: a second device whose key was typed in takes over the locked state from the first, so the words
+    /// it writes are locked. It takes effect at the next start, when `FieldLock.isOn` is set.
+    static func adoptFromOtherDevice(level: Int) {
+        defaults.set(Stored.on.rawValue, forKey: stateKey)
+        defaults.set(level, forKey: levelKey)
+        defaults.set(Date().timeIntervalSince1970, forKey: lockedAtKey)
+    }
+
     /// What a new run would lock beyond what is locked now, in plain words for the Lock my data screen.
     static var moreToLock: String {
         var parts: [String] = []
