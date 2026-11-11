@@ -637,6 +637,41 @@ enum StoredFiles {
     static func clearSharedCopies() {
         try? FileManager.default.removeItem(at: sharedFolder)
     }
+
+    // MARK: A copy to listen to, for finding who is speaking (Patch VN4a2, D64)
+
+    private static var workingFolder: URL {
+        FileManager.default.temporaryDirectory.appendingPathComponent("AnchorSeparation", isDirectory: true)
+    }
+
+    /// A plain copy of a recording for `SpeakerSeparation` to read once, in the phone's temporary folder (which no
+    /// backup takes). The audio reader needs a file, and a locked file has to be opened to give it one. The caller
+    /// removes it with `removeWorkingCopy` when it is done, and `clearWorkingCopies` removes any left behind at
+    /// every start, so a copy never outlasts the run that made it. Nil if the file is missing or cannot be opened.
+    static func workingCopy(_ folder: Folder, _ name: String) -> URL? {
+        guard isPlainName(name), let plain = read(folder, name) else { return nil }
+        let directory = workingFolder.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let copy = directory.appendingPathComponent(name)
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try plain.write(to: copy, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+            return copy
+        } catch {
+            try? FileManager.default.removeItem(at: directory)
+            return nil
+        }
+    }
+
+    /// Removes one copy made by `workingCopy`, and only something that lies inside the working folder.
+    static func removeWorkingCopy(_ url: URL) {
+        let directory = url.deletingLastPathComponent().standardizedFileURL
+        guard directory.deletingLastPathComponent() == workingFolder.standardizedFileURL else { return }
+        try? FileManager.default.removeItem(at: directory)
+    }
+
+    static func clearWorkingCopies() {
+        try? FileManager.default.removeItem(at: workingFolder)
+    }
 }
 
 /// Lock my files (Patch 35d, D31): the second step of locking. Lock my data (35b3) locks the words; this locks the
@@ -731,6 +766,7 @@ enum LockMyFiles {
     @MainActor
     static func runIfWaiting() {
         StoredFiles.clearSharedCopies()
+        StoredFiles.clearWorkingCopies()
         guard let asked = defaults.object(forKey: requestedKey) as? Double else { return }
         defaults.removeObject(forKey: requestedKey)
         let requested = Date(timeIntervalSince1970: asked)

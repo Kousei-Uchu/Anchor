@@ -178,6 +178,7 @@ The second step of locking: the voice notes and Journal photos, which are files 
 - **The safety copy is plain.** It holds the files as they were, unlocked, until you delete it.
 - **Names, sizes and times.** The file names are random ids, but the size and time of each file, and that a file is a photo or a recording, are still visible to anyone with the files.
 - **The temporary copy** of a voice note exists for as long as a share or a send takes, and until the start after that if the app is closed first.
+- **The listening copy** (finding who is speaking, VN4a). To listen to a locked recording, a plain copy is made in the phone's temporary folder for as long as the run takes. It is removed when the run ends however it ends, and at the next start if the app is closed first. Nothing computed from the voices is kept. Today only a test build can start this.
 - **A recording in progress** is plain until it stops.
 - **Old copies.** A phone backup or an export made before locking still holds the files readable.
 - **Turning it off.** There is no switch that unlocks files in place. The way back is the safety copy or an encrypted backup.

@@ -291,6 +291,13 @@ struct SettingsView: View {
                     } label: {
                         Text("Encryption").font(.system(.subheadline, design: .rounded))
                     }
+                    #if DEBUG
+                    NavigationLink {
+                        SpeakerTryItView()
+                    } label: {
+                        Text("Who is speaking (test build)").font(.system(.subheadline, design: .rounded))
+                    }
+                    #endif
                     NavigationLink {
                         SyncSettingsView()
                     } label: {

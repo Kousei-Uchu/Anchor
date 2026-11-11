@@ -16,6 +16,8 @@ struct AnchorApp: App {
         UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
         FieldLockWiring.install()
         CloudSync.install()
+        // The speaker-separation library can fetch models from the internet. Anchor never lets it (Patch VN4a2, D73).
+        SpeakerSeparation.forbidDownloads()
         #if DEBUG
         WidgetSealSelfTest.run()
         FieldLockSelfTest.run()
@@ -25,6 +27,7 @@ struct AnchorApp: App {
         JournalAssistSelfTest.run()
         JournalVoiceSelfTest.run()
         SpeakerLabelsSelfTest.run()
+        SpeakerSeparationSelfTest.run()
         AIAnswerReaderSelfTest.run()
         OllamaSelfTest.run()
         OtherProviderSelfTest.run()
