@@ -31,7 +31,7 @@ enum AIFeature: String, CaseIterable {
     var instruction: String {
         switch self {
         case .makeShorter:
-            return "Rewrite this text so it is clearly shorter, about half its length. Cut repetition, filler, hedging and sentences that only say a point again. Keep every name, number and date, and keep who said what. Add nothing: no advice, no comment on feelings, no new facts. Use the same voice and the same language as the text. Reply with the shorter text only."
+            return "Rewrite this text so it is clearly shorter, about half its length. Cut repetition, filler, hedging and sentences that only say a point again. Keep every name, number and date, and keep who said what. Add nothing: no advice, no comment on feelings, no new facts. Use the same voice and the same language as the text. Reply with the shorter text only. Example 1. Text: I went to the shop today and I bought some milk and also some bread and I think maybe some eggs as well, because we were nearly out of everything. Shorter: I went to the shop and bought milk, bread and eggs, because we were nearly out. Example 2. Text: Sam said on Tuesday that he would probably be able to come on Friday, but then later on he said that he was not totally sure about it. Shorter: Sam said on Tuesday he could probably come on Friday, then said he was not sure."
         case .breakIntoSteps:
             return "Break this task into a short list of small steps, in the order they would be done. Use only what the text says or plainly needs. Add no dates, no priorities, no advice and no comment on feelings. Write one step per line, with no numbers, bullets or other words, and at most 8 lines. Use the same language as the text."
         case .estimateTime:
@@ -134,6 +134,7 @@ enum AIError: Error, Equatable {
     case unavailable(AIProviderStatus)
     case cancelled
     case failed
+    case couldNotShorten
     case cannotReach
     case modelNotFound
     case keyRefused
@@ -150,6 +151,7 @@ enum AIError: Error, Equatable {
         case .unavailable(let status): return status.plainText + ". Nothing was sent."
         case .cancelled: return "Cancelled. Nothing was sent."
         case .failed: return "It could not make an answer. Nothing was kept."
+        case .couldNotShorten: return "The model on this phone gave your words back unchanged. Longer or fiddlier text works better with Ollama on your computer or another provider, which you can set up in Settings, AI tools. Nothing was kept."
         case .cannotReach: return "Anchor could not reach your computer. Check the address, that Ollama is running, that you are on the same network, and that Local Network is on for Anchor in the phone's Settings. Nothing was kept."
         case .modelNotFound: return "Ollama on your computer does not have that model. Check the name in Settings, AI tools. Nothing was kept."
         case .keyRefused: return "The provider did not accept the key. Check it in Settings, AI tools. Nothing was kept."
@@ -202,6 +204,17 @@ enum AIProviders {
     }
 }
 
+#if canImport(FoundationModels)
+/// The shape of a Make shorter answer from Apple's model: the shorter text and nothing around it, so no
+/// "Here is a shorter version" lead-in can end up in the entry.
+@available(iOS 26.0, *)
+@Generable
+struct AnchorShortenedText {
+    @Guide(description: "Only the shorter version of the text. No introduction, no label, no comment.")
+    var shorter: String
+}
+#endif
+
 /// Apple's on-device model, through the FoundationModels framework. It runs on the phone, with no network.
 /// It needs a phone that supports Apple Intelligence with it turned on in the phone's Settings.
 struct AppleOnDeviceProvider: AIProviding {
@@ -234,6 +247,71 @@ struct AppleOnDeviceProvider: AIProviding {
         #endif
     }
 
+    /// Longest piece shortened in one go. The on-device model copes much better with a paragraph or two than with a page.
+    static let chunkLimit = 700
+
+    /// Splits text into pieces of at most about `limit` characters: whole paragraphs together where they fit,
+    /// and a paragraph that is longer than that cut at sentence ends.
+    static func chunks(of text: String, limit: Int) -> [String] {
+        var pieces: [String] = []
+        var current = ""
+        let paragraphs = text.components(separatedBy: "\n\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        for paragraph in paragraphs {
+            if paragraph.count > limit {
+                if !current.isEmpty { pieces.append(current); current = "" }
+                var run = ""
+                paragraph.enumerateSubstrings(in: paragraph.startIndex..<paragraph.endIndex, options: .bySentences) { sentence, _, _, _ in
+                    guard let sentence else { return }
+                    if !run.isEmpty && run.count + sentence.count > limit {
+                        pieces.append(run.trimmingCharacters(in: .whitespacesAndNewlines))
+                        run = ""
+                    }
+                    run += sentence
+                }
+                let rest = run.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !rest.isEmpty { pieces.append(rest) }
+            } else if current.isEmpty {
+                current = paragraph
+            } else if current.count + paragraph.count + 2 > limit {
+                pieces.append(current)
+                current = paragraph
+            } else {
+                current += "\n\n" + paragraph
+            }
+        }
+        if !current.isEmpty { pieces.append(current) }
+        return pieces
+    }
+
+    #if canImport(FoundationModels)
+    /// One call to the model. Low temperature, because these tools follow rules rather than write freely.
+    /// Make shorter asks for a guided answer; the other tools ask for plain text as before.
+    @available(iOS 26.0, *)
+    private func respond(instruction: String, text: String, shortening: Bool) async throws -> String {
+        let session = LanguageModelSession(instructions: instruction)
+        let options = GenerationOptions(temperature: 0.2)
+        if shortening {
+            let answer = try await session.respond(to: Self.framed(text), generating: AnchorShortenedText.self, options: options)
+            return answer.content.shorter
+        }
+        return try await session.respond(to: Self.framed(text), options: options).content
+    }
+
+    /// A call that is tried again, firmly, once if the model hands back the text it was given.
+    @available(iOS 26.0, *)
+    private func attempt(instruction: String, text: String, shortening: Bool) async throws -> String {
+        var reply = try await respond(instruction: instruction, text: text, shortening: shortening)
+        if Self.isUnchangedCopy(reply, of: text) {
+            let firm = instruction + " Your reply must not be a copy of the text. Do what the instructions say to it."
+            reply = try await respond(instruction: firm, text: text, shortening: shortening)
+            if Self.isUnchangedCopy(reply, of: text) { throw shortening ? AIError.couldNotShorten : AIError.failed }
+        }
+        return reply
+    }
+    #endif
+
     /// The text set apart from the instruction, so the model treats it as something to work on and not to continue.
     static func framed(_ text: String) -> String {
         "Text to work on:\n\n" + text
@@ -253,16 +331,22 @@ struct AppleOnDeviceProvider: AIProviding {
         guard AIGate.isEnabled else { throw AIError.off }
         #if canImport(FoundationModels)
         guard #available(iOS 26.0, *) else { throw AIError.unavailable(.notOnThisPhone) }
-        let session = LanguageModelSession(instructions: instruction)
-        var reply = try await session.respond(to: Self.framed(text)).content
-        // The small on-device model sometimes returns the text it was given. Try once more, firmly; if it still
-        // does, say so instead of showing an unchanged copy as if it were a result.
-        if Self.isUnchangedCopy(reply, of: text) {
-            let firm = LanguageModelSession(instructions: instruction + " Your reply must not be a copy of the text. Do what the instructions say to it.")
-            reply = try await firm.respond(to: Self.framed(text)).content
-            if Self.isUnchangedCopy(reply, of: text) { throw AIError.failed }
+        let shortening = instruction == AIFeature.makeShorter.instruction
+        guard shortening, text.count > Self.chunkLimit else {
+            return try await attempt(instruction: instruction, text: text, shortening: shortening)
         }
-        return reply
+        // A long text is shortened a piece at a time. A piece the model will not change stays as the writer wrote it.
+        var pieces: [String] = []
+        for chunk in Self.chunks(of: text, limit: Self.chunkLimit) {
+            do {
+                pieces.append(try await attempt(instruction: instruction, text: chunk, shortening: true))
+            } catch let error as AIError where error == .couldNotShorten {
+                pieces.append(chunk)
+            }
+        }
+        let joined = pieces.joined(separator: "\n\n")
+        if Self.isUnchangedCopy(joined, of: text) { throw AIError.couldNotShorten }
+        return joined
         #else
         throw AIError.unavailable(.unavailable)
         #endif
