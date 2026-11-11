@@ -16,7 +16,7 @@ export const ABOUT_PRINCIPLES: string[] = [
   "Nothing is shared unless you share it. Messages and exports go only where you send them.",
 ];
 
-export const ABOUT_LICENCES = "Anchor is built with Apple's own frameworks. It contains no third-party code or fonts.";
+export const ABOUT_LICENCES = "Anchor is built with Apple's own frameworks and has no third-party fonts. Finding who is speaking uses the FluidAudio code (Apache License 2.0) from Fluid Inference, and speaker-separation models that Fluid Inference converted to Core ML from pyannote's speaker-diarization-community-1, with parts from WeSpeaker and BUT Speech@FIT, licensed under CC-BY-4.0 (creativecommons.org/licenses/by/4.0). The models are modified conversions. They run on your phone and nothing is sent anywhere.";
 
 export const ABOUT_CONTACT_NOTE = "I can't reply in real time. If you are in danger right now, call your local emergency number or a crisis line.";
 

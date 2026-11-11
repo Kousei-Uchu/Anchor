@@ -162,6 +162,21 @@ if (replay && !/AVAudioPlayer\(data:/.test(replay.text)) problems.push("Support/
 const tapScreen = files.find((x) => x.rel === "Views/Journal/PeopleTapScreen.swift");
 if (tapScreen && !/PeopleScreen\(/.test(tapScreen.text)) problems.push("Views/Journal/PeopleTapScreen.swift does not open the people screen.");
 
+// 10. Switched on (VN4a4): off to begin with, off in showcase mode, and the only way in is the voice note's own menu.
+const settings = files.find((x) => x.rel === "Support/PeopleSettings.swift");
+if (!settings) problems.push("Support/PeopleSettings.swift is missing.");
+else {
+  if (!/DemoMode\.isOn/.test(settings.text)) problems.push("Support/PeopleSettings.swift does not stay off in showcase mode.");
+  if (!/UserDefaults\.standard\.bool\(forKey:\s*key\)/.test(settings.text)) problems.push("Support/PeopleSettings.swift does not read the switch with bool(forKey:), which is off until switched on.");
+}
+for (const f of files) {
+  if (/register\(defaults:[^)]*findWhoIsSpeaking[^)]*true/.test(f.text)) problems.push(`${f.rel}: registers Find who is speaking as on by default.`);
+  if (f.rel === "Support/SpeakerTryIt.swift" || f.rel.startsWith("Views/Journal/People")) continue;
+  if (/\bPeopleScreen\(|\bPeopleTapScreen\(/.test(f.text) && f.rel !== "Views/Journal/JournalEntryEditorView.swift") problems.push(`${f.rel}: opens the people screen; only a voice note's menu may.`);
+}
+const editor = files.find((x) => x.rel === "Views/Journal/JournalEntryEditorView.swift");
+if (editor && !/if PeopleSettings\.isOn[^\n]*case \.voice/.test(editor.text)) problems.push("The Journal editor shows the people buttons without checking PeopleSettings.isOn on a voice note.");
+
 // 1 and 2. The project.
 const pbx = readFileSync(join(root, "iOS/Anchor/Anchor.xcodeproj/project.pbxproj"), "utf8");
 const packageRef = pbx.match(/XCRemoteSwiftPackageReference "FluidAudio" \*\/ = \{[^}]*requirement = \{([^}]*)\}/);

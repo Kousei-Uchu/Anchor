@@ -410,6 +410,7 @@ struct JournalEntryEditorView: View {
     @StateObject private var dictation = DictationSession()
     @State private var dictationTarget: DictationTarget?
     @State private var voiceKeep: DictationKeep?
+    @State private var peopleSheet: PeopleSheet?
     @AppStorage(DictationSettings.labelSpeakersKey) private var labelSpeakers = false
     @State private var renamingSpeakers = false
     @State private var speakerOneName = ""
@@ -646,6 +647,22 @@ struct JournalEntryEditorView: View {
             .sheet(isPresented: $showGuide) {
                 GuideSheetView(entry: Guide.entry(for: "journal.editor", tab: .journal))
             }
+            .sheet(item: $peopleSheet) { sheet in
+                NavigationStack {
+                    Group {
+                        if sheet.taps {
+                            PeopleTapScreen(folder: .voiceNotes, fileName: sheet.file) { addPeople($0, after: sheet.blockID) }
+                        } else {
+                            PeopleScreen(folder: .voiceNotes, fileName: sheet.file) { addPeople($0, after: sheet.blockID) }
+                        }
+                    }
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Close") { peopleSheet = nil }
+                        }
+                    }
+                }
+            }
             .sheet(item: $braindump) { draft in
                 AIBraindumpSheet(text: draft.text, canEdit: false, destinations: BraindumpDestination.allCases,
                                  sourceEntryID: entry.id)
@@ -742,7 +759,30 @@ struct JournalEntryEditorView: View {
         if let index = blocks.firstIndex(where: { $0.id == id }), case .assist = blocks[index].kind {
             Button { useOriginal(id) } label: { Label("Use the original text", systemImage: "arrow.uturn.backward") }
         }
+        if PeopleSettings.isOn, let index = blocks.firstIndex(where: { $0.id == id }), case .voice(let voice) = blocks[index].kind {
+            if PeopleFinder.isAvailable {
+                Button { peopleSheet = PeopleSheet(blockID: id, file: voice.file, taps: false) } label: {
+                    Label("Find who is speaking", systemImage: "person.2.wave.2")
+                }
+            }
+            Button { peopleSheet = PeopleSheet(blockID: id, file: voice.file, taps: true) } label: {
+                Label("Replay and tap who is speaking", systemImage: "hand.tap")
+            }
+        }
         Button(role: .destructive) { remove(id) } label: { Label("Remove", systemImage: "trash") }
+    }
+
+    /// Puts the labelled lines from the people screen in a paragraph of their own right after the voice note. They
+    /// are added and never replace anything, so the person's own words are left exactly as they are, and doing it
+    /// again for the same voice note adds another paragraph the person can remove.
+    private func addPeople(_ text: String, after id: UUID) {
+        peopleSheet = nil
+        guard !text.isEmpty, let index = blocks.firstIndex(where: { $0.id == id }) else { return }
+        blocks.insert(JournalBlock(.text(text)), at: index + 1)
+        let after = index + 2
+        if after >= blocks.count || !blocks[after].isText {
+            blocks.insert(JournalBlock(.text("")), at: after)
+        }
     }
 
     /// Adds blocks after the paragraph being written in (or at the end), and

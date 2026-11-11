@@ -542,6 +542,7 @@ Every key the app keeps in the phone's settings (UserDefaults and `@AppStorage`)
 | dictationEnabled | dictation in the Journal | plain | plain | an on or off switch |
 | dictationKeepsVoiceNote | keep a voice note while dictating | plain | plain | an on or off switch |
 | dictationLabelsSpeakers | label who is speaking while dictating | plain | plain | an on or off switch |
+| findWhoIsSpeaking | find who is speaking in a voice note | plain | plain | an on or off switch |
 | anchor.appLockEnabled | the app lock | plain | plain | an on or off switch |
 | anchor.showcaseOn | Showcase mode | plain | plain | an on or off switch |
 | anchor.dailyCheckIn.enabled | the daily check-in reminder | plain | plain | an on or off switch |

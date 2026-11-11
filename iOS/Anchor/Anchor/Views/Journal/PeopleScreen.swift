@@ -134,3 +134,11 @@ struct PeopleScreen: View {
         }
     }
 }
+
+/// Which voice note the people screen was opened for, and whether it is the model's or the tapped one (Patch VN4a4).
+struct PeopleSheet: Identifiable {
+    let id = UUID()
+    let blockID: UUID
+    let file: String
+    let taps: Bool
+}

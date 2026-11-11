@@ -72,6 +72,7 @@ struct SettingsView: View {
     @AppStorage(DictationSettings.enabledKey) private var dictationOn = false
     @AppStorage(DictationSettings.keepVoiceNoteKey) private var dictationKeepsNote = false
     @AppStorage(DictationSettings.labelSpeakersKey) private var dictationLabels = false
+    @AppStorage(PeopleSettings.key) private var findSpeakersOn = false
     @AppStorage(WidgetTab.plan.hiddenKey) private var planHiddenRaw = WidgetTab.plan.defaultHiddenRaw
     @Query private var sleepEntries: [SleepEntry]
 
@@ -223,13 +224,14 @@ struct SettingsView: View {
 
                 Anchor.SettingsSection(
                     title: "Journal",
-                    footer: "Off until you switch it on. Dictate is a microphone button on a Journal page that turns what you say into text, on this phone only. Nothing you say is sent anywhere. If your language is not ready on the phone, Dictate says so and does not start. The sound is not kept unless you also switch on Keep a voice note while dictating, which saves it on this phone as a voice note on the page and lets you choose afterwards whether to keep the words, the voice note or both. Label who is speaking adds Speaker 1 and Speaker 2 buttons while Dictate listens: you tap one when the speaker changes, and the words that follow go on a new line with that label. Anchor does not tell voices apart and keeps nothing about a voice."
+                    footer: "Off until you switch it on. Dictate is a microphone button on a Journal page that turns what you say into text, on this phone only. Nothing you say is sent anywhere. If your language is not ready on the phone, Dictate says so and does not start. The sound is not kept unless you also switch on Keep a voice note while dictating, which saves it on this phone as a voice note on the page and lets you choose afterwards whether to keep the words, the voice note or both. Label who is speaking adds Speaker 1 and Speaker 2 buttons while Dictate listens: you tap one when the speaker changes, and the words that follow go on a new line with that label. Label who is speaking does not tell voices apart; it only starts a new line when you say so. Find who is speaking, which is separate and also off to begin with, adds buttons to a voice note on a Journal page. One listens to that recording once, on this phone only, with a model inside Anchor, to tell the voices in it apart, and the other lets you replay it and tap who is speaking yourself. A voice is compared only with the other voices in that one recording, nothing about a voice is kept, nothing is sent anywhere, and the words are added to the page only when you tap Add to this page."
                 ) {
                     Anchor.SettingsToggle(title: "Dictate in the Journal", isOn: $dictationOn)
                     if dictationOn {
                         Anchor.SettingsToggle(title: "Keep a voice note while dictating", isOn: $dictationKeepsNote)
                         Anchor.SettingsToggle(title: "Label who is speaking", isOn: $dictationLabels)
                     }
+                    Anchor.SettingsToggle(title: "Find who is speaking", isOn: $findSpeakersOn)
                 }
 
                 Anchor.SettingsSection(
@@ -688,7 +690,7 @@ enum AboutContent {
         "Nothing is shared unless you share it. Messages and exports go only where you send them.",
     ]
 
-    static let licences = "Anchor is built with Apple's own frameworks. It contains no third-party code or fonts."
+    static let licences = "Anchor is built with Apple's own frameworks and has no third-party fonts. Finding who is speaking uses the FluidAudio code (Apache License 2.0) from Fluid Inference, and speaker-separation models that Fluid Inference converted to Core ML from pyannote's speaker-diarization-community-1, with parts from WeSpeaker and BUT Speech@FIT, licensed under CC-BY-4.0 (creativecommons.org/licenses/by/4.0). The models are modified conversions. They run on your phone and nothing is sent anywhere."
 
     static let contactNote = "I can't reply in real time. If you are in danger right now, call your local emergency number or a crisis line."
 
