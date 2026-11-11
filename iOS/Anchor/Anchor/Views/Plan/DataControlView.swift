@@ -199,10 +199,11 @@ struct DataControlView: View {
         }
         .sheet(item: $showDateRangeSheet) { kind in
             DateRangeExportSheet(kind: kind, hasRecovery: recoveryCounters.contains { !$0.isArchived },
-                                 hasAssist: journalEntries.contains { JournalBlocks.hasAssist($0.text) }) { range, includeRecovery, includeAssist in
+                                 hasAssist: journalEntries.contains { JournalBlocks.hasAssist($0.text) },
+                                 speakerRows: speakerRows) { range, includeRecovery, includeAssist, speakers in
                 switch kind {
-                case .csv: exportCSV(range: range, includeRecovery: includeRecovery, includeAssist: includeAssist)
-                case .pdf: exportPDF(range: range, includeRecovery: includeRecovery, includeAssist: includeAssist)
+                case .csv: exportCSV(range: range, includeRecovery: includeRecovery, includeAssist: includeAssist, speakers: speakers)
+                case .pdf: exportPDF(range: range, includeRecovery: includeRecovery, includeAssist: includeAssist, speakers: speakers)
                 }
             }
         }
@@ -536,12 +537,24 @@ struct DataControlView: View {
 
     // MARK: - CSV / PDF (Journal + Check-ins only — the two things worth handing a psych)
 
-    private func exportCSV(range: ClosedRange<Date>?, includeRecovery: Bool, includeAssist: Bool = false) {
+    /// Journal entries that have people in them, for the Who is speaking screen on the CSV and PDF exports (Patch VN5).
+    private var speakerRows: [SpeakerExportRow] {
+        var rows: [SpeakerExportRow] = []
+        for entry in journalEntries {
+            let people = SpeakerExport.people(in: entry.text)
+            if !people.isEmpty {
+                rows.append(SpeakerExportRow(id: entry.id, date: entry.createdAt, people: people))
+            }
+        }
+        return rows.sorted { $0.date < $1.date }
+    }
+
+    private func exportCSV(range: ClosedRange<Date>?, includeRecovery: Bool, includeAssist: Bool = false, speakers: SpeakerExportChoices = SpeakerExportChoices()) {
         // Sleep has its own columns at the end, so the first three stay where they were.
         var lines = ["type,date,text_or_values,bed_time,wake_time,minutes_asleep,feel"]
         let noSleepColumns = ",,,,"
         for entry in filteredJournal(range) {
-            let escaped = JournalBlocks.sharedText(entry.text, includeAssist: includeAssist).replacingOccurrences(of: "\"", with: "\"\"").replacingOccurrences(of: "\n", with: " ")
+            let escaped = JournalBlocks.sharedText(entry.text, includeAssist: includeAssist, speakers: speakers.modes(for: entry.id)).replacingOccurrences(of: "\"", with: "\"\"").replacingOccurrences(of: "\n", with: " ")
             lines.append("journal,\(iso(entry.createdAt)),\"\(escaped)\"\(noSleepColumns)")
         }
         for checkIn in filteredCheckIns(range) {
@@ -569,7 +582,7 @@ struct DataControlView: View {
         writeAndShare(data: data, filename: "anchor-export-\(fileTimestamp()).csv")
     }
 
-    private func exportPDF(range: ClosedRange<Date>?, includeRecovery: Bool, includeAssist: Bool = false) {
+    private func exportPDF(range: ClosedRange<Date>?, includeRecovery: Bool, includeAssist: Bool = false, speakers: SpeakerExportChoices = SpeakerExportChoices()) {
         let pageRect = CGRect(x: 0, y: 0, width: 612, height: 792) // US Letter
         let renderer = UIGraphicsPDFRenderer(bounds: pageRect)
         let data = renderer.pdfData { context in
@@ -597,7 +610,7 @@ struct DataControlView: View {
             draw("Anchor export", font: titleFont, indent: 40)
             draw("Journal entries", font: headingFont)
             for entry in filteredJournal(range) {
-                draw("\(entry.createdAt.formatted(date: .abbreviated, time: .shortened))\n\(JournalBlocks.sharedText(entry.text, includeAssist: includeAssist))", font: bodyFont)
+                draw("\(entry.createdAt.formatted(date: .abbreviated, time: .shortened))\n\(JournalBlocks.sharedText(entry.text, includeAssist: includeAssist, speakers: speakers.modes(for: entry.id)))", font: bodyFont)
             }
             draw("Check-ins", font: headingFont)
             for checkIn in filteredCheckIns(range) {
@@ -761,7 +774,9 @@ private struct DateRangeExportSheet: View {
     let kind: DataControlView.DateRangeExportKind
     let hasRecovery: Bool
     var hasAssist: Bool = false
-    let onExport: (ClosedRange<Date>?, Bool, Bool) -> Void
+    /// Journal entries that have people in them (Patch VN5).
+    var speakerRows: [SpeakerExportRow] = []
+    let onExport: (ClosedRange<Date>?, Bool, Bool, SpeakerExportChoices) -> Void
     @Environment(\.dismiss) private var dismiss
 
     @State private var useRange = false
@@ -771,6 +786,17 @@ private struct DateRangeExportSheet: View {
     @State private var includeRecovery = false
     /// Also not remembered: AI Optimised versions are left out unless ticked for that export.
     @State private var includeAssist = false
+    /// Also not remembered: what to do with each person's name is chosen for each export (Patch VN5).
+    @State private var speakers = SpeakerExportChoices()
+
+    private var chosenRange: ClosedRange<Date>? {
+        useRange ? min(start, end)...max(start, end) : nil
+    }
+
+    private var visibleSpeakerRows: [SpeakerExportRow] {
+        guard let range = chosenRange else { return speakerRows }
+        return speakerRows.filter { range.contains($0.date) }
+    }
 
     var body: some View {
         NavigationStack {
@@ -787,6 +813,17 @@ private struct DateRangeExportSheet: View {
                             .tint(Anchor.Theme.accent)
                     } footer: {
                         Text("Off unless you switch it on, every time. They are shorter versions made by a tool, not your own words. When they are in, each comes as its own entry beside the words it was made from, and both are labelled.")
+                    }
+                }
+                if !visibleSpeakerRows.isEmpty {
+                    Section {
+                        NavigationLink {
+                            SpeakerExportView(rows: visibleSpeakerRows, choices: $speakers)
+                        } label: {
+                            Text("Who is speaking")
+                        }
+                    } footer: {
+                        Text("Some entries have people in them. For this export only, you can show each name, hide it, or leave that person's words out.")
                     }
                 }
                 if hasRecovery {
@@ -806,7 +843,7 @@ private struct DateRangeExportSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Export") {
-                        onExport(useRange ? min(start, end)...max(start, end) : nil, hasRecovery && includeRecovery, hasAssist && includeAssist)
+                        onExport(chosenRange, hasRecovery && includeRecovery, hasAssist && includeAssist, speakers)
                         dismiss()
                     }
                 }

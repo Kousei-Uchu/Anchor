@@ -212,6 +212,29 @@ if (guessScreen) {
   if (/\.generate\(|\bURLSession\b|\bURLRequest\b|\bUserDefaults\b|\bCodable\b/.test(t)) problems.push("Views/Journal/PeopleScreen.swift talks to a provider, goes online, keeps something or makes something saveable.");
 }
 
+// Patch VN5: speaker tags in exports. The choices are kept on the export screen only, and nothing but the exports
+// that are handed to someone reads them.
+const exportRules = files.find((x) => x.rel === "Support/SpeakerExport.swift");
+if (!exportRules) problems.push("Support/SpeakerExport.swift is missing.");
+else {
+  const t = exportRules.text.split("#if DEBUG")[0];
+  if (/\bCodable\b|\bEncodable\b|\bDecodable\b|\bUserDefaults\b|\bModelContext\b|\bFileManager\b|\bURLSession\b|\bKeychain\b|\b@AppStorage\b|\bimport SwiftData\b/.test(t)) problems.push("Support/SpeakerExport.swift keeps something, makes the choices saveable or goes online.");
+}
+const exportScreen = files.find((x) => x.rel === "Views/Bridge/SpeakerExportView.swift");
+if (exportScreen && /\bUserDefaults\b|\b@AppStorage\b|\bModelContext\b|\bCodable\b/.test(exportScreen.text)) problems.push("Views/Bridge/SpeakerExportView.swift keeps the choices.");
+for (const f of files) {
+  if (/SpeakerExport\b|SpeakerExportChoices|speakers:/.test(code(f.text)) && !/^(Support\/SpeakerExport\.swift|Views\/Bridge\/SpeakerExportView\.swift|Views\/Bridge\/BridgeExportView\.swift|Views\/Plan\/DataControlView\.swift|Views\/Journal\/JournalAssist\.swift|AnchorApp\.swift)$/.test(f.rel)) {
+    problems.push(`${f.rel} uses the speaker export choices, which only the exports handed to someone may do.`);
+  }
+}
+const dataView = files.find((x) => x.rel === "Views/Plan/DataControlView.swift");
+if (dataView) {
+  // The full JSON and the encrypted backup keep every line as it is, so a restore is exact.
+  const json = dataView.text.match(/journalEntries:\s*journalEntries\.map\(JournalEntryDTO\.init\)/);
+  if (!json) problems.push("The full export no longer reads journal entries as they are.");
+  if (/JournalEntryDTO[^\n]*speakers/.test(dataView.text)) problems.push("The full export or backup applies speaker choices.");
+}
+
 // 1 and 2. The project.
 const pbx = readFileSync(join(root, "iOS/Anchor/Anchor.xcodeproj/project.pbxproj"), "utf8");
 const packageRef = pbx.match(/XCRemoteSwiftPackageReference "FluidAudio" \*\/ = \{[^}]*requirement = \{([^}]*)\}/);

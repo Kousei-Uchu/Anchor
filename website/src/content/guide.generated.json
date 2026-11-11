@@ -384,7 +384,8 @@
         "The web page can have a password. Anchor does not keep it and cannot get it back, so tell the person another way.",
         "Some mail apps block web pages, so a PDF is the safer thing to send.",
         "The one-page PDF makes the print smaller to fit. If it is still too long it says so and makes nothing, so leave some things out.",
-        "Choosing a provider fills in their name, and exporting for that person leaves out what was meant for someone else."
+        "Choosing a provider fills in their name, and exporting for that person leaves out what was meant for someone else.",
+        "If a journal entry has people in it, Who is speaking lets you show each name, hide it as Speaker A or Speaker B, or leave that person's words out, for that export only. Only a name at the start of a line is changed, so read the preview."
       ],
       "inTour": false
     },

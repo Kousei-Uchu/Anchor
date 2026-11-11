@@ -199,12 +199,20 @@ extension JournalBlocks {
     /// An entry as words for something handed to someone else. AI Optimised blocks are left out, so a rewrite
     /// is never passed off as the person's own words (D43). When they are ticked in, the rewrite and the words it
     /// was made from come as two entries, each labelled (Patch AI9).
-    static func sharedText(_ text: String, includeAssist: Bool) -> String {
+    ///
+    /// `speakers` is what this export does with each person in the entry (Patch VN5, D79): a hidden name becomes
+    /// Speaker A, Speaker B and so on, and a left out person loses their lines. It is applied to the entry first,
+    /// before anything else is read. When it changes anything, the entry's AI Optimised versions are left out even
+    /// if they were ticked, because a shorter version can carry a name or words the person asked to keep back.
+    static func sharedText(_ text: String, includeAssist: Bool, speakers: [String: SpeakerExportMode] = [:]) -> String {
+        let changesSpeakers = speakers.values.contains { $0 != .showName }
+        let source = changesSpeakers ? SpeakerExport.apply(text, modes: speakers) : text
+        let withAssist = includeAssist && !changesSpeakers
         var lines: [String] = []
         var labelled = Set<String>()
-        for line in text.components(separatedBy: "\n") {
+        for line in source.components(separatedBy: "\n") {
             if let assist = JournalAssist(line: line) {
-                if includeAssist {
+                if withAssist {
                     appendLabelledPair(for: assist, to: &lines, labelled: &labelled)
                 }
             } else if JournalVoice.isBlockLine(line) {

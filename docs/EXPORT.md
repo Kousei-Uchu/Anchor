@@ -8,6 +8,15 @@ Bridge has a share button that opens Export for someone. The person writes who i
 - **Web page (.html).** One file with the document inside it and a small viewer: search, By section and Timeline, a line chart for each of the five check-in values (Energy, Clarity, Room in head, Moving, Social energy) (and one for time asleep, if Sleep is included, with no target line), a print stylesheet (Print or save as PDF) and Download CSV and Download Word file buttons. It reads fine as a document and needs no internet.
 - **Word (.docx).** Made inside the web page by its Download Word file button, named like the page. It holds the title, the note, then each kind with its count and each entry as its date, heading, lines and footnote. It is plain text with headings: no charts or photos. It is the whole document, not just what the search box is showing. The page size is A4, or US Letter when the browser's language ends in US, CA, MX or PH. A locked page has to be unlocked first. There is no document library in the page: the page writes the .docx itself as a zip with the files stored uncompressed, so the file is about the size of the text.
 
+## Who is speaking (VN5)
+A Journal entry made with Label who is speaking, Find who is speaking or Replay and tap has lines that start with a name and a colon. When an entry has people in it, Export for someone (under Journal entries) and the CSV and PDF export in Your data show a Who is speaking screen. For each person in each entry you choose Show name, Hide name or Leave out, or set everyone at once.
+- **Show name** leaves the lines as they are. **Hide name** starts that person's lines with Speaker A, Speaker B and so on, in the order they first speak in that entry, skipping a label someone already has. **Leave out** removes every line that starts with that person's name.
+- The choices are for that export only. They are not stored on the entry and are gone when the export is closed, and each export starts at Show name.
+- A line counts as a person's only if its name is one Anchor writes itself (Speaker 1, Person 2) or it sits in a run of lines with at least two different names. A line such as Note: buy milk is never touched.
+- If anyone in an entry is hidden or left out, that entry's AI Optimised versions are left out too, even if ticked, because a shorter version can still carry a name or words.
+- Not covered: only the start of a line is read, so a name inside what someone said stays as written, and words on a line that does not start with a name are not tied to anyone. Letters are per entry, so Speaker A in one entry may be a different person from Speaker A in another. Read the preview before sending.
+- The full JSON and the encrypted backup are not changed by any of this, so a restore stays exact.
+
 ## How the web page is kept safe
 - **No network.** A content security policy in the page sets `default-src 'none'` and allows the one script by its SHA-256 hash, so nothing else can run and nothing can be fetched or posted.
 - **Written text is never run.** Everything is drawn with `textContent`, and `<` is escaped inside the data block, so text such as `<script>` shows as text.

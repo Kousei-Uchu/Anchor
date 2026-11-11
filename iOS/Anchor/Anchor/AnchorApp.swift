@@ -27,6 +27,7 @@ struct AnchorApp: App {
         JournalAssistSelfTest.run()
         JournalVoiceSelfTest.run()
         SpeakerLabelsSelfTest.run()
+        SpeakerExportSelfTest.run()
         SpeakerSeparationSelfTest.run()
         PeopleFinderSelfTest.run()
         TapTurnsSelfTest.run()

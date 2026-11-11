@@ -1,6 +1,6 @@
 # Anchor: what is left
 
-*Only what is still to do. When something is finished, confirmed or answered, it is deleted from this file in the same patch, never moved to a done list. Finished work is in the Progress table of `ANCHOR_PATCH_PLAN.md` and in `docs/PLAN_CHANGELOG.md`. Last updated: 11 Nov 2026, after DOC31.*
+*Only what is still to do. When something is finished, confirmed or answered, it is deleted from this file in the same patch, never moved to a done list. Finished work is in the Progress table of `ANCHOR_PATCH_PLAN.md` and in `docs/PLAN_CHANGELOG.md`. Last updated: 11 Nov 2026, after VN5.*
 
 ## 1. Waiting on you
 
@@ -58,6 +58,8 @@ Everything here builds and launches on your phone (confirmed 11 Nov 2026, after 
 - 35g4: also open Settings and Lock my data (More to lock), the three sleep words, an AI address and model, Today's plan, answering an escalation reminder, and Sleep's Apple Health saving. Everything should look as before, and nothing should save twice to Health.
 - 35g3: after the steps above, also open Tasks (a task with a due day, one with none, one set aside, one with an energy tag, focus totals and an estimate, ticking one done and back), Plan's safety plan and boundaries, Trigger windows (days and times, in Settings too) and Appointments (a usual day and time, moving one session), the quick lists and routines on Now and in Plan (their order newest first), and the diagrams on the Plan widget. Everything should look as it did. Make a new task and a new hard time and check they show.
 
+- VN5: Bridge, Export for someone, and Settings, Your data, CSV or PDF, with an entry that has lines like Mum: hi and Dr Lee: hello. A Who is speaking screen should appear. Hide Mum, leave out Dr Lee, check the preview, and check a second export starts back at Show name. Needs a normal test build, not the review run. Say if you want the hidden letters to match across entries (D79).
+
 **Website**
 
 - 47: the website's Features and Philosophy pages.
@@ -66,10 +68,9 @@ Everything here builds and launches on your phone (confirmed 11 Nov 2026, after 
 
 ## 3. Not started, in order
 
-1. **VN5**: speaker tags in exports, per entry and per person: include the name, hide it, or leave that person's words out. Next.
-2. **52**: refresh the Remotion promo with new screenshots and captions. The single source is already true (`remotion-project/src/Promo.tsx`, `npm run sync:promo`); what is left needs the app run on a simulator.
-3. **53**: the long full-tour video, split into per-tab scenes, scripted from `website/src/content/guide.generated.json`. Waits on 52. Size L, to be split.
-7. **54**: Android decision write-up, optional prototype spike. Android itself is far future (D4).
+1. **52**: refresh the Remotion promo with new screenshots and captions. The single source is already true (`remotion-project/src/Promo.tsx`, `npm run sync:promo`); what is left needs the app run on a simulator.
+2. **53**: the long full-tour video, split into per-tab scenes, scripted from `website/src/content/guide.generated.json`. Waits on 52. Size L, to be split.
+3. **54**: Android decision write-up, optional prototype spike. Android itself is far future (D4).
 
 **Parked on purpose**
 

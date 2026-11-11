@@ -113,6 +113,8 @@ struct ExportSelection {
     var left: Set<UUID> = []
     /// AI Optimised blocks in journal entries are left out unless this is switched on for that export (D43).
     var includeAssist = false
+    /// What this export does with each person who speaks in a journal entry (Patch VN5, D43). Never stored.
+    var speakers = SpeakerExportChoices()
 }
 
 /// One thing that could go in, with how it would read.
@@ -175,7 +177,7 @@ struct BridgeExportBuilder {
             }
         case .journal:
             return journal.filter { inRange($0.createdAt) }.sorted { $0.createdAt < $1.createdAt }.map { entry in
-                var lines = [JournalBlocks.sharedText(entry.text, includeAssist: selection.includeAssist)]
+                var lines = [JournalBlocks.sharedText(entry.text, includeAssist: selection.includeAssist, speakers: selection.speakers.modes(for: entry.id))]
                 if entry.audioFileName != nil { lines.append("(A voice note was recorded. It is not included.)") }
                 return ExportCandidate(
                     id: entry.id, category: category,
@@ -240,6 +242,18 @@ struct BridgeExportBuilder {
     func included(_ category: ExportCategory) -> [ExportCandidate] {
         guard selection.categories.contains(category) else { return [] }
         return candidates(category).filter { !selection.left.contains($0.id) }
+    }
+
+    /// The included journal entries that have people in them, for the Who is speaking screen (Patch VN5).
+    func speakerRows() -> [SpeakerExportRow] {
+        let wanted = Set(included(.journal).map(\.id))
+        return journal
+            .filter { wanted.contains($0.id) }
+            .sorted { $0.createdAt < $1.createdAt }
+            .compactMap { entry -> SpeakerExportRow? in
+                let people = SpeakerExport.people(in: entry.text)
+                return people.isEmpty ? nil : SpeakerExportRow(id: entry.id, date: entry.createdAt, people: people)
+            }
     }
 
     func document(now: Date = .now) -> ExportDocument {
@@ -471,6 +485,22 @@ struct BridgeExportView: View {
             Toggle("Include AI Optimised versions", isOn: $selection.includeAssist)
                 .font(.subheadline)
                 .tint(Anchor.Theme.accent)
+        }
+        if on, category == .journal {
+            let speakerRows = builder.speakerRows()
+            if !speakerRows.isEmpty {
+                NavigationLink {
+                    SpeakerExportView(rows: speakerRows, choices: $selection.speakers)
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Who is speaking")
+                        Text(speakerRows.count == 1 ? "1 entry has people in it" : "\(speakerRows.count) entries have people in them")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .font(.subheadline)
+            }
         }
     }
 }

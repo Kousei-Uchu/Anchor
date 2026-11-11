@@ -62,6 +62,7 @@
 		88226887249B4A38BB57B954 /* MascotEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A0404FF100C4BE6AD94AF56 /* MascotEngine.swift */; };
 		8A67639F74080F56C5AA328F /* RecoveryModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A37DFE702393E0FA6C8BBC2 /* RecoveryModels.swift */; };
 		8C400612E36D441C8EFAB66D /* BridgeExportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6EB259D670046848BB54BA4 /* BridgeExportView.swift */; };
+		D1A2B3C4E5F6478899AABB1A /* SpeakerExportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A2B3C4E5F6478899AABB1B /* SpeakerExportView.swift */; };
 		933BAE1CA6ED3B8C9B1D09A9 /* RecoveryHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 413DF4F73EF8C9FCD698014E /* RecoveryHomeView.swift */; };
 		95FBA5A7AC4BEC75F6456822 /* AIBraindumpSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F125C7F526ED24028B46F94 /* AIBraindumpSheet.swift */; };
 		9F00D8283DC2466FA535DDF7 /* NextHourChecklistView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBB26C8470984C569FBB94F9 /* NextHourChecklistView.swift */; };
@@ -118,6 +119,7 @@
 		D1A2B3C4E5F6478899AABB12 /* PeopleTapScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A2B3C4E5F6478899AABB13 /* PeopleTapScreen.swift */; };
 		D1A2B3C4E5F6478899AABB14 /* PeopleSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A2B3C4E5F6478899AABB15 /* PeopleSettings.swift */; };
 		D1A2B3C4E5F6478899AABB16 /* SpeakerWords.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A2B3C4E5F6478899AABB17 /* SpeakerWords.swift */; };
+		D1A2B3C4E5F6478899AABB18 /* SpeakerExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A2B3C4E5F6478899AABB19 /* SpeakerExport.swift */; };
 		D1A2B3C4E5F6478899AABB06 /* SpeakerSeparation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A2B3C4E5F6478899AABB07 /* SpeakerSeparation.swift */; };
 		D1A2B3C4E5F6478899AABB08 /* SpeakerTryIt.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A2B3C4E5F6478899AABB09 /* SpeakerTryIt.swift */; };
 /* End PBXBuildFile section */
@@ -253,6 +255,7 @@
 		EBB26C8470984C569FBB94F9 /* NextHourChecklistView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextHourChecklistView.swift; sourceTree = "<group>"; };
 		EFD1EFDCD9DB49BC8F857812 /* AppointmentPrepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppointmentPrepView.swift; sourceTree = "<group>"; };
 		F6EB259D670046848BB54BA4 /* BridgeExportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeExportView.swift; sourceTree = "<group>"; };
+		D1A2B3C4E5F6478899AABB1B /* SpeakerExportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeakerExportView.swift; sourceTree = "<group>"; };
 		F823CDEF7F73EDD77B6C2916 /* RecoveryStreaksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryStreaksView.swift; sourceTree = "<group>"; };
 		FAFB3180183348DF8F5E6251 /* NowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowView.swift; sourceTree = "<group>"; };
 		FB68FEFD19AE3E8E5DF28FB3 /* RecoveryCounterEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryCounterEditorView.swift; sourceTree = "<group>"; };
@@ -266,6 +269,7 @@
 		D1A2B3C4E5F6478899AABB13 /* PeopleTapScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeopleTapScreen.swift; sourceTree = "<group>"; };
 		D1A2B3C4E5F6478899AABB15 /* PeopleSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeopleSettings.swift; sourceTree = "<group>"; };
 		D1A2B3C4E5F6478899AABB17 /* SpeakerWords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeakerWords.swift; sourceTree = "<group>"; };
+		D1A2B3C4E5F6478899AABB19 /* SpeakerExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeakerExport.swift; sourceTree = "<group>"; };
 		D1A2B3C4E5F6478899AABB07 /* SpeakerSeparation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeakerSeparation.swift; sourceTree = "<group>"; };
 		D1A2B3C4E5F6478899AABB09 /* SpeakerTryIt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeakerTryIt.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -377,6 +381,7 @@
 				D1A2B3C4E5F6478899AABB11 /* ReplayPlayer.swift */,
 				D1A2B3C4E5F6478899AABB15 /* PeopleSettings.swift */,
 				D1A2B3C4E5F6478899AABB17 /* SpeakerWords.swift */,
+				D1A2B3C4E5F6478899AABB19 /* SpeakerExport.swift */,
 				D1A2B3C4E5F6478899AABB07 /* SpeakerSeparation.swift */,
 				D1A2B3C4E5F6478899AABB09 /* SpeakerTryIt.swift */,
 				92D593B269EB6B064DC986FE /* LockMyData.swift */,
@@ -495,6 +500,7 @@
 			children = (
 				4B5E71C24DC54F12A11355E4 /* BridgeDraftListView.swift */,
 				F6EB259D670046848BB54BA4 /* BridgeExportView.swift */,
+				D1A2B3C4E5F6478899AABB1B /* SpeakerExportView.swift */,
 				FC91DABF2267094CC3DB0AD7 /* OnePageSummary.swift */,
 				1F63F54283A74831A7A90583 /* PostSessionNotesView.swift */,
 				58818985BDB64C248C254C16 /* NSWMentalHealthReferenceView.swift */,
@@ -725,6 +731,7 @@
 				D1A2B3C4E5F6478899AABB12 /* PeopleTapScreen.swift in Sources */,
 				D1A2B3C4E5F6478899AABB14 /* PeopleSettings.swift in Sources */,
 				D1A2B3C4E5F6478899AABB16 /* SpeakerWords.swift in Sources */,
+				D1A2B3C4E5F6478899AABB18 /* SpeakerExport.swift in Sources */,
 				D1A2B3C4E5F6478899AABB06 /* SpeakerSeparation.swift in Sources */,
 				D1A2B3C4E5F6478899AABB08 /* SpeakerTryIt.swift in Sources */,
 				0CAA287DC6AAD87AC93CC178 /* LockMyData.swift in Sources */,
@@ -789,6 +796,7 @@
 				C7C09E0130173A6300F9144F /* DataControlView.swift in Sources */,
 				C750DE2E2E8C45A9BD63856C /* BridgeDraftListView.swift in Sources */,
 				8C400612E36D441C8EFAB66D /* BridgeExportView.swift in Sources */,
+				D1A2B3C4E5F6478899AABB1A /* SpeakerExportView.swift in Sources */,
 				74834F3FA0C4D96671A86D15 /* OnePageSummary.swift in Sources */,
 				C7C09DFD30173A3900F9144F /* AffirmationsView.swift in Sources */,
 				1A9242F9317D4AE99CA29492 /* PostSessionNotesView.swift in Sources */,
