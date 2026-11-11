@@ -140,6 +140,16 @@ The third group, 32 fields on thirteen models. `docs/FIELD_INVENTORY.md` has the
 - **Sorting moved.** The routines, quick lists, item lists, hard times and diagrams lists no longer ask the database to sort on a locked field. Each fetches the items and sorts them after they are opened, and so does the one-time move of old Next hour rows. No place is left that sorts or filters in the database on a field still to lock.
 - **Left plain, with the reason in the list:** ids and the links between items, the order on screen, the on or off switches for reminders, a routine's reminder days and time, and a task's folded or open steps (D69).
 
+## Typed settings (Patch 35g4, D44, D69)
+
+The last group: nine values kept in the phone's settings and not in the database. `docs/FIELD_INVENTORY.md` has the list.
+
+- **One piece of text.** A typed setting is sealed as one piece of text with the same prefix as a sealed field (`LockedSetting`). A value from before locking still reads as it was, and a Lock my data run (level 5) or the next write seals it.
+- **Fails closed.** A sealed value that does not open reads as nothing and never shows the sealed text. A write that cannot be sealed is not made.
+- **Escalation reminders answered:** if sealing fails, a reminder already answered may be planned again at the next re-sync. The key is available after the first unlock, so this only matters before it.
+- **Apple Health saved nights:** saving stops while the record cannot be read or a new one cannot be sealed, so a night is never saved twice.
+- **Old plain values.** The phone's settings file may keep an earlier plain copy until the system rewrites it. The app cannot clear that.
+
 ## Lock my files (Patch 35d)
 
 The second step of locking: the voice notes and Journal photos, which are files and not stored text (D31). It is on the Lock my data screen, offered once the text is locked. The code is `LockMyFiles`, `StoredFiles` and `FileLock` in `Support/LockMyData.swift`, and `FileCipher` in `Support/AppLock.swift`.

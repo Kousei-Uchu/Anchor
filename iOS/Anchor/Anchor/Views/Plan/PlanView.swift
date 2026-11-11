@@ -722,11 +722,11 @@ private struct SleepWordsSheet: View {
     private func binding(_ index: Int) -> Binding<String> {
         Binding(
             get: {
-                let saved = wordsRaw.split(separator: "|", omittingEmptySubsequences: false).map(String.init)
+                let saved = SleepFeelWords.saved(from: wordsRaw)
                 return index < saved.count ? saved[index] : ""
             },
             set: { newValue in
-                var saved = wordsRaw.split(separator: "|", omittingEmptySubsequences: false).map(String.init)
+                var saved = SleepFeelWords.saved(from: wordsRaw)
                 while saved.count < 3 { saved.append("") }
                 saved[index] = newValue
                 wordsRaw = SleepFeelWords.encode(Array(saved.prefix(3)))
@@ -982,9 +982,31 @@ final class SleepHealthWriter {
     private var available: Bool { HKHealthStore.isHealthDataAvailable() && !DemoMode.isOn }
     private var sleepType: HKCategoryType? { HKObjectType.categoryType(forIdentifier: .sleepAnalysis) }
 
+    /// What has been saved, kept sealed while locking is on (Patch 35g4). If the record is sealed and does not open, it
+    /// reads as empty here, and `canKeepRecord` is false so nothing is saved to Health while that is so (a night would
+    /// be saved twice). A write that cannot be sealed is not made.
     private var tracked: [String: Int] {
-        get { (UserDefaults.standard.dictionary(forKey: SleepHealthSettings.writtenKey) as? [String: Int]) ?? [:] }
-        set { UserDefaults.standard.set(newValue, forKey: SleepHealthSettings.writtenKey) }
+        get {
+            guard let text = LockedSetting.text(UserDefaults.standard.object(forKey: SleepHealthSettings.writtenKey), key: SleepHealthSettings.writtenKey),
+                  let list = try? JSONDecoder().decode([String: Int].self, from: Data(text.utf8)) else { return [:] }
+            return list
+        }
+        set {
+            let key = SleepHealthSettings.writtenKey
+            if FieldLock.isOn {
+                guard let data = try? JSONEncoder().encode(newValue), let text = String(data: data, encoding: .utf8),
+                      let sealed = LockedSetting.kept(text, key: key) else { return }
+                UserDefaults.standard.set(sealed, forKey: key)
+            } else {
+                UserDefaults.standard.set(newValue, forKey: key)
+            }
+        }
+    }
+
+    /// True when the record of saved nights can be read and a new one can be kept.
+    private var canKeepRecord: Bool {
+        !LockedSetting.isUnreadable(UserDefaults.standard.object(forKey: SleepHealthSettings.writtenKey), key: SleepHealthSettings.writtenKey)
+            && LockedSetting.canKeep
     }
 
     /// How many nights Anchor has samples saved for.
@@ -1035,7 +1057,7 @@ final class SleepHealthWriter {
         guard available, let type = sleepType else { return }
         do {
             _ = try await store.deleteObjects(of: type, predicate: HKQuery.predicateForObjects(from: HKSource.default()))
-            tracked = [:]
+            UserDefaults.standard.removeObject(forKey: SleepHealthSettings.writtenKey)
         } catch {
             return
         }
@@ -1045,7 +1067,7 @@ final class SleepHealthWriter {
     /// times, saves them again when they change, and removes the samples for
     /// a night that is gone. Safe to run often.
     func reconcile(context: ModelContext) async {
-        guard available, let type = sleepType, !isWorking else { return }
+        guard available, let type = sleepType, !isWorking, canKeepRecord else { return }
         let defaults = UserDefaults.standard
         let writing = defaults.bool(forKey: SleepHealthSettings.writeKey)
         var written = tracked

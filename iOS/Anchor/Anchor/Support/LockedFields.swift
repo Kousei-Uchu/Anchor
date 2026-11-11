@@ -245,3 +245,74 @@ extension FieldLock {
         parts.joined(separator: "\u{1F}")
     }
 }
+
+// MARK: - Typed settings (Patch 35g4, D44, D69)
+
+/// A typed value kept in the phone's settings (UserDefaults) that is sealed once locking is on: the three words for a
+/// night, the addresses and model names of the AI tools, today's plan, the escalation reminders answered, and which
+/// nights were saved to Apple Health. A sealed value is one piece of text that starts with the same prefix as a sealed
+/// field. A value from before locking is read as it was, so the old forms (a string, `Data`, a list, a dictionary) still
+/// open, and only a Lock my data run or a new write seals them.
+///
+/// A sealed value that does not open (no key, or not yet unlocked since a restart) reads as nothing, never as the sealed
+/// text. A write that cannot be sealed is not made, so nothing typed is ever kept in plain while locking is on.
+enum LockedSetting {
+    /// The same prefix as `FieldCipher.prefix`; a launch self-test in test builds checks they match.
+    static let prefix = "anchor.sealed.v1:"
+
+    static func context(_ key: String) -> String { "Setting." + key }
+
+    /// True when the stored value is sealed and does not open, so a caller can tell "cannot read" from "nothing there".
+    static func isUnreadable(_ object: Any?, key: String) -> Bool {
+        guard let object else { return false }
+        if let text = object as? String, text.hasPrefix(prefix) { return FieldLock.opener?(text, context(key)) == nil }
+        return false
+    }
+
+    /// The value as text, whatever form it was kept in. Nil when nothing is kept, or when it is sealed and does not open.
+    /// A list or a dictionary from before locking is written out as sorted JSON, the same text a sealed one holds.
+    static func text(_ object: Any?, key: String) -> String? {
+        switch object {
+        case nil: return nil
+        case let text as String:
+            guard text.hasPrefix(prefix) else { return text }
+            return FieldLock.opener?(text, context(key))
+        case let data as Data:
+            return String(data: data, encoding: .utf8)
+        case let list as [String]:
+            return json(list.sorted())
+        case let dictionary as [String: Any]:
+            return json(dictionary)
+        default:
+            return nil
+        }
+    }
+
+    private static func json(_ value: Any) -> String? {
+        guard JSONSerialization.isValidJSONObject(value),
+              let data = try? JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]) else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    /// What to keep for a piece of text: the text while locking is off or the text is empty, the sealed text while it is
+    /// on, and nil if sealing was wanted and failed.
+    static func kept(_ text: String, key: String) -> String? {
+        if text.isEmpty || !FieldLock.isOn { return text }
+        return FieldLock.sealer?(text, context(key))
+    }
+
+    /// Whether a write would be sealed, which is true while locking is off.
+    static var canKeep: Bool {
+        !FieldLock.isOn || FieldLock.sealer?("probe", context("probe")) != nil
+    }
+
+    /// Reads a typed string setting. Empty when nothing is kept or it does not open.
+    static func string(_ key: String, in defaults: UserDefaults = .standard) -> String {
+        text(defaults.object(forKey: key), key: key) ?? ""
+    }
+
+    /// Keeps a typed string setting. If sealing is wanted and fails, the old value is removed and nothing is written.
+    static func setString(_ value: String, key: String, in defaults: UserDefaults = .standard) {
+        if let kept = kept(value, key: key) { defaults.set(kept, forKey: key) } else { defaults.removeObject(forKey: key) }
+    }
+}

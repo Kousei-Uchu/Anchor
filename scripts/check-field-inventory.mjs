@@ -153,7 +153,7 @@ for (const [, t] of allText) {
     constants.get(m[1]).add(m[2]);
   }
 }
-const keyLine = /AppStorage\(|forKey:/;
+const keyLine = /AppStorage\(|forKey:|LockedSetting\./;
 for (const [, t] of allText) {
   for (const line of t.split("\n")) {
     if (!keyLine.test(line)) continue;

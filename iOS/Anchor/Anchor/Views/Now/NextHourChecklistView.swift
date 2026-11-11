@@ -2057,8 +2057,8 @@ struct DayPlan: Codable, Equatable {
 
     static func today(now: Date = .now, calendar: Calendar = .current) -> DayPlan {
         let start = calendar.startOfDay(for: now)
-        guard let data = UserDefaults.standard.data(forKey: key),
-              let saved = try? JSONDecoder().decode(DayPlan.self, from: data) else {
+        guard let text = LockedSetting.text(UserDefaults.standard.object(forKey: key), key: key),
+              let saved = try? JSONDecoder().decode(DayPlan.self, from: Data(text.utf8)) else {
             return DayPlan(day: start)
         }
         if calendar.isDate(saved.day, inSameDayAs: now) { return saved }
@@ -2067,7 +2067,13 @@ struct DayPlan: Codable, Equatable {
 
     func save() {
         guard let data = try? JSONEncoder().encode(self) else { return }
-        UserDefaults.standard.set(data, forKey: Self.key)
+        // Sealed as text while locking is on (Patch 35g4). If it cannot be sealed, nothing is saved.
+        if FieldLock.isOn {
+            guard let text = String(data: data, encoding: .utf8), let sealed = LockedSetting.kept(text, key: Self.key) else { return }
+            UserDefaults.standard.set(sealed, forKey: Self.key)
+        } else {
+            UserDefaults.standard.set(data, forKey: Self.key)
+        }
     }
 }
 

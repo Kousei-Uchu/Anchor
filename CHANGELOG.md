@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 35g4: the words, addresses, model names, today's plan and other typed settings are locked too, which finishes locking.
 - Patch 35g3: the dates, times, numbers and marks in tasks, lists, routines, hard times, appointments and the plan are locked too, and Lock the rest offers them to a store that is already locked.
 - Patch 35g2: the dates, times, numbers and marks in the Journal, messages and the people you list are locked too, and Lock the rest offers them to a store that is already locked.
 - Patch 35g1b: the dates, times, numbers and choices in check-ins, sleep and Recovery are locked too. On a store that is already locked, Settings, Lock my data offers Lock the rest, with a new safety copy first.

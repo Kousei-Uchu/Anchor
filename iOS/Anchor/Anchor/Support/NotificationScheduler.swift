@@ -543,22 +543,43 @@ enum EscalationKeys {
 /// The escalation reminders the person has answered, so a re-sync does not put them back.
 /// Only the day is kept with each, and a day that has gone by is dropped.
 enum EscalationSkips {
-    private static let storeKey = "anchor.escalationSkipped"
+    static let storeKey = "anchor.escalationSkipped"
+
+    /// The answered reminders, or nil when they are sealed and do not open, so a caller does not take that for none.
+    private static func load(defaults: UserDefaults) -> Set<String>? {
+        guard let object = defaults.object(forKey: storeKey) else { return [] }
+        guard let text = LockedSetting.text(object, key: storeKey),
+              let list = try? JSONDecoder().decode([String].self, from: Data(text.utf8)) else { return nil }
+        return Set(list)
+    }
+
+    /// Keeps the set, sealed while locking is on (Patch 35g4). If it cannot be sealed, nothing is written and what was
+    /// kept stays; the cost is that an answered reminder may be planned again at the next re-sync.
+    private static func write(_ set: Set<String>, defaults: UserDefaults) {
+        let list = Array(set).sorted()
+        if FieldLock.isOn {
+            guard let data = try? JSONEncoder().encode(list), let text = String(data: data, encoding: .utf8),
+                  let sealed = LockedSetting.kept(text, key: storeKey) else { return }
+            defaults.set(sealed, forKey: storeKey)
+        } else {
+            defaults.set(list, forKey: storeKey)
+        }
+    }
 
     static func all(defaults: UserDefaults = .standard) -> Set<String> {
-        Set(defaults.stringArray(forKey: storeKey) ?? [])
+        load(defaults: defaults) ?? []
     }
 
     static func add(_ ids: [String], defaults: UserDefaults = .standard) {
-        var set = all(defaults: defaults)
+        guard var set = load(defaults: defaults) else { return }
         ids.forEach { set.insert($0) }
-        defaults.set(Array(set).sorted(), forKey: storeKey)
+        write(set, defaults: defaults)
     }
 
     static func prune(defaults: UserDefaults = .standard, calendar: Calendar = .current, now: Date = Date()) {
+        guard let current = load(defaults: defaults) else { return }
         let today = EscalationKeys.dayStamp(now, calendar: calendar)
-        let kept = all(defaults: defaults).filter { String($0.suffix(8)) >= today }
-        defaults.set(Array(kept).sorted(), forKey: storeKey)
+        write(current.filter { String($0.suffix(8)) >= today }, defaults: defaults)
     }
 
     static func clear(defaults: UserDefaults = .standard) {

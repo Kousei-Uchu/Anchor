@@ -456,13 +456,13 @@ enum OllamaSettings {
     static let modelKey = "aiOllamaModel"
 
     static var address: String {
-        get { UserDefaults.standard.string(forKey: addressKey) ?? "" }
-        set { UserDefaults.standard.set(newValue, forKey: addressKey) }
+        get { LockedSetting.string(addressKey) }
+        set { LockedSetting.setString(newValue, key: addressKey) }
     }
 
     static var model: String {
-        get { UserDefaults.standard.string(forKey: modelKey) ?? "" }
-        set { UserDefaults.standard.set(newValue, forKey: modelKey) }
+        get { LockedSetting.string(modelKey) }
+        set { LockedSetting.setString(newValue, key: modelKey) }
     }
 
     // An address away from the home network is held back until the person has confirmed that address (Patch AI8,
@@ -471,22 +471,22 @@ enum OllamaSettings {
     static let confirmedKey = "aiOllamaConfirmedAway"
 
     static var confirmedAway: String {
-        UserDefaults.standard.string(forKey: confirmedKey) ?? ""
+        LockedSetting.string(confirmedKey)
     }
 
     /// True for an address on the home network, and for an away address the person has confirmed.
     static func isConfirmed(_ endpoint: OllamaEndpoint, in defaults: UserDefaults = .standard) -> Bool {
-        !endpoint.isAway || defaults.string(forKey: confirmedKey) == endpoint.confirmationKey
+        !endpoint.isAway || LockedSetting.string(confirmedKey, in: defaults) == endpoint.confirmationKey
     }
 
     static func confirm(_ endpoint: OllamaEndpoint, in defaults: UserDefaults = .standard) {
         guard endpoint.isAway else { return }
-        defaults.set(endpoint.confirmationKey, forKey: confirmedKey)
+        LockedSetting.setString(endpoint.confirmationKey, key: confirmedKey, in: defaults)
     }
 
     /// Called as the address is typed: the confirmation stays only while what is typed is the confirmed address.
     static func keepConfirmation(onlyFor typed: String, in defaults: UserDefaults = .standard) {
-        if case .success(let endpoint) = OllamaEndpoint.parse(typed), defaults.string(forKey: confirmedKey) == endpoint.confirmationKey {
+        if case .success(let endpoint) = OllamaEndpoint.parse(typed), LockedSetting.string(confirmedKey, in: defaults) == endpoint.confirmationKey {
             return
         }
         defaults.removeObject(forKey: confirmedKey)
@@ -757,6 +757,15 @@ enum OtherKeychain {
     }
 }
 
+/// The five typed AI settings that Lock my data seals (Patch 35g4). Kept here so the Lock my data file never has to
+/// name a provider.
+enum AITypedSettingKeys {
+    static var all: [String] {
+        [OllamaSettings.addressKey, OllamaSettings.modelKey, OllamaSettings.confirmedKey, OtherSettings.addressKey, OtherSettings.modelKey]
+    }
+    static var address: String { OllamaSettings.addressKey }
+}
+
 /// What the person typed for an Other provider. The address and model name are kept in the phone's settings like
 /// the AI switch (not in a backup, and Clear all data leaves them). The key is in the Keychain (`OtherKeychain`).
 /// All three are empty to begin with, and nothing connects to the address while AI tools are off.
@@ -765,13 +774,13 @@ enum OtherSettings {
     static let modelKey = "aiOtherModel"
 
     static var address: String {
-        get { UserDefaults.standard.string(forKey: addressKey) ?? "" }
-        set { UserDefaults.standard.set(newValue, forKey: addressKey) }
+        get { LockedSetting.string(addressKey) }
+        set { LockedSetting.setString(newValue, key: addressKey) }
     }
 
     static var model: String {
-        get { UserDefaults.standard.string(forKey: modelKey) ?? "" }
-        set { UserDefaults.standard.set(newValue, forKey: modelKey) }
+        get { LockedSetting.string(modelKey) }
+        set { LockedSetting.setString(newValue, key: modelKey) }
     }
 
     static var key: String { OtherKeychain.read() }

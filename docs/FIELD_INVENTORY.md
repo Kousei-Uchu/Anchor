@@ -527,15 +527,15 @@ Every key the app keeps in the phone's settings (UserDefaults and `@AppStorage`)
 
 | Key | Holds | Verdict | Today | Reason |
 | --- | --- | --- | --- | --- |
-| sleepFeelWords | the three words you chose for how a night felt | locked | to lock 35g4 | words you typed |
-| aiOllamaAddress | the address of your own computer | locked | to lock 35g4 | an address you typed |
-| aiOllamaModel | a model name | locked | to lock 35g4 | a name you typed |
-| aiOllamaConfirmedAway | the away address you confirmed | locked | to lock 35g4 | an address you typed |
-| aiOtherAddress | the address of a service you added | locked | to lock 35g4 | an address you typed; its key is in the Keychain and never here |
-| aiOtherModel | a model name | locked | to lock 35g4 | a name you typed |
-| anchor.dayPlan | the tasks you picked for today, their order and the time you said you have | locked | to lock 35g4 | what you planned to do, and a time you gave |
-| anchor.escalationSkipped | which escalation reminders you answered, by id and day | locked | to lock 35g4 | records what you did on a day; whatever reads it must open the key first |
-| anchor.sleep.health.written | for each night saved to Apple Health, its id and when it was last changed | locked | to lock 35g4 | the last-changed time of a night is a date of yours, kept as a number |
+| sleepFeelWords | the three words you chose for how a night felt | locked | sealed | words you typed |
+| aiOllamaAddress | the address of your own computer | locked | sealed | an address you typed |
+| aiOllamaModel | a model name | locked | sealed | a name you typed |
+| aiOllamaConfirmedAway | the away address you confirmed | locked | sealed | an address you typed |
+| aiOtherAddress | the address of a service you added | locked | sealed | an address you typed; its key is in the Keychain and never here |
+| aiOtherModel | a model name | locked | sealed | a name you typed |
+| anchor.dayPlan | the tasks you picked for today, their order and the time you said you have | locked | sealed | what you planned to do, and a time you gave |
+| anchor.escalationSkipped | which escalation reminders you answered, by id and day | locked | sealed | records what you did on a day; whatever reads it must open the key first |
+| anchor.sleep.health.written | for each night saved to Apple Health, its id and when it was last changed | locked | sealed | the last-changed time of a night is a date of yours, kept as a number |
 | aiToolsEnabled | the one switch for all AI tools | plain | plain | an on or off switch |
 | dictationEnabled | dictation in the Journal | plain | plain | an on or off switch |
 | dictationKeepsVoiceNote | keep a voice note while dictating | plain | plain | an on or off switch |
@@ -624,5 +624,5 @@ Not checked by the script, listed so the picture is whole.
 
 - **Sorting and filtering.** SwiftData cannot sort or filter on a sealed value. Run `node scripts/check-field-inventory.mjs --uses` to list every place that sorts or filters on a field still to lock; As of 35f there are 37 such places where the database sorts or filters (D64 guessed about fifteen), and 52 more that sort or filter in memory, which keep working because reading a locked field already opens it. 35g moves each of the 37 to an in-memory sort after the items are opened. The existing check (`check-locked-fields.mjs`, rule 4) then stops any new sort on a sealed field.
 - **Switches that record what you did** (done, favourite, resolved, sent, moved) are locked in 35g, so a screen that filters on `isDone` or `isResolved` opens the items first.
-- **Settings that something reads while the phone is locked** (`anchor.escalationSkipped`, and the day plan) need the key to be available, or to fail closed and show nothing, never to show a sealed string. 35g4 decides this key by key and says so.
+- **Settings that something reads while the phone is locked** (`anchor.escalationSkipped`, and the day plan) need the key to be available, or to fail closed and show nothing, never to show a sealed string. 35g4 decided this key by key; docs/ENCRYPTION.md has the reasons.
 - **Each group ships alone,** with a safety copy and the way back first, and is checked on your phone before the next group starts.

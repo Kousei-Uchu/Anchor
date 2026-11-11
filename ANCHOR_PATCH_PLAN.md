@@ -682,7 +682,7 @@ Decided (D10 to D14 closed, 7 Nov 2026) and part of the main release, Apple Heal
 | **35g1b** | Lock the rest, group 1: check-ins, sleep and Recovery (D44) | 20 | M | ✅ pushed, build not confirmed |
 | **35g2** | Lock the rest, group 2: Journal, messages and people (D44) | 20 | M | Written, awaiting your build |
 | **35g3** | Lock the rest, group 3: plans, tasks, lists and sessions (D44) | 20 | M+ | Written, awaiting your build |
-| **35g4** | Lock the rest, group 4: typed settings (D44) | 20 | S | ⬜ |
+| **35g4** | Lock the rest, group 4: typed settings (D44) | 20 | S | Written, awaiting your build |
 
 ### Phase G — Guide, audit, docs
 

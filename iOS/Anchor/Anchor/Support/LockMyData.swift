@@ -53,9 +53,9 @@ enum LockMyData {
     // MARK: Levels (Patch 35g1a, D44)
 
     /// How much there is to lock. Level 1 is the words, which Patch 35b locks. Each part of 35g adds fields and raises
-    /// this by one: 35g1b made it 2 (check-ins, sleep and Recovery), 35g2 made it 3 (the Journal, messages and people), 35g3 makes it 4 (plans, tasks, lists and sessions). A store that was locked at an earlier level is
+    /// this by one: 35g1b made it 2 (check-ins, sleep and Recovery), 35g2 made it 3 (the Journal, messages and people), 35g3 made it 4 (plans, tasks, lists and sessions), 35g4 makes it 5 (the typed settings). A store that was locked at an earlier level is
     /// still locked, and Lock my data offers to lock the rest, with a new safety copy first.
-    static let currentLevel = 4
+    static let currentLevel = 5
 
     /// What the last finished run locked. 0 when nothing is locked. A store locked before levels existed has no
     /// saved number and counts as level 1.
@@ -79,8 +79,11 @@ enum LockMyData {
         if level < 2 { parts.append("check-ins, sleep and Recovery") }
         if level < 3 { parts.append("the Journal, messages and people") }
         if level < 4 { parts.append("plans, tasks, lists and sessions") }
-        if parts.isEmpty { return "More of what Anchor keeps can be locked now." }
-        return "Dates, numbers and marks in " + parts.joined(separator: " and ") + " can be locked now."
+        var lines: [String] = []
+        if !parts.isEmpty { lines.append("Dates, numbers and marks in " + parts.joined(separator: " and ") + " can be locked now.") }
+        if level < 5 { lines.append("The words, addresses and plans you typed in settings can be locked now too.") }
+        if lines.isEmpty { return "More of what Anchor keeps can be locked now." }
+        return lines.joined(separator: " ")
     }
 
     struct Status {
@@ -184,6 +187,8 @@ enum LockMyData {
     struct Report {
         var kinds = 0
         var items = 0
+        /// How many typed settings were locked (Patch 35g4).
+        var settings = 0
     }
 
     struct Failure: Error {
@@ -289,7 +294,7 @@ enum LockMyData {
     /// Locks every item and checks the result in a fresh context. Throws, with something to say, if anything is off.
     /// The caller turns `FieldLock.isOn` on first, and puts it back if this throws.
     @MainActor
-    static func lockAll(in container: ModelContainer) throws -> Report {
+    static func lockAll(in container: ModelContainer, settings: UserDefaults = .standard) throws -> Report {
         let all = kinds
 
         // What everything reads as now.
@@ -342,6 +347,7 @@ enum LockMyData {
                 report.items += items.count
             }
         }
+        report.settings = try LockedSettingsRun.lockAll(in: settings)
         return report
     }
 
@@ -349,6 +355,53 @@ enum LockMyData {
         let probe = "anchor lock probe"
         guard let sealed = try? FieldCipher.seal(probe, context: "LockMyData.probe", key: key) else { return false }
         return FieldCipher.open(sealed, context: "LockMyData.probe", key: key) == probe
+    }
+}
+
+// MARK: - Typed settings (Patch 35g4, D44, D69)
+
+/// Locks the nine typed settings that are kept in the phone's settings and not in the database. It runs as the last
+/// step of `LockMyData.lockAll`, after the items, and does what the items do: notes what each reads as, seals it,
+/// and reads it back. Sealing a value that is already sealed is skipped, so it is safe to run again. A value that is
+/// not there, or is empty, has nothing to lock.
+enum LockedSettingsRun {
+    /// Each key and what holds it. `scripts/check-field-inventory.mjs` lists the same keys as locked.
+    static var keys: [String] {
+        [
+            SleepFeelWords.storageKey,
+            DayPlan.key, EscalationSkips.storeKey, SleepHealthSettings.writtenKey
+        ] + AITypedSettingKeys.all
+    }
+
+    /// Returns how many values were sealed. Throws, with something to say, if one did not read back as it was.
+    @discardableResult
+    static func lockAll(in defaults: UserDefaults = .standard, keys: [String]? = nil) throws -> Int {
+        let all = keys ?? Self.keys
+        var sealedCount = 0
+        for key in all {
+            guard let object = defaults.object(forKey: key) else { continue }
+            if let text = object as? String, text.hasPrefix(LockedSetting.prefix) {
+                guard LockedSetting.text(object, key: key) != nil else {
+                    throw LockMyData.Failure(message: "A setting that was already locked did not open.")
+                }
+                continue
+            }
+            guard let was = LockedSetting.text(object, key: key) else {
+                throw LockMyData.Failure(message: "Anchor could not read a setting before locking it.")
+            }
+            if was.isEmpty { continue }
+            guard let sealed = LockedSetting.kept(was, key: key), sealed.hasPrefix(LockedSetting.prefix) else {
+                throw LockMyData.Failure(message: "A setting could not be locked.")
+            }
+            defaults.set(sealed, forKey: key)
+            guard LockedSetting.text(defaults.object(forKey: key), key: key) == was,
+                  let stored = defaults.object(forKey: key) as? String, stored.hasPrefix(LockedSetting.prefix) else {
+                defaults.set(object, forKey: key)
+                throw LockMyData.Failure(message: "A setting did not read back exactly as it was.")
+            }
+            sealedCount += 1
+        }
+        return sealedCount
     }
 }
 
@@ -803,10 +856,27 @@ enum LockMyDataSelfTest {
         try? context.save()
         check(entry.textSealed == nil && !entry.lockedFieldsAreSealed(), "an item was sealed while locking was off.")
 
+        // Typed settings, in a throwaway set of settings so nothing real is touched (Patch 35g4).
+        let suiteName = "anchor.lockselftest.settings"
+        let settings = UserDefaults(suiteName: suiteName) ?? .standard
+        settings.removePersistentDomain(forName: suiteName)
+        defer { settings.removePersistentDomain(forName: suiteName) }
+        settings.set("Calm|Flat|Worn", forKey: SleepFeelWords.storageKey)
+        settings.set("my-mac.local", forKey: AITypedSettingKeys.address)
+        settings.set(Data("{\"ids\":[]}".utf8), forKey: DayPlan.key)
+        settings.set(["escalation-x-20261116"], forKey: EscalationSkips.storeKey)
+        settings.set(["night-1": 5], forKey: SleepHealthSettings.writtenKey)
+        check(LockedSetting.prefix == FieldCipher.prefix, "the settings prefix is not the field prefix.")
+
         // Lock them.
         FieldLock.isOn = true
-        guard let report = try? LockMyData.lockAll(in: container) else { fatalError("Lock my data self-test: locking threw.") }
+        guard let report = try? LockMyData.lockAll(in: container, settings: settings) else { fatalError("Lock my data self-test: locking threw.") }
         check(report.items == 9, "the number of locked items was \(report.items), not 9.")
+        check(report.settings == 5, "the number of locked settings was \(report.settings), not 5.")
+        check(LockedSetting.string(SleepFeelWords.storageKey, in: settings) == "Calm|Flat|Worn" && (settings.string(forKey: SleepFeelWords.storageKey) ?? "").hasPrefix(LockedSetting.prefix), "a typed setting was not locked and readable.")
+        check(EscalationSkips.all(defaults: settings) == ["escalation-x-20261116"] && settings.object(forKey: EscalationSkips.storeKey) is String, "the answered reminders were not locked and readable.")
+        check(LockedSetting.string(AITypedSettingKeys.address, in: settings) == "my-mac.local", "a locked address did not read back.")
+        check((try? LockedSettingsRun.lockAll(in: settings)) == 0, "a second settings run sealed something again.")
         check(entry.text == "plain journal words" && entry.textPlain.isEmpty && entry.lockedFieldsAreSealed(), "a journal entry was not locked and readable.")
         check(contact.name == "Sam" && contact.discordUserID == "42" && contact.lockedFieldsAreSealed(), "a contact was not locked and readable.")
         check(list.items.count == 1 && list.items[0].text == "keys" && list.lockedFieldsAreSealed(), "a list was not locked and readable.")

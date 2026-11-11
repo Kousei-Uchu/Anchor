@@ -1338,7 +1338,7 @@ enum SleepFeelWords {
     /// Three words from the saved text (separated by a bar), falling back to
     /// the default for any left empty.
     static func words(from raw: String) -> [String] {
-        let saved = raw.split(separator: "|", omittingEmptySubsequences: false).map {
+        let saved = saved(from: raw).map {
             $0.trimmingCharacters(in: .whitespacesAndNewlines)
         }
         return (0..<3).map { index in
@@ -1346,8 +1346,17 @@ enum SleepFeelWords {
         }
     }
 
+    /// What was saved, opened if it is sealed and split into its words, with nothing filled in for an empty one. Empty
+    /// when the saved value is sealed and does not open (Patch 35g4).
+    static func saved(from raw: String) -> [String] {
+        guard let text = LockedSetting.text(raw, key: storageKey) else { return [] }
+        return text.split(separator: "|", omittingEmptySubsequences: false).map(String.init)
+    }
+
+    /// The text to save for the words: sealed while locking is on, and empty (the usual words) if it could not be sealed.
     static func encode(_ words: [String]) -> String {
-        words.map { $0.replacingOccurrences(of: "|", with: " ") }.joined(separator: "|")
+        let plain = words.map { $0.replacingOccurrences(of: "|", with: " ") }.joined(separator: "|")
+        return LockedSetting.kept(plain, key: storageKey) ?? ""
     }
 }
 
