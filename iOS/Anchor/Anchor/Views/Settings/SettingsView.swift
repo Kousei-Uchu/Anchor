@@ -1076,8 +1076,10 @@ private struct RecoveryKeyShownSheet: View {
     let text: String
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
     @State private var typed = ""
     @State private var copied = false
+    @State private var showQR = false
 
     private var lastGroup: String { String(text.suffix(4)) }
 
@@ -1117,6 +1119,8 @@ private struct RecoveryKeyShownSheet: View {
                     }
                     .buttonStyle(.bordered)
 
+                    qrSection
+
                     VStack(alignment: .leading, spacing: 6) {
                         Text("To check you have it, type the last four characters.")
                             .font(.footnote)
@@ -1140,6 +1144,40 @@ private struct RecoveryKeyShownSheet: View {
             }
         }
         .interactiveDismissDisabled()
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active { showQR = false }
+        }
+    }
+
+    /// The key as a QR code for a second device (Patch SY3). Off until asked for, hidden again when Anchor leaves the
+    /// screen, made in memory and never saved. Typing the key stays the way that always works.
+    @ViewBuilder
+    private var qrSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Button {
+                showQR.toggle()
+            } label: {
+                Label(showQR ? "Hide the QR code" : "Show a QR code for another device", systemImage: "qrcode")
+            }
+            .buttonStyle(.bordered)
+
+            if showQR {
+                if let image = RecoveryKeyQR.image(for: text) {
+                    Image(uiImage: image)
+                        .interpolation(.none)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: 260)
+                        .padding(14)
+                        .background(Color.white, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .frame(maxWidth: .infinity)
+                        .accessibilityLabel("A QR code holding your recovery key. Use Scan a QR code on your other device.")
+                }
+                Text("On your other device, open Settings, iCloud sync, Type my recovery key, then Scan a QR code. Anyone who can see this code can use your recovery key, so show it only where no one else can see your screen. It is not saved anywhere and goes away when you close this.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
     }
 }
 
@@ -1153,6 +1191,8 @@ struct RecoveryKeyEntrySheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var typed = ""
     @State private var errorText: String?
+    @State private var scanNote: String?
+    @State private var showScanner = false
 
     /// Written out because a view with private state has a memberwise init that other files cannot reach.
     init(title: String, buttonTitle: String, action: @escaping (String) -> String?) {
@@ -1172,6 +1212,17 @@ struct RecoveryKeyEntrySheet: View {
                     if let errorText {
                         Text(errorText).font(.footnote).foregroundStyle(.red)
                     }
+                    if let scanNote {
+                        Text(scanNote).font(.footnote).foregroundStyle(.secondary)
+                    }
+                    if RecoveryKeyQR.cameraAvailable {
+                        Button {
+                            showScanner = true
+                        } label: {
+                            Label("Scan a QR code", systemImage: "qrcode.viewfinder")
+                                .font(.system(.subheadline, design: .rounded))
+                        }
+                    }
                 }
                 Section {
                     Button(buttonTitle) {
@@ -1189,6 +1240,13 @@ struct RecoveryKeyEntrySheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
+                }
+            }
+            .sheet(isPresented: $showScanner) {
+                RecoveryKeyScanSheet { key in
+                    typed = key
+                    errorText = nil
+                    scanNote = "Scanned. Check that it reads as you expect, then tap \(buttonTitle)."
                 }
             }
         }

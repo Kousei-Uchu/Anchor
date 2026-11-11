@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch SY3: the recovery key can be shown as a QR code when it is first made, and scanned with the camera on a second device instead of typed. Typing still works. The code is never saved and the camera is used only when you tap Scan a QR code.
 - Patch SY1b2: fixes Settings, iCloud sync freezing when it was opened.
 - Patch SY1b1: fixes the build error in the iCloud sync patch (the widget also builds the database file and cannot name the sync code). Nothing you see changes.
 - Patch SY1b: Settings, iCloud sync, off until you turn it on. It uses your own private iCloud only, starts once everything is locked, and a second device gets the recovery file from iCloud and you type the recovery key there. Nights from Apple Health are kept out while it is on.

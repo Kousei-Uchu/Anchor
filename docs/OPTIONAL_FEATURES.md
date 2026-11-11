@@ -33,7 +33,7 @@ Written 9 Nov 2026 (change log 123). Built so far: the one switch (AI0) the cons
 - **Voice notes and Journal photos** are files, not rows. They travel as CloudKit assets in a second step (SY2), and only after 35d has locked them.
 - **Deleting means deleting everywhere.** "Clear everything" says plainly that it also removes the data from the other devices. A way back is the safety copy on each device, not iCloud.
 - **Conflicts:** the same record edited on two phones at once keeps the later edit, which is what CloudKit does. Text is never merged line by line. **Check** whether a conflicted text field is worth keeping both versions of; the first version does not.
-- **The key** (D40): a second device needs the data key before it can read anything. Either the recovery key is typed on the new device (nothing travels), or the key is put in iCloud Keychain, which Apple also encrypts end to end, if the person turns that on. Recommendation in D40.
+- **The key** (D40): a second device needs the data key before it can read anything. Either the recovery key is typed on the new device (nothing travels), or the key is put in iCloud Keychain, which Apple also encrypts end to end, if the person turns that on. Recommendation in D40. The QR code from SY3 is the typed key in another form: it is drawn by the first device in memory while the key is shown, scanned by the second, and never saved. Details in `docs/ENCRYPTION.md`.
 - **Needs from you in Xcode:** the iCloud capability with CloudKit on the app target, a container, and a first run on two real devices. Neither can be tested in a simulator pair.
 
 ## E2. Dictation and voice notes together, for journalling

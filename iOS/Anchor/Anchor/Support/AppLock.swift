@@ -931,6 +931,12 @@ enum DataKeySelfTest {
         check(RecoveryKeyText.raw(from: "3" + String(recoveryText.dropFirst())) == nil, "a changed character was accepted.")
         check(RecoveryKeyText.raw(from: String(recoveryText.dropLast())) == nil, "a short recovery key was accepted.")
         check(RecoveryKeyText.raw(from: "") == nil, "an empty recovery key was accepted.")
+        check(RecoveryKeyQR.roundTrips(recoveryText), "the recovery key did not come back from its QR code text.")
+        check(RecoveryKeyQR.key(fromScanned: recoveryText) != nil, "a bare recovery key was not accepted from a scan.")
+        check(RecoveryKeyQR.key(fromScanned: "https://example.com") == nil, "a code that is not a recovery key was accepted.")
+        check(RecoveryKeyQR.key(fromScanned: RecoveryKeyQR.prefix + "3" + String(recoveryText.dropFirst())) == nil,
+              "a changed key in a QR code was accepted.")
+        check(RecoveryKeyQR.image(for: recoveryText) != nil, "the QR code could not be made.")
 
         let blob = bytes(blobHex)
         check(RecoveryBlob.keyID(of: master) == bytes(keyIDHex), "the key id differs from the reference.")

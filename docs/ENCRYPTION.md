@@ -183,6 +183,20 @@ The second step of locking: the voice notes and Journal photos, which are files 
 - **Turning it off.** There is no switch that unlocks files in place. The way back is the safety copy or an encrypted backup.
 - **It has not run on real files.** It is checked by a self-test on made-up bytes in a test build and by `scripts/check-locked-files.mjs`, which keeps every other file from reading or writing the two folders itself. Nothing has been compiled by the tool that wrote it.
 
+## The recovery key as a QR code (Patch SY3, E1, D40)
+
+A second device needs the recovery key before it can read anything synced (SY1b). Typing it always works. SY3 adds a shortcut for people with a camera: the first device draws the key as a QR code, and the second scans it.
+
+**Where the code comes from.** Only the "Your recovery key" sheet, the one that shows the key once, can offer it. The key is not kept anywhere in a readable form (the recovery file is sealed under it), so there is nothing else to draw it from. To scan to a second device after the key was first shown, make a new recovery key (Settings, Encryption), which replaces the file and, with sync on, puts the new file in iCloud's key-value store for the other device. The sheet has Show a QR code for another device, which is off until tapped, and the code is hidden again when Anchor leaves the screen.
+
+**What is in the code.** Plain text: `anchor-recovery-key:` and the key as it is shown, for example `anchor-recovery-key:208H-44RM-2MB1-E60S-38DH-R78Y-3WZG`. It is not a link, so a phone's own camera app offers nothing to open, and nothing in Anchor opens what a scan read. The prefix lets a scan ignore any other QR code. A bare key is also accepted.
+
+**Memory only.** The code is made with the system's QR code filter into an image that lives in the sheet's view. It is never written to a file, the photo library or the pasteboard, never shared, and never logged. Anyone who can see the screen while it is shown can read it, and a screenshot or recording would keep it, so the sheet says to show it only where no one can see. `scripts/check-recovery-qr.mjs` fails if the code maker or the camera is used outside `Support/RecoveryKeyQR.swift`, if that file saves, copies, shares or logs anything, or if the sheet stops hiding the code to begin with.
+
+**Scanning.** Scan a QR code is in the box where a recovery key is typed (Restore the key, Check recovery key, and the sync screen's Type my recovery key). It shows only on a device with a camera. The camera permission is asked on the first tap and never before, and the line the phone shows says the camera is used only for this. The scanner looks for QR codes only, takes the first one that holds a whole recovery key (the two check characters must agree), and stops. A code that is not an Anchor recovery key is ignored and its contents are not shown. The key goes into the box, and the person still taps Restore or Check, so nothing is applied by the scan alone.
+
+**Not done.** Hiding the code while the screen is being recorded or mirrored; scanning from a photo in the library; a printable page. Each is a choice for the person, not a gap they would hit.
+
 ## Checking a test build on a device
 
 1. Open the screen: nothing should stop the app (the self-test runs on open).

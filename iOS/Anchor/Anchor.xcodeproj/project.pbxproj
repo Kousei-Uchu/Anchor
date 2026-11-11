@@ -99,6 +99,7 @@
 		D13B8EA74B006244AE3D3D32 /* WidgetCustomisation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E97286CA8BFDAB85F4D8066 /* WidgetCustomisation.swift */; };
 		D7450C847008FD8A42518AA1 /* RecoveryCounterDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D4E020E267318B40AF47F49 /* RecoveryCounterDetailView.swift */; };
 		D7A3F91B5C2E4086B1E9A4C7 /* DictationAudio.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B14E6D0A93F42C5B7D1E028 /* DictationAudio.swift */; };
+		B6F2D8E4AC3E5719B2E5F803 /* RecoveryKeyQR.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5E1C7D39B2F4608A1D4E7F2 /* RecoveryKeyQR.swift */; };
 		EB41D8990918488D90943B85 /* ReframingPromptView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FD53AB2A11E46FAABD602C7 /* ReframingPromptView.swift */; };
 		ECE2756575FD40A49A06E1D1 /* JournalEntryEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 988D389A938F4784B62E6999 /* JournalEntryEditorView.swift */; };
 		F2C85A0E7D1B4936A8E3B5D9 /* JournalVoice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D9E1A7C03B8426F95A0C3E1 /* JournalVoice.swift */; };
@@ -190,6 +191,7 @@
 		85B27412DFF5FC3D964C3D85 /* LockMyDataView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockMyDataView.swift; sourceTree = "<group>"; };
 		87A893C8C649E0DA82BF5434 /* SafetyCopyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafetyCopyView.swift; sourceTree = "<group>"; };
 		8B14E6D0A93F42C5B7D1E028 /* DictationAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationAudio.swift; sourceTree = "<group>"; };
+		A5E1C7D39B2F4608A1D4E7F2 /* RecoveryKeyQR.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryKeyQR.swift; sourceTree = "<group>"; };
 		905C4FDA487AB3F8365B7465 /* SafetyCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafetyCopy.swift; sourceTree = "<group>"; };
 		92467451520AC73206018CEC /* CloudSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSync.swift; sourceTree = "<group>"; };
 		92D593B269EB6B064DC986FE /* LockMyData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockMyData.swift; sourceTree = "<group>"; };
@@ -348,6 +350,7 @@
 				94ECF0E537016231C42D3609 /* AIAsk.swift */,
 				3E9A60B1D7C24F58A02E8B64 /* Dictation.swift */,
 				8B14E6D0A93F42C5B7D1E028 /* DictationAudio.swift */,
+				A5E1C7D39B2F4608A1D4E7F2 /* RecoveryKeyQR.swift */,
 				51F94DB50E36F6B5A95BDC6D /* AIProviders.swift */,
 				E8FC090AB9CDA60DC7E77AF2 /* LockedFields.swift */,
 				C7C09E04301AA21400F9144F /* HelpContent.swift */,
@@ -677,6 +680,7 @@
 				FDBD68869E5A11B99B6BED27 /* AIAsk.swift in Sources */,
 				C4D81E7A29F3B05A6E1D7C93 /* Dictation.swift in Sources */,
 				D7A3F91B5C2E4086B1E9A4C7 /* DictationAudio.swift in Sources */,
+				B6F2D8E4AC3E5719B2E5F803 /* RecoveryKeyQR.swift in Sources */,
 				26585E49ABF5E46A21471C87 /* AIProviders.swift in Sources */,
 				07033D98FCBCC16228F86C85 /* LockedFields.swift in Sources */,
 				B82692F35F794738ADD35491 /* AnchorApp.swift in Sources */,
@@ -806,6 +810,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSAppleMusicUsageDescription = "Anchor can suggest recently played music as journal context, if you choose to look.";
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Anchor can suggest calendar events from the day you're journaling about, if you choose to look.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Anchor uses the camera only when you tap Scan a QR code to read your recovery key from another device. Nothing the camera sees is saved or sent anywhere.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Anchor uses Face ID to keep your safety plan and journal private, independent of your phone's own lock.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Anchor can read your sleep from Apple Health, only if you choose to connect it or to save nights to it. It is used for your sleep journal, and to avoid saving a night Health already has. It is kept on your device.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Anchor can save the nights you type in your sleep journal to Apple Health, only if you turn that on. They are marked as coming from Anchor, and you can remove them.";
@@ -987,6 +992,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSAppleMusicUsageDescription = "Anchor can suggest recently played music as journal context, if you choose to look.";
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Anchor can suggest calendar events from the day you're journaling about, if you choose to look.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Anchor uses the camera only when you tap Scan a QR code to read your recovery key from another device. Nothing the camera sees is saved or sent anywhere.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Anchor uses Face ID to keep your safety plan and journal private, independent of your phone's own lock.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Anchor can read your sleep from Apple Health, only if you choose to connect it or to save nights to it. It is used for your sleep journal, and to avoid saving a night Health already has. It is kept on your device.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Anchor can save the nights you type in your sleep journal to Apple Health, only if you turn that on. They are marked as coming from Anchor, and you can remove them.";

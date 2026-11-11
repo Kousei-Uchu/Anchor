@@ -580,11 +580,12 @@
       "title": "Encryption",
       "whatItIs": "The key that locks the text you write, and the recovery key that gets it back if the key is lost.",
       "howToUse": [
-        "Make a key and a recovery key creates a key on this phone and shows the recovery key once, so write it down then. Check my recovery key asks you to type it back, and Make a new recovery key replaces it. Restore with your recovery key is for a phone where the key is missing. Lock my data, a few rows down in Settings, is what uses the key to lock your text."
+        "Make a key and a recovery key creates a key on this phone and shows the recovery key once, so write it down then. Check my recovery key asks you to type it back, and Make a new recovery key replaces it. When a recovery key is shown, Show a QR code for another device puts it on screen as a code, so a second device can scan it instead of you typing it. Restore with your recovery key is for a phone where the key is missing, and it has Scan a QR code as well as a box to type in. Lock my data, a few rows down in Settings, is what uses the key to lock your text."
       ],
       "tips": [
         "If the key is lost and there is no recovery key, locked data cannot be opened by anyone.",
-        "The recovery file is kept with your data so a restored phone can get the key back."
+        "The recovery file is kept with your data so a restored phone can get the key back. The QR code is made on the screen and never saved, so show it only where no one else can see.",
+        "Typing the key always works. Scanning is only a shortcut, and it asks to use the camera only when you tap it."
       ],
       "inTour": false
     }
