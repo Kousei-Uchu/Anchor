@@ -13,6 +13,7 @@ enum AIFeature: String, CaseIterable {
     case estimateTime
     case turnIntoTasks
     case turnIntoThingsToRaise
+    case findSpeakerChanges
 
     /// The plain name of the button, and of the tool in the list of ones that no longer ask.
     var title: String {
@@ -22,6 +23,7 @@ enum AIFeature: String, CaseIterable {
         case .estimateTime: return "Estimate time"
         case .turnIntoTasks: return "Turn into tasks"
         case .turnIntoThingsToRaise: return "Turn into things to raise"
+        case .findSpeakerChanges: return "Suggest who is speaking"
         }
     }
 
@@ -38,6 +40,8 @@ enum AIFeature: String, CaseIterable {
             return "Turn this text into a short list of tasks the writer said they need to do or plainly meant to do. Use only what the text says. Add no tasks of your own, no dates, no priorities, no advice and no comment on feelings. Write one task per line, as a short action, with no numbers, bullets or other words, and at most 12 lines. If the text holds nothing to do, reply with nothing. Use the same language as the text."
         case .turnIntoThingsToRaise:
             return "Turn this text into a short list of things the writer wants to bring up in an appointment or session. Keep each one in the writer's own words as far as you can. Use only what the text says. Add nothing: no advice, no diagnosis, no comment on feelings, no new facts. Write one item per line, with no numbers, bullets or other words, at most 12 lines, and keep each under 160 characters. If the text holds nothing to bring up, reply with nothing. Use the same language as the text."
+        case .findSpeakerChanges:
+            return "Below is the transcript of a recording, cut into numbered pieces in order. Say where a different person starts speaking, using only how the words read, such as a question and its reply or a change between I and you. You cannot hear anyone, so do not guess about voices, names or anything the words do not show. Reply with one line for each piece where the speaker changes, and one for piece 1: the number, a space, and a letter, A for the first speaker, B for the next new one, and so on, using the same letter when an earlier speaker comes back. Use at most 6 letters. Write nothing else. If it reads as one person throughout, reply with: 1 A"
         }
     }
 }

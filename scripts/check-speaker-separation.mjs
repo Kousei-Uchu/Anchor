@@ -1,5 +1,6 @@
 // Checks that finding who is speaking (VN4a, E2, D38, D63, D64, D73 in ANCHOR_PATCH_PLAN.md) keeps nothing about a voice
 // and never goes online. Run it from anywhere:  node scripts/check-speaker-separation.mjs
+// 11. Guessing from the words (VN4c1) only prepares words and reads an answer; AIAsk is the one place text goes to a model.
 // 9. Replay and tap (VN4b) uses no model and no recogniser, and keeps and sends nothing.
 // 1. FluidAudio is imported in one file only, Support/SpeakerSeparation.swift, and is linked into the app and not the widget.
 // 2. The package is pinned to one exact version, so a build never picks up a newer one by itself.
@@ -176,6 +177,22 @@ for (const f of files) {
 }
 const editor = files.find((x) => x.rel === "Views/Journal/JournalEntryEditorView.swift");
 if (editor && !/if PeopleSettings\.isOn[^\n]*case \.voice/.test(editor.text)) problems.push("The Journal editor shows the people buttons without checking PeopleSettings.isOn on a voice note.");
+
+// 11. Guessing from the words (VN4c1): Support/SpeakerWords.swift only prepares words and reads an answer. It never talks to a
+//     model, never goes online, keeps nothing and makes nothing that can be saved; the one place text goes to a model is AIAsk.
+const words = files.find((x) => x.rel === "Support/SpeakerWords.swift");
+if (!words) problems.push("Support/SpeakerWords.swift is missing.");
+else {
+  const code = words.text.split("#if DEBUG")[0];
+  const rules = [
+    [/\bAIAsk\b|\bAIProvid\w*|\.generate\(|\bFoundationModels\b|\bLanguageModelSession\b|\bFluidAudio\b|\bSFSpeech\w*|\bFileTranscription\.words\b/, "reaches a model, a provider or a recogniser itself"],
+    [/\bURLSession\b|\bURLRequest\b|\bNWConnection\b|\bNWPathMonitor\b/, "goes online"],
+    [/\bUserDefaults\b|\bSecItem\w*|\bKeychain\w*|\bModelContext\b|\bmodelContext\b|\.insert\(|@Model\b|\bAppStorage\b|\bSceneStorage\b|\bUIPasteboard\b/, "reaches storage, the Keychain, the database or the clipboard"],
+    [/\.write\(|\.createFile\(|\bFileHandle\b|\bOutputStream\b|\bwriteToFile\b|\bworkingCopy\(/, "writes a file"],
+    [/\bCodable\b|\bEncodable\b|\bNSCoding\b|\bJSONEncoder\b|\bPropertyListEncoder\b/, "makes something that can be saved"],
+  ];
+  for (const [pattern, why] of rules) if (pattern.test(code)) problems.push(`Support/SpeakerWords.swift: ${why}.`);
+}
 
 // 1 and 2. The project.
 const pbx = readFileSync(join(root, "iOS/Anchor/Anchor.xcodeproj/project.pbxproj"), "utf8");
