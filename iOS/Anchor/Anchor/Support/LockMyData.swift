@@ -189,6 +189,8 @@ enum LockMyData {
         var items = 0
         /// How many typed settings were locked (Patch 35g4).
         var settings = 0
+        /// How many typed settings were already sealed and no longer open (Patch 35g5). They are left as they were.
+        var settingsUnreadable = 0
     }
 
     struct Failure: Error {
@@ -275,7 +277,13 @@ enum LockMyData {
             defaults.set(true, forKey: scrubKey)
             defaults.set(currentLevel, forKey: levelKey)
             defaults.set(Stored.on.rawValue, forKey: stateKey)
-            setResult("Locked \(report.items) \(report.items == 1 ? "item" : "items") and checked every one. Close Anchor and open it again to finish: the old plain copies are cleared out of the database file on that start.")
+            var done = "Locked \(report.items) \(report.items == 1 ? "item" : "items") and checked every one. Close Anchor and open it again to finish: the old plain copies are cleared out of the database file on that start."
+            if report.settingsUnreadable == 1 {
+                done += " One saved setting was locked with a key that no longer opens it, so it was left as it was and reads as empty."
+            } else if report.settingsUnreadable > 1 {
+                done += " \(report.settingsUnreadable) saved settings were locked with a key that no longer opens them, so they were left as they were and read as empty."
+            }
+            setResult(done)
         } catch {
             let reason = (error as? Failure)?.message ?? "Something did not work."
             if upgrading {
@@ -347,7 +355,9 @@ enum LockMyData {
                 report.items += items.count
             }
         }
-        report.settings = try LockedSettingsRun.lockAll(in: settings)
+        let settingsRun = try LockedSettingsRun.run(in: settings)
+        report.settings = settingsRun.sealed
+        report.settingsUnreadable = settingsRun.unreadable
         return report
     }
 
@@ -376,14 +386,21 @@ enum LockedSettingsRun {
     /// Returns how many values were sealed. Throws, with something to say, if one did not read back as it was.
     @discardableResult
     static func lockAll(in defaults: UserDefaults = .standard, keys: [String]? = nil) throws -> Int {
+        try run(in: defaults, keys: keys).sealed
+    }
+
+    /// The same run, and also how many values were already sealed and do not open. This run did not seal those and
+    /// going back to the safety copy would not open them, so they are left exactly as they are and counted, and they
+    /// read as empty to the rest of the app (`LockedSetting.text`). Stopping the whole run for one would leave the
+    /// person unable to lock anything else, however many times they tried.
+    static func run(in defaults: UserDefaults = .standard, keys: [String]? = nil) throws -> (sealed: Int, unreadable: Int) {
         let all = keys ?? Self.keys
         var sealedCount = 0
+        var unreadableCount = 0
         for key in all {
             guard let object = defaults.object(forKey: key) else { continue }
             if let text = object as? String, text.hasPrefix(LockedSetting.prefix) {
-                guard LockedSetting.text(object, key: key) != nil else {
-                    throw LockMyData.Failure(message: "A setting that was already locked did not open.")
-                }
+                if LockedSetting.text(object, key: key) == nil { unreadableCount += 1 }
                 continue
             }
             guard let was = LockedSetting.text(object, key: key) else {
@@ -401,7 +418,7 @@ enum LockedSettingsRun {
             }
             sealedCount += 1
         }
-        return sealedCount
+        return (sealedCount, unreadableCount)
     }
 }
 
@@ -877,6 +894,12 @@ enum LockMyDataSelfTest {
         check(EscalationSkips.all(defaults: settings) == ["escalation-x-20261116"] && settings.object(forKey: EscalationSkips.storeKey) is String, "the answered reminders were not locked and readable.")
         check(LockedSetting.string(AITypedSettingKeys.address, in: settings) == "my-mac.local", "a locked address did not read back.")
         check((try? LockedSettingsRun.lockAll(in: settings)) == 0, "a second settings run sealed something again.")
+        // A setting that was sealed and no longer opens is left alone and counted; it does not stop the run (Patch 35g5).
+        settings.set(LockedSetting.prefix + "not-a-real-seal", forKey: OtherSettings.modelKey)
+        let leftover = try? LockedSettingsRun.run(in: settings)
+        check(leftover?.sealed == 0 && leftover?.unreadable == 1, "a setting that does not open stopped the settings run, or was not counted.")
+        check((settings.object(forKey: OtherSettings.modelKey) as? String) == LockedSetting.prefix + "not-a-real-seal", "a setting that does not open was changed.")
+        settings.removeObject(forKey: OtherSettings.modelKey)
         check(entry.text == "plain journal words" && entry.textPlain.isEmpty && entry.lockedFieldsAreSealed(), "a journal entry was not locked and readable.")
         check(contact.name == "Sam" && contact.discordUserID == "42" && contact.lockedFieldsAreSealed(), "a contact was not locked and readable.")
         check(list.items.count == 1 && list.items[0].text == "keys" && list.lockedFieldsAreSealed(), "a list was not locked and readable.")
