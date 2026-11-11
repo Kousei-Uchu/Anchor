@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		03341B23D1B41EB29A286F8D /* SafetyCopyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87A893C8C649E0DA82BF5434 /* SafetyCopyView.swift */; };
-		5357347FF47C55576D8D3104 /* SyncSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DC8C700FDC1CB81DCA414DC /* SyncSettingsView.swift */; };
 		035010293EE54573AECF8B65 /* CrisisNumbersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23872821DD004B2493E86D8F /* CrisisNumbersView.swift */; };
 		07033D98FCBCC16228F86C85 /* LockedFields.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8FC090AB9CDA60DC7E77AF2 /* LockedFields.swift */; };
 		07F174CB78A6BBEEF965D4F0 /* RecoveryDailyViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D549DC46C03C21BB00FA9EA /* RecoveryDailyViews.swift */; };
@@ -37,11 +36,12 @@
 		407578FA97624A1B90D8E30F /* PlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDFFB2420D684494B43F882B /* PlanView.swift */; };
 		44242B30E58D656EC4F3378C /* RecoveryCalendarTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = E18A0A5ABCCA95BF8E2F8559 /* RecoveryCalendarTab.swift */; };
 		531B53A829A58820D8D01370 /* RecoverySupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A299E490BBED2CF3DFC8DF07 /* RecoverySupport.swift */; };
+		5357347FF47C55576D8D3104 /* SyncSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DC8C700FDC1CB81DCA414DC /* SyncSettingsView.swift */; };
 		57EEA17235EA4D03B12B7C30 /* AnchorWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8711082EC7542F886FD6D0E /* AnchorWidgetBundle.swift */; };
+		5D8CD457D6400371B991BDA2 /* CloudSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92467451520AC73206018CEC /* CloudSync.swift */; };
 		5E39536252994C52BA23EB63 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 84BE718902E34AC5BD3C4A36 /* SwiftUI.framework */; };
 		5ECEDA94452645569E4857AA /* AnchorModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15ACBC80FF724521BB7AE9FF /* AnchorModels.swift */; };
 		60A074630CC7C6188746A45F /* SafetyCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 905C4FDA487AB3F8365B7465 /* SafetyCopy.swift */; };
-		5D8CD457D6400371B991BDA2 /* CloudSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92467451520AC73206018CEC /* CloudSync.swift */; };
 		60E16D624DA94736AA1C8E13 /* NotificationDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C21816FFAD0B409A88F1D941 /* NotificationDelegate.swift */; };
 		621ABFDCE22D492A88CCABE0 /* GroundingToolsEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2AA5399254246FC897A81A7 /* GroundingToolsEditorView.swift */; };
 		66F8C2F61BC14462BF3E5005 /* QuickContactsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D814F7C294EE47FE8A60BC30 /* QuickContactsView.swift */; };
@@ -144,6 +144,7 @@
 		06B6C1312DD7B78D1CE65DF5 /* AIOffNotice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIOffNotice.swift; sourceTree = "<group>"; };
 		0838913F4176466AB146AA58 /* AnchorApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnchorApp.swift; sourceTree = "<group>"; };
 		090C431E0F51BA088A90B557 /* TabWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabWidgets.swift; sourceTree = "<group>"; };
+		0DC8C700FDC1CB81DCA414DC /* SyncSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncSettingsView.swift; sourceTree = "<group>"; };
 		0E1B309040E54EB990628DD5 /* ThreadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThreadView.swift; sourceTree = "<group>"; };
 		0E9589A3314F4DA081389181 /* MascotPresenceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MascotPresenceView.swift; sourceTree = "<group>"; };
 		12C7B8E05D9A4F63A1E4D0B8 /* SpeakerLabels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeakerLabels.swift; sourceTree = "<group>"; };
@@ -188,7 +189,6 @@
 		858B92E9C32D46358B7278A5 /* ContactsEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsEditorView.swift; sourceTree = "<group>"; };
 		85B27412DFF5FC3D964C3D85 /* LockMyDataView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockMyDataView.swift; sourceTree = "<group>"; };
 		87A893C8C649E0DA82BF5434 /* SafetyCopyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafetyCopyView.swift; sourceTree = "<group>"; };
-		0DC8C700FDC1CB81DCA414DC /* SyncSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncSettingsView.swift; sourceTree = "<group>"; };
 		8B14E6D0A93F42C5B7D1E028 /* DictationAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationAudio.swift; sourceTree = "<group>"; };
 		905C4FDA487AB3F8365B7465 /* SafetyCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafetyCopy.swift; sourceTree = "<group>"; };
 		92467451520AC73206018CEC /* CloudSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSync.swift; sourceTree = "<group>"; };
