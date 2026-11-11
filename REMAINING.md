@@ -74,7 +74,7 @@ Everything here builds and launches on your phone (confirmed 11 Nov 2026, after 
 **Parked on purpose**
 
 - **49, 50**: demo routes A and C, replaced by 55.
-- **55**: the web demo made by one script from the app and its demo data (D3). Done last, just before the Android work.
+- **55**: the web demo. 55a (the content, from the app's demo store) is written; 55b (the look of the screens, recorded from the app on a simulator) needs your Mac; 55c joins them in one script. See D82.
 
 ## 4. Offered but not built
 

@@ -1,37 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Icon } from './Icons';
+import demo from '../content/demo.generated.json';
 
 /* A tappable rebuild of the real app's main screens, with made-up content.
    Used full-size on /demo and the home page, and (non-interactive, driven by props) in the scroll story. */
 
-const SCRIPTS = [
-  'I need 10 minutes, then we can talk.',
-  "I'm not okay right now. I need space, not a conversation.",
-  "Can we pause this? I'll come find you when I've calmed down.",
-];
-const AFFIRMATIONS = [
-  'I got through today. That counts.',
-  'Small steps still move me forward.',
-  "I don't have to figure it all out tonight.",
-];
-const TOOLS: Record<string, string[]> = {
-  '5-4-3-2-1': [
-    'Name 5 things you can see.',
-    'Name 4 things you can touch.',
-    'Name 3 things you can hear.',
-    'Name 2 things you can smell.',
-    'Take 1 slow breath.',
-  ],
-  'Cold water': ['Go to a tap.', 'Run cold water over your wrists.', 'Breathe out slowly, twice.'],
-};
-const PROMPTS = [
-  "What's currently on your mind?",
-  "What's your biggest emotion right now?",
-  "What's something you're looking forward to?",
-];
-const SLIDERS = ['Physical energy', 'Mental clarity', 'Room in your head', 'Physical energy to move', 'Social energy'];
-const QUIET_LINE = 'No pressure to do anything right now.';
+const SCRIPTS: string[] = demo.scripts;
+const AFFIRMATIONS: string[] = demo.affirmations;
+const TOOLS: Record<string, string[]> = Object.fromEntries(demo.tools.map((t) => [t.title, t.steps]));
+const PROMPTS: string[] = demo.checkInQuestions;
+const SLIDERS: string[] = demo.sliders;
+const QUIET_LINE: string = demo.mascot.quiet;
 
 type Sheet =
   | { k: 'open'; title: string }
@@ -73,13 +53,13 @@ export function DemoApp({ tab, scrollTo, locked = false }: { tab?: number; scrol
   const [own, setOwn] = useState(0);
   const cur = tab ?? own;
 
-  const [items, setItems] = useState<string[]>(['Drink some water']);
+  const [items, setItems] = useState<string[]>([demo.firstTask]);
   const [done, setDone] = useState<Set<number>>(new Set());
   const [newItem, setNewItem] = useState('');
   const [si, setSi] = useState(0);
   const [ai, setAi] = useState(0);
-  const [entries, setEntries] = useState([{ t: 'Slept badly, but the walk helped a bit.', h: 'Yesterday, 8:12 pm' }]);
-  const [line, setLine] = useState("Hey. I'm here.");
+  const [entries, setEntries] = useState([{ t: demo.firstJournalEntry, h: 'Yesterday, 8:12 pm' }]);
+  const [line, setLine] = useState<string>(demo.mascot.hello);
   const [draft, setDraft] = useState('');
 
   const [open, setOpen] = useState(false);

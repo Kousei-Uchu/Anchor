@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 55a: the website demo now takes its made-up content from the app's own demo content, so the two cannot drift apart. The demo shows all five grounding tools, as the app does.
 - Patch 54: a write-up for deciding about Android (`docs/ANDROID_DECISION.md`): what carries over, what does not, three routes, and what Google Play asks of a new account.
 - Plan note DOC33: the plan records that the About the creator patch is pushed.
 - Patch AB3: Settings, About now has an About the creator section, with the mascot, a short note from the person who makes Anchor and a longer story that folds away, and the website's About page says the same. A My website link is under Links.

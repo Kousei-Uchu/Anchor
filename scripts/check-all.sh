@@ -9,6 +9,8 @@ for check in check-about-content.mjs check-demo-coverage.mjs check-ai-gate.mjs c
 done
 echo "=== sync-guide.mjs --check ==="
 node scripts/sync-guide.mjs --check || status=1
+echo "=== sync-demo.mjs --check ==="
+node scripts/sync-demo.mjs --check || status=1
 echo "=== check-swift-syntax.py ==="
 python3 scripts/check-swift-syntax.py
 code=$?

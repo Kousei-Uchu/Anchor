@@ -1,0 +1,76 @@
+{
+  "tools": [
+    {
+      "title": "5-4-3-2-1",
+      "steps": [
+        "Name 5 things you can see.",
+        "Name 4 things you can touch.",
+        "Name 3 things you can hear.",
+        "Name 2 things you can smell.",
+        "Take 1 slow breath."
+      ]
+    },
+    {
+      "title": "Cold water",
+      "steps": [
+        "Go to a tap.",
+        "Run cold water over your wrists.",
+        "Breathe out slowly, twice."
+      ]
+    },
+    {
+      "title": "Slow breathing",
+      "steps": [
+        "Breathe in for four.",
+        "Hold for four.",
+        "Breathe out for six."
+      ]
+    },
+    {
+      "title": "Ten slow steps",
+      "steps": [
+        "Stand up.",
+        "Walk across the room, slowly.",
+        "Count ten steps.",
+        "Notice your feet on the floor."
+      ]
+    },
+    {
+      "title": "Something warm",
+      "steps": [
+        "Make a warm drink, or hold a warm mug.",
+        "Feel the warmth in your hands.",
+        "Take a few slow sips."
+      ]
+    }
+  ],
+  "scripts": [
+    "I need ten minutes. I will come back and we can finish this.",
+    "I want to keep talking, but not while I am this wound up.",
+    "Can we take a break and pick this up after dinner?"
+  ],
+  "affirmations": [
+    "I got through today. That counts.",
+    "Small steps still move me forward.",
+    "I do not have to do all of it today.",
+    "Resting is allowed."
+  ],
+  "checkInQuestions": [
+    "What's currently on your mind?",
+    "What's your biggest emotion right now?",
+    "Is there anything coming up that's on your mind?"
+  ],
+  "sliders": [
+    "Physical energy",
+    "Mental clarity",
+    "Room in your head",
+    "Physical energy to move",
+    "Social energy"
+  ],
+  "mascot": {
+    "hello": "Hey. I'm here.",
+    "quiet": "No pressure to do anything right now."
+  },
+  "firstTask": "Drink some water",
+  "firstJournalEntry": "Slept badly, but the walk helped a bit."
+}
