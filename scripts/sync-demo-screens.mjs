@@ -11,7 +11,7 @@
 // How the screens are joined (nothing here is typed by hand):
 //   - a tab button on any screen goes to that tab's first screen
 //   - a button whose label is the last step of another screen's path goes to that screen, from the screen
-//     one step up the path (or from that screen's scrolled version, if the button was below the fold)
+//     one step up the path (or from that screen scrolled once, twice or more, if the button was below the fold)
 //   - "Back", "Close", "Cancel" and "Done" go back to the screen before
 //   - a screen whose path ends in "@scroll" is the scrolled version of its parent: wheel or swipe moves between them
 
@@ -155,7 +155,10 @@ const screens = captured.map((c) => {
       for (const other of captured) {
         if (isScroll(other) || other.path.length === 0 || TABS.includes(lastOf(other)) && other.path.length === 1) continue;
         const parent = other.path.slice(0, -1);
-        const sameScreen = same(parent, c.path) || same([...parent, "@scroll"], c.path);
+        // the screen itself, or that screen scrolled once, twice, and so on
+        const base = [...c.path];
+        while (base.length > 0 && base[base.length - 1] === "@scroll") base.pop();
+        const sameScreen = same(parent, base);
         if (sameScreen && matches(e.label, lastOf(other))) { to = other.name; break; }
       }
     }

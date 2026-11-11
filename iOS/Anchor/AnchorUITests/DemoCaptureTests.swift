@@ -26,6 +26,8 @@ final class DemoCaptureTests: XCTestCase {
         ("now-checkin", ["Check in"]),
         ("plan", ["Plan"]),
         ("plan-more", ["Plan", "@scroll"]),
+        ("plan-more2", ["Plan", "@scroll", "@scroll"]),
+        ("plan-more3", ["Plan", "@scroll", "@scroll", "@scroll"]),
         ("plan-contacts", ["Plan", "All contacts"]),
         ("plan-safety", ["Plan", "Safety plan"]),
         ("plan-grounding", ["Plan", "All tools"]),
