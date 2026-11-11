@@ -66,7 +66,6 @@ for (const name of ["eligibleEntries", "checkInTally", "countsText", "nightsWrit
 
 // 5. Guide and review.
 if (!/one-page sheet/i.test(help)) problems.push("The guide does not mention the one-page sheet.");
-if (!/\("30r"/.test(review)) problems.push("The review walkthrough has no stop for 30r.");
 
 if (problems.length) {
   console.log(problems.join("\n"));

@@ -1,6 +1,6 @@
 # Anchor: what is left
 
-*Only what is still to do. When something is finished, confirmed or answered, it is deleted from this file in the same patch, never moved to a done list. Finished work is in the Progress table of `ANCHOR_PATCH_PLAN.md` and in `docs/PLAN_CHANGELOG.md`. Last updated: 10 Nov 2026, after 35g4.*
+*Only what is still to do. When something is finished, confirmed or answered, it is deleted from this file in the same patch, never moved to a done list. Finished work is in the Progress table of `ANCHOR_PATCH_PLAN.md` and in `docs/PLAN_CHANGELOG.md`. Last updated: 11 Nov 2026, after R4.*
 
 ## 1. Waiting on you
 
@@ -28,7 +28,7 @@
 
 ## 2. Pushed, waiting for a build and a try on your phone
 
-Quickest way to check many at once: `scripts/review-on-device.sh` (the numbered review bar, Patch R1). Each line is what to look at.
+Quickest way to check many at once: `scripts/review-on-device.sh` (the numbered review bar, Patch R1). On your phone: `DEVICE="Demon Child" scripts/review-on-device.sh`. The bar now holds only what is still untried (R4). Each line is what to look at.
 
 - RV1a: Task cards, the quiet line is now a few small facts that wrap instead of being cut off.
 - 30p2: Settings, After-session reminders, a switch for each person, that evening or the next morning.

@@ -10,7 +10,9 @@ A way to go through every change one at a time, on made-up content, and write do
 
 The phone needs to be plugged in, unlocked, trusted, with Developer Mode on. The script builds the Debug app, installs it and launches it with `-AnchorDemo -AnchorReview`. The app runs on the in-memory demo store, so your own data is not opened, and nothing it does is kept. Open the app normally afterwards and your own data is back.
 
-The first round, 66 stops, is finished and removed from the list. It is kept in git history (`d0fa55a`). This round is the changes added since, and notes are kept separately from the first round.
+The first round, 66 stops, and the second round, 27 stops, are finished and removed from the list. They are in git history (`d0fa55a` and `168c552`). The second round, and everything pushed up to the start of 35d, was confirmed by you on 9 Nov 2026, so none of it is listed. This round is what has been added since and is still untried. Notes are kept separately from the earlier rounds.
+
+The stops marked as needing a normal test build cannot be tried in a review run, because it keeps AI tools, Dictate, Apple Health and locking switched off; the stop says what to look at here and what to try on your own copy.
 
 ## Using it
 
