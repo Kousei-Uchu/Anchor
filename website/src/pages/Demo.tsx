@@ -1,4 +1,4 @@
-import { DemoApp } from '../components/DemoApp';
+import { Demo as DemoScreens, hasCapturedDemo } from '../components/CapturedDemo';
 import { DEVICE_H, DEVICE_W, PhoneFrame } from '../components/PhoneFrame';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { ROUTE_META } from '../content/meta';
@@ -11,9 +11,9 @@ export default function Demo() {
   return (
     <main className="demo-page">
       <h1 className="sr-only">Anchor demo</h1>
-      <p className="demo-note"><strong>Interactive demo.</strong> Rebuilt from the real app&rsquo;s screens, with made-up content. Nothing you type is saved or sent.</p>
+      <p className="demo-note"><strong>Interactive demo.</strong>{' '}{hasCapturedDemo ? 'Real screens from the app, with made-up content. Tap around, and scroll with the wheel or a swipe.' : 'Rebuilt from the real app\u2019s screens, with made-up content.'} Nothing you type is saved or sent.</p>
       <PhoneFrame scale={scale}>
-        <DemoApp />
+        <DemoScreens />
       </PhoneFrame>
     </main>
   );

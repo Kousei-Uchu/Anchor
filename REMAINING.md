@@ -67,14 +67,14 @@ Everything here builds and launches on your phone (confirmed 11 Nov 2026, after 
 
 ## 3. Not started, in order
 
-1. **52**: refresh the Remotion promo with new screenshots and captions. The single source is already true (`remotion-project/src/Promo.tsx`, `npm run sync:promo`); what is left needs the app run on a simulator.
+1. **52**: refresh the Remotion promo with new screenshots and captions. The single source is already true (`remotion-project/src/Promo.tsx`, `npm run sync:promo`); it is written and waits for you: run `scripts/make-screenshots.sh`, then `scripts/refresh-promo-shots.sh`, then look at the video in `npm run studio` before `npm run render` (D83).
 2. **53**: the long full-tour video, split into per-tab scenes, scripted from `website/src/content/guide.generated.json`. Waits on 52. Size L, to be split.
 3. **54**: the Android write-up is written (`docs/ANDROID_DECISION.md`); read it and answer its four questions. The prototype spike is optional. Android itself is far future (D4).
 
 **Parked on purpose**
 
 - **49, 50**: demo routes A and C, replaced by 55.
-- **55**: the web demo. 55a (the content, from the app's demo store) is written; 55b (the look of the screens, recorded from the app on a simulator) needs your Mac; 55c joins them in one script. See D82.
+- **55**: the web demo. 55a (the content, from the app's demo store) is done; 55b (the screens, recorded from the app on a simulator) is written and waits for you to run `scripts/make-demo-capture.sh`; 55c is the thin script that runs the capture, the sync and the website build together, to do after you have run 55b once. See D82 and D83.
 
 ## 4. Offered but not built
 

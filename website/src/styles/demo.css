@@ -143,3 +143,13 @@
 
 @keyframes app-br { from { scale: 0.98; } to { scale: 1.04; } }
 @keyframes app-bl { 0%, 95%, 100% { height: 9px; } 97% { height: 1.5px; } }
+
+/* The demo made from recordings of the real app (CapturedDemo.tsx). Same size as .app, so the phone frame fits it. */
+.cd { position: relative; width: 393px; height: 852px; border-radius: 54px; overflow: hidden; background: #fbf6f1; touch-action: pan-y; }
+.cd img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; user-select: none; -webkit-user-drag: none; }
+.cd .hot { position: absolute; padding: 0; border: 0; border-radius: 14px; background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.cd .hot:active { background: rgba(202, 121, 95, 0.14); }
+.cd .hot:focus-visible { outline: 3px solid #ca795f; outline-offset: -3px; }
+.cd-scroll { position: absolute; left: 50%; bottom: 104px; transform: translateX(-50%); padding: 7px 14px; border: 0; border-radius: 999px; background: rgba(29, 27, 26, 0.62); color: #fff; font: 600 13px/1 ui-rounded, 'SF Pro Rounded', -apple-system, system-ui, sans-serif; cursor: pointer; }
+.cd-scroll.up { bottom: auto; top: 64px; }
+.cd-scroll:focus-visible { outline: 3px solid #ca795f; outline-offset: 2px; }

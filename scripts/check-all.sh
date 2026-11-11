@@ -11,6 +11,10 @@ echo "=== sync-guide.mjs --check ==="
 node scripts/sync-guide.mjs --check || status=1
 echo "=== sync-demo.mjs --check ==="
 node scripts/sync-demo.mjs --check || status=1
+echo "=== sync-demo-screens.mjs --check ==="
+node scripts/sync-demo-screens.mjs --check || status=1
+echo "=== check-promo-shots.mjs ==="
+node scripts/check-promo-shots.mjs || status=1
 echo "=== check-swift-syntax.py ==="
 python3 scripts/check-swift-syntax.py
 code=$?
