@@ -37,7 +37,7 @@ for (const f of files) {
   });
   if (/Models\/(AnchorModels|RecoveryModels)\.swift$/.test(f)) {
     models += (text.match(/^@Model\s*\nfinal class /gm) || []).length;
-    const ids = (text.match(/^    var id: UUID$/gm) || []).length;
+    const ids = (text.match(/^    var id: UUID(?: = UUID\(\))?$/gm) || []).length;
     if (ids < 1) problems.push(`${rel}: no model has an id.`);
   }
   if (/Views\/Plan\/DataControlView\.swift$/.test(f)) {

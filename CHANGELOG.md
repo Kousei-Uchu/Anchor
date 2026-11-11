@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch SY1a: every item Anchor keeps now has a default for each value, another step toward iCloud sync. It changes nothing you see.
 - Patch SY0: the database no longer insists on a unique id for each item, and importing a backup keeps an id from being added twice. This prepares for iCloud sync and changes nothing you see.
 - Patch 35g4: the words, addresses, model names, today's plan and other typed settings are locked too, which finishes locking.
 - Patch 35g3: the dates, times, numbers and marks in tasks, lists, routines, hard times, appointments and the plan are locked too, and Lock the rest offers them to a store that is already locked.

@@ -131,48 +131,48 @@ enum RecoveryMilestones {
 
 @Model
 final class RecoveryCounter {
-    var id: UUID
+    var id: UUID = UUID()
 
     /// The user's own words, shown only inside the app unless they opt in below.
-    @Attribute(originalName: "name") var namePlain: String
+    @Attribute(originalName: "name") var namePlain: String = ""
     /// The locked form of `name`, empty until locking is turned on. Read and written through `name` only.
     var nameSealed: String? = nil
 
     /// What widgets and notifications call this counter, e.g. "Your counter".
-    @Attribute(originalName: "discreetLabel") var discreetLabelPlain: String
+    @Attribute(originalName: "discreetLabel") var discreetLabelPlain: String = ""
     /// The locked form of `discreetLabel`, empty until locking is turned on. Read and written through `discreetLabel` only.
     var discreetLabelSealed: String? = nil
-    var showNameOutsideApp: Bool
+    var showNameOutsideApp: Bool = false
 
-    @Attribute(originalName: "mode") var modePlain: DayCountMode
+    @Attribute(originalName: "mode") var modePlain: DayCountMode = DayCountMode.lockedPlaceholder
 
     /// JSON-encoded `[RecoveryRun]`. Stored as data so the schema stays simple.
     /// The locked form of `mode`, empty until locking is turned on. Read and written through `mode` only.
     var modeSealed: String? = nil
-    @Attribute(originalName: "runsData") var runsDataPlain: Data
+    @Attribute(originalName: "runsData") var runsDataPlain: Data = Data()
     /// The locked form of `runsData`, empty until locking is turned on. Read and written through `runsData` only.
     var runsDataSealed: String? = nil
 
-    @Attribute(originalName: "savingsAmount") var savingsAmountPlain: Double
+    @Attribute(originalName: "savingsAmount") var savingsAmountPlain: Double = 0
     /// The locked form of `savingsAmount`, empty until locking is turned on. Read and written through `savingsAmount` only.
     var savingsAmountSealed: String? = nil
-    @Attribute(originalName: "savingsPeriod") var savingsPeriodPlain: SavingsPeriod
+    @Attribute(originalName: "savingsPeriod") var savingsPeriodPlain: SavingsPeriod = SavingsPeriod.lockedPlaceholder
     /// The locked form of `savingsPeriod`, empty until locking is turned on. Read and written through `savingsPeriod` only.
     var savingsPeriodSealed: String? = nil
-    @Attribute(originalName: "currencyCode") var currencyCodePlain: String
+    @Attribute(originalName: "currencyCode") var currencyCodePlain: String = ""
 
     /// Milestones (in days) the user has already seen, so each is marked once.
     /// The locked form of `currencyCode`, empty until locking is turned on. Read and written through `currencyCode` only.
     var currencyCodeSealed: String? = nil
-    @Attribute(originalName: "acknowledgedMilestones") var acknowledgedMilestonesPlain: [Int]
+    @Attribute(originalName: "acknowledgedMilestones") var acknowledgedMilestonesPlain: [Int] = []
     /// The locked form of `acknowledgedMilestones`, empty until locking is turned on. Read and written through `acknowledgedMilestones` only.
     var acknowledgedMilestonesSealed: String? = nil
 
-    var sortOrder: Int
-    @Attribute(originalName: "createdAt") var createdAtPlain: Date
+    var sortOrder: Int = 0
+    @Attribute(originalName: "createdAt") var createdAtPlain: Date = Date(timeIntervalSinceReferenceDate: 0)
     /// The locked form of `createdAt`, empty until locking is turned on. Read and written through `createdAt` only.
     var createdAtSealed: String? = nil
-    var isArchived: Bool
+    var isArchived: Bool = false
 
     /// "Before tracking, on a typical day, how many times did it happen?" Just a reference note.
     @Attribute(originalName: "priorTimesPerDay") var priorTimesPerDayPlain: Int = 0
@@ -453,15 +453,15 @@ extension RecoveryCounter {
 /// "Who I'm doing this for" and "why it matters", in the user's own words.
 @Model
 final class RecoveryMotivation {
-    var id: UUID
-    @Attribute(originalName: "kind") var kindPlain: MotivationKind
+    var id: UUID = UUID()
+    @Attribute(originalName: "kind") var kindPlain: MotivationKind = MotivationKind.lockedPlaceholder
     /// The locked form of `kind`, empty until locking is turned on. Read and written through `kind` only.
     var kindSealed: String? = nil
-    @Attribute(originalName: "text") var textPlain: String
+    @Attribute(originalName: "text") var textPlain: String = ""
     /// The locked form of `text`, empty until locking is turned on. Read and written through `text` only.
     var textSealed: String? = nil
-    var sortOrder: Int
-    @Attribute(originalName: "createdAt") var createdAtPlain: Date
+    var sortOrder: Int = 0
+    @Attribute(originalName: "createdAt") var createdAtPlain: Date = Date(timeIntervalSinceReferenceDate: 0)
     /// The locked form of `createdAt`, empty until locking is turned on. Read and written through `createdAt` only.
     var createdAtSealed: String? = nil
 
@@ -544,9 +544,9 @@ extension RecoveryMotivation {
 /// One day for one counter. Free text only: no rating, no score.
 @Model
 final class RecoveryDayEntry {
-    var id: UUID
-    var counterID: UUID
-    @Attribute(originalName: "day") var dayPlain: Date               // start of day
+    var id: UUID = UUID()
+    var counterID: UUID = UUID()
+    @Attribute(originalName: "day") var dayPlain: Date = Date(timeIntervalSinceReferenceDate: 0) // start of day
     /// The locked form of `day`, empty until locking is turned on. Read and written through `day` only.
     var daySealed: String? = nil
     @Attribute(originalName: "pledgedAt") var pledgedAtPlain: Date?
@@ -555,13 +555,13 @@ final class RecoveryDayEntry {
     @Attribute(originalName: "reviewedAt") var reviewedAtPlain: Date?
     /// The locked form of `reviewedAt`, empty until locking is turned on. Read and written through `reviewedAt` only.
     var reviewedAtSealed: String? = nil
-    @Attribute(originalName: "helped") var helpedPlain: String
+    @Attribute(originalName: "helped") var helpedPlain: String = ""
     /// The locked form of `helped`, empty until locking is turned on. Read and written through `helped` only.
     var helpedSealed: String? = nil
-    @Attribute(originalName: "hard") var hardPlain: String
+    @Attribute(originalName: "hard") var hardPlain: String = ""
     /// The locked form of `hard`, empty until locking is turned on. Read and written through `hard` only.
     var hardSealed: String? = nil
-    @Attribute(originalName: "tomorrow") var tomorrowPlain: String
+    @Attribute(originalName: "tomorrow") var tomorrowPlain: String = ""
     /// The locked form of `tomorrow`, empty until locking is turned on. Read and written through `tomorrow` only.
     var tomorrowSealed: String? = nil
 
@@ -714,15 +714,15 @@ enum UrgeStrength: String, Codable, CaseIterable, Identifiable {
 /// A logged urge. How strong it felt is the user's own description, not a score.
 @Model
 final class RecoveryUrge {
-    var id: UUID
-    var counterID: UUID
-    @Attribute(originalName: "date") var datePlain: Date
+    var id: UUID = UUID()
+    var counterID: UUID = UUID()
+    @Attribute(originalName: "date") var datePlain: Date = Date(timeIntervalSinceReferenceDate: 0)
     /// The locked form of `date`, empty until locking is turned on. Read and written through `date` only.
     var dateSealed: String? = nil
-    @Attribute(originalName: "strength") var strengthPlain: UrgeStrength
+    @Attribute(originalName: "strength") var strengthPlain: UrgeStrength = UrgeStrength.lockedPlaceholder
     /// The locked form of `strength`, empty until locking is turned on. Read and written through `strength` only.
     var strengthSealed: String? = nil
-    @Attribute(originalName: "note") var notePlain: String
+    @Attribute(originalName: "note") var notePlain: String = ""
     /// The locked form of `note`, empty until locking is turned on. Read and written through `note` only.
     var noteSealed: String? = nil
 
