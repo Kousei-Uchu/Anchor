@@ -210,6 +210,8 @@ struct AppleOnDeviceProvider: AIProviding {
     func status() -> AIProviderStatus {
         guard AIGate.isEnabled else { return .aiToolsOff }
         #if canImport(FoundationModels)
+        // FoundationModels needs iOS 26; the app still runs on iOS 17 and says it is unavailable there.
+        guard #available(iOS 26.0, *) else { return .notOnThisPhone }
         switch SystemLanguageModel.default.availability {
         case .available:
             return .ready
@@ -231,6 +233,7 @@ struct AppleOnDeviceProvider: AIProviding {
     func generate(instruction: String, text: String) async throws -> String {
         guard AIGate.isEnabled else { throw AIError.off }
         #if canImport(FoundationModels)
+        guard #available(iOS 26.0, *) else { throw AIError.unavailable(.notOnThisPhone) }
         let session = LanguageModelSession(instructions: instruction)
         let response = try await session.respond(to: text)
         return response.content
@@ -241,7 +244,7 @@ struct AppleOnDeviceProvider: AIProviding {
 }
 
 /// Why a typed address is not accepted, in words the person can act on (Patch AI5, AI8).
-enum OllamaAddressProblem: Equatable {
+enum OllamaAddressProblem: Error, Equatable {
     case empty
     case notAnAddress
     case needsHTTPS
@@ -640,7 +643,7 @@ struct OllamaProvider: AIProviding {
 }
 
 /// Why a typed address for an Other provider is not accepted (Patch AI6).
-enum OtherAddressProblem: Equatable {
+enum OtherAddressProblem: Error, Equatable {
     case empty
     case notAnAddress
     case needsHTTPS
