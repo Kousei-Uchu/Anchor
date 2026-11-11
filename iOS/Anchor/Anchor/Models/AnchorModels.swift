@@ -27,7 +27,7 @@ import SwiftUI
 /// Thread quotes) points back into this table rather than generating new text.
 @Model
 final class JournalEntry {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
     @Attribute(originalName: "createdAt") var createdAtPlain: Date
     /// The locked form of `createdAt`, empty until locking is turned on. Read and written through `createdAt` only.
     var createdAtSealed: String? = nil
@@ -171,7 +171,7 @@ extension TaskEnergy: LockedChoice { static var lockedPlaceholder: TaskEnergy { 
 /// this is a snapshot the user can optionally save, not a tracker.
 @Model
 final class CheckIn {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
     @Attribute(originalName: "timestamp") var timestampPlain: Date
 
     // Each is a private 0...1 continuous value the user sets by feel,
@@ -317,7 +317,7 @@ extension CheckIn {
 
 @Model
 final class TrustedContact {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
     @Attribute(originalName: "name") var namePlain: String
     /// The locked form of `name`, empty until locking is turned on. Read and written through `name` only.
     var nameSealed: String? = nil
@@ -648,7 +648,7 @@ enum DeepLinkDestination: Codable {
 /// band" suggestions are ever seeded or offered by this app.
 @Model
 final class GroundingTool {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
     @Attribute(originalName: "title") var titlePlain: String
     /// The locked form of `title`, empty until locking is turned on. Read and written through `title` only.
     var titleSealed: String? = nil
@@ -752,7 +752,7 @@ enum TimeWindowTag: String, Codable {
 
 @Model
 final class SafetyPlan {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
     @Attribute(originalName: "lastEditedAt") var lastEditedAtPlain: Date
     /// The locked form of `lastEditedAt`, empty until locking is turned on. Read and written through `lastEditedAt` only.
     var lastEditedAtSealed: String? = nil
@@ -876,7 +876,7 @@ extension SafetyPlan {
 /// into sections once, never changed afterwards, and no longer read.
 @Model
 final class SafetyPlanSection {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
     @Attribute(originalName: "title") var titlePlain: String
     /// The locked form of `title`, empty until locking is turned on. Read and written through `title` only.
     var titleSealed: String? = nil
@@ -983,7 +983,7 @@ extension SafetyPlanSection {
 /// list. Nothing is shared unless they do it themselves.
 @Model
 final class BoundarySection {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
     @Attribute(originalName: "title") var titlePlain: String
     /// The locked form of `title`, empty until locking is turned on. Read and written through `title` only.
     var titleSealed: String? = nil
@@ -1110,7 +1110,7 @@ extension BoundarySection {
 /// is optional or defaulted, so a night can hold just a note, or just a time.
 @Model
 final class SleepEntry {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
     /// The night this belongs to, as the start of the day you woke up on.
     @Attribute(originalName: "nightDate") var nightDatePlain: Date
     /// The locked form of `nightDate`, empty until locking is turned on. Read and written through `nightDate` only.
@@ -1366,7 +1366,7 @@ enum SleepFeelWords {
 /// Nothing is made for anyone, and nothing here is counted or scored.
 @Model
 final class PersonSection {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
     /// The `TrustedContact` this page belongs to.
     var contactID: UUID
     @Attribute(originalName: "title") var titlePlain: String
@@ -1497,7 +1497,7 @@ enum GoalStatus: String, CaseIterable, Identifiable {
 /// goal is (working on it, reached, set aside for now) is the person's call.
 @Model
 final class PersonalGoal {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
     @Attribute(originalName: "title") var titlePlain: String
     /// The locked form of `title`, empty until locking is turned on. Read and written through `title` only.
     var titleSealed: String? = nil
@@ -1714,7 +1714,7 @@ extension PersonalGoal {
 /// be changed before anything is saved or sent.
 @Model
 final class MessageStarter {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
     @Attribute(originalName: "text") var textPlain: String
     /// The locked form of `text`, empty until locking is turned on. Read and written through `text` only.
     var textSealed: String? = nil
@@ -1884,7 +1884,7 @@ enum SafetyPlanMigration {
 /// a location trigger.
 @Model
 final class TriggerWindow {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
     @Attribute(originalName: "label") var labelPlain: String
     /// The locked form of `label`, empty until locking is turned on. Read and written through `label` only.
     var labelSealed: String? = nil
@@ -2060,7 +2060,7 @@ extension TriggerWindow {
 /// around. Never a hardcoded fixed interval.
 @Model
 final class AppointmentSeries {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
     @Attribute(originalName: "clinicianLabel") var clinicianLabelPlain: String
     /// The locked form of `clinicianLabel`, empty until locking is turned on. Read and written through `clinicianLabel` only.
     var clinicianLabelSealed: String? = nil
@@ -2279,7 +2279,7 @@ extension AppointmentSeries {
 
 @Model
 final class AppointmentOccurrence {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
     @Attribute(originalName: "scheduledDate") var scheduledDatePlain: Date       // editable independent of the series rule
     /// The locked form of `scheduledDate`, empty until locking is turned on. Read and written through `scheduledDate` only.
     var scheduledDateSealed: String? = nil
@@ -2377,7 +2377,7 @@ extension AppointmentOccurrence {
 
 @Model
 final class BridgeDraftItem {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
     @Attribute(originalName: "createdAt") var createdAtPlain: Date
     /// The locked form of `createdAt`, empty until locking is turned on. Read and written through `createdAt` only.
     var createdAtSealed: String? = nil
@@ -2543,7 +2543,7 @@ extension BridgeDraftItem {
 
 @Model
 final class FeedbackLoopDiagram {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
     @Attribute(originalName: "title") var titlePlain: String
     /// The locked form of `title`, empty until locking is turned on. Read and written through `title` only.
     var titleSealed: String? = nil
@@ -2634,7 +2634,7 @@ extension FeedbackLoopDiagram {
 
 @Model
 final class ThreadMessage {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
     @Attribute(originalName: "timestamp") var timestampPlain: Date
     /// The locked form of `timestamp`, empty until locking is turned on. Read and written through `timestamp` only.
     var timestampSealed: String? = nil
@@ -2727,7 +2727,7 @@ extension ThreadMessage {
 
 @Model
 final class SupportCalendarEntry {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
     @Attribute(originalName: "date") var datePlain: Date
     /// The locked form of `date`, empty until locking is turned on. Read and written through `date` only.
     var dateSealed: String? = nil
@@ -2799,7 +2799,7 @@ extension SupportCalendarEntry {
 
 @Model
 final class FutureNote {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
     @Attribute(originalName: "writtenAt") var writtenAtPlain: Date
     /// The locked form of `writtenAt`, empty until locking is turned on. Read and written through `writtenAt` only.
     var writtenAtSealed: String? = nil
@@ -2924,7 +2924,7 @@ extension FutureNote {
 
 @Model
 final class UnsentDraft {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
     @Attribute(originalName: "createdAt") var createdAtPlain: Date
     /// The locked form of `createdAt`, empty until locking is turned on. Read and written through `createdAt` only.
     var createdAtSealed: String? = nil
@@ -3037,7 +3037,7 @@ extension UnsentDraft {
 
 @Model
 final class DecisionPresetCategory {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
     @Attribute(originalName: "name") var namePlain: String
     /// The locked form of `name`, empty until locking is turned on. Read and written through `name` only.
     var nameSealed: String? = nil
@@ -3095,7 +3095,7 @@ extension DecisionPresetCategory {
 
 @Model
 final class DecisionPresetChoice {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
     @Attribute(originalName: "name") var namePlain: String
     /// The locked form of `name`, empty until locking is turned on. Read and written through `name` only.
     var nameSealed: String? = nil
@@ -3178,7 +3178,7 @@ extension DecisionPresetChoice {
 
 @Model
 final class DeEscalationScript {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
     @Attribute(originalName: "text") var textPlain: String
     /// The locked form of `text`, empty until locking is turned on. Read and written through `text` only.
     var textSealed: String? = nil
@@ -3239,7 +3239,7 @@ extension DeEscalationScript {
 
 @Model
 final class Affirmation {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
     @Attribute(originalName: "text") var textPlain: String
     /// The locked form of `text`, empty until locking is turned on. Read and written through `text` only.
     var textSealed: String? = nil
@@ -3303,7 +3303,7 @@ extension Affirmation {
 // EKReminder when the user chooses to also add it to Reminders.
 @Model
 final class NextHourItem {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
     @Attribute(originalName: "text") var textPlain: String
     /// The locked form of `text`, empty until locking is turned on. Read and written through `text` only.
     var textSealed: String? = nil
@@ -3398,7 +3398,7 @@ extension NextHourItem {
 // `reminderIdentifier` links a task that was imported from the Reminders app.
 @Model
 final class TaskItem {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
     @Attribute(originalName: "title") var titlePlain: String
     /// The locked form of `title`, empty until locking is turned on. Read and written through `title` only.
     var titleSealed: String? = nil
@@ -4067,7 +4067,7 @@ struct QuickListItem: Codable, Identifiable, Hashable {
 
 @Model
 final class QuickList {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
     @Attribute(originalName: "title") var titlePlain: String
     /// The locked form of `title`, empty until locking is turned on. Read and written through `title` only.
     var titleSealed: String? = nil
@@ -4298,7 +4298,7 @@ struct RoutineStep: Codable, Identifiable, Hashable {
 
 @Model
 final class Routine {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
     @Attribute(originalName: "name") var namePlain: String
     /// The locked form of `name`, empty until locking is turned on. Read and written through `name` only.
     var nameSealed: String? = nil
@@ -4501,7 +4501,7 @@ struct ListItem: Codable, Identifiable, Hashable {
 
 @Model
 final class ItemList {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
     @Attribute(originalName: "name") var namePlain: String
     /// The locked form of `name`, empty until locking is turned on. Read and written through `name` only.
     var nameSealed: String? = nil
@@ -4719,7 +4719,7 @@ enum MascotTrigger: String, Codable {
 /// nothing crisis-adjacent.
 @Model
 final class MascotLine {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
     var trigger: MascotTrigger
     var mood: MascotMood
     var text: String
@@ -4758,6 +4758,9 @@ enum AnchorSchema {
 
     static func makeContainer() -> ModelContainer {
         let schema = Schema(models)
+        // No model declares a unique id any more (Patch SY0), so a second row with the same id is kept and not merged.
+        // Where Anchor adds rows from outside (the backup import), it skips an id it already has. See
+        // scripts/check-no-unique-ids.mjs.
         // Local-first: no CloudKit configuration and no sync service. Data moves
         // only through explicit export/import, never a required third-party cloud.
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)

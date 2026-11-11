@@ -181,7 +181,7 @@ The source code repository is at <https://github.com/Kousei-Uchu/Anchor/tree/v2-
 | 47: Website, Features and Philosophy pages (point 24, part 1): a Features page made from the in-app guide by `scripts/sync-guide.mjs`, and a Philosophy page of the principles and who Anchor is and is not for | ✅ Pushed by you (`3b3e4d0`), change log 155; build not yet confirmed. The website typechecks and builds with both pages prerendered, tried in a scratch copy; no Swift changed. My readings are D60 |
 | 48: Website, About page, Support answers and Privacy (point 24, part 2): an About page with the app's About copy and What's new by version, wrong places named in the Support answers put right and four answers added, one sentence on Label who is speaking | ✅ Pushed by you (`60aec7d`), change log 156, stacked on 47; build not yet confirmed. The website typechecks and builds with all seven pages prerendered, tried in a scratch copy; no Swift changed. The creator section waits on your words (D23). My readings are D61 |
 | 51: Website, the unlisted beta page (point 27, D7): `/beta` with the pitch, what testing involves and one flag for sign-ups, marked noindex in the page, the prerender and a response header, linked from nowhere, with a check script that keeps it so | ✅ Pushed by you (`461d5fb`), change log 157, stacked on 48; build not yet confirmed. The website typechecks and builds, tried in a scratch copy; no Swift changed. Sign-ups are closed until you change the flag. My readings are D62 |
-| SY0: Sync groundwork (E1): drop the unique constraint from all 34 models and keep ids from doubling up in the app, with the safety copy first | ⬜ Not started; after 35b1, D39 and D40 are answered |
+| SY0: Sync groundwork (E1): drop the unique constraint from all 34 models and keep ids from doubling up in the app, with the safety copy first | Written, change log 174; build not yet confirmed. Make a safety copy first (Settings, Safety copy), then open the new build: everything should be there as before, and importing the same backup twice should say nothing new to import. |
 | SY1: iCloud sync switch (E1): off by default, the private database, per-device things left per-device, sleep nights synced except any that Apple Health already holds (D39), Clear everything says it clears every device | ⬜ Not started; after 35b3 so only locked text reaches iCloud, and SY0 |
 | SY2: Voice notes and Journal photos in sync (E1) | ⬜ Not started; after 35d and SY1 |
 | SY3: The recovery key as a QR code (E1, D40): shown on one device and scanned on the next, with the typed key still the default | ⬜ Not started; with SY1 |
@@ -750,7 +750,7 @@ Patches 49, 50 and 54 are **deferred (eventually planned)** pending the React Na
 | **VN4b** | Replay and tap to mark who starts talking, no model | E2 | M | ⬜ |
 | **VN4c** | Words as a backup or beside the model, behind the AI switch | E2 | M | ⬜ |
 | **VN5** | Speaker tags in exports: include, hide the name, or leave out | E2 | M | ⬜ |
-| **SY0** | Sync groundwork: unique constraints removed from 34 models | E1 | M+ | ⬜ |
+| **SY0** | Sync groundwork: unique constraints removed from 34 models | E1 | M+ | Written, awaiting your build |
 | **SY1** | iCloud sync switch | E1 | M+ | ⬜ |
 | **SY2** | Voice notes and photos in sync | E1 | M | ⬜ |
 | **SY3** | The recovery key as a QR code (D40) | E1 | S | ⬜ |

@@ -131,7 +131,7 @@ enum RecoveryMilestones {
 
 @Model
 final class RecoveryCounter {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
 
     /// The user's own words, shown only inside the app unless they opt in below.
     @Attribute(originalName: "name") var namePlain: String
@@ -453,7 +453,7 @@ extension RecoveryCounter {
 /// "Who I'm doing this for" and "why it matters", in the user's own words.
 @Model
 final class RecoveryMotivation {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
     @Attribute(originalName: "kind") var kindPlain: MotivationKind
     /// The locked form of `kind`, empty until locking is turned on. Read and written through `kind` only.
     var kindSealed: String? = nil
@@ -544,7 +544,7 @@ extension RecoveryMotivation {
 /// One day for one counter. Free text only: no rating, no score.
 @Model
 final class RecoveryDayEntry {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
     var counterID: UUID
     @Attribute(originalName: "day") var dayPlain: Date               // start of day
     /// The locked form of `day`, empty until locking is turned on. Read and written through `day` only.
@@ -714,7 +714,7 @@ enum UrgeStrength: String, Codable, CaseIterable, Identifiable {
 /// A logged urge. How strong it felt is the user's own description, not a score.
 @Model
 final class RecoveryUrge {
-    @Attribute(.unique) var id: UUID
+    var id: UUID
     var counterID: UUID
     @Attribute(originalName: "date") var datePlain: Date
     /// The locked form of `date`, empty until locking is turned on. Read and written through `date` only.

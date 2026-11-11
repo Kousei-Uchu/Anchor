@@ -366,52 +366,53 @@ struct DataControlView: View {
         importExport(export)
     }
 
-    /// Adds everything in a decoded export that isn't here yet, and says how much.
+    /// Adds everything in a decoded export that isn't here yet, and says how much. Each id is added to its set as it
+    /// is used, so an id that appears twice in one file is imported once (Patch SY0: the database no longer enforces it).
     private func importExport(_ export: AnchorDataExport, restoredFiles: Int = 0) {
-        let existingJournalIDs = Set(journalEntries.map(\.id))
-        let existingCheckInIDs = Set(checkIns.map(\.id))
-        let existingContactIDs = Set(contacts.map(\.id))
-        let existingToolIDs = Set(groundingTools.map(\.id))
-        let existingSafetyPlanIDs = Set(safetyPlans.map(\.id))
-        let existingSectionIDs = Set(planSections.map(\.id))
-        let existingWindowIDs = Set(triggerWindows.map(\.id))
-        let existingBridgeIDs = Set(bridgeDraftItems.map(\.id))
-        let existingDiagramIDs = Set(diagrams.map(\.id))
-        let existingThreadIDs = Set(threadMessages.map(\.id))
-        let existingSupportCalendarIDs = Set(supportCalendarEntries.map(\.id))
-        let existingFutureNoteIDs = Set(futureNotes.map(\.id))
-        let existingDraftIDs = Set(unsentDrafts.map(\.id))
-        let existingCategoryIDs = Set(decisionCategories.map(\.id))
-        let existingScriptIDs = Set(deEscalationScripts.map(\.id))
-        let existingAffirmationIDs = Set(affirmations.map(\.id))
-        let existingTaskIDs = Set(tasks.map(\.id))
-        let existingQuickListIDs = Set(quickLists.map(\.id))
-        let existingRoutineIDs = Set(routines.map(\.id))
-        let existingItemListIDs = Set(itemLists.map(\.id))
-        let existingBoundaryIDs = Set(boundarySections.map(\.id))
-        let existingPersonSectionIDs = Set(personSections.map(\.id))
-        let existingSleepIDs = Set(sleepEntries.map(\.id))
-        let existingStarterIDs = Set(messageStarters.map(\.id))
-        let existingGoalIDs = Set(personalGoals.map(\.id))
-        let existingProviderIDs = Set(appointmentSeries.map(\.id))
+        var existingJournalIDs = Set(journalEntries.map(\.id))
+        var existingCheckInIDs = Set(checkIns.map(\.id))
+        var existingContactIDs = Set(contacts.map(\.id))
+        var existingToolIDs = Set(groundingTools.map(\.id))
+        var existingSafetyPlanIDs = Set(safetyPlans.map(\.id))
+        var existingSectionIDs = Set(planSections.map(\.id))
+        var existingWindowIDs = Set(triggerWindows.map(\.id))
+        var existingBridgeIDs = Set(bridgeDraftItems.map(\.id))
+        var existingDiagramIDs = Set(diagrams.map(\.id))
+        var existingThreadIDs = Set(threadMessages.map(\.id))
+        var existingSupportCalendarIDs = Set(supportCalendarEntries.map(\.id))
+        var existingFutureNoteIDs = Set(futureNotes.map(\.id))
+        var existingDraftIDs = Set(unsentDrafts.map(\.id))
+        var existingCategoryIDs = Set(decisionCategories.map(\.id))
+        var existingScriptIDs = Set(deEscalationScripts.map(\.id))
+        var existingAffirmationIDs = Set(affirmations.map(\.id))
+        var existingTaskIDs = Set(tasks.map(\.id))
+        var existingQuickListIDs = Set(quickLists.map(\.id))
+        var existingRoutineIDs = Set(routines.map(\.id))
+        var existingItemListIDs = Set(itemLists.map(\.id))
+        var existingBoundaryIDs = Set(boundarySections.map(\.id))
+        var existingPersonSectionIDs = Set(personSections.map(\.id))
+        var existingSleepIDs = Set(sleepEntries.map(\.id))
+        var existingStarterIDs = Set(messageStarters.map(\.id))
+        var existingGoalIDs = Set(personalGoals.map(\.id))
+        var existingProviderIDs = Set(appointmentSeries.map(\.id))
 
         var importedCount = 0
-        for dto in export.journalEntries where !existingJournalIDs.contains(dto.id) {
+        for dto in export.journalEntries where existingJournalIDs.insert(dto.id).inserted {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
-        for dto in export.checkIns where !existingCheckInIDs.contains(dto.id) {
+        for dto in export.checkIns where existingCheckInIDs.insert(dto.id).inserted {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
-        for dto in export.contacts where !existingContactIDs.contains(dto.id) {
+        for dto in export.contacts where existingContactIDs.insert(dto.id).inserted {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
-        for dto in export.groundingTools where !existingToolIDs.contains(dto.id) {
+        for dto in export.groundingTools where existingToolIDs.insert(dto.id).inserted {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
-        for dto in export.safetyPlans where !existingSafetyPlanIDs.contains(dto.id) {
+        for dto in export.safetyPlans where existingSafetyPlanIDs.insert(dto.id).inserted {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
-        for dto in export.safetySections ?? [] where !existingSectionIDs.contains(dto.id) {
+        for dto in export.safetySections ?? [] where existingSectionIDs.insert(dto.id).inserted {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
         // A file made before sections existed carries only the four text
@@ -429,88 +430,88 @@ struct DataControlView: View {
                 modelContext.insert(section); importedCount += 1
             }
         }
-        for dto in export.triggerWindows where !existingWindowIDs.contains(dto.id) {
+        for dto in export.triggerWindows where existingWindowIDs.insert(dto.id).inserted {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
-        for dto in export.bridgeDraftItems where !existingBridgeIDs.contains(dto.id) {
+        for dto in export.bridgeDraftItems where existingBridgeIDs.insert(dto.id).inserted {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
-        for dto in export.diagrams where !existingDiagramIDs.contains(dto.id) {
+        for dto in export.diagrams where existingDiagramIDs.insert(dto.id).inserted {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
-        for dto in export.threadMessages where !existingThreadIDs.contains(dto.id) {
+        for dto in export.threadMessages where existingThreadIDs.insert(dto.id).inserted {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
-        for dto in export.supportCalendarEntries where !existingSupportCalendarIDs.contains(dto.id) {
+        for dto in export.supportCalendarEntries where existingSupportCalendarIDs.insert(dto.id).inserted {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
-        for dto in export.futureNotes where !existingFutureNoteIDs.contains(dto.id) {
+        for dto in export.futureNotes where existingFutureNoteIDs.insert(dto.id).inserted {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
-        for dto in export.unsentDrafts where !existingDraftIDs.contains(dto.id) {
+        for dto in export.unsentDrafts where existingDraftIDs.insert(dto.id).inserted {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
-        for dto in export.decisionCategories where !existingCategoryIDs.contains(dto.id) {
+        for dto in export.decisionCategories where existingCategoryIDs.insert(dto.id).inserted {
             let category = dto.toModel()
             modelContext.insert(category)
             for choice in category.choices { modelContext.insert(choice) }
             importedCount += 1
         }
-        for dto in export.deEscalationScripts where !existingScriptIDs.contains(dto.id) {
+        for dto in export.deEscalationScripts where existingScriptIDs.insert(dto.id).inserted {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
-        for dto in export.affirmations where !existingAffirmationIDs.contains(dto.id) {
+        for dto in export.affirmations where existingAffirmationIDs.insert(dto.id).inserted {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
-        for dto in export.tasks ?? [] where !existingTaskIDs.contains(dto.id) {
+        for dto in export.tasks ?? [] where existingTaskIDs.insert(dto.id).inserted {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
-        for dto in export.quickLists ?? [] where !existingQuickListIDs.contains(dto.id) {
+        for dto in export.quickLists ?? [] where existingQuickListIDs.insert(dto.id).inserted {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
-        for dto in export.routines ?? [] where !existingRoutineIDs.contains(dto.id) {
+        for dto in export.routines ?? [] where existingRoutineIDs.insert(dto.id).inserted {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
-        for dto in export.itemLists ?? [] where !existingItemListIDs.contains(dto.id) {
+        for dto in export.itemLists ?? [] where existingItemListIDs.insert(dto.id).inserted {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
-        for dto in export.boundarySections ?? [] where !existingBoundaryIDs.contains(dto.id) {
+        for dto in export.boundarySections ?? [] where existingBoundaryIDs.insert(dto.id).inserted {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
         // A person's page only comes in when that person is here, either already
         // on this device or in the same file, so nothing arrives that cannot be seen.
         let knownContactIDs = Set(contacts.map(\.id)).union(export.contacts.map(\.id))
         for dto in export.personSections ?? []
-        where !existingPersonSectionIDs.contains(dto.id) && knownContactIDs.contains(dto.contactID) {
+        where knownContactIDs.contains(dto.contactID) && existingPersonSectionIDs.insert(dto.id).inserted {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
-        for dto in export.sleepEntries ?? [] where !existingSleepIDs.contains(dto.id) {
+        for dto in export.sleepEntries ?? [] where existingSleepIDs.insert(dto.id).inserted {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
-        for dto in export.messageStarters ?? [] where !existingStarterIDs.contains(dto.id) {
+        for dto in export.messageStarters ?? [] where existingStarterIDs.insert(dto.id).inserted {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
-        for dto in export.personalGoals ?? [] where !existingGoalIDs.contains(dto.id) {
+        for dto in export.personalGoals ?? [] where existingGoalIDs.insert(dto.id).inserted {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
-        for dto in export.appointmentSeries ?? [] where !existingProviderIDs.contains(dto.id) {
+        for dto in export.appointmentSeries ?? [] where existingProviderIDs.insert(dto.id).inserted {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
         // Recovery data is optional in the file, so exports from earlier versions still import.
-        let existingCounterIDs = Set(recoveryCounters.map(\.id))
-        let existingMotivationIDs = Set(recoveryMotivations.map(\.id))
-        let existingDayEntryIDs = Set(recoveryDayEntries.map(\.id))
-        let existingUrgeIDs = Set(recoveryUrges.map(\.id))
-        for dto in export.recoveryCounters ?? [] where !existingCounterIDs.contains(dto.id) {
+        var existingCounterIDs = Set(recoveryCounters.map(\.id))
+        var existingMotivationIDs = Set(recoveryMotivations.map(\.id))
+        var existingDayEntryIDs = Set(recoveryDayEntries.map(\.id))
+        var existingUrgeIDs = Set(recoveryUrges.map(\.id))
+        for dto in export.recoveryCounters ?? [] where existingCounterIDs.insert(dto.id).inserted {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
-        for dto in export.recoveryMotivations ?? [] where !existingMotivationIDs.contains(dto.id) {
+        for dto in export.recoveryMotivations ?? [] where existingMotivationIDs.insert(dto.id).inserted {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
-        for dto in export.recoveryDayEntries ?? [] where !existingDayEntryIDs.contains(dto.id) {
+        for dto in export.recoveryDayEntries ?? [] where existingDayEntryIDs.insert(dto.id).inserted {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
-        for dto in export.recoveryUrges ?? [] where !existingUrgeIDs.contains(dto.id) {
+        for dto in export.recoveryUrges ?? [] where existingUrgeIDs.insert(dto.id).inserted {
             modelContext.insert(dto.toModel()); importedCount += 1
         }
         RecoveryNotifications.refresh(using: modelContext)
