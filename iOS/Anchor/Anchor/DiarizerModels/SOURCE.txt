@@ -1,0 +1,3 @@
+repo: FluidInference/speaker-diarization-coreml
+commit: 7eab74f3463c736418d0eb10296261ae581146c9
+fetched: 2026-11-11T08:20:01Z
