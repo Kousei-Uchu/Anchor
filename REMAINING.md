@@ -1,19 +1,18 @@
 # Anchor: what is left
 
-*Only what is still to do. When something is finished, confirmed or answered, it is deleted from this file in the same patch, never moved to a done list. Finished work is in the Progress table of `ANCHOR_PATCH_PLAN.md` and in `docs/PLAN_CHANGELOG.md`. Last updated: 11 Nov 2026, after DOC32.*
+*Only what is still to do. When something is finished, confirmed or answered, it is deleted from this file in the same patch, never moved to a done list. Finished work is in the Progress table of `ANCHOR_PATCH_PLAN.md` and in `docs/PLAN_CHANGELOG.md`. Last updated: 11 Nov 2026, after LIC1.*
 
 ## 1. Waiting on you
 
 **Words and files**
 
-- The words for the About screen's creator section (D23, 1).
-- The licence files you said you would attach, so the `LICENSE` file can be written (D23, 2). Nothing is written yet.
+- The words for the About screen's creator section (D23, 1): answer the 20 questions I sent in chat on 11 Nov 2026, or send the words yourself.
+- The licence files you attached (D23, 2): the notices are in; the licence itself waits until you decide whether to publish it before a lawyer has read it. Patch LIC2 adds it.
+- The text of the FA-L licence, for `ambient.wav` and `ambient.mp3` (`THIRD-PARTY-NOTICES.md`), or say to replace it with a plain public-domain dedication.
 
 **Things to read and answer**
 
-- D70: the review run cannot try AI, dictation or locking, and this phone has no Apple Intelligence. Say which of (a) a made-up-answers stand-in for AI in the review run only, (b) a test store on disk, (c) dropping those stops from the review bar, you want. I recommend (a) and (c).
-- D72: before a TestFlight or App Store build can sync, the CloudKit record types need Deploy Schema Changes in the CloudKit Dashboard (container `iCloud.page.aspens.anchor`). Builds you run from Xcode do not need it. Say whether you will do that and want the steps in `docs/RELEASE_GUIDE.md`.
-- D69 and `docs/FIELD_INVENTORY.md` (35f): the list of every field and setting, locked or plain, with the reason. Nothing to try on your phone. Say which verdicts to change; the ones I left plain on a judgment are reminder times, the crisis-numbers country, the focus timer lengths and times the app sets for itself.
+- D72: before a TestFlight or App Store build, deploy the CloudKit schema to Production. The steps are in `docs/RELEASE_GUIDE.md`, Part 4b. Builds you run from Xcode do not need it.
 
 **Things only you can try**
 

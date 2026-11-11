@@ -56,6 +56,18 @@ You need: a Mac with **Xcode 26 or later** (Apple requires current-SDK builds fo
 5. Wait for the email, or watch **TestFlight** in App Store Connect. Processing takes 5 to 30 minutes.
 6. If you get an email with "ITMS-" warnings, forward me the text. The privacy manifest and encryption key are already in, so the usual first-time ones should be gone.
 
+## Part 4b: iCloud sync needs its schema deployed (TestFlight and App Store builds only)
+
+A build you run from Xcode on your own device talks to CloudKit's **Development** environment, which makes record types as the app first saves each kind of thing. A TestFlight or App Store build talks to **Production**, which only has the record types you have deployed. If you skip this, sync works from Xcode and then fails in TestFlight. The container is `iCloud.page.aspens.anchor`.
+
+1. Run the build from Xcode on a real device that is signed in to iCloud. In Settings, iCloud sync, switch sync on, and switch on Voice notes and photos as well. Then add at least one of each kind of thing you want synced: a task, a Journal entry, a check-in, a night of sleep, a voice note and a Journal photo. This makes the record types exist in Development.
+2. Open the CloudKit Console from developer.apple.com (Account, then CloudKit Console) and choose the container `iCloud.page.aspens.anchor`.
+3. Choose the **Development** environment and look at Schema, Record Types. You should see types whose names start with `CD_` (one for each kind of thing the database keeps) and a type called `StoredFile` (voice notes and photos). If one you expect is missing, add one of that kind of thing in the app with sync on, wait a minute, and look again.
+4. Choose **Deploy Schema Changes**, read the list it shows, and deploy to Production. Apple moves and renames buttons now and then, so if the wording differs, look for the option that deploys the Development schema to Production.
+5. Do this again whenever a patch adds a new kind of stored thing or a new stored field that syncs. Record types and fields can be added to Production but not taken away, so be sure before you deploy.
+
+As far as the code shows, neither the database sync nor the voice note and photo sync runs a CloudKit query (the voice note and photo sync reads changes by zone), so no extra indexes should be needed. If a TestFlight build says a record type or field is missing, step 4 is the first place to look.
+
 ## Part 5: TestFlight (just you)
 
 1. App Store Connect, your app, **TestFlight**. When the build shows up, it should not ask about encryption.

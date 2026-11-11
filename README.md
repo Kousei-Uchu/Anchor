@@ -1,6 +1,6 @@
 Anchor
 
-A private safety plan, contacts and journal app for iPhone and iPad. Early build, parts will change. Anchor sends no data anywhere.
+A private safety plan, contacts and journal app for iPhone and iPad. Early build, parts will change. Anchor sends no data, or at most the minimum a feature you switch on needs: iCloud sync and AI tools are off until you turn them on, and AI tools ask before every send.
 
 Layout
 

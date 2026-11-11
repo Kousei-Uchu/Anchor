@@ -4,7 +4,7 @@
 
 ## What it is
 
-A private safety plan, contacts and journal app for iPhone and iPad, in SwiftUI with SwiftData. Five tabs: Now, Plan, Journal, Bridge, Thread. Recovery (counters and streaks) is its own area, and sleep, tasks, routines, lists and a focus timer sit under Plan. A WidgetKit extension shows contacts, a counter and the focus timer on the lock screen. Anchor sends no data anywhere: everything is stored on the phone, and exports are files you choose to share.
+A private safety plan, contacts and journal app for iPhone and iPad, in SwiftUI with SwiftData. Five tabs: Now, Plan, Journal, Bridge, Thread. Recovery (counters and streaks) is its own area, and sleep, tasks, routines, lists and a focus timer sit under Plan. A WidgetKit extension shows contacts, a counter and the focus timer on the lock screen. Anchor sends no data, or at most the minimum a feature you switch on needs: everything is stored on the phone, exports are files you choose to share, and the two optional extras that can send data (iCloud sync to your own private iCloud, and AI tools that ask before every send) are off until you turn them on.
 
 ## Branch and build
 

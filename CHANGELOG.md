@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch LIC1: a list of everything in Anchor that someone else made, with its licence (THIRD-PARTY-NOTICES.md), and a check that keeps the list current. A short CONTRIBUTING.md says code contributions are not open yet. The release guide has the steps to deploy the iCloud schema before a TestFlight build, and the README and status page now say what the privacy page says: Anchor sends no data, or at most the minimum a feature you switch on needs. Nothing in the app changes.
 - Patch DOC32: the plan and status now record that speaker tags in exports (VN5) and voice notes and photos in sync (SY2) are pushed, and two rows that were out of date are corrected. Nothing in the app changes.
 - Patch VN5: speaker tags in exports. When a Journal entry has people in it, Export for someone and the CSV and PDF export in Your data have a Who is speaking screen: for each person you can show the name, hide it as Speaker A or Speaker B, or leave that person's words out, for that export only. Nothing is kept, and the full backup is unchanged.
 - Patch DOC31: the plan and status now record that the who-is-speaking work, VN4a1 to VN4c2, is pushed, and that two commit names the plan gave for the speaker model were wrong. Nothing in the app changes.
