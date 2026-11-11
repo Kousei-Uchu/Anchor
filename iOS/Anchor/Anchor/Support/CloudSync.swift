@@ -42,11 +42,10 @@ enum CloudSync {
     // MARK: What is needed before it can be switched on
 
     /// Why sync cannot be switched on from this device yet, or nil when it can.
-    @MainActor
+    /// Read-only: the screen calls this while it is being drawn, so it must not change anything the screen watches
+    /// (`DataKeyManager.refresh` does, and calling it from here froze the screen).
     static func reasonCannotTurnOn() -> String? {
-        let keys = DataKeyManager.shared
-        keys.refresh()
-        guard keys.status == .ready else {
+        guard case .found = DataKeyStore.lookup() else {
             return "Set up Encryption first (Settings, Encryption), so there is a key to lock your words with."
         }
         guard LockMyData.isOn, !LockMyData.needsMore else {

@@ -796,15 +796,20 @@ final class DataKeyManager: ObservableObject {
     func refresh() {
         // With iCloud sync on, a device with no key takes the recovery file from iCloud (Patch SY1b).
         if CloudSync.isOn, case .missing = DataKeyStore.lookup() { CloudSync.pullRecoveryFile() }
-        hasRecoveryFile = RecoveryFile.exists
+        // Only assign what changed: assigning a published value to the same value still tells every screen watching it to
+        // redraw, and a screen that calls this while drawing would never settle (Patch SY1b2).
+        let haveFile = RecoveryFile.exists
+        let newStatus: Status
         switch DataKeyStore.lookup() {
         case .found:
-            status = .ready
+            newStatus = .ready
         case .missing:
-            status = hasRecoveryFile ? .needsRecovery : .notSetUp
+            newStatus = haveFile ? .needsRecovery : .notSetUp
         case .unavailable:
-            status = .unavailable
+            newStatus = .unavailable
         }
+        if hasRecoveryFile != haveFile { hasRecoveryFile = haveFile }
+        if status != newStatus { status = newStatus }
     }
 
     /// Makes the data key and the recovery file together and returns the recovery key,
