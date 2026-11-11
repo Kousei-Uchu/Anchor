@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>AnchorWidgetKeychainGroup</key>
+	<string>$(AppIdentifierPrefix)page.aspens.anchor.widgetkey</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -23,15 +25,7 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>Anchor connects to the computer whose address you type in Settings, AI tools, only when you use an AI tool or tap Look for models. It does not look for other devices.</string>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Anchor turns what you say into text on this phone when you tap Dictate in the Journal. It never sends your voice anywhere.</string>
-	<key>NSSupportsLiveActivities</key>
-	<true/>
 	<key>UILaunchScreen</key>
 	<dict/>
-	<key>AnchorWidgetKeychainGroup</key>
-	<string>$(AppIdentifierPrefix)page.aspens.anchor.widgetkey</string>
 </dict>
 </plist>
