@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch AB3: Settings, About now has an About the creator section, with the mascot, a short note from the person who makes Anchor and a longer story that folds away, and the website's About page says the same. A My website link is under Links.
 - Patch AI10: Make shorter works better on the phone's own model. It is shown two worked examples, answers in a fixed shape with no lead-in, uses steadier settings, and shortens a long entry a paragraph at a time. If the model still hands your words back unchanged, it says so and points to Ollama or another provider instead of showing a copy.
 - Patch LIC1: a list of everything in Anchor that someone else made, with its licence (THIRD-PARTY-NOTICES.md), and a check that keeps the list current. A short CONTRIBUTING.md says code contributions are not open yet. The release guide has the steps to deploy the iCloud schema before a TestFlight build, and the README and status page now say what the privacy page says: Anchor sends no data, or at most the minimum a feature you switch on needs. Nothing in the app changes.
 - Patch DOC32: the plan and status now record that speaker tags in exports (VN5) and voice notes and photos in sync (SY2) are pushed, and two rows that were out of date are corrected. Nothing in the app changes.

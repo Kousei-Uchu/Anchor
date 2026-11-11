@@ -681,6 +681,7 @@ enum AboutContent {
     static let privacyURL = "https://anchor.aspens.page/privacy"
     static let sourceURL = "https://github.com/Kousei-Uchu/Anchor"
     static let supportEmail = "anchor@aspens.page"
+    static let creatorSiteURL = "https://aspens.page"
 
     static let purpose = "Anchor is a private place for your safety plan, your people and your journal, for the hard days and the ordinary ones. It is an early build and parts of it will change."
 
@@ -693,6 +694,28 @@ enum AboutContent {
     static let licences = "Anchor is built with Apple's own frameworks and has no third-party fonts. Finding who is speaking uses the FluidAudio code (Apache License 2.0) from Fluid Inference, and speaker-separation models that Fluid Inference converted to Core ML from pyannote's speaker-diarization-community-1, with parts from WeSpeaker and BUT Speech@FIT, licensed under CC-BY-4.0 (creativecommons.org/licenses/by/4.0). The models are modified conversions. They run on your phone and nothing is sent anywhere."
 
     static let contactNote = "I can't reply in real time. If you are in danger right now, call your local emergency number or a crisis line."
+
+    static let creatorName = "Aspen, they/them (Kousei-Uchu)"
+
+    static let creatorIntro: [String] = [
+        "I'm a Sydney based dev with a passionate hatred for commercialisation and the commodification of privacy. I love open source software, and I do what I can to provide support tools for mental health and for marginalised communities.",
+        "I was sick of paying for several subscriptions across multiple apps and sending my mental health data to who knows where. So I made a support toolkit that feels warm, secure and yours, modelled on the tools I would actually use, and built in the most user controlled and private way I could.",
+    ]
+
+    static let creatorLine = "Anchor is a toolkit designed for you, not for my wallet."
+
+    static let creatorValues = "Private, Free, and Yours. Entirely, Honestly, and Eternally."
+
+    static let creatorStory: [AboutNote] = [
+        AboutNote(title: "Who it is for", body: "Anchor is for privacy-minded people who want a toolkit to help them along their mental health journey without becoming the product themselves. It is also for care providers who want to recommend a tool they can trust, if they choose to. And it is for the average person too, because you don't need a diagnosis to look after yourself."),
+        AboutNote(title: "Where it came from", body: "I built it for myself, around tools I already use or want to use. After I showed it to my family and my care providers, they encouraged me to keep working on it and to put it out into the world."),
+        AboutNote(title: "Why there are no accounts", body: "I refused to build accounts. As soon as you have to enter an email, your data is being collected and you can no longer trust that it is private."),
+        AboutNote(title: "A toolkit, not a therapist", body: "You can buy an IKEA flatpack, but it gets hard to put together well without consulting the manual. Anchor is a collection of tools that are useful on their own, and it does not replace a professional. If you are really having a hard time, or it is an emergency, please get some outside help."),
+        AboutNote(title: "About the AI", body: "A hand was given by an LLM while I built this, and it did not replace the human in the room. It is not vibe-coded slop. It is a passion project built alongside real-world commitments and, ironically, mental health struggles, where some help was needed. As of release I am the solo dev. I am being open about using AI in making this app, and I ask that you please don't shrink my effort, passion and care down to vibe-coded slop-scripts pumped out by a plagiarism machine on a Sunday afternoon over a cup of coffee."),
+        AboutNote(title: "Thank you", body: "Thank you to my psychologist, who advised on the details of this app. I am not naming them, out of respect for their privacy and their own interest."),
+    ]
+
+    static let creatorContact = "Feedback, bug reports and ideas are welcome, by email at anchor@aspens.page or on GitHub. Questions about the licence go to licensing@aspens.page."
 
     /// Newest version first. The first one is open in What's new and the others are folded.
     /// To add a version, put it at the top with what it added, changed and removed.
@@ -747,6 +770,7 @@ enum AboutContent {
 
 struct AboutView: View {
     @State private var copiedEmail = false
+    @State private var creatorStoryOpen = false
 
     var body: some View {
         Form {
@@ -764,6 +788,39 @@ struct AboutView: View {
                 ForEach(AboutContent.principles, id: \.self) { line in
                     Text(line).font(.system(.subheadline, design: .rounded))
                 }
+            }
+
+            Anchor.SettingsSection(title: "About the creator") {
+                HStack(spacing: 14) {
+                    MascotCharacterView(mood: .neutral)
+                        .frame(width: 56, height: 56)
+                        .accessibilityHidden(true)
+                    Text(AboutContent.creatorName)
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                }
+                .padding(.vertical, 4)
+                ForEach(AboutContent.creatorIntro, id: \.self) { paragraph in
+                    Text(paragraph).font(.system(.subheadline, design: .rounded))
+                }
+                Text(AboutContent.creatorLine)
+                    .font(.system(.subheadline, design: .rounded).weight(.medium))
+                Text(AboutContent.creatorValues)
+                    .font(.system(.footnote, design: .rounded))
+                    .foregroundStyle(.secondary)
+                DisclosureGroup(isExpanded: $creatorStoryOpen) {
+                    ForEach(AboutContent.creatorStory) { note in
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(note.title).font(.system(.subheadline, design: .rounded).weight(.medium))
+                            Text(note.body).font(.footnote).foregroundStyle(.secondary)
+                        }
+                        .padding(.vertical, 2)
+                        .accessibilityElement(children: .combine)
+                    }
+                } label: {
+                    Text("The longer story")
+                        .font(.system(.subheadline, design: .rounded).weight(.medium))
+                }
+                Text(AboutContent.creatorContact).font(.footnote).foregroundStyle(.secondary)
             }
 
             Anchor.SettingsSection(title: "Get in touch", footer: AboutContent.contactNote) {
@@ -785,6 +842,7 @@ struct AboutView: View {
                 aboutLink("Website", AboutContent.websiteURL)
                 aboutLink("Privacy policy", AboutContent.privacyURL)
                 aboutLink("Source code on GitHub", AboutContent.sourceURL)
+                aboutLink("My website", AboutContent.creatorSiteURL)
             }
 
             Anchor.SettingsSection(title: "Licences") {
