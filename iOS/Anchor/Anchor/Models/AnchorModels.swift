@@ -358,7 +358,7 @@ final class TrustedContact {
     /// How reaching this person actually works. Phone (SMS/call) is the
     /// default and always available; Discord needs their numeric user ID
     /// — Discord's URL scheme can't resolve a DM from a username alone.
-    var contactMethod: ContactMethod = .phone
+    var contactMethod: ContactMethod = ContactMethod.phone
     @Attribute(originalName: "discordUserID") var discordUserIDPlain: String?
     /// The locked form of `discordUserID`, empty until locking is turned on. Read and written through `discordUserID` only.
     var discordUserIDSealed: String? = nil
@@ -652,7 +652,7 @@ final class GroundingTool {
     @Attribute(originalName: "title") var titlePlain: String = ""
     /// The locked form of `title`, empty until locking is turned on. Read and written through `title` only.
     var titleSealed: String? = nil
-    var kind: GroundingToolKind = .physicalAction
+    var kind: GroundingToolKind = GroundingToolKind.physicalAction
     @Attribute(originalName: "steps") var stepsPlain: String?                 // for .physicalAction
     /// The locked form of `steps`, empty until locking is turned on. Read and written through `steps` only.
     var stepsSealed: String? = nil
@@ -4720,8 +4720,8 @@ enum MascotTrigger: String, Codable {
 @Model
 final class MascotLine {
     var id: UUID = UUID()
-    var trigger: MascotTrigger = .appOpen
-    var mood: MascotMood = .gentle
+    var trigger: MascotTrigger = MascotTrigger.appOpen
+    var mood: MascotMood = MascotMood.gentle
     var text: String = ""
     var isUserAuthored: Bool = false   // false = shipped with the reviewed content pack
 
