@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch 54: a write-up for deciding about Android (`docs/ANDROID_DECISION.md`): what carries over, what does not, three routes, and what Google Play asks of a new account.
 - Plan note DOC33: the plan records that the About the creator patch is pushed.
 - Patch AB3: Settings, About now has an About the creator section, with the mascot, a short note from the person who makes Anchor and a longer story that folds away, and the website's About page says the same. A My website link is under Links.
 - Patch AI10: Make shorter works better on the phone's own model. It is shown two worked examples, answers in a fixed shape with no lead-in, uses steadier settings, and shortens a long entry a paragraph at a time. If the model still hands your words back unchanged, it says so and points to Ollama or another provider instead of showing a copy.

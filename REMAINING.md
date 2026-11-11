@@ -69,7 +69,7 @@ Everything here builds and launches on your phone (confirmed 11 Nov 2026, after 
 
 1. **52**: refresh the Remotion promo with new screenshots and captions. The single source is already true (`remotion-project/src/Promo.tsx`, `npm run sync:promo`); what is left needs the app run on a simulator.
 2. **53**: the long full-tour video, split into per-tab scenes, scripted from `website/src/content/guide.generated.json`. Waits on 52. Size L, to be split.
-3. **54**: Android decision write-up, optional prototype spike. Android itself is far future (D4).
+3. **54**: the Android write-up is written (`docs/ANDROID_DECISION.md`); read it and answer its four questions. The prototype spike is optional. Android itself is far future (D4).
 
 **Parked on purpose**
 
