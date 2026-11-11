@@ -29,8 +29,14 @@ enum PeopleFinder {
         let lines: [Line]
         /// False when the phone could not turn the words into text; the people and times are still right.
         let hasWords: Bool
+        /// The words with their times, kept in memory while the people screen is open so other turns (VN4b taps, VN4c
+        /// guesses) can be lined up with them. Empty when no words were made out. Never saved.
+        var words: [FileTranscription.Word] = []
 
         var personCount: Int { SpeakerSeparation.personCount(in: turns) }
+
+        /// The words cut into numbered pieces, for guessing from the words (Patch VN4c2).
+        var pieces: [SpeakerWords.Piece] { SpeakerWords.pieces(from: words) }
 
         /// The person numbers heard, in the order they first speak.
         var people: [Int] { Set(turns.map(\.person)).sorted() }
@@ -84,7 +90,12 @@ enum PeopleFinder {
             return Outcome(turns: turns, lines: [], hasWords: false)
         }
         try Task.checkCancellation()
-        return Outcome(turns: turns, lines: lines(words: words, turns: turns), hasWords: true)
+        return Outcome(turns: turns, lines: lines(words: words, turns: turns), hasWords: true, words: words)
+    }
+
+    /// The same words given to other turns (Patch VN4c2): who spoke when changes, the words do not.
+    static func relined(_ outcome: Outcome, turns: [Turn]) -> Outcome {
+        Outcome(turns: turns, lines: lines(words: outcome.words, turns: turns), hasWords: outcome.hasWords, words: outcome.words)
     }
 
     // MARK: Lining the words up
@@ -186,6 +197,8 @@ enum PeopleFinderSelfTest {
         let long = [PeopleFinder.Line(person: 1, start: 0, text: String(repeating: "a", count: 100))]
         check(PeopleFinder.preview(of: long, person: 1)?.count == 81, "a long preview is cut")
         let outcome = PeopleFinder.Outcome(turns: turns, lines: lines, hasWords: true)
+        let swapped = PeopleFinder.relined(PeopleFinder.Outcome(turns: turns, lines: lines, hasWords: true, words: [w("hello", 0.2, 0.6), w("fine", 5.1, 5.4)]), turns: [SpeakerSeparation.Turn(person: 1, start: 0, end: 9)])
+        check(swapped.lines.count == 1 && swapped.lines[0].text == "hello fine", "the same words given to other turns")
         check(outcome.people == [1, 2] && outcome.seconds(of: 2) == 4, "people and time spoken")
     }
 }

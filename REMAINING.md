@@ -66,10 +66,9 @@ Everything here builds and launches on your phone (confirmed 11 Nov 2026, after 
 
 ## 3. Not started, in order
 
-1. **VN4c2** (VN4c1 is written): the people screen's button that suggests who is speaking from the words, behind the AI switch and the consent sheet, with Apple's model where it exists and Ollama on your own computer; the suggestions are shown beside the others for you to accept.
-2. **VN5**: speaker tags in exports, per entry and per person: include the name, hide it, or leave that person's words out. After VN4a.
-3. **52**: refresh the Remotion promo with new screenshots and captions. The single source is already true (`remotion-project/src/Promo.tsx`, `npm run sync:promo`); what is left needs the app run on a simulator.
-4. **53**: the long full-tour video, split into per-tab scenes, scripted from `website/src/content/guide.generated.json`. Waits on 52. Size L, to be split.
+1. **VN5**: speaker tags in exports, per entry and per person: include the name, hide it, or leave that person's words out. After VN4a.
+2. **52**: refresh the Remotion promo with new screenshots and captions. The single source is already true (`remotion-project/src/Promo.tsx`, `npm run sync:promo`); what is left needs the app run on a simulator.
+3. **53**: the long full-tour video, split into per-tab scenes, scripted from `website/src/content/guide.generated.json`. Waits on 52. Size L, to be split.
 7. **54**: Android decision write-up, optional prototype spike. Android itself is far future (D4).
 
 **Parked on purpose**

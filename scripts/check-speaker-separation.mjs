@@ -2,6 +2,7 @@
 // and never goes online. Run it from anywhere:  node scripts/check-speaker-separation.mjs
 // 11. Guessing from the words (VN4c1) only prepares words and reads an answer; AIAsk is the one place text goes to a model.
 // 9. Replay and tap (VN4b) uses no model and no recogniser, and keeps and sends nothing.
+// 12. Guessing from the words (VN4c2): only the people screen sends words, only through AIAsk, behind the AI switch.
 // 1. FluidAudio is imported in one file only, Support/SpeakerSeparation.swift, and is linked into the app and not the widget.
 // 2. The package is pinned to one exact version, so a build never picks up a newer one by itself.
 // 3. That file never goes online and never fetches a model: no URLSession or URLRequest, none of the library's download or
@@ -192,6 +193,23 @@ else {
     [/\bCodable\b|\bEncodable\b|\bNSCoding\b|\bJSONEncoder\b|\bPropertyListEncoder\b/, "makes something that can be saved"],
   ];
   for (const [pattern, why] of rules) if (pattern.test(code)) problems.push(`Support/SpeakerWords.swift: ${why}.`);
+}
+
+// 12. Guessing from the words, the screen (VN4c2): only the people screen sends words, only through AIAsk, only the text that
+//     SpeakerWords.prompt made, only after checking the AI switch, and a greyed-out button stands in while it is off.
+for (const f of files) {
+  if (/\.findSpeakerChanges\b/.test(f.text) && f.rel !== "Support/AIProviders.swift" && f.rel !== "Views/Journal/PeopleScreen.swift") {
+    problems.push(`${f.rel}: uses the Suggest who is speaking tool; only the people screen may.`);
+  }
+}
+const guessScreen = files.find((x) => x.rel === "Views/Journal/PeopleScreen.swift");
+if (guessScreen) {
+  const t = guessScreen.text;
+  if (!/ask\.run\(\s*\.findSpeakerChanges\s*,\s*on:\s*prompt\.text\b/.test(t)) problems.push("Views/Journal/PeopleScreen.swift does not send only the prompt's text through AIAsk with the Suggest who is speaking tool.");
+  if (!/SpeakerWords\.prompt\(/.test(t)) problems.push("Views/Journal/PeopleScreen.swift does not build what it sends with SpeakerWords.prompt.");
+  if (!/guard AIGate\.isEnabled\b/.test(t)) problems.push("Views/Journal/PeopleScreen.swift does not check the AI switch before guessing from the words.");
+  if (!/\.aiAsk\(ask\)/.test(t)) problems.push("Views/Journal/PeopleScreen.swift does not show the consent sheet (.aiAsk).");
+  if (/\.generate\(|\bURLSession\b|\bURLRequest\b|\bUserDefaults\b|\bCodable\b/.test(t)) problems.push("Views/Journal/PeopleScreen.swift talks to a provider, goes online, keeps something or makes something saveable.");
 }
 
 // 1 and 2. The project.

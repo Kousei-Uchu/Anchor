@@ -24,6 +24,13 @@ struct PeopleScreen: View {
     @State private var outcome: PeopleFinder.Outcome?
     @State private var names: [Int: String] = [:]
     @State private var task: Task<Void, Never>?
+    @StateObject private var ask = AIAsk()
+    @State private var other: PeopleFinder.Outcome?
+    @State private var showingWords = false
+    @State private var guessing = false
+    @State private var guessNote: String?
+    @State private var guessTask: Task<Void, Never>?
+    @State private var showingAIOff = false
 
     private enum Phase: Equatable {
         case working, done, failed(String)
@@ -62,7 +69,9 @@ struct PeopleScreen: View {
         .navigationTitle("Who is speaking")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { if outcome == nil, task == nil { start() } }
-        .onDisappear { task?.cancel() }
+        .aiAsk(ask)
+        .aiOffAlert(isPresented: $showingAIOff)
+        .onDisappear { task?.cancel(); guessTask?.cancel() }
     }
 
     @ViewBuilder
@@ -85,6 +94,9 @@ struct PeopleScreen: View {
                 }
             }
         }
+        if outcome.hasWords, !outcome.words.isEmpty {
+            wordsSection(outcome)
+        }
         if outcome.hasWords {
             Anchor.SettingsSection(title: "How it will read") {
                 Text(PeopleFinder.text(of: outcome.lines, names: names))
@@ -99,6 +111,92 @@ struct PeopleScreen: View {
                     Text("Add to this page").font(.system(.subheadline, design: .rounded))
                 }
             }
+        }
+    }
+
+    /// Guessing who is speaking from the words alone (Patch VN4c2). Only here, only behind the AI switch, and only
+    /// through `AIAsk`, which shows the exact text and asks before anything is sent. The guess is shown beside the
+    /// first answer and changes nothing until the person chooses it.
+    @ViewBuilder
+    private func wordsSection(_ outcome: PeopleFinder.Outcome) -> some View {
+        Anchor.SettingsSection(
+            title: "From the words",
+            footer: "This reads only the words, not the sound: a question and its reply, a change between I and you. It cannot hear anyone, so it can be wrong. Nothing changes until you choose Use this instead, and you can go back."
+        ) {
+            if let other {
+                let count = other.personCount
+                Text(showingWords
+                     ? "You are looking at the guess from the words."
+                     : (count == 1 ? "The words read as 1 person." : "The words read as \(count) people."))
+                    .font(.system(.footnote, design: .rounded))
+                    .foregroundStyle(.secondary)
+                Button {
+                    let current = outcome
+                    self.outcome = other
+                    self.other = current
+                    showingWords.toggle()
+                    names = [:]
+                } label: {
+                    Text(showingWords ? "Go back to the first" : "Use this instead")
+                        .font(.system(.subheadline, design: .rounded).weight(.medium))
+                }
+            } else if AIGate.isEnabled {
+                if guessing {
+                    HStack(spacing: 12) {
+                        ProgressView()
+                        Text("Reading the words…").font(.system(.subheadline, design: .rounded))
+                    }
+                    Button {
+                        guessTask?.cancel()
+                    } label: {
+                        Text("Stop").font(.system(.subheadline, design: .rounded))
+                    }
+                } else {
+                    Button {
+                        guess(outcome)
+                    } label: {
+                        Text(AIFeature.findSpeakerChanges.title).font(.system(.subheadline, design: .rounded))
+                    }
+                }
+            } else if AIGate.showsOffButtons {
+                AIOffButton { showingAIOff = true } content: {
+                    Text(AIFeature.findSpeakerChanges.title).font(.system(.subheadline, design: .rounded))
+                }
+            }
+            if let guessNote {
+                Text(guessNote).font(.system(.footnote, design: .rounded)).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private func guess(_ base: PeopleFinder.Outcome) {
+        guard AIGate.isEnabled, !guessing else { return }
+        let provider = AIProviders.make(AIProviders.chosen)
+        let prompt = SpeakerWords.prompt(for: base.pieces, limit: provider.maxCharacters)
+        guard !prompt.pieces.isEmpty else {
+            guessNote = AIError.nothingToSend.plainText
+            return
+        }
+        guessing = true
+        guessNote = nil
+        guessTask = Task {
+            do {
+                let answer = try await ask.run(.findSpeakerChanges, on: prompt.text, using: provider)
+                let turns = SpeakerWords.turns(from: answer, pieces: prompt.pieces)
+                if !AIGate.isEnabled {
+                    // Turned off while it worked: nothing is shown.
+                } else if turns.isEmpty {
+                    guessNote = "No change of speaker could be read from the answer. Nothing was kept."
+                } else {
+                    other = PeopleFinder.relined(base, turns: turns)
+                    if !prompt.coversAll { guessNote = "The recording is long, so only the first part of the words was read." }
+                }
+            } catch let error as AIError {
+                if error != .cancelled { guessNote = error.plainText }
+            } catch {
+                guessNote = AIError.failed.plainText
+            }
+            guessing = false
         }
     }
 
