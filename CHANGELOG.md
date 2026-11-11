@@ -1,5 +1,6 @@
 # Changelog
 
+- Settings is now a short list. Reminders, Recovery, Sleep, Journal and Your data and help each open their own page, with the same switches as before.
 - Patches 55b and 52: the website demo can now be recorded from the real app screen by screen (scripts/make-demo-capture.sh); until it is, the website keeps the hand-built demo. The promo video's pictures can be refreshed from the app's screenshots (scripts/refresh-promo-shots.sh).
 - Patch 55a: the website demo now takes its made-up content from the app's own demo content, so the two cannot drift apart. The demo shows all five grounding tools, as the app does.
 - Patch 54: a write-up for deciding about Android (`docs/ANDROID_DECISION.md`): what carries over, what does not, three routes, and what Google Play asks of a new account.

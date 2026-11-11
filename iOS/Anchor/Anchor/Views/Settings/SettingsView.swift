@@ -102,136 +102,15 @@ struct SettingsView: View {
                     Anchor.SettingsToggle(title: "Require Face ID", isOn: $faceIDEnabled)
                 }
 
-                Anchor.SettingsSection(
-                    title: "Reminders",
-                    footer: "Gentle and optional. Totally fine to skip when one comes."
-                ) {
-                    Anchor.SettingsToggle(title: "Daily check-in", isOn: $dailyCheckInEnabled)
-                    if dailyCheckInEnabled {
-                        Anchor.SettingsTimeRow(time: timeBinding($dailyCheckInHour, $dailyCheckInMinute))
+                Anchor.SettingsSection(title: nil) {
+                    pageLink("Reminders") { remindersPage }
+                    if showsRecovery {
+                        pageLink("Recovery") { recoveryPage }
                     }
-                    Anchor.SettingsToggle(title: "Focus timer alerts", isOn: $focusAlertsEnabled)
-                    Anchor.SettingsToggle(title: "Focus timer on the lock screen", isOn: $focusLockScreenEnabled)
-                }
-
-                if routines.contains(where: { !$0.isBlank }) {
-                    Anchor.SettingsSection(
-                        title: "Routine reminders",
-                        footer: "Off until you switch one on. The days are set in the routine itself, and the lock screen never shows its name."
-                    ) {
-                        ForEach(routines.filter { !$0.isBlank }) { routine in
-                            RoutineReminderSettingsRow(routine: routine)
-                        }
+                    if showsSleep {
+                        pageLink("Sleep") { sleepPage }
                     }
-                }
-
-                Anchor.SettingsSection(
-                    title: "Session reminders",
-                    footer: "Off until you switch one on. The evening before comes at the time you choose, from 4 pm to 10:59 pm. The lock screen only says something you planned is coming up, never who it is with. Tap a reminder and Anchor opens Session prep for that person."
-                ) {
-                    Anchor.SettingsToggle(title: "The evening before", isOn: $remindDayBefore)
-                    if remindDayBefore {
-                        Anchor.SettingsTimeRow(title: "Evening time", time: eveningBinding)
-                    }
-                    Anchor.SettingsToggle(title: "A couple of hours before", isOn: $remindSameDay)
-                }
-
-                if helloContacts.contains(where: { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {
-                    Anchor.SettingsSection(
-                        title: "Hello reminders",
-                        footer: "Off until you switch one on. At most one comes on any day, and the lock screen never shows a name."
-                    ) {
-                        ForEach(helloContacts.filter { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) { contact in
-                            HelloReminderSettingsRow(contact: contact, all: helloContacts)
-                        }
-                    }
-                }
-
-                if helloContacts.contains(where: { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {
-                    Anchor.SettingsSection(
-                        title: "Support day reminders",
-                        footer: "Off until you switch one on. For a person who can see a day on your Support calendar, a reminder at 9 am the morning of that day or the day before. It takes the place of a hello that day, and at most one comes on any day. The lock screen never shows a name."
-                    ) {
-                        ForEach(helloContacts.filter { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) { contact in
-                            SupportDayReminderSettingsRow(contact: contact, all: helloContacts)
-                        }
-                    }
-                }
-
-                if helloContacts.contains(where: { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {
-                    Anchor.SettingsSection(
-                        title: "Follow-up reminders",
-                        footer: "Off unless you choose one when you write to someone. It comes a few days later at 10 am. It takes the place of a hello that day, and at most one comes on any day. The lock screen never shows a name."
-                    ) {
-                        FollowUpSettingsRow()
-                    }
-                }
-
-                if helloContacts.contains(where: { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {
-                    Anchor.SettingsSection(
-                        title: "Hard-time reminders",
-                        footer: "Off until you switch one on. At the start of a trigger window you pick, a reminder that this person is one option. A support day or a follow-up keeps its day over it, it takes the place of a hello, and at most one comes on any day. The lock screen never shows a name or says what it is about."
-                    ) {
-                        ForEach(helloContacts.filter { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) { contact in
-                            CompanionSettingsRow(contact: contact)
-                        }
-                    }
-                }
-
-                if helloContacts.contains(where: { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {
-                    Anchor.SettingsSection(
-                        title: "After-session reminders",
-                        footer: "Off until you switch one on. After a session you have scheduled, a reminder to ask whether you want to tell this person how it went. It comes at 6 pm, or at least two hours after a late session starts, and if that would be after 9 pm it comes the next morning at 9. A support day, a follow-up or a hard-time reminder keeps its day over it, and at most one comes on any day. The lock screen never shows a name or says what it is about."
-                    ) {
-                        ForEach(helloContacts.filter { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) { contact in
-                            AfterSessionSettingsRow(contact: contact)
-                        }
-                    }
-                }
-
-                if showsRecovery {
-                    Anchor.SettingsSection(
-                        title: "Recovery",
-                        footer: "Reminders and widgets use generic wording, like \"A quiet moment for yourself?\", so nobody reading your lock screen learns what you're tracking. You can show a counter's name outside the app by turning that on for the counter. Your longest run stays hidden until you switch on Show my longest run."
-                    ) {
-                        Anchor.SettingsToggle(title: "Daily pledge", isOn: $pledgeEnabled)
-                        if pledgeEnabled {
-                            Anchor.SettingsTimeRow(time: timeBinding($pledgeHour, $pledgeMinute))
-                        }
-                        Anchor.SettingsToggle(title: "Evening review", isOn: $reviewEnabled)
-                        if reviewEnabled {
-                            Anchor.SettingsTimeRow(time: timeBinding($reviewHour, $reviewMinute))
-                        }
-                        Anchor.SettingsToggle(title: "Milestones", isOn: $milestonesEnabled)
-                        Anchor.SettingsToggle(title: "Show my longest run", isOn: $showLongest)
-                    }
-                }
-
-                if showsSleep {
-                    Anchor.SettingsSection(
-                        title: "Sleep",
-                        footer: "These are off until you switch them on. Last night is a card on Now in the morning, until you write down last night or tap Not now. The Journal gets a small row for each night and a mark on the month. A check-in gets one more optional question, unless last night is already written down. The reminder never says on the lock screen what it is about."
-                    ) {
-                        Anchor.SettingsToggle(title: "Show Last night on Now", isOn: $sleepNowCard)
-                        Anchor.SettingsToggle(title: "Show sleep in the Journal", isOn: $sleepInJournal)
-                        Anchor.SettingsToggle(title: "Ask about sleep in check-ins", isOn: $sleepInCheckIn)
-                        Anchor.SettingsToggle(title: "Morning reminder", isOn: $sleepReminderOn)
-                        if sleepReminderOn {
-                            Anchor.SettingsTimeRow(time: timeBinding($sleepReminderHour, $sleepReminderMinute))
-                        }
-                    }
-                }
-
-                Anchor.SettingsSection(
-                    title: "Journal",
-                    footer: "Off until you switch it on. Dictate is a microphone button on a Journal page that turns what you say into text, on this phone only. Nothing you say is sent anywhere. If your language is not ready on the phone, Dictate says so and does not start. The sound is not kept unless you also switch on Keep a voice note while dictating, which saves it on this phone as a voice note on the page and lets you choose afterwards whether to keep the words, the voice note or both. Label who is speaking adds Speaker 1 and Speaker 2 buttons while Dictate listens: you tap one when the speaker changes, and the words that follow go on a new line with that label. Label who is speaking does not tell voices apart; it only starts a new line when you say so. Find who is speaking, which is separate and also off to begin with, adds buttons to a voice note on a Journal page. One listens to that recording once, on this phone only, with a model inside Anchor, to tell the voices in it apart, and the other lets you replay it and tap who is speaking yourself. A voice is compared only with the other voices in that one recording, nothing about a voice is kept, nothing is sent anywhere, and the words are added to the page only when you tap Add to this page."
-                ) {
-                    Anchor.SettingsToggle(title: "Dictate in the Journal", isOn: $dictationOn)
-                    if dictationOn {
-                        Anchor.SettingsToggle(title: "Keep a voice note while dictating", isOn: $dictationKeepsNote)
-                        Anchor.SettingsToggle(title: "Label who is speaking", isOn: $dictationLabels)
-                    }
-                    Anchor.SettingsToggle(title: "Find who is speaking", isOn: $findSpeakersOn)
+                    pageLink("Journal") { journalPage }
                 }
 
                 Anchor.SettingsSection(
@@ -260,61 +139,8 @@ struct SettingsView: View {
                     }
                 }
 
-                Anchor.SettingsSection(title: "Your data and help") {
-                    NavigationLink {
-                        DataControlView()
-                    } label: {
-                        Text("Your data").font(.system(.subheadline, design: .rounded))
-                    }
-                    Button {
-                        showTour = true
-                    } label: {
-                        Text("Take the tour")
-                            .font(.system(.subheadline, design: .rounded))
-                            .foregroundStyle(.primary)
-                    }
-                    NavigationLink {
-                        AboutView()
-                    } label: {
-                        Text("About Anchor").font(.system(.subheadline, design: .rounded))
-                    }
-                    NavigationLink {
-                        ShowcaseSettingsView()
-                    } label: {
-                        Text("Showcase mode").font(.system(.subheadline, design: .rounded))
-                    }
-                    NavigationLink {
-                        AIToolsSettingsView()
-                    } label: {
-                        Text("AI tools").font(.system(.subheadline, design: .rounded))
-                    }
-                    NavigationLink {
-                        EncryptionSettingsView()
-                    } label: {
-                        Text("Encryption").font(.system(.subheadline, design: .rounded))
-                    }
-                    #if DEBUG
-                    NavigationLink {
-                        SpeakerTryItView()
-                    } label: {
-                        Text("Who is speaking (test build)").font(.system(.subheadline, design: .rounded))
-                    }
-                    #endif
-                    NavigationLink {
-                        SyncSettingsView()
-                    } label: {
-                        Text("iCloud sync").font(.system(.subheadline, design: .rounded))
-                    }
-                    NavigationLink {
-                        SafetyCopyView()
-                    } label: {
-                        Text("Safety copy").font(.system(.subheadline, design: .rounded))
-                    }
-                    NavigationLink {
-                        LockMyDataView()
-                    } label: {
-                        Text("Lock my data").font(.system(.subheadline, design: .rounded))
-                    }
+                Anchor.SettingsSection(title: nil) {
+                    pageLink("Your data and help") { dataAndHelpPage }
                 }
             }
             .anchorSettingsStyle()
@@ -325,9 +151,6 @@ struct SettingsView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
-            }
-            .sheet(isPresented: $showTour) {
-                OnboardingTourView()
             }
             .onChange(of: faceIDEnabled) { _, isOn in appLock.isEnabled = isOn }
             .onChange(of: dailyCheckInEnabled) { _, _ in applyDailyCheckIn() }
@@ -358,6 +181,247 @@ struct SettingsView: View {
             .onChange(of: pledgeMinute) { _, _ in RecoveryNotifications.refresh(using: modelContext) }
             .onChange(of: reviewHour) { _, _ in RecoveryNotifications.refresh(using: modelContext) }
             .onChange(of: reviewMinute) { _, _ in RecoveryNotifications.refresh(using: modelContext) }
+        }
+    }
+
+    // MARK: Settings pages (Patch 56)
+
+    /// A row in the Settings list that opens one of the pages below. The page names are the old section names,
+    /// so the directions the app gives ("Settings, Journal", "Settings, Reminders") still lead to the same place.
+    private func pageLink<Page: View>(_ title: String, @ViewBuilder page: @escaping () -> Page) -> some View {
+        NavigationLink {
+            page()
+        } label: {
+            Text(title).font(.system(.subheadline, design: .rounded))
+        }
+    }
+
+    private var remindersPage: some View {
+        Form {
+            Anchor.SettingsSection(
+                title: "Reminders",
+                footer: "Gentle and optional. Totally fine to skip when one comes."
+            ) {
+                Anchor.SettingsToggle(title: "Daily check-in", isOn: $dailyCheckInEnabled)
+                if dailyCheckInEnabled {
+                    Anchor.SettingsTimeRow(time: timeBinding($dailyCheckInHour, $dailyCheckInMinute))
+                }
+                Anchor.SettingsToggle(title: "Focus timer alerts", isOn: $focusAlertsEnabled)
+                Anchor.SettingsToggle(title: "Focus timer on the lock screen", isOn: $focusLockScreenEnabled)
+            }
+
+            if routines.contains(where: { !$0.isBlank }) {
+                Anchor.SettingsSection(
+                    title: "Routine reminders",
+                    footer: "Off until you switch one on. The days are set in the routine itself, and the lock screen never shows its name."
+                ) {
+                    ForEach(routines.filter { !$0.isBlank }) { routine in
+                        RoutineReminderSettingsRow(routine: routine)
+                    }
+                }
+            }
+
+            Anchor.SettingsSection(
+                title: "Session reminders",
+                footer: "Off until you switch one on. The evening before comes at the time you choose, from 4 pm to 10:59 pm. The lock screen only says something you planned is coming up, never who it is with. Tap a reminder and Anchor opens Session prep for that person."
+            ) {
+                Anchor.SettingsToggle(title: "The evening before", isOn: $remindDayBefore)
+                if remindDayBefore {
+                    Anchor.SettingsTimeRow(title: "Evening time", time: eveningBinding)
+                }
+                Anchor.SettingsToggle(title: "A couple of hours before", isOn: $remindSameDay)
+            }
+
+            if helloContacts.contains(where: { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {
+                Anchor.SettingsSection(
+                    title: "Hello reminders",
+                    footer: "Off until you switch one on. At most one comes on any day, and the lock screen never shows a name."
+                ) {
+                    ForEach(helloContacts.filter { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) { contact in
+                        HelloReminderSettingsRow(contact: contact, all: helloContacts)
+                    }
+                }
+            }
+
+            if helloContacts.contains(where: { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {
+                Anchor.SettingsSection(
+                    title: "Support day reminders",
+                    footer: "Off until you switch one on. For a person who can see a day on your Support calendar, a reminder at 9 am the morning of that day or the day before. It takes the place of a hello that day, and at most one comes on any day. The lock screen never shows a name."
+                ) {
+                    ForEach(helloContacts.filter { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) { contact in
+                        SupportDayReminderSettingsRow(contact: contact, all: helloContacts)
+                    }
+                }
+            }
+
+            if helloContacts.contains(where: { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {
+                Anchor.SettingsSection(
+                    title: "Follow-up reminders",
+                    footer: "Off unless you choose one when you write to someone. It comes a few days later at 10 am. It takes the place of a hello that day, and at most one comes on any day. The lock screen never shows a name."
+                ) {
+                    FollowUpSettingsRow()
+                }
+            }
+
+            if helloContacts.contains(where: { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {
+                Anchor.SettingsSection(
+                    title: "Hard-time reminders",
+                    footer: "Off until you switch one on. At the start of a trigger window you pick, a reminder that this person is one option. A support day or a follow-up keeps its day over it, it takes the place of a hello, and at most one comes on any day. The lock screen never shows a name or says what it is about."
+                ) {
+                    ForEach(helloContacts.filter { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) { contact in
+                        CompanionSettingsRow(contact: contact)
+                    }
+                }
+            }
+
+            if helloContacts.contains(where: { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {
+                Anchor.SettingsSection(
+                    title: "After-session reminders",
+                    footer: "Off until you switch one on. After a session you have scheduled, a reminder to ask whether you want to tell this person how it went. It comes at 6 pm, or at least two hours after a late session starts, and if that would be after 9 pm it comes the next morning at 9. A support day, a follow-up or a hard-time reminder keeps its day over it, and at most one comes on any day. The lock screen never shows a name or says what it is about."
+                ) {
+                    ForEach(helloContacts.filter { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) { contact in
+                        AfterSessionSettingsRow(contact: contact)
+                    }
+                }
+            }
+        }
+        .anchorSettingsStyle()
+        .navigationTitle("Reminders")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var recoveryPage: some View {
+        Form {
+            Anchor.SettingsSection(
+                title: "Recovery",
+                footer: "Reminders and widgets use generic wording, like \"A quiet moment for yourself?\", so nobody reading your lock screen learns what you're tracking. You can show a counter's name outside the app by turning that on for the counter. Your longest run stays hidden until you switch on Show my longest run."
+            ) {
+                Anchor.SettingsToggle(title: "Daily pledge", isOn: $pledgeEnabled)
+                if pledgeEnabled {
+                    Anchor.SettingsTimeRow(time: timeBinding($pledgeHour, $pledgeMinute))
+                }
+                Anchor.SettingsToggle(title: "Evening review", isOn: $reviewEnabled)
+                if reviewEnabled {
+                    Anchor.SettingsTimeRow(time: timeBinding($reviewHour, $reviewMinute))
+                }
+                Anchor.SettingsToggle(title: "Milestones", isOn: $milestonesEnabled)
+                Anchor.SettingsToggle(title: "Show my longest run", isOn: $showLongest)
+            }
+        }
+        .anchorSettingsStyle()
+        .navigationTitle("Recovery")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var sleepPage: some View {
+        Form {
+            Anchor.SettingsSection(
+                title: "Sleep",
+                footer: "These are off until you switch them on. Last night is a card on Now in the morning, until you write down last night or tap Not now. The Journal gets a small row for each night and a mark on the month. A check-in gets one more optional question, unless last night is already written down. The reminder never says on the lock screen what it is about."
+            ) {
+                Anchor.SettingsToggle(title: "Show Last night on Now", isOn: $sleepNowCard)
+                Anchor.SettingsToggle(title: "Show sleep in the Journal", isOn: $sleepInJournal)
+                Anchor.SettingsToggle(title: "Ask about sleep in check-ins", isOn: $sleepInCheckIn)
+                Anchor.SettingsToggle(title: "Morning reminder", isOn: $sleepReminderOn)
+                if sleepReminderOn {
+                    Anchor.SettingsTimeRow(time: timeBinding($sleepReminderHour, $sleepReminderMinute))
+                }
+            }
+        }
+        .anchorSettingsStyle()
+        .navigationTitle("Sleep")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var journalPage: some View {
+        Form {
+            Anchor.SettingsSection(
+                title: "Journal",
+                footer: "Off until you switch it on. Dictate is a microphone button on a Journal page that turns what you say into text, on this phone only. Nothing you say is sent anywhere. If your language is not ready on the phone, Dictate says so and does not start. The sound is not kept unless you also switch on Keep a voice note while dictating, which saves it on this phone as a voice note on the page and lets you choose afterwards whether to keep the words, the voice note or both. Label who is speaking adds Speaker 1 and Speaker 2 buttons while Dictate listens: you tap one when the speaker changes, and the words that follow go on a new line with that label. Label who is speaking does not tell voices apart; it only starts a new line when you say so. Find who is speaking, which is separate and also off to begin with, adds buttons to a voice note on a Journal page. One listens to that recording once, on this phone only, with a model inside Anchor, to tell the voices in it apart, and the other lets you replay it and tap who is speaking yourself. A voice is compared only with the other voices in that one recording, nothing about a voice is kept, nothing is sent anywhere, and the words are added to the page only when you tap Add to this page."
+            ) {
+                Anchor.SettingsToggle(title: "Dictate in the Journal", isOn: $dictationOn)
+                if dictationOn {
+                    Anchor.SettingsToggle(title: "Keep a voice note while dictating", isOn: $dictationKeepsNote)
+                    Anchor.SettingsToggle(title: "Label who is speaking", isOn: $dictationLabels)
+                }
+                Anchor.SettingsToggle(title: "Find who is speaking", isOn: $findSpeakersOn)
+            }
+        }
+        .anchorSettingsStyle()
+        .navigationTitle("Journal")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var dataAndHelpPage: some View {
+        Form {
+            Anchor.SettingsSection(title: "Your data") {
+                NavigationLink {
+                    DataControlView()
+                } label: {
+                    Text("Your data").font(.system(.subheadline, design: .rounded))
+                }
+                NavigationLink {
+                    SafetyCopyView()
+                } label: {
+                    Text("Safety copy").font(.system(.subheadline, design: .rounded))
+                }
+                NavigationLink {
+                    SyncSettingsView()
+                } label: {
+                    Text("iCloud sync").font(.system(.subheadline, design: .rounded))
+                }
+                NavigationLink {
+                    LockMyDataView()
+                } label: {
+                    Text("Lock my data").font(.system(.subheadline, design: .rounded))
+                }
+                NavigationLink {
+                    EncryptionSettingsView()
+                } label: {
+                    Text("Encryption").font(.system(.subheadline, design: .rounded))
+                }
+            }
+
+            Anchor.SettingsSection(title: "Help") {
+                Button {
+                    showTour = true
+                } label: {
+                    Text("Take the tour")
+                        .font(.system(.subheadline, design: .rounded))
+                        .foregroundStyle(.primary)
+                }
+                NavigationLink {
+                    AboutView()
+                } label: {
+                    Text("About Anchor").font(.system(.subheadline, design: .rounded))
+                }
+            }
+
+            Anchor.SettingsSection(title: "More") {
+                NavigationLink {
+                    ShowcaseSettingsView()
+                } label: {
+                    Text("Showcase mode").font(.system(.subheadline, design: .rounded))
+                }
+                NavigationLink {
+                    AIToolsSettingsView()
+                } label: {
+                    Text("AI tools").font(.system(.subheadline, design: .rounded))
+                }
+                #if DEBUG
+                NavigationLink {
+                    SpeakerTryItView()
+                } label: {
+                    Text("Who is speaking (test build)").font(.system(.subheadline, design: .rounded))
+                }
+                #endif
+            }
+        }
+        .anchorSettingsStyle()
+        .navigationTitle("Your data and help")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showTour) {
+            OnboardingTourView()
         }
     }
 
