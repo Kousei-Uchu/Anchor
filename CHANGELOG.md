@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch DOC32: the plan and status now record that speaker tags in exports (VN5) and voice notes and photos in sync (SY2) are pushed, and two rows that were out of date are corrected. Nothing in the app changes.
 - Patch VN5: speaker tags in exports. When a Journal entry has people in it, Export for someone and the CSV and PDF export in Your data have a Who is speaking screen: for each person you can show the name, hide it as Speaker A or Speaker B, or leave that person's words out, for that export only. Nothing is kept, and the full backup is unchanged.
 - Patch DOC31: the plan and status now record that the who-is-speaking work, VN4a1 to VN4c2, is pushed, and that two commit names the plan gave for the speaker model were wrong. Nothing in the app changes.
 - Patch VN4c2: guessing who is speaking from the words, on the people screen. A From the words section has a Suggest who is speaking button, greyed out while AI tools are off. When they are on it shows you the exact numbered words and asks before sending anything, then shows what the words read as beside the first answer. Nothing changes until you tap Use this instead, and Go back to the first undoes it.
