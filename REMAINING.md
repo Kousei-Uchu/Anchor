@@ -1,6 +1,6 @@
 # Anchor: what is left
 
-*Only what is still to do. When something is finished, confirmed or answered, it is deleted from this file in the same patch, never moved to a done list. Finished work is in the Progress table of `ANCHOR_PATCH_PLAN.md` and in `docs/PLAN_CHANGELOG.md`. Last updated: 11 Nov 2026, after DOC30.*
+*Only what is still to do. When something is finished, confirmed or answered, it is deleted from this file in the same patch, never moved to a done list. Finished work is in the Progress table of `ANCHOR_PATCH_PLAN.md` and in `docs/PLAN_CHANGELOG.md`. Last updated: 11 Nov 2026, after VN4a1.*
 
 ## 1. Waiting on you
 
@@ -13,6 +13,7 @@
 
 - D70: the review run cannot try AI, dictation or locking, and this phone has no Apple Intelligence. Say which of (a) a made-up-answers stand-in for AI in the review run only, (b) a test store on disk, (c) dropping those stops from the review bar, you want. I recommend (a) and (c).
 - D72: before a TestFlight or App Store build can sync, the CloudKit record types need Deploy Schema Changes in the CloudKit Dashboard (container `iCloud.page.aspens.anchor`). Builds you run from Xcode do not need it. Say whether you will do that and want the steps in `docs/RELEASE_GUIDE.md`.
+- D73: VN4a (who is speaking): I chose FluidAudio's offline pipeline, about 21.6 MB, CC-BY-4.0, loaded from files inside the app with no download. Three questions: add it as a Swift package or copy only its diarizer source in, commit the model files or fetch them at build time, and is credit in About enough. I recommend the package, commit them, and yes. VN4a1's fetch script needs running once either way: `bash scripts/fetch-diarizer-models.sh` (it needs the internet and takes under a minute).
 - D69 and `docs/FIELD_INVENTORY.md` (35f): the list of every field and setting, locked or plain, with the reason. Nothing to try on your phone. Say which verdicts to change; the ones I left plain on a judgment are reminder times, the crisis-numbers country, the focus timer lengths and times the app sets for itself.
 
 **Things only you can try**
@@ -65,7 +66,7 @@ Everything here builds and launches on your phone (confirmed 11 Nov 2026, after 
 
 ## 3. Not started, in order
 
-1. **VN4a**: find who is speaking with a speaker-separation model on the recording, used in memory against the other voices in that one recording only, labelling Person 1, Person 2 and so on, then a people screen (how many were heard, a name for each beside a transcript preview, openable again later). The model ships inside the app; its size is measured first. Nothing is stored. Size L, to be split.
+1. **VN4a2, VN4a3, VN4a4** (VN4a1 is written): run the speaker-separation model on a copy of a recording in memory and keep nothing from it (VN4a2, after your answers to D73); then the people screen, how many were heard, a name for each beside a transcript preview (VN4a3, which needs the words lined up with the time ranges); then the switch, the buttons, the credit in About and the privacy words (VN4a4). The model ships inside the app and its size is measured: about 21.6 MB.
 2. **VN4b**: replay and tap, for the more privacy-minded: play the recording back and tap where each new person starts, with no model. After VN4a.
 3. **VN4c**: the words as a backup or beside the model: a language model reads only the transcript and suggests where the speaker changes, on the phone and through Ollama on your own computer, behind the AI switch. After VN4a.
 4. **VN5**: speaker tags in exports, per entry and per person: include the name, hide it, or leave that person's words out. After VN4a.
