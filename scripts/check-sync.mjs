@@ -48,6 +48,14 @@ const plan = readFileSync(join(app, "Views/Plan/PlanView.swift"), "utf8");
 const guards = (plan.match(/!CloudSync\.isOn/g) || []).length;
 if (guards < 2) problems.push("The Health reader must stop bringing nights in while sync is on, in both connect and sync.");
 
+// SY2: files reach iCloud only as sealed files, and nothing in FileSync deletes a local file by itself.
+const files = readFileSync(join(app, "Support/FileSync.swift"), "utf8").replace(/\/\/[^\n]*/g, "");
+if (!/StoredFiles\.isSealed\(at:/.test(files)) problems.push("FileSync no longer checks that a file is sealed before sending it.");
+if (!/LockMyFiles\.isOn/.test(files)) problems.push("FileSync no longer needs Lock my files to be complete.");
+if (!/installSealed/.test(files)) problems.push("FileSync no longer brings files in through StoredFiles.installSealed.");
+if (/removeItem|FileManager\.default\.removeItem/.test(files.replace(/zone/gi, ""))) problems.push("FileSync removes a file by itself; only StoredFiles.removeFromSync may, for a delete made on another device.");
+if (!/FileSync\.noteDeleted/.test(readFileSync(join(app, "Views/Thread/ThreadMessagesView.swift"), "utf8"))) problems.push("Deleting a voice note must tell FileSync.");
+
 if (problems.length) {
   console.log(`FAIL: ${problems.length} problem(s)`);
   for (const p of problems) console.log("  - " + p);

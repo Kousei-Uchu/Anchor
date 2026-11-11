@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch SY2: iCloud sync can also carry voice notes and Journal photos, on a switch of its own for each device. Only locked files are sent, and a voice note you delete goes from your other devices too. The privacy page now describes iCloud sync.
 - Patch SY3: the recovery key can be shown as a QR code when it is first made, and scanned with the camera on a second device instead of typed. Typing still works. The code is never saved and the camera is used only when you tap Scan a QR code.
 - Patch SY1b2: fixes Settings, iCloud sync freezing when it was opened.
 - Patch SY1b1: fixes the build error in the iCloud sync patch (the widget also builds the database file and cannot name the sync code). Nothing you see changes.

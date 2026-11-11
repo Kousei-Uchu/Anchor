@@ -732,6 +732,8 @@ struct DataControlView: View {
         LockMyFiles.cancelRequest()
         SafetyCopy.deleteEverything()
         CloudSync.removeCloudCopies()
+        FileSync.removeEverythingFromICloud()
+        FileSync.forgetLocalState()
         showClearedAlert = true
     }
 

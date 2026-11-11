@@ -53,6 +53,7 @@ enum VoiceNoteStore {
     static func delete(_ name: String?) {
         guard let name else { return }
         try? FileManager.default.removeItem(at: url(for: name))
+        FileSync.noteDeleted(.voiceNotes, name)
         durationLock.lock()
         durations[name] = nil
         durationLock.unlock()

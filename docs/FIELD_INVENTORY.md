@@ -552,6 +552,11 @@ Every key the app keeps in the phone's settings (UserDefaults and `@AppStorage`)
 | anchor.sleep.health.read | reading sleep from Apple Health | plain | plain | an on or off switch |
 | anchor.sync.icloud | iCloud sync | plain | plain | an on or off switch, read when Anchor starts and kept on this device only |
 | anchor.sync.recoveryfile | the recovery file, put in iCloud's key-value store for a second device | plain | plain | already sealed under the recovery key, so it holds nothing readable and is no use without that key |
+| anchor.sync.files | sending voice notes and photos through iCloud sync | plain | plain | an on or off switch, kept on this device only |
+| anchor.sync.files.token | where the last check of the files in iCloud left off | plain | plain | an opaque marker from iCloud with no content |
+| anchor.sync.files.known | which locked files iCloud already holds | plain | plain | random file names with nothing readable in them |
+| anchor.sync.files.deleted | voice notes deleted here that iCloud has not yet been told about | plain | plain | random file names with nothing readable in them |
+| anchor.sync.files.last | how the last pass of sending files went | plain | plain | two counts in a short line |
 | anchor.sync.locklevel | how much is locked, put in iCloud's key-value store for a second device | plain | plain | a single number with no content |
 | anchor.sleep.health.write | saving typed nights to Apple Health | plain | plain | an on or off switch |
 | reminders.appointment.dayBefore | the day-before session reminder | plain | plain | an on or off switch |

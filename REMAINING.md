@@ -1,6 +1,6 @@
 # Anchor: what is left
 
-*Only what is still to do. When something is finished, confirmed or answered, it is deleted from this file in the same patch, never moved to a done list. Finished work is in the Progress table of `ANCHOR_PATCH_PLAN.md` and in `docs/PLAN_CHANGELOG.md`. Last updated: 11 Nov 2026, after SY3.*
+*Only what is still to do. When something is finished, confirmed or answered, it is deleted from this file in the same patch, never moved to a done list. Finished work is in the Progress table of `ANCHOR_PATCH_PLAN.md` and in `docs/PLAN_CHANGELOG.md`. Last updated: 11 Nov 2026, after SY2.*
 
 ## 1. Waiting on you
 
@@ -12,6 +12,7 @@
 **Things to read and answer**
 
 - D70: the review run cannot try AI, dictation or locking, and this phone has no Apple Intelligence. Say which of (a) a made-up-answers stand-in for AI in the review run only, (b) a test store on disk, (c) dropping those stops from the review bar, you want. I recommend (a) and (c).
+- D72: before a TestFlight or App Store build can sync, the CloudKit record types need Deploy Schema Changes in the CloudKit Dashboard (container `iCloud.page.aspens.anchor`). Builds you run from Xcode do not need it. Say whether you will do that and want the steps in `docs/RELEASE_GUIDE.md`.
 - D69 and `docs/FIELD_INVENTORY.md` (35f): the list of every field and setting, locked or plain, with the reason. Nothing to try on your phone. Say which verdicts to change; the ones I left plain on a judgment are reminder times, the crisis-numbers country, the focus timer lengths and times the app sets for itself.
 
 **Things only you can try**
@@ -26,6 +27,7 @@ Everything here builds and launches on your phone (confirmed 11 Nov 2026, after 
 **Can be tried in the review run** (`scripts/review-on-device.sh`, made-up content)
 
 - SY1b: Settings, iCloud sync, the switch. **Cannot be tried in the review run** (it uses a throwaway store), and it needs both your devices, signed in to the same Apple ID. First device: Encryption set up, Lock my data done, then turn on iCloud sync, close Anchor from the app switcher and open it again. Second device, with nothing in Anchor yet: Settings, iCloud sync, Use this as a second device, type the recovery key, Finish setting up this device, close and open again. Then add a task or write a journal entry on one and watch it arrive on the other, and check it reads as text on both. Make the safety copy first. Known to check: the default items Anchor adds itself (decision presets, de-escalation scripts, mascot lines) may appear twice on the second device; tell me what you see. Nights from Apple Health are removed from Anchor when sync is turned on, and Anchor stops bringing them in while it is on (D39).
+- SY2: needs both devices, and cannot be tried in the review run. On each device Lock my files must be done (Settings, Lock my data). Then Settings, iCloud sync, Voice notes and photos, switch on Send voice notes and photos on both. Record a voice note on one (Thread, a message) and add a Journal photo: after a minute and a foreground on the other, the note should play and the photo show. The line under the switch says what the last pass sent and received. Delete the voice note on one: it should go from the other after its next pass. Check the second device's own files still open after a restart. Make the safety copy first.
 - SY3: the recovery key as a QR code. **Cannot be tried in the review run or the simulator** (it needs a real camera, and a second device to scan to). With sync on and your key already made, Settings, Encryption, Make a new recovery key: the sheet that shows the key has Show a QR code for another device, and the code should go away when you leave Anchor and come back. On the other device (Settings, iCloud sync, Use this as a second device, then Type my recovery key) tap Scan a QR code: the phone should ask to use the camera, with a line saying it is only for this, then fill the box when it sees the code; tap Restore. Check that a different QR code is ignored and that typing the key still works. Nothing is saved: check the Photos app has no new picture.
 - SY1b-pre: Plan, Appointments and Decision presets, the two links CloudKit needs to be optional with an inverse. Make the safety copy first, and open the new build on a copy of your data if you can: every provider's sessions and every preset group's options should still be there.
 - R5: the check-in and sleep fixes, six stops at the end of the review bar. Make the safety copy first: a check-in gets a new locked field for its answers. Check-in exports do not carry those answers yet.
@@ -63,15 +65,13 @@ Everything here builds and launches on your phone (confirmed 11 Nov 2026, after 
 
 ## 3. Not started, in order
 
-1. **SY2**: voice notes and Journal photos in sync. After SY1.
-2. **SY3**: the recovery key shown as a QR code and scanned on the new device, with the typed key still the default (D40). With SY1.
-3. **VN4a**: find who is speaking with a speaker-separation model on the recording, used in memory against the other voices in that one recording only, labelling Person 1, Person 2 and so on, then a people screen (how many were heard, a name for each beside a transcript preview, openable again later). The model ships inside the app; its size is measured first. Nothing is stored. Size L, to be split.
-4. **VN4b**: replay and tap, for the more privacy-minded: play the recording back and tap where each new person starts, with no model. After VN4a.
-5. **VN4c**: the words as a backup or beside the model: a language model reads only the transcript and suggests where the speaker changes, on the phone and through Ollama on your own computer, behind the AI switch. After VN4a.
-6. **VN5**: speaker tags in exports, per entry and per person: include the name, hide it, or leave that person's words out. After VN4a.
-7. **52**: refresh the Remotion promo with new screenshots and captions. The single source is already true (`remotion-project/src/Promo.tsx`, `npm run sync:promo`); what is left needs the app run on a simulator.
-8. **53**: the long full-tour video, split into per-tab scenes, scripted from `website/src/content/guide.generated.json`. Waits on 52. Size L, to be split.
-9. **54**: Android decision write-up, optional prototype spike. Android itself is far future (D4).
+1. **VN4a**: find who is speaking with a speaker-separation model on the recording, used in memory against the other voices in that one recording only, labelling Person 1, Person 2 and so on, then a people screen (how many were heard, a name for each beside a transcript preview, openable again later). The model ships inside the app; its size is measured first. Nothing is stored. Size L, to be split.
+2. **VN4b**: replay and tap, for the more privacy-minded: play the recording back and tap where each new person starts, with no model. After VN4a.
+3. **VN4c**: the words as a backup or beside the model: a language model reads only the transcript and suggests where the speaker changes, on the phone and through Ollama on your own computer, behind the AI switch. After VN4a.
+4. **VN5**: speaker tags in exports, per entry and per person: include the name, hide it, or leave that person's words out. After VN4a.
+5. **52**: refresh the Remotion promo with new screenshots and captions. The single source is already true (`remotion-project/src/Promo.tsx`, `npm run sync:promo`); what is left needs the app run on a simulator.
+6. **53**: the long full-tour video, split into per-tab scenes, scripted from `website/src/content/guide.generated.json`. Waits on 52. Size L, to be split.
+7. **54**: Android decision write-up, optional prototype spike. Android itself is far future (D4).
 
 **Parked on purpose**
 

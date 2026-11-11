@@ -58,6 +58,8 @@ struct AnchorApp: App {
                     await SleepHealthReader.shared.sync(context: context)
                     await SleepHealthWriter.shared.reconcile(context: context)
                 }
+                // Voice notes and photos, only if sync and the files switch are on (Patch SY2).
+                FileSync.startIfDue()
             }
         }
     }

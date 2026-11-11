@@ -39,6 +39,7 @@
 		5357347FF47C55576D8D3104 /* SyncSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DC8C700FDC1CB81DCA414DC /* SyncSettingsView.swift */; };
 		57EEA17235EA4D03B12B7C30 /* AnchorWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8711082EC7542F886FD6D0E /* AnchorWidgetBundle.swift */; };
 		5D8CD457D6400371B991BDA2 /* CloudSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92467451520AC73206018CEC /* CloudSync.swift */; };
+		A1F5C0D2E3B44A7F8C6D9E01 /* FileSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2E6D1E3F4C55B808D7EAF12 /* FileSync.swift */; };
 		5E39536252994C52BA23EB63 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 84BE718902E34AC5BD3C4A36 /* SwiftUI.framework */; };
 		5ECEDA94452645569E4857AA /* AnchorModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15ACBC80FF724521BB7AE9FF /* AnchorModels.swift */; };
 		60A074630CC7C6188746A45F /* SafetyCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 905C4FDA487AB3F8365B7465 /* SafetyCopy.swift */; };
@@ -194,6 +195,7 @@
 		A5E1C7D39B2F4608A1D4E7F2 /* RecoveryKeyQR.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryKeyQR.swift; sourceTree = "<group>"; };
 		905C4FDA487AB3F8365B7465 /* SafetyCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafetyCopy.swift; sourceTree = "<group>"; };
 		92467451520AC73206018CEC /* CloudSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSync.swift; sourceTree = "<group>"; };
+		B2E6D1E3F4C55B808D7EAF12 /* FileSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileSync.swift; sourceTree = "<group>"; };
 		92D593B269EB6B064DC986FE /* LockMyData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockMyData.swift; sourceTree = "<group>"; };
 		94ECF0E537016231C42D3609 /* AIAsk.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIAsk.swift; sourceTree = "<group>"; };
 		988D389A938F4784B62E6999 /* JournalEntryEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalEntryEditorView.swift; sourceTree = "<group>"; };
@@ -345,6 +347,7 @@
 			children = (
 				905C4FDA487AB3F8365B7465 /* SafetyCopy.swift */,
 				92467451520AC73206018CEC /* CloudSync.swift */,
+				B2E6D1E3F4C55B808D7EAF12 /* FileSync.swift */,
 				92D593B269EB6B064DC986FE /* LockMyData.swift */,
 				60E32204EBCB9844F599B451 /* AIGate.swift */,
 				94ECF0E537016231C42D3609 /* AIAsk.swift */,
@@ -675,6 +678,7 @@
 				FBE4E15F99C3E6CE0C415894 /* AIOffNotice.swift in Sources */,
 				60A074630CC7C6188746A45F /* SafetyCopy.swift in Sources */,
 				5D8CD457D6400371B991BDA2 /* CloudSync.swift in Sources */,
+				A1F5C0D2E3B44A7F8C6D9E01 /* FileSync.swift in Sources */,
 				0CAA287DC6AAD87AC93CC178 /* LockMyData.swift in Sources */,
 				383D93D08A9CDB63AB066AD1 /* AIGate.swift in Sources */,
 				FDBD68869E5A11B99B6BED27 /* AIAsk.swift in Sources */,

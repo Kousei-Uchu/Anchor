@@ -576,6 +576,39 @@ enum StoredFiles {
         _ = sealFile(at: folder.url.appendingPathComponent(name), context: context(folder, name), key: key)
     }
 
+    // MARK: Sync (Patch SY2)
+
+    /// A name that stays inside its folder: no path, nothing hidden. A name that came from iCloud is checked with this
+    /// before it is used for anything.
+    static func isPlainName(_ name: String) -> Bool {
+        !name.isEmpty && !name.hasPrefix(".") && !name.contains("/") && !name.contains("\\")
+            && name == (name as NSString).lastPathComponent
+    }
+
+    /// Where a file lies, for handing it to iCloud as it is. Only `FileSync` uses this, and only for a file that is sealed.
+    static func fileURL(_ folder: Folder, _ name: String) -> URL { folder.url.appendingPathComponent(name) }
+
+    /// Puts a file that arrived from iCloud in its folder, exactly as it came. Kept only if it is sealed and opens with the
+    /// key on this phone, and never in the place of a file that is already here. True if the file is there afterwards.
+    static func installSealed(_ data: Data, _ folder: Folder, _ name: String) -> Bool {
+        guard isPlainName(name), FileCipher.looksSealed(data), let key = FieldLockWiring.currentKey(),
+              FileCipher.open(data, context: context(folder, name), key: key) != nil else { return false }
+        let url = fileURL(folder, name)
+        if FileManager.default.fileExists(atPath: url.path) { return true }
+        do {
+            try data.write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    /// Removes a file because it was deleted on another device.
+    static func removeFromSync(_ folder: Folder, _ name: String) {
+        guard isPlainName(name) else { return }
+        try? FileManager.default.removeItem(at: fileURL(folder, name))
+    }
+
     // MARK: Handing a file to another app
 
     private static var sharedFolder: URL {

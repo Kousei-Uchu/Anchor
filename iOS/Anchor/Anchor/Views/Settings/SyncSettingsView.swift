@@ -11,6 +11,7 @@ struct SyncSettingsView: View {
     @State private var confirmTurnOff = false
     @State private var showRestore = false
     @State private var enabled = CloudSync.isOn
+    @State private var syncFiles = UserDefaults.standard.bool(forKey: FileSync.enabledKey)
 
     var body: some View {
         Form {
@@ -28,6 +29,10 @@ struct SyncSettingsView: View {
                 onSection
             } else {
                 offSection
+            }
+
+            if enabled {
+                filesSection
             }
 
             Anchor.SettingsSection(
@@ -63,6 +68,7 @@ struct SyncSettingsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             enabled = CloudSync.isOn
+            syncFiles = UserDefaults.standard.bool(forKey: FileSync.enabledKey)
             keys.refresh()
         }
         .sheet(isPresented: $showRestore) {
@@ -106,6 +112,29 @@ struct SyncSettingsView: View {
                 Text("Turn on iCloud sync").font(.system(.subheadline, design: .rounded).weight(.semibold))
             }
             .disabled(reason != nil)
+        }
+    }
+
+    @ViewBuilder
+    private var filesSection: some View {
+        let reason = FileSync.reasonCannotTurnOn()
+        Anchor.SettingsSection(
+            title: "Voice notes and photos",
+            footer: reason ?? "Only files that are already locked are sent, so iCloud holds nothing readable. This uses your own iCloud storage, and it is a switch for each device. A voice note you delete is deleted from iCloud and from your other devices."
+        ) {
+            Toggle(isOn: $syncFiles) {
+                Text("Send voice notes and photos").font(.system(.subheadline, design: .rounded))
+            }
+            .disabled(reason != nil && !syncFiles)
+            .onChange(of: syncFiles) { _, on in
+                UserDefaults.standard.set(on, forKey: FileSync.enabledKey)
+                if on { FileSync.startIfDue(force: true) }
+            }
+            if let last = UserDefaults.standard.string(forKey: FileSync.lastKey), syncFiles {
+                Text(last)
+                    .font(.system(.footnote, design: .rounded))
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 
