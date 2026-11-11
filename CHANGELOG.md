@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch DOC29: the plan and status now record that everything through R4 builds and launches on an iPhone 14 Pro, with the two fixes that got it there: the AI tools build errors, and the app closing at launch because iCloud was switched on by default. iCloud sync stays off until SY1b.
 - Patch SY1a: every item Anchor keeps now has a default for each value, another step toward iCloud sync. It changes nothing you see.
 - Patch SY0: the database no longer insists on a unique id for each item, and importing a backup keeps an id from being added twice. This prepares for iCloud sync and changes nothing you see.
 - Patch 35g4: the words, addresses, model names, today's plan and other typed settings are locked too, which finishes locking.

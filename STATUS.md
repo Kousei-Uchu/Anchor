@@ -8,8 +8,9 @@ A private safety plan, contacts and journal app for iPhone and iPad, in SwiftUI 
 
 ## Branch and build
 
-- Work is on `v2-recovery`. Patches are written as `.sh` files and pasted into Terminal; the Progress table in `ANCHOR_PATCH_PLAN.md` says which are pushed and which are written and waiting. RV1a, 30p2, 35d, AI1, AI2, AI3, AI4, AI5, VN1, VN2 and VN3 are pushed and wait for you to build them.
-- The code has never been compiled by the tool that writes the patches, which has no Xcode. It does run `bash scripts/check-all.sh`, which reads every Swift file with a parser and runs the content checks; that finds syntax slips, not compile errors. A patch is marked as building only after you have built it and told me so; on 9 Nov 2026 you confirmed everything pushed through R3 builds and works, and each newer patch stays "build not yet confirmed" until you do the same. A first build after several patches may need small fixes.
+- Work is on `v2-recovery`. Patches are written as `.sh` files and pasted into Terminal; the Progress table in `ANCHOR_PATCH_PLAN.md` says which are pushed and which are written and waiting. Everything through R4 is pushed, and it builds and launches on your phone; what is left is trying each patch (see `REMAINING.md`).
+- The code has never been compiled by the tool that writes the patches, which has no Xcode. It does run `bash scripts/check-all.sh`, which reads every Swift file with a parser and runs the content checks; that finds syntax slips, not compile errors. A patch is marked as building only after you have built it and told me so; on 9 Nov 2026 you confirmed everything pushed through R3 builds and works, and each newer patch stays "build not yet confirmed" until you do the same. 
+- iCloud sync is off. The iCloud entitlement is in the app, and every store is opened with `cloudKitDatabase: .none` (FIX2) until SY1b makes the schema ready and turns sync on.
 - Open `iOS/Anchor/Anchor.xcodeproj` in Xcode 26 or later. Two targets: the app and `AnchorWidget` (the widget extension). App group `group.page.aspens.anchor`; a shared Keychain item for the widget key (Patch 35a2).
 
 ## Where things live
