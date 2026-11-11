@@ -113,6 +113,9 @@
 		D1A2B3C4E5F6478899AABB03 /* DiarizerModels in Resources */ = {isa = PBXBuildFile; fileRef = D1A2B3C4E5F6478899AABB04 /* DiarizerModels */; };
 		D1A2B3C4E5F6478899AABB0A /* PeopleFinder.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A2B3C4E5F6478899AABB0B /* PeopleFinder.swift */; };
 		D1A2B3C4E5F6478899AABB0C /* PeopleScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A2B3C4E5F6478899AABB0D /* PeopleScreen.swift */; };
+		D1A2B3C4E5F6478899AABB0E /* TapTurns.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A2B3C4E5F6478899AABB0F /* TapTurns.swift */; };
+		D1A2B3C4E5F6478899AABB10 /* ReplayPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A2B3C4E5F6478899AABB11 /* ReplayPlayer.swift */; };
+		D1A2B3C4E5F6478899AABB12 /* PeopleTapScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A2B3C4E5F6478899AABB13 /* PeopleTapScreen.swift */; };
 		D1A2B3C4E5F6478899AABB06 /* SpeakerSeparation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A2B3C4E5F6478899AABB07 /* SpeakerSeparation.swift */; };
 		D1A2B3C4E5F6478899AABB08 /* SpeakerTryIt.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A2B3C4E5F6478899AABB09 /* SpeakerTryIt.swift */; };
 /* End PBXBuildFile section */
@@ -256,6 +259,9 @@
 		D1A2B3C4E5F6478899AABB04 /* DiarizerModels */ = {isa = PBXFileReference; lastKnownFileType = folder; path = DiarizerModels; sourceTree = "<group>"; };
 		D1A2B3C4E5F6478899AABB0B /* PeopleFinder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeopleFinder.swift; sourceTree = "<group>"; };
 		D1A2B3C4E5F6478899AABB0D /* PeopleScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeopleScreen.swift; sourceTree = "<group>"; };
+		D1A2B3C4E5F6478899AABB0F /* TapTurns.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TapTurns.swift; sourceTree = "<group>"; };
+		D1A2B3C4E5F6478899AABB11 /* ReplayPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReplayPlayer.swift; sourceTree = "<group>"; };
+		D1A2B3C4E5F6478899AABB13 /* PeopleTapScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeopleTapScreen.swift; sourceTree = "<group>"; };
 		D1A2B3C4E5F6478899AABB07 /* SpeakerSeparation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeakerSeparation.swift; sourceTree = "<group>"; };
 		D1A2B3C4E5F6478899AABB09 /* SpeakerTryIt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeakerTryIt.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -330,6 +336,7 @@
 				C7C09DFE30173A5900F9144F /* JournalContextSuggestionsView.swift */,
 				5A1E7C20B3D94F68A0C1E2D7 /* JournalAssist.swift */,
 				D1A2B3C4E5F6478899AABB0D /* PeopleScreen.swift */,
+				D1A2B3C4E5F6478899AABB13 /* PeopleTapScreen.swift */,
 				4D9E1A7C03B8426F95A0C3E1 /* JournalVoice.swift */,
 				12C7B8E05D9A4F63A1E4D0B8 /* SpeakerLabels.swift */,
 				988D389A938F4784B62E6999 /* JournalEntryEditorView.swift */,
@@ -362,6 +369,8 @@
 				92467451520AC73206018CEC /* CloudSync.swift */,
 				B2E6D1E3F4C55B808D7EAF12 /* FileSync.swift */,
 				D1A2B3C4E5F6478899AABB0B /* PeopleFinder.swift */,
+				D1A2B3C4E5F6478899AABB0F /* TapTurns.swift */,
+				D1A2B3C4E5F6478899AABB11 /* ReplayPlayer.swift */,
 				D1A2B3C4E5F6478899AABB07 /* SpeakerSeparation.swift */,
 				D1A2B3C4E5F6478899AABB09 /* SpeakerTryIt.swift */,
 				92D593B269EB6B064DC986FE /* LockMyData.swift */,
@@ -705,6 +714,9 @@
 				A1F5C0D2E3B44A7F8C6D9E01 /* FileSync.swift in Sources */,
 				D1A2B3C4E5F6478899AABB0A /* PeopleFinder.swift in Sources */,
 				D1A2B3C4E5F6478899AABB0C /* PeopleScreen.swift in Sources */,
+				D1A2B3C4E5F6478899AABB0E /* TapTurns.swift in Sources */,
+				D1A2B3C4E5F6478899AABB10 /* ReplayPlayer.swift in Sources */,
+				D1A2B3C4E5F6478899AABB12 /* PeopleTapScreen.swift in Sources */,
 				D1A2B3C4E5F6478899AABB06 /* SpeakerSeparation.swift in Sources */,
 				D1A2B3C4E5F6478899AABB08 /* SpeakerTryIt.swift in Sources */,
 				0CAA287DC6AAD87AC93CC178 /* LockMyData.swift in Sources */,

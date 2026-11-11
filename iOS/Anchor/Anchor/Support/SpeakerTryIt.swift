@@ -49,6 +49,13 @@ struct SpeakerTryItView: View {
                     }
                     .disabled(working || !SpeakerSeparation.isAvailable)
                 }
+                ForEach(names, id: \.self) { name in
+                    NavigationLink {
+                        PeopleTapScreen(folder: .voiceNotes, fileName: name) { added = $0 }
+                    } label: {
+                        Text("Replay and tap: " + label(name)).font(.system(.subheadline, design: .rounded))
+                    }
+                }
                 if !added.isEmpty {
                     Text(added).font(.system(.footnote, design: .rounded))
                 }

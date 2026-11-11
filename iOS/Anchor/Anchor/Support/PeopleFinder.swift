@@ -15,6 +15,8 @@
 import Foundation
 
 enum PeopleFinder {
+    typealias Turn = SpeakerSeparation.Turn
+
     /// One person's words, from where they start speaking until another person does.
     struct Line: Equatable, Sendable {
         let person: Int
@@ -61,7 +63,15 @@ enum PeopleFinder {
     static func find(_ folder: StoredFiles.Folder, _ name: String) async throws -> Outcome {
         let turns = try await SpeakerSeparation.separate(folder, name)
         try Task.checkCancellation()
+        return try await withWords(folder, name, turns: turns)
+    }
 
+    /// The same, for turns the person tapped (Patch VN4b): no model reads the recording; only the words are made out.
+    static func find(_ folder: StoredFiles.Folder, _ name: String, tapped turns: [Turn]) async throws -> Outcome {
+        try await withWords(folder, name, turns: turns)
+    }
+
+    private static func withWords(_ folder: StoredFiles.Folder, _ name: String, turns: [Turn]) async throws -> Outcome {
         guard let copy = StoredFiles.workingCopy(folder, name) else { throw SpeakerSeparation.Failure.cannotOpen }
         defer { StoredFiles.removeWorkingCopy(copy) }
 

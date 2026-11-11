@@ -1,5 +1,6 @@
 // Checks that finding who is speaking (VN4a, E2, D38, D63, D64, D73 in ANCHOR_PATCH_PLAN.md) keeps nothing about a voice
 // and never goes online. Run it from anywhere:  node scripts/check-speaker-separation.mjs
+// 9. Replay and tap (VN4b) uses no model and no recogniser, and keeps and sends nothing.
 // 1. FluidAudio is imported in one file only, Support/SpeakerSeparation.swift, and is linked into the app and not the widget.
 // 2. The package is pinned to one exact version, so a build never picks up a newer one by itself.
 // 3. That file never goes online and never fetches a model: no URLSession or URLRequest, none of the library's download or
@@ -141,6 +142,25 @@ else {
   if (!/\bsupportsOnDeviceRecognition\b/.test(transcriber)) problems.push("FileTranscription does not check the phone can recognise the language on its own.");
   if (/\bUserDefaults\b|\bURLSession\b|\.write\(/.test(transcriber)) problems.push("FileTranscription keeps something or goes online.");
 }
+
+// 9. Replay and tap (VN4b): no model and no recogniser reads anything, and nothing is kept or sent.
+for (const rel of ["Support/TapTurns.swift", "Support/ReplayPlayer.swift", "Views/Journal/PeopleTapScreen.swift"]) {
+  const f = files.find((x) => x.rel === rel);
+  if (!f) { problems.push(`${rel} is missing.`); continue; }
+  const code = f.text.split("#if DEBUG")[0];
+  const rules = [
+    [/\bFluidAudio\b|SpeakerSeparation\.(separate|isAvailable|forbidDownloads|turns|personCount)\b|\bFileTranscription\b|\bSFSpeech\w*|\bOfflineDiarizer\w*/, "reaches the model or the recogniser; replay and tap uses neither"],
+    [/\bURLSession\b|\bURLRequest\b|\bNWConnection\b|\bNWPathMonitor\b/, "goes online"],
+    [/\bUserDefaults\b|\bSecItem\w*|\bKeychain\w*|\bModelContext\b|\bmodelContext\b|\.insert\(|@Model\b|\bAppStorage\b|\bSceneStorage\b|\bUIPasteboard\b/, "reaches storage, the Keychain, the database or the clipboard"],
+    [/\.write\(|\.createFile\(|\bFileHandle\b|\bOutputStream\b|\bwriteToFile\b|\bworkingCopy\(/, "writes a file"],
+    [/\bCodable\b|\bEncodable\b|\bNSCoding\b|\bJSONEncoder\b|\bPropertyListEncoder\b/, "makes something that can be saved"],
+  ];
+  for (const [pattern, why] of rules) if (pattern.test(code)) problems.push(`${rel}: ${why}.`);
+}
+const replay = files.find((x) => x.rel === "Support/ReplayPlayer.swift");
+if (replay && !/AVAudioPlayer\(data:/.test(replay.text)) problems.push("Support/ReplayPlayer.swift does not play from memory with AVAudioPlayer(data:).");
+const tapScreen = files.find((x) => x.rel === "Views/Journal/PeopleTapScreen.swift");
+if (tapScreen && !/PeopleScreen\(/.test(tapScreen.text)) problems.push("Views/Journal/PeopleTapScreen.swift does not open the people screen.");
 
 // 1 and 2. The project.
 const pbx = readFileSync(join(root, "iOS/Anchor/Anchor.xcodeproj/project.pbxproj"), "utf8");

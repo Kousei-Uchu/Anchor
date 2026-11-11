@@ -66,12 +66,11 @@ Everything here builds and launches on your phone (confirmed 11 Nov 2026, after 
 
 ## 3. Not started, in order
 
-1. **VN4a4** (VN4a1 is pushed, VN4a2, VN4a3a and VN4a3b are written): the people screen, how many were heard, a name for each beside a transcript preview (VN4a3, which needs the words lined up with the time ranges VN4a2 returns); then the switch, the buttons, the credit in About and the privacy words (VN4a4). The model ships inside the app, about 21.6 MB.
-2. **VN4b**: replay and tap, for the more privacy-minded: play the recording back and tap where each new person starts, with no model. After VN4a.
-3. **VN4c**: the words as a backup or beside the model: a language model reads only the transcript and suggests where the speaker changes, on the phone and through Ollama on your own computer, behind the AI switch. After VN4a.
-4. **VN5**: speaker tags in exports, per entry and per person: include the name, hide it, or leave that person's words out. After VN4a.
-5. **52**: refresh the Remotion promo with new screenshots and captions. The single source is already true (`remotion-project/src/Promo.tsx`, `npm run sync:promo`); what is left needs the app run on a simulator.
-6. **53**: the long full-tour video, split into per-tab scenes, scripted from `website/src/content/guide.generated.json`. Waits on 52. Size L, to be split.
+1. **VN4a4** (VN4a1 is pushed; VN4a2, VN4a3a, VN4a3b and VN4b are written): the switch, the buttons, the credit in About and the privacy words (VN4a4). The model ships inside the app, about 21.6 MB.
+2. **VN4c**: the words as a backup or beside the model: a language model reads only the transcript and suggests where the speaker changes, on the phone and through Ollama on your own computer, behind the AI switch. After VN4a.
+3. **VN5**: speaker tags in exports, per entry and per person: include the name, hide it, or leave that person's words out. After VN4a.
+4. **52**: refresh the Remotion promo with new screenshots and captions. The single source is already true (`remotion-project/src/Promo.tsx`, `npm run sync:promo`); what is left needs the app run on a simulator.
+5. **53**: the long full-tour video, split into per-tab scenes, scripted from `website/src/content/guide.generated.json`. Waits on 52. Size L, to be split.
 7. **54**: Android decision write-up, optional prototype spike. Android itself is far future (D4).
 
 **Parked on purpose**

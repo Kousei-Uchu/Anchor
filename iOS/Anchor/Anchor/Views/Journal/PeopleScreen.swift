@@ -2,7 +2,7 @@
 //  PeopleScreen.swift
 //  Anchor
 //
-//  The people screen (Patch VN4a3b, docs/OPTIONAL_FEATURES.md, E2, D38, D63, D74): how many people were heard in one
+//  The people screen (Patches VN4a3b and VN4b, docs/OPTIONAL_FEATURES.md, E2, D38, D63, D74): how many people were heard in one
 //  recording, a name for each beside the start of what they said, and a button that hands the labelled lines to
 //  whoever opened it, to add to the page. It goes through `PeopleFinder` only; it never reaches the model or the
 //  recogniser itself, and it keeps nothing: the names you type live on this screen until it closes, and what is
@@ -15,6 +15,8 @@ struct PeopleScreen: View {
     let folder: StoredFiles.Folder
     let fileName: String
     /// Called with the labelled lines when the person taps Add to this page. The caller decides where they go.
+    /// Turns the person tapped (VN4b). Nil means the speaker model finds them.
+    var tapped: [PeopleFinder.Turn]?
     let onUse: (String) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -34,7 +36,7 @@ struct PeopleScreen: View {
                 Anchor.SettingsSection(title: nil, footer: "This listens to the recording on this phone only. Nothing is sent anywhere or saved.") {
                     HStack(spacing: 12) {
                         ProgressView()
-                        Text("Finding who is speaking…").font(.system(.subheadline, design: .rounded))
+                        Text(tapped == nil ? "Finding who is speaking…" : "Making out the words…").font(.system(.subheadline, design: .rounded))
                     }
                     Button {
                         task?.cancel()
@@ -111,14 +113,18 @@ struct PeopleScreen: View {
     }
 
     private func start() {
-        guard PeopleFinder.isAvailable else {
+        guard tapped != nil || PeopleFinder.isAvailable else {
             phase = .failed("The speaker model is not in this build.")
             return
         }
         phase = .working
         task = Task {
             do {
-                outcome = try await PeopleFinder.find(folder, fileName)
+                if let tapped {
+                    outcome = try await PeopleFinder.find(folder, fileName, tapped: tapped)
+                } else {
+                    outcome = try await PeopleFinder.find(folder, fileName)
+                }
                 phase = .done
             } catch is CancellationError {
                 // The screen was closed; nothing to show.
