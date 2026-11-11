@@ -9,6 +9,14 @@
 - The words for the About screen's creator section (D23, 1).
 - The licence files you said you would attach, so the `LICENSE` file can be written (D23, 2). Nothing is written yet.
 
+**Needed before SY1b can be written (iCloud sync switch)**
+
+- The iCloud container name you want to register for the app, for example `iCloud.page.aspens.anchor` (the app is `page.aspens.anchor`). I will not guess it, because the entitlement has to match what is registered in your Apple developer account.
+- The iCloud (CloudKit) capability added to the app target in Xcode, with that container ticked. `Anchor.entitlements` has no iCloud key today, and adding one without the matching registration stops the app from signing, so this is yours to do first. The widget extension does not need it.
+- A second device signed in to the same Apple ID to try it on. A simulator cannot show whether two devices agree.
+- A go-ahead on the two relationships (`AppointmentSeries.occurrences`, `DecisionPresetCategory.choices`): CloudKit wants them optional with an inverse, which changes how a stored link is kept. I will make the change in its own small patch, and it needs the safety copy and your data on a copy first.
+- How the second device gets the data key: D40 says the recovery key is typed on the new device. I have not checked that a screen for typing it in on a new device exists; that is the first thing I will look at once the above is in place.
+
 **Things to read and answer**
 
 - D69 and `docs/FIELD_INVENTORY.md` (35f): the list of every field and setting, locked or plain, with the reason. Nothing to try on your phone. Say which verdicts to change; the ones I left plain on a judgment are reminder times, the crisis-numbers country, the focus timer lengths and times the app sets for itself.
