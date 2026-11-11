@@ -120,7 +120,7 @@ final class DemoCaptureTests: XCTestCase {
                 "path": path,
                 "width": size.width,
                 "height": size.height,
-                "scale": XCUIScreen.main.scale,
+                "scale": shot.image.scale,
                 "elements": buttons(in: app, screen: size),
             ]
             let data = try JSONSerialization.data(withJSONObject: info, options: [.prettyPrinted, .sortedKeys])
