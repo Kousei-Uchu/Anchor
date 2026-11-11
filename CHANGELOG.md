@@ -1,5 +1,6 @@
 # Changelog
 
+- Patch VN4a3a: the part of finding who is speaking that puts words beside each person. When asked, the phone listens to a kept recording again, on the phone only, to work out when each word was said, and the words are given to whoever was speaking. Nothing is saved, nothing goes online, and nothing in a release build reaches it yet.
 - Patch VN4a2: Anchor can now listen to a recording once and say who spoke when (Person 1, Person 2 and so on), with a model that is inside the app. It keeps nothing about a voice, makes no network request, and removes the plain copy it listens to as soon as it is done. Nothing in a release build uses it yet; a test build has a row in Settings to try it on a voice note.
 - Patch VN4a1: the first step of finding who is speaking in a recording. It adds a script that fetches the speaker-separation model files (about 22 MB, from one fixed version) and a check that keeps them exactly as fetched. Nothing in the app changes yet and nothing is sent anywhere by the app.
 - Patch DOC30: the plan and status now record that the sync work up to SY1b2 builds and launches on your phone, and that the recovery key QR code (SY3) is pushed. Nothing in the app changes.

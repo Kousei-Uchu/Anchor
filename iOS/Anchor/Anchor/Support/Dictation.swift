@@ -349,3 +349,81 @@ struct DictationTarget {
         return base + joiner + lines.joined(separator: "\n")
     }
 }
+
+/// Turns a recording that is already kept into words with the time each was said, on the phone only (Patch VN4a3,
+/// D64, D74). It exists so the people screen can put words beside who was speaking: dictation keeps only the
+/// words, not when each was said. Only `PeopleFinder` calls `words(at:)`, with a plain working copy that it removes
+/// when it is done. The words and times are handed back and kept nowhere here. The recogniser is told to work on
+/// the device only, and nothing starts if the phone cannot do that for the person's language.
+enum FileTranscription {
+    /// One word and the stretch of the recording it was said in, in seconds from the start.
+    struct Word: Equatable, Sendable {
+        let text: String
+        let start: TimeInterval
+        let end: TimeInterval
+    }
+
+    enum Failure: Error {
+        case languageNotReady, notAllowed, nothingHeard, failed
+
+        var plainText: String {
+            switch self {
+            case .languageNotReady: return "This phone cannot turn your language into text on its own, so the words cannot be shown beside each person. Anchor never sends a recording to Apple for this."
+            case .notAllowed: return "Anchor does not have speech recognition, so the words cannot be shown beside each person. You can allow it in the phone's Settings, under Anchor."
+            case .nothingHeard: return "No words could be made out in that recording."
+            case .failed: return "Turning that recording into words did not work this time."
+            }
+        }
+    }
+
+    static func words(at url: URL) async throws -> [Word] {
+        let locale = Locale.current
+        guard let recogniser = SFSpeechRecognizer(locale: locale),
+              recogniser.isAvailable,
+              recogniser.supportsOnDeviceRecognition else {
+            throw Failure.languageNotReady
+        }
+        let status = await withCheckedContinuation { (continuation: CheckedContinuation<SFSpeechRecognizerAuthorizationStatus, Never>) in
+            SFSpeechRecognizer.requestAuthorization { continuation.resume(returning: $0) }
+        }
+        guard status == .authorized else { throw Failure.notAllowed }
+        try Task.checkCancellation()
+
+        let request = SFSpeechURLRecognitionRequest(url: url)
+        request.requiresOnDeviceRecognition = true
+        request.shouldReportPartialResults = false
+        request.addsPunctuation = true
+        request.taskHint = .dictation
+
+        let holder = TaskHolder()
+        let found: [Word] = try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<[Word], Error>) in
+                var finished = false
+                holder.task = recogniser.recognitionTask(with: request) { result, error in
+                    if finished { return }
+                    if let result, result.isFinal {
+                        finished = true
+                        let words = result.bestTranscription.segments.map {
+                            Word(text: $0.substring, start: $0.timestamp, end: $0.timestamp + $0.duration)
+                        }
+                        continuation.resume(returning: words)
+                    } else if error != nil {
+                        finished = true
+                        continuation.resume(throwing: Failure.failed)
+                    }
+                }
+            }
+        } onCancel: {
+            holder.task?.cancel()
+        }
+        try Task.checkCancellation()
+        let usable = found.filter { !$0.text.trimmingCharacters(in: .whitespaces).isEmpty }
+        guard !usable.isEmpty else { throw Failure.nothingHeard }
+        return usable
+    }
+
+    /// Lets the cancel handler reach the recognition task.
+    private final class TaskHolder: @unchecked Sendable {
+        var task: SFSpeechRecognitionTask?
+    }
+}

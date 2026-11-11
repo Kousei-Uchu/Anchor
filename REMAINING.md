@@ -66,7 +66,7 @@ Everything here builds and launches on your phone (confirmed 11 Nov 2026, after 
 
 ## 3. Not started, in order
 
-1. **VN4a3, VN4a4** (VN4a1 is pushed and VN4a2 is written): the people screen, how many were heard, a name for each beside a transcript preview (VN4a3, which needs the words lined up with the time ranges VN4a2 returns); then the switch, the buttons, the credit in About and the privacy words (VN4a4). The model ships inside the app, about 21.6 MB.
+1. **VN4a3b, VN4a4** (VN4a1 is pushed, VN4a2 and VN4a3a are written): the people screen, how many were heard, a name for each beside a transcript preview (VN4a3, which needs the words lined up with the time ranges VN4a2 returns); then the switch, the buttons, the credit in About and the privacy words (VN4a4). The model ships inside the app, about 21.6 MB.
 2. **VN4b**: replay and tap, for the more privacy-minded: play the recording back and tap where each new person starts, with no model. After VN4a.
 3. **VN4c**: the words as a backup or beside the model: a language model reads only the transcript and suggests where the speaker changes, on the phone and through Ollama on your own computer, behind the AI switch. After VN4a.
 4. **VN5**: speaker tags in exports, per entry and per person: include the name, hide it, or leave that person's words out. After VN4a.

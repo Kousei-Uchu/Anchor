@@ -28,6 +28,7 @@ struct AnchorApp: App {
         JournalVoiceSelfTest.run()
         SpeakerLabelsSelfTest.run()
         SpeakerSeparationSelfTest.run()
+        PeopleFinderSelfTest.run()
         AIAnswerReaderSelfTest.run()
         OllamaSelfTest.run()
         OtherProviderSelfTest.run()

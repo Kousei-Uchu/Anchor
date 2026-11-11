@@ -10,7 +10,11 @@
 //    returns can be saved (no Codable). The library is run with export: .none and exposeChunkEmbeddings: false.
 // 6. The recording is only ever read from a working copy that is removed in a defer, and StoredFiles makes that copy in the
 //    phone's temporary folder, removes only inside it, and clears it at every start.
-// 7. Only the test-build screen calls SpeakerSeparation.separate until the people screen (VN4a3) exists.
+// 7. Only the people finder (Support/PeopleFinder.swift) and the test-build screen call SpeakerSeparation.separate, and only the
+//    people finder calls FileTranscription.words.
+// 8. The people finder keeps nothing and goes nowhere: no storage, no network, nothing it returns can be saved, it works from a
+//    working copy removed in a defer, and the people screen goes through it. FileTranscription works on the phone only
+//    (requiresOnDeviceRecognition = true) and checks the phone can recognise the language on its own.
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -100,12 +104,43 @@ if (!stored) {
 // 7. Callers.
 for (const f of files) {
   if (f.rel === runnerPath) continue;
-  if (/SpeakerSeparation\.separate\(/.test(f.text) && f.rel !== "Support/SpeakerTryIt.swift") {
-    problems.push(`${f.rel}: calls SpeakerSeparation.separate; only the test-build screen may until VN4a3 exists`);
+  if (/SpeakerSeparation\.separate\(/.test(f.text) && f.rel !== "Support/SpeakerTryIt.swift" && f.rel !== "Support/PeopleFinder.swift") {
+    problems.push(`${f.rel}: calls SpeakerSeparation.separate; only the people finder and the test-build screen may`);
+  }
+  if (/FileTranscription\.words\(/.test(f.text) && f.rel !== "Support/PeopleFinder.swift") {
+    problems.push(`${f.rel}: calls FileTranscription.words; only the people finder may`);
   }
 }
 const tryIt = files.find((f) => f.rel === "Support/SpeakerTryIt.swift");
 if (tryIt && !/^\s*#if DEBUG/m.test(tryIt.text)) problems.push("Support/SpeakerTryIt.swift is not inside #if DEBUG.");
+
+// 8. The people finder and the recogniser.
+const finder = files.find((f) => f.rel === "Support/PeopleFinder.swift");
+if (!finder) {
+  problems.push("Support/PeopleFinder.swift is missing.");
+} else {
+  const finderCode = finder.text.split("#if DEBUG")[0];
+  const rules = [
+    [/\bURLSession\b|\bURLRequest\b|\bNWConnection\b|\bNWPathMonitor\b/, "goes online"],
+    [/\bUserDefaults\b|\bSecItem\w*|\bKeychain\w*|\bModelContext\b|\bmodelContext\b|\.insert\(|@Model\b|\bAppStorage\b|\bSceneStorage\b|\bUIPasteboard\b/, "reaches storage, the Keychain, the database or the clipboard"],
+    [/\.write\(|\.createFile\(|\bFileHandle\b|\bOutputStream\b|\bwriteToFile\b/, "writes to storage"],
+    [/\bCodable\b|\bEncodable\b|\bNSCoding\b|\bJSONEncoder\b|\bPropertyListEncoder\b/, "makes something that can be saved"],
+    [/StoredFiles\.read\(|\.url\(for:|VoiceNoteStore\.url/, "reads a recording from its own file"],
+  ];
+  for (const [pattern, why] of rules) if (pattern.test(finderCode)) problems.push(`Support/PeopleFinder.swift: ${why}.`);
+  if (!/StoredFiles\.workingCopy\(/.test(finderCode)) problems.push("Support/PeopleFinder.swift does not read from StoredFiles.workingCopy.");
+  if (!/defer\s*\{\s*StoredFiles\.removeWorkingCopy\(/.test(finderCode)) problems.push("Support/PeopleFinder.swift does not remove its working copy in a defer.");
+}
+const screen = files.find((f) => f.rel === "Views/Journal/PeopleScreen.swift");
+if (screen && /SpeakerSeparation\.|FileTranscription\./.test(screen.text)) problems.push("Views/Journal/PeopleScreen.swift reaches the model or the recogniser itself; it goes through PeopleFinder.");
+const dictation = files.find((f) => f.rel === "Support/Dictation.swift");
+const transcriber = dictation ? dictation.text.slice(Math.max(dictation.text.indexOf("enum FileTranscription"), 0)) : "";
+if (!/enum FileTranscription/.test(transcriber)) problems.push("Support/Dictation.swift has no FileTranscription.");
+else {
+  if (!/SFSpeechURLRecognitionRequest/.test(transcriber) || !/request\.requiresOnDeviceRecognition\s*=\s*true/.test(transcriber)) problems.push("FileTranscription does not work on the phone only (requiresOnDeviceRecognition = true).");
+  if (!/\bsupportsOnDeviceRecognition\b/.test(transcriber)) problems.push("FileTranscription does not check the phone can recognise the language on its own.");
+  if (/\bUserDefaults\b|\bURLSession\b|\.write\(/.test(transcriber)) problems.push("FileTranscription keeps something or goes online.");
+}
 
 // 1 and 2. The project.
 const pbx = readFileSync(join(root, "iOS/Anchor/Anchor.xcodeproj/project.pbxproj"), "utf8");

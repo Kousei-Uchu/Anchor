@@ -111,6 +111,7 @@
 		FDBD68869E5A11B99B6BED27 /* AIAsk.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94ECF0E537016231C42D3609 /* AIAsk.swift */; };
 		D1A2B3C4E5F6478899AABB01 /* FluidAudio in Frameworks */ = {isa = PBXBuildFile; productRef = D1A2B3C4E5F6478899AABB02 /* FluidAudio */; };
 		D1A2B3C4E5F6478899AABB03 /* DiarizerModels in Resources */ = {isa = PBXBuildFile; fileRef = D1A2B3C4E5F6478899AABB04 /* DiarizerModels */; };
+		D1A2B3C4E5F6478899AABB0A /* PeopleFinder.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A2B3C4E5F6478899AABB0B /* PeopleFinder.swift */; };
 		D1A2B3C4E5F6478899AABB06 /* SpeakerSeparation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A2B3C4E5F6478899AABB07 /* SpeakerSeparation.swift */; };
 		D1A2B3C4E5F6478899AABB08 /* SpeakerTryIt.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A2B3C4E5F6478899AABB09 /* SpeakerTryIt.swift */; };
 /* End PBXBuildFile section */
@@ -252,6 +253,7 @@
 		FC91DABF2267094CC3DB0AD7 /* OnePageSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnePageSummary.swift; sourceTree = "<group>"; };
 		FDFFB2420D684494B43F882B /* PlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanView.swift; sourceTree = "<group>"; };
 		D1A2B3C4E5F6478899AABB04 /* DiarizerModels */ = {isa = PBXFileReference; lastKnownFileType = folder; path = DiarizerModels; sourceTree = "<group>"; };
+		D1A2B3C4E5F6478899AABB0B /* PeopleFinder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeopleFinder.swift; sourceTree = "<group>"; };
 		D1A2B3C4E5F6478899AABB07 /* SpeakerSeparation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeakerSeparation.swift; sourceTree = "<group>"; };
 		D1A2B3C4E5F6478899AABB09 /* SpeakerTryIt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeakerTryIt.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -356,6 +358,7 @@
 				905C4FDA487AB3F8365B7465 /* SafetyCopy.swift */,
 				92467451520AC73206018CEC /* CloudSync.swift */,
 				B2E6D1E3F4C55B808D7EAF12 /* FileSync.swift */,
+				D1A2B3C4E5F6478899AABB0B /* PeopleFinder.swift */,
 				D1A2B3C4E5F6478899AABB07 /* SpeakerSeparation.swift */,
 				D1A2B3C4E5F6478899AABB09 /* SpeakerTryIt.swift */,
 				92D593B269EB6B064DC986FE /* LockMyData.swift */,
@@ -697,6 +700,7 @@
 				60A074630CC7C6188746A45F /* SafetyCopy.swift in Sources */,
 				5D8CD457D6400371B991BDA2 /* CloudSync.swift in Sources */,
 				A1F5C0D2E3B44A7F8C6D9E01 /* FileSync.swift in Sources */,
+				D1A2B3C4E5F6478899AABB0A /* PeopleFinder.swift in Sources */,
 				D1A2B3C4E5F6478899AABB06 /* SpeakerSeparation.swift in Sources */,
 				D1A2B3C4E5F6478899AABB08 /* SpeakerTryIt.swift in Sources */,
 				0CAA287DC6AAD87AC93CC178 /* LockMyData.swift in Sources */,
