@@ -1,6 +1,6 @@
 # Anchor: what is left
 
-*Only what is still to do. When something is finished, confirmed or answered, it is deleted from this file in the same patch, never moved to a done list. Finished work is in the Progress table of `ANCHOR_PATCH_PLAN.md` and in `docs/PLAN_CHANGELOG.md`. Last updated: 11 Nov 2026, after VN4a2.*
+*Only what is still to do. When something is finished, confirmed or answered, it is deleted from this file in the same patch, never moved to a done list. Finished work is in the Progress table of `ANCHOR_PATCH_PLAN.md` and in `docs/PLAN_CHANGELOG.md`. Last updated: 11 Nov 2026, after DOC31.*
 
 ## 1. Waiting on you
 
@@ -19,7 +19,7 @@
 
 - D29a: try the Apple Health sleep cleanup on a real device (a review run never touches Health). The Apple Health checklist is in `docs/SLEEP.md`.
 - D28: read the privacy page and open its links, before a TestFlight build.
-- VN4a2 (who is speaking): a test-build row only, so it needs an Xcode build and not the review run. Open the new build (Xcode fetches the FluidAudio package the first time, so it needs the internet once; commit the `Package.resolved` it writes). Settings, Who is speaking (test build), tap a voice note with two or more voices in it. Tell me what it shows, how long it took, and whether the people are told apart. A voice note with one voice should show one person.
+- VN4a2 to VN4c2 (who is speaking): these are pushed, and Xcode has already fetched the FluidAudio package and its `Package.resolved` is committed. None of them has a build confirmed yet, so first build and say whether it compiles. They need a normal test build, not the review run (it has no real recordings and keeps these off). Settings, Journal, switch on Dictate in the Journal, Keep a voice note while dictating and Find who is speaking, keep a voice note with two or more voices on a Journal page, then open its three dots. Find who is speaking: tell me what it shows, how long it took, and whether the people are told apart (a voice note with one voice should show one person). Replay and tap who is speaking: check the taps give the same screen. Add to this page should add a labelled paragraph after the voice note and leave your words alone. Suggest who is speaking (VN4c2) needs AI tools on and Ollama on your Mac, because this phone has no Apple Intelligence. The VN4 and VN4c review stops say the same in full.
 
 ## 2. Pushed and building, waiting for a try on your phone
 
@@ -66,7 +66,7 @@ Everything here builds and launches on your phone (confirmed 11 Nov 2026, after 
 
 ## 3. Not started, in order
 
-1. **VN5**: speaker tags in exports, per entry and per person: include the name, hide it, or leave that person's words out. After VN4a.
+1. **VN5**: speaker tags in exports, per entry and per person: include the name, hide it, or leave that person's words out. Next.
 2. **52**: refresh the Remotion promo with new screenshots and captions. The single source is already true (`remotion-project/src/Promo.tsx`, `npm run sync:promo`); what is left needs the app run on a simulator.
 3. **53**: the long full-tour video, split into per-tab scenes, scripted from `website/src/content/guide.generated.json`. Waits on 52. Size L, to be split.
 7. **54**: Android decision write-up, optional prototype spike. Android itself is far future (D4).
