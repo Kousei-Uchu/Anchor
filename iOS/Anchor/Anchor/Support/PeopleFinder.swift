@@ -29,6 +29,30 @@ enum PeopleFinder {
         let hasWords: Bool
 
         var personCount: Int { SpeakerSeparation.personCount(in: turns) }
+
+        /// The person numbers heard, in the order they first speak.
+        var people: [Int] { Set(turns.map(\.person)).sorted() }
+
+        /// How long one person spoke for, in seconds.
+        func seconds(of person: Int) -> TimeInterval {
+            turns.filter { $0.person == person }.reduce(0) { $0 + ($1.end - $1.start) }
+        }
+    }
+
+    /// Whether this build carries the speaker model.
+    static var isAvailable: Bool { SpeakerSeparation.isAvailable }
+
+    /// The plain line to show for a run that did not finish. Never an error code.
+    static func plainText(for error: Error) -> String {
+        if let failure = error as? SpeakerSeparation.Failure { return failure.plainText }
+        return SpeakerSeparation.Failure.failed.plainText
+    }
+
+    /// The start of what one person said, for beside their name, or nil if no words were made out.
+    static func preview(of lines: [Line], person: Int, limit: Int = 80) -> String? {
+        guard let first = lines.first(where: { $0.person == person }), !first.text.isEmpty else { return nil }
+        guard first.text.count > limit else { return first.text }
+        return String(first.text.prefix(limit)).trimmingCharacters(in: .whitespaces) + "…"
     }
 
     /// Who spoke when, and as many of the words as the phone can make out, for one kept recording.
@@ -107,7 +131,7 @@ enum PeopleFinder {
     static func text(of lines: [Line], names: [Int: String] = [:]) -> String {
         lines.map { line -> String in
             let typed = names[line.person]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            let label = (typed.isEmpty || typed.contains(":") || typed.contains("\n")) ? "Person \(line.person)" : typed
+            let label = (typed.isEmpty || typed.contains(":") || typed.contains("\n") || typed.count > 40) ? "Person \(line.person)" : typed
             return label + ": " + line.text
         }.joined(separator: "\n")
     }
@@ -146,6 +170,13 @@ enum PeopleFinderSelfTest {
         check(PeopleFinder.lines(words: [], turns: turns).isEmpty, "no words, no lines")
         let text = PeopleFinder.text(of: lines, names: [1: "Mum", 2: "a:b"])
         check(text == "Mum: hello there\nPerson 2: fine thanks and you", "names written, a colon refused: \(text)")
+        check(PeopleFinder.text(of: lines, names: [1: String(repeating: "x", count: 41)]).hasPrefix("Person 1: "), "a very long name is refused")
+        check(PeopleFinder.preview(of: lines, person: 2) == "fine thanks and you", "preview of one person")
+        check(PeopleFinder.preview(of: lines, person: 3) == nil, "no preview for someone with no words")
+        let long = [PeopleFinder.Line(person: 1, start: 0, text: String(repeating: "a", count: 100))]
+        check(PeopleFinder.preview(of: long, person: 1)?.count == 81, "a long preview is cut")
+        let outcome = PeopleFinder.Outcome(turns: turns, lines: lines, hasWords: true)
+        check(outcome.people == [1, 2] && outcome.seconds(of: 2) == 4, "people and time spoken")
     }
 }
 #endif

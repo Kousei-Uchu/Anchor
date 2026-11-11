@@ -4,7 +4,7 @@
 //
 //  A way to try finding who is speaking on a real voice note (Patch VN4a2, test builds only). It lists the voice
 //  notes on this phone, runs `SpeakerSeparation` on the one you tap and shows who spoke when. It keeps nothing, and
-//  it is not part of a release build: the people screen that people use comes with VN4a3.
+//  it is not part of a release build: the people screen that people use is `PeopleScreen`, opened from here for now.
 //
 
 #if DEBUG
@@ -15,6 +15,7 @@ struct SpeakerTryItView: View {
     @State private var working = false
     @State private var lines: [String] = []
     @State private var task: Task<Void, Never>?
+    @State private var added = ""
 
     var body: some View {
         Form {
@@ -34,6 +35,22 @@ struct SpeakerTryItView: View {
                         Text(label(name)).font(.system(.subheadline, design: .rounded))
                     }
                     .disabled(working || !SpeakerSeparation.isAvailable)
+                }
+            }
+            Anchor.SettingsSection(
+                title: "People screen",
+                footer: "Opens the screen people will use, with the words beside each person. Add to this page only shows the text here; nothing is saved."
+            ) {
+                ForEach(names, id: \.self) { name in
+                    NavigationLink {
+                        PeopleScreen(folder: .voiceNotes, fileName: name) { added = $0 }
+                    } label: {
+                        Text(label(name)).font(.system(.subheadline, design: .rounded))
+                    }
+                    .disabled(working || !SpeakerSeparation.isAvailable)
+                }
+                if !added.isEmpty {
+                    Text(added).font(.system(.footnote, design: .rounded))
                 }
             }
             if working {
