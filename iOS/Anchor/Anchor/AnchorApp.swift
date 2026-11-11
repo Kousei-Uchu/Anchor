@@ -205,7 +205,7 @@ enum DemoMode {
     /// that fell back to your own data would show it to the person the phone was handed to.
     static func makeContainer() -> ModelContainer? {
         let schema = Schema(AnchorSchema.models)
-        let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true, cloudKitDatabase: .none)
         guard let container = try? ModelContainer(for: schema, configurations: [configuration]) else {
             return nil
         }

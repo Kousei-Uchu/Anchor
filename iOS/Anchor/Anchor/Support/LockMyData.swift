@@ -811,7 +811,7 @@ enum LockMyDataSelfTest {
         if hasRun { return }
         hasRun = true
         let schema = Schema(AnchorSchema.models)
-        guard let container = try? ModelContainer(for: schema, configurations: [ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)]) else {
+        guard let container = try? ModelContainer(for: schema, configurations: [ModelConfiguration(schema: schema, isStoredInMemoryOnly: true, cloudKitDatabase: .none)]) else {
             fatalError("Lock my data self-test: could not make a store in memory.")
         }
         let key = SymmetricKey(data: Data((0..<32).map { UInt8(255 - $0) }))

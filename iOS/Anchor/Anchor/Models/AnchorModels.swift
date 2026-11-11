@@ -4761,16 +4761,16 @@ enum AnchorSchema {
         // No model declares a unique id any more (Patch SY0), so a second row with the same id is kept and not merged.
         // Where Anchor adds rows from outside (the backup import), it skips an id it already has. See
         // scripts/check-no-unique-ids.mjs.
-        // Local-first: no CloudKit configuration and no sync service. Data moves
+        // Local-first: CloudKit is switched off explicitly (cloudKitDatabase: .none), because the iCloud entitlement is now present and the default would otherwise try to sync and validate the schema (Patch FIX2). No sync service. Data moves
         // only through explicit export/import, never a required third-party cloud.
-        let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+        let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false, cloudKitDatabase: .none)
         do {
             let container = try ModelContainer(for: schema, configurations: [configuration])
             applyDataProtection(at: configuration.url)
             return container
         } catch {
             openedPersistentStore = false
-            let temporary = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+            let temporary = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true, cloudKitDatabase: .none)
             do {
                 return try ModelContainer(for: schema, configurations: [temporary])
             } catch {

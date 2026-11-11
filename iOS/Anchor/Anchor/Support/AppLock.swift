@@ -994,7 +994,7 @@ enum FieldLockSelfTest {
         if hasRun { return }
         hasRun = true
         let schema = Schema(AnchorSchema.models)
-        guard let container = try? ModelContainer(for: schema, configurations: [ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)]) else {
+        guard let container = try? ModelContainer(for: schema, configurations: [ModelConfiguration(schema: schema, isStoredInMemoryOnly: true, cloudKitDatabase: .none)]) else {
             fatalError("Locked field self-test: could not make a store in memory.")
         }
         let context = ModelContext(container)

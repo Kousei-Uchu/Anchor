@@ -62,7 +62,7 @@ enum SafetyCopy {
     /// The database file as the app opens it, with its two companion files and any folder of
     /// separately stored values that sits beside it.
     private static var storeFile: URL {
-        ModelConfiguration(schema: Schema(AnchorSchema.models), isStoredInMemoryOnly: false).url
+        ModelConfiguration(schema: Schema(AnchorSchema.models), isStoredInMemoryOnly: false, cloudKitDatabase: .none).url
     }
     private static var storeDir: URL { storeFile.deletingLastPathComponent() }
 
