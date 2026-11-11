@@ -34,7 +34,10 @@ for (const file of swiftFiles(app)) {
 if (realStores !== 1) problems.push(`Expected one real store that can sync, found ${realStores}.`);
 
 const models = readFileSync(join(app, "Models/AnchorModels.swift"), "utf8");
-if (!/let wantsSync = CloudSync\.shouldSyncAtLaunch/.test(models)) problems.push("makeContainer does not decide through CloudSync.shouldSyncAtLaunch.");
+if (!/let wantsSync = syncWanted\(\)/.test(models)) problems.push("makeContainer does not decide through syncWanted.");
+if (/CloudSync/.test(models.replace(/\/\/[^\n]*/g, ""))) problems.push("AnchorModels.swift is built into the widget and must not name CloudSync in code.");
+const appSwift = readFileSync(join(root, "iOS/Anchor/Anchor/AnchorApp.swift"), "utf8");
+if (!/CloudSync\.install\(\)/.test(appSwift)) problems.push("AnchorApp.init must call CloudSync.install() before any store is opened.");
 
 const sync = readFileSync(join(app, "Support/CloudSync.swift"), "utf8");
 for (const needle of ["DataKeyStore.lookup()", "LockMyData.isOn", "LockMyData.needsMore"]) {

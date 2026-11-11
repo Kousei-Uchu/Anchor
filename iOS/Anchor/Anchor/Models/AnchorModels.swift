@@ -4816,25 +4816,35 @@ enum AnchorSchema {
     /// so nobody keeps writing into a store that won't be saved.
     static private(set) var openedPersistentStore = true
 
+    // iCloud sync (Patch SY1b). This file is also built into the widget, which has no key code, so the app hands it the
+    // decision at launch (`AnchorApp.init`, from `CloudSync.shouldSyncAtLaunch`) and nothing here names `CloudSync`.
+    /// Whether the real store should be opened with sync. Always false until the app sets it.
+    nonisolated(unsafe) static var syncWanted: () -> Bool = { false }
+    static let cloudContainerID = "iCloud.page.aspens.anchor"
+    /// What the store was opened with this time.
+    nonisolated(unsafe) static var openedWithSync = false
+    /// True when the store could not be opened with sync and was opened without it, so nothing was lost.
+    nonisolated(unsafe) static var syncFailedToStart = false
+
     static func makeContainer() -> ModelContainer {
         let schema = Schema(models)
         // No model declares a unique id any more (Patch SY0), so a second row with the same id is kept and not merged.
         // Where Anchor adds rows from outside (the backup import), it skips an id it already has. See
         // scripts/check-no-unique-ids.mjs.
         // Local-first: CloudKit is off unless the person switched iCloud sync on and everything is locked (Patch SY1b,
-        // `CloudSync.shouldSyncAtLaunch`). Every other store in the app says `cloudKitDatabase: .none` (Patch FIX2), because the
+        // `CloudSync.shouldSyncAtLaunch` through `syncWanted`). Every other store in the app says `cloudKitDatabase: .none` (Patch FIX2), because the
         // iCloud entitlement is present and the default would otherwise try to sync.
-        let wantsSync = CloudSync.shouldSyncAtLaunch
-        let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false, cloudKitDatabase: wantsSync ? .private(CloudSync.containerID) : .none)
+        let wantsSync = syncWanted()
+        let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false, cloudKitDatabase: wantsSync ? .private(cloudContainerID) : .none)
         do {
             let container = try ModelContainer(for: schema, configurations: [configuration])
-            CloudSync.openedWithSync = wantsSync
+            openedWithSync = wantsSync
             applyDataProtection(at: configuration.url)
             return container
         } catch {
             if wantsSync {
                 // Sync would not start. Open the same store without it, so nothing is hidden or lost.
-                CloudSync.syncFailedToStart = true
+                syncFailedToStart = true
                 let local = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false, cloudKitDatabase: .none)
                 if let container = try? ModelContainer(for: schema, configurations: [local]) {
                     applyDataProtection(at: local.url)

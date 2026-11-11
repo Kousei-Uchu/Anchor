@@ -14,7 +14,7 @@ import SwiftData
 /// The setting is read once, when the store is opened, so a change takes effect the next time Anchor starts.
 enum CloudSync {
     static let enabledKey = "anchor.sync.icloud"
-    static let containerID = "iCloud.page.aspens.anchor"
+    static var containerID: String { AnchorSchema.cloudContainerID }
     private static let recoveryFileKey = "anchor.sync.recoveryfile"
     private static let lockLevelKey = "anchor.sync.locklevel"
 
@@ -22,9 +22,9 @@ enum CloudSync {
     static var isOn: Bool { UserDefaults.standard.bool(forKey: enabledKey) }
 
     /// What the store was opened with this time. Set by `AnchorSchema.makeContainer`.
-    nonisolated(unsafe) static var openedWithSync = false
+    static var openedWithSync: Bool { AnchorSchema.openedWithSync }
     /// True when the store could not be opened with sync and was opened without it, so nothing was lost.
-    nonisolated(unsafe) static var syncFailedToStart = false
+    static var syncFailedToStart: Bool { AnchorSchema.syncFailedToStart }
 
     /// Sync starts only when it is switched on, the data key is on this device and the words are fully locked.
     static var shouldSyncAtLaunch: Bool {
@@ -33,8 +33,10 @@ enum CloudSync {
         return LockMyData.isOn && !LockMyData.needsMore
     }
 
-    static var launchDatabase: ModelConfiguration.CloudKitDatabase {
-        shouldSyncAtLaunch ? .private(containerID) : .none
+    /// Hands the decision to the schema, which the widget also builds and so cannot name this file. Called once, at launch,
+    /// before any store is opened.
+    static func install() {
+        AnchorSchema.syncWanted = { shouldSyncAtLaunch }
     }
 
     // MARK: What is needed before it can be switched on

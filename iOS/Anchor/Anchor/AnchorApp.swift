@@ -15,6 +15,7 @@ struct AnchorApp: App {
     init() {
         UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
         FieldLockWiring.install()
+        CloudSync.install()
         #if DEBUG
         WidgetSealSelfTest.run()
         FieldLockSelfTest.run()
