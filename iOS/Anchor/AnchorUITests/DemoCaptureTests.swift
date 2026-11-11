@@ -14,7 +14,8 @@ import XCTest
 ///   a tab name (Now, Plan, Journal, Bridge, Thread)  taps that tab
 ///   "@scroll"                                        swipes up once (the screen after the swipe is its own screen)
 ///   anything else                                    taps the button or row with that label, scrolling to find it
-/// A tile that is below the fold needs no "@scroll" in its path. The test scrolls to find it, and the
+/// Plan's default layout is widgets, so its buttons are the widgets' own: "All contacts", "All scripts", "All tools",
+/// "All affirmations", and the Recovery widget. A tile that is below the fold needs no "@scroll" in its path. The test scrolls to find it, and the
 /// website links it from the scrolled screen of its parent if it is not on the first one.
 final class DemoCaptureTests: XCTestCase {
 
@@ -25,13 +26,13 @@ final class DemoCaptureTests: XCTestCase {
         ("now-checkin", ["Check in"]),
         ("plan", ["Plan"]),
         ("plan-more", ["Plan", "@scroll"]),
-        ("plan-contacts", ["Plan", "Contacts"]),
+        ("plan-contacts", ["Plan", "All contacts"]),
         ("plan-safety", ["Plan", "Safety plan"]),
-        ("plan-grounding", ["Plan", "Grounding tools"]),
+        ("plan-grounding", ["Plan", "All tools"]),
         ("plan-tasks", ["Plan", "Tasks"]),
-        ("plan-deescalation", ["Plan", "De-escalation"]),
-        ("plan-affirmations", ["Plan", "Affirmations"]),
-        ("plan-counters", ["Plan", "Counters"]),
+        ("plan-deescalation", ["Plan", "All scripts"]),
+        ("plan-affirmations", ["Plan", "All affirmations"]),
+        ("plan-recovery", ["Plan", "Recovery"]),
         ("journal", ["Journal"]),
         ("journal-more", ["Journal", "@scroll"]),
         ("bridge", ["Bridge"]),
@@ -146,10 +147,14 @@ final class DemoCaptureTests: XCTestCase {
             return true
         }
         guard let element = find(step, in: app) else { return false }
+        // A tap that changes nothing on screen found the wrong thing (a heading, say), so the screen
+        // that follows would be a copy of this one. Count that as not reached.
+        let before = XCUIScreen.main.screenshot().pngRepresentation
         element.tap()
         sleep(2)
         dismissSystemAlert()
-        return true
+        let after = XCUIScreen.main.screenshot().pngRepresentation
+        return before != after
     }
 
     /// A button or row with this label, scrolling down up to four times to bring it into view.
@@ -157,8 +162,10 @@ final class DemoCaptureTests: XCTestCase {
         let match = NSPredicate(format: "label == %@ OR label BEGINSWITH %@", label, label + ",")
         for attempt in 0..<5 {
             for query in [app.buttons, app.cells, app.staticTexts] {
-                let element = query.matching(match).firstMatch
-                if element.exists && element.isHittable { return element }
+                // Every match, not just the first: a heading can match before the button does.
+                for element in query.matching(match).allElementsBoundByIndex where element.exists && element.isHittable {
+                    return element
+                }
             }
             if attempt < 4 {
                 app.swipeUp()
