@@ -31,7 +31,7 @@ import PencilKit
 /// place, or one of Apple's journaling suggestions.
 struct JournalCard: Equatable {
     enum Kind: String {
-        case event, song, place, suggestion
+        case event, song, place, suggestion, sleep
 
         var icon: String {
             switch self {
@@ -39,6 +39,7 @@ struct JournalCard: Equatable {
             case .song: return "music.note"
             case .place: return "mappin.and.ellipse"
             case .suggestion: return "sparkles"
+            case .sleep: return "moon.zzz.fill"
             }
         }
 
@@ -48,6 +49,7 @@ struct JournalCard: Equatable {
             case .song: return "Song"
             case .place: return "Place"
             case .suggestion: return "Suggestion"
+            case .sleep: return "Sleep"
             }
         }
 
@@ -57,6 +59,7 @@ struct JournalCard: Equatable {
             case .song: return Color(red: 0.55, green: 0.46, blue: 0.72)
             case .place: return Anchor.Theme.sage
             case .suggestion: return Anchor.Theme.accent
+            case .sleep: return Color(red: 0.36, green: 0.42, blue: 0.70)
             }
         }
     }
@@ -414,6 +417,13 @@ struct JournalEntryEditorView: View {
     @AppStorage(DictationSettings.enabledKey) private var dictationChosen = false
     @Environment(\.scenePhase) private var scenePhase
     @Query(sort: \RecoveryCounter.sortOrder) private var recoveryCounters: [RecoveryCounter]
+    @Query private var checkInsStored: [CheckIn]
+    @State private var linkingCheckIn = false
+
+    /// The check-ins that point at this entry, newest first (Patch R5).
+    private var linkedCheckIns: [CheckIn] {
+        checkInsStored.filter { $0.expandedEntryID == entry.id }.sortedByKey(descending: true) { $0.timestamp }
+    }
 
     init(entry: JournalEntry, onFinish: (() -> Void)? = nil) {
         self.entry = entry
@@ -515,6 +525,26 @@ struct JournalEntryEditorView: View {
                             Label("Add to things to raise", systemImage: "doc.text")
                         }
                         .disabled(BridgeDraftItem.raising(fromJournal: entry.text) == nil)
+                        if let linked = linkedCheckIns.first {
+                            Button {} label: {
+                                Label("Linked to the check-in at \(linked.timestamp.formatted(date: .abbreviated, time: .shortened))",
+                                      systemImage: "link")
+                            }
+                            .disabled(true)
+                        }
+                        Button {
+                            linkingCheckIn = true
+                        } label: {
+                            Label(linkedCheckIns.isEmpty ? "Link a check-in" : "Link another check-in",
+                                  systemImage: "link.badge.plus")
+                        }
+                        if !linkedCheckIns.isEmpty {
+                            Button(role: .destructive) {
+                                for checkIn in linkedCheckIns { checkIn.expandedEntryID = nil }
+                            } label: {
+                                Label("Unlink the check-in", systemImage: "link.badge.minus")
+                            }
+                        }
                         if AIGate.isEnabled {
                             Menu {
                                 Button("This paragraph") { makeShorter(wholeEntry: false) }
@@ -606,6 +636,11 @@ struct JournalEntryEditorView: View {
             .sheet(isPresented: $showContextSuggestions) {
                 JournalContextSuggestionsView(day: entry.createdAt) { kinds in
                     insert(kinds)
+                }
+            }
+            .sheet(isPresented: $linkingCheckIn) {
+                CheckInPickerSheet(selectedIDs: Set(linkedCheckIns.map(\.id))) { checkIn in
+                    checkIn.expandedEntryID = entry.id
                 }
             }
             .sheet(isPresented: $showGuide) {

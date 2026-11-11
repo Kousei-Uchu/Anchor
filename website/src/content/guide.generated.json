@@ -287,12 +287,13 @@
       "id": "journal.suggestions",
       "tab": "journal",
       "title": "Journaling Suggestions",
-      "whatItIs": "Things from the day of the entry that you can add to the page: Apple's own suggestions, calendar events, photos and songs you played recently.",
+      "whatItIs": "Things from the day of the entry that you can add to the page: the night's sleep, Apple's own suggestions, calendar events, photos and songs you played recently.",
       "howToUse": [
         "Browse suggestions opens Apple's picker, where you choose what to share with Anchor. Below it are the events and photos from that day and your recently played songs. Tap one to add it to the page as a block, and this screen closes. Each of those three has its own button, and Anchor asks for that access only when you tap it. If it was allowed before, it just shows. If you say no, that part stays empty and the rest still works."
       ],
       "tips": [
         "Nothing is added until you tap it, and nothing leaves your phone.",
+        "Sleep is first: tap the night for that day to add it, or Write down how you slept if there is none yet. Earlier nights are listed under it.",
         "A photo you add is copied into Anchor and kept with the entry.",
         "You can change what Anchor may see later, in the phone's own Settings under Anchor."
       ],

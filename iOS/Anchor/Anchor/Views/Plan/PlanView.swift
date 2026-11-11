@@ -1385,7 +1385,9 @@ struct SleepMorningCard: View {
     private var isMorning: Bool { ReviewMode.isOn || Calendar.current.component(.hour, from: .now) < 12 }
 
     var body: some View {
-        if enabled && isMorning && !loggedToday && dismissedDay != SleepSettings.dayKey() {
+        // The card stays while its sheet is open. Putting a start time in makes last night count as written
+        // down, which used to take the card away and its sheet with it (Patch R5).
+        if logging || (enabled && isMorning && !loggedToday && dismissedDay != SleepSettings.dayKey()) {
             Anchor.Card(accentColor: Anchor.Theme.accent) {
                 VStack(alignment: .leading, spacing: 10) {
                     Anchor.SectionHeader(icon: "moon.zzz.fill", title: "Last night")

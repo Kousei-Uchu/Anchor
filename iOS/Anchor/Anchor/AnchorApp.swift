@@ -412,8 +412,15 @@ enum DemoMode {
         context.insert(JournalEntry(createdAt: ago(31), text: "Rained all day. Stayed in and read for an hour."))
         context.insert(JournalEntry(createdAt: ago(40), text: "First week back in the routine. It still feels like a lot."))
         context.insert(JournalEntry(createdAt: ago(55), text: "Not much to say today. Writing this anyway."))
+        // One check-in with answers to the optional questions, kept on the check-in itself.
         context.insert(CheckIn(timestamp: ago(1, hour: 5), physicalExhaustion: 0.4, cognitiveBurnout: 0.5,
-                               mentalLoad: 0.45, physicalEnergy: 0.5, socialEnergy: 0.35))
+                               mentalLoad: 0.45, physicalEnergy: 0.5, socialEnergy: 0.35,
+                               extraAnswers: CheckInAnswers.encode([
+                                   CheckInAnswer(question: "What's currently on your mind?",
+                                                 answer: "The appointment on Thursday, and whether I have everything ready."),
+                                   CheckInAnswer(question: "What's something you're looking forward to?",
+                                                 answer: "A quiet evening with a book.")
+                               ])))
         context.insert(CheckIn(timestamp: ago(3, hour: 6), physicalExhaustion: 0.75, cognitiveBurnout: 0.7,
                                mentalLoad: 0.8, physicalEnergy: 0.2, socialEnergy: 0.15))
         context.insert(CheckIn(timestamp: ago(5, hour: 4), physicalExhaustion: 0.2, cognitiveBurnout: 0.3,

@@ -16,8 +16,9 @@
 //     Grounding Tools), every one individually skippable, with "Finish"
 //     available at every step. Finishing right after the sliders is the
 //     complete, default path — not a partial one. Anything answered in the
-//     extra steps becomes a real Journal entry, linked back to this
-//     check-in, instead of a separate "expand" button feeling bolted on.
+//     extra steps is kept on the check-in itself (Patch R5), not as a
+//     separate Journal entry. A check-in and a Journal entry can be linked
+//     afterwards, from either one.
 //
 
 import SwiftUI
@@ -26,7 +27,6 @@ import SwiftData
 struct CheckInSliderView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-    var onExpandToJournal: (CheckIn) -> Void
     @AppStorage(SleepSettings.checkInKey) private var askAboutSleep = false
     @Query private var sleepEntries: [SleepEntry]
 
@@ -41,6 +41,10 @@ struct CheckInSliderView: View {
     @State private var stage: Stage = .sliders
     @State private var promptIndex = 0
     @State private var promptAnswers: [String: String] = [:]
+    /// The questions as they were when the questions began. Saving the sleep answer makes last night count as
+    /// written down, which would take the sleep question out of `activePrompts` while the screen is still showing
+    /// it and leave `promptIndex` past the end, so the screen reads this fixed list instead (Patch R5).
+    @State private var promptList: [CheckInPrompt] = []
 
     private enum Stage { case sliders, prompts }
 
@@ -175,6 +179,8 @@ struct CheckInSliderView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 8) {
                 Button("A few optional questions") {
+                    promptList = activePrompts
+                    promptIndex = 0
                     stage = .prompts
                 }
                 .buttonStyle(Anchor.SecondaryButtonStyle())
@@ -200,18 +206,19 @@ struct CheckInSliderView: View {
     }
 
     private var promptStage: some View {
-        let current = activePrompts[promptIndex]
+        let list = promptList.isEmpty ? activePrompts : promptList
+        let current = list[min(max(promptIndex, 0), list.count - 1)]
         return ScrollView {
             VStack(spacing: 16) {
                 MascotPresenceView(line: nil, mood: current.mood)
                     .padding(.horizontal, 24)
                     .id(promptIndex)
 
-                ProgressView(value: Double(promptIndex + 1), total: Double(activePrompts.count))
+                ProgressView(value: Double(promptIndex + 1), total: Double(list.count))
                     .tint(Anchor.Theme.accent)
                     .padding(.horizontal)
 
-                Text("Question \(promptIndex + 1) of \(activePrompts.count), skip any of these")
+                Text("Question \(promptIndex + 1) of \(list.count), skip any of these")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
@@ -262,8 +269,8 @@ struct CheckInSliderView: View {
                         Button("Back") { withAnimation { promptIndex -= 1 } }
                             .buttonStyle(Anchor.SecondaryButtonStyle())
                     }
-                    Button(promptIndex == activePrompts.count - 1 ? "Finish" : "Next") {
-                        if promptIndex == activePrompts.count - 1 {
+                    Button(promptIndex == list.count - 1 ? "Finish" : "Next") {
+                        if promptIndex == list.count - 1 {
                             finishWithPrompts()
                         } else {
                             withAnimation { promptIndex += 1 }
@@ -341,27 +348,29 @@ struct CheckInSliderView: View {
         return checkIn
     }
 
-    /// Any answered prompt (blank ones are skipped) becomes one real
-    /// Journal entry linked back to this check-in — not a separate,
-    /// easy-to-miss "expand" action. If nothing was answered, no entry is
-    /// created and the caller isn't asked to open anything.
+    /// Any answered question (blank ones are skipped) is kept on this check-in, in the order they were asked.
+    /// Nothing is made in the Journal; a check-in can be linked to an entry later. The sleep answer is the one
+    /// exception: it is the note on last night, as it always was.
     private func finishWithPrompts() {
         let checkIn = save()
-        let answered = activePrompts.filter { !$0.isSleep }.compactMap { prompt -> String? in
+        let list = promptList.isEmpty ? activePrompts : promptList
+        let answered = list.filter { !$0.isSleep }.compactMap { prompt -> CheckInAnswer? in
             guard let answer = promptAnswers[prompt.text]?.trimmingCharacters(in: .whitespacesAndNewlines),
                   !answer.isEmpty else { return nil }
-            return "\(prompt.text)\n\(answer)"
+            return CheckInAnswer(question: prompt.text, answer: answer)
         }
-        if let sleepPrompt = activePrompts.first(where: \.isSleep),
+        checkIn.extraAnswers = CheckInAnswers.encode(answered)
+        if let sleepPrompt = list.first(where: \.isSleep),
            let sleepAnswer = promptAnswers[sleepPrompt.text]?.trimmingCharacters(in: .whitespacesAndNewlines),
            !sleepAnswer.isEmpty {
-            modelContext.insert(SleepEntry(nightDate: Calendar.current.startOfDay(for: .now), note: sleepAnswer))
-        }
-        if !answered.isEmpty {
-            let entry = JournalEntry(text: answered.joined(separator: "\n\n"), linkedContext: .checkInSlider)
-            modelContext.insert(entry)
-            checkIn.expandedEntryID = entry.id
-            onExpandToJournal(checkIn)
+            let today = Calendar.current.startOfDay(for: .now)
+            if let existing = sleepEntries.first(where: { Calendar.current.startOfDay(for: $0.nightDate) == today }) {
+                // A night for today that was started and left blank takes the answer rather than doubling up.
+                existing.note = sleepAnswer
+                existing.lastEditedAt = .now
+            } else {
+                modelContext.insert(SleepEntry(nightDate: today, note: sleepAnswer))
+            }
         }
         dismiss()
     }

@@ -199,9 +199,15 @@ final class CheckIn {
     /// into free writing.
     var expandedEntryID: UUID?
 
+    /// Patch R5: the answers to the optional questions after the sliders, kept with the check-in itself as one piece
+    /// of text (see `CheckInAnswers`). A new field, so it has no older name to carry over.
+    var extraAnswersPlain: String = "" // a new locked field, no older name
+    /// The locked form of `extraAnswers`, empty until locking is turned on. Read and written through `extraAnswers` only.
+    var extraAnswersSealed: String? = nil
+
     init(id: UUID = UUID(), timestamp: Date = .now,
          physicalExhaustion: Double, cognitiveBurnout: Double, mentalLoad: Double,
-         physicalEnergy: Double, socialEnergy: Double, expandedEntryID: UUID? = nil) {
+         physicalEnergy: Double, socialEnergy: Double, expandedEntryID: UUID? = nil, extraAnswers: String = "") {
         self.id = id
         self.timestampPlain = timestamp
         self.physicalExhaustionPlain = physicalExhaustion
@@ -210,12 +216,45 @@ final class CheckIn {
         self.physicalEnergyPlain = physicalEnergy
         self.socialEnergyPlain = socialEnergy
         self.expandedEntryID = expandedEntryID
+        self.extraAnswersPlain = extraAnswers
         lockNewValues()
+    }
+}
+
+/// One of the optional questions after the check-in sliders, and what was written for it.
+struct CheckInAnswer: Codable, Equatable, Identifiable {
+    var question: String
+    var answer: String
+    var id: String { question }
+}
+
+/// The answers kept on a check-in are one piece of text (a list written as JSON), so they are locked as one field.
+enum CheckInAnswers {
+    static func encode(_ answers: [CheckInAnswer]) -> String {
+        guard !answers.isEmpty, let data = try? JSONEncoder().encode(answers) else { return "" }
+        return String(data: data, encoding: .utf8) ?? ""
+    }
+
+    static func decode(_ text: String) -> [CheckInAnswer] {
+        guard !text.isEmpty, let data = text.data(using: .utf8) else { return [] }
+        return (try? JSONDecoder().decode([CheckInAnswer].self, from: data)) ?? []
     }
 }
 
 // Patch 35g1b: the old names, read and written through FieldLock so a locked value reads as its value.
 extension CheckIn {
+    var extraAnswers: String {
+        get { FieldLock.read(plain: extraAnswersPlain, sealed: extraAnswersSealed, context: "CheckIn.extraAnswers") }
+        set {
+            let kept = FieldLock.store(newValue, context: "CheckIn.extraAnswers")
+            extraAnswersPlain = kept.plain
+            extraAnswersSealed = kept.sealed
+        }
+    }
+
+    /// The questions answered after the sliders, with what was written. Empty when none were.
+    var answers: [CheckInAnswer] { CheckInAnswers.decode(extraAnswers) }
+
     var timestamp: Date {
         get { FieldLock.readScalar(plain: timestampPlain, sealed: timestampSealed, context: "CheckIn.timestamp") }
         set {
@@ -275,6 +314,7 @@ extension CheckIn {
         mentalLoad = mentalLoadPlain
         physicalEnergy = physicalEnergyPlain
         socialEnergy = socialEnergyPlain
+        extraAnswers = extraAnswersPlain
     }
 
     /// Seals what is stored plain and leaves anything already sealed alone, so it is safe to run again. It does
@@ -287,6 +327,7 @@ extension CheckIn {
         if mentalLoadSealed == nil { mentalLoad = mentalLoadPlain }
         if physicalEnergySealed == nil { physicalEnergy = physicalEnergyPlain }
         if socialEnergySealed == nil { socialEnergy = socialEnergyPlain }
+        if extraAnswersSealed == nil { extraAnswers = extraAnswersPlain }
     }
 
     /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
@@ -298,7 +339,8 @@ extension CheckIn {
             FieldLock.describe(cognitiveBurnout),
             FieldLock.describe(mentalLoad),
             FieldLock.describe(physicalEnergy),
-            FieldLock.describe(socialEnergy)
+            FieldLock.describe(socialEnergy),
+            FieldLock.describe(extraAnswers)
         ])
     }
 
@@ -310,6 +352,7 @@ extension CheckIn {
             && mentalLoadSealed != nil && mentalLoadPlain == Double.lockedPlaceholder
             && physicalEnergySealed != nil && physicalEnergyPlain == Double.lockedPlaceholder
             && socialEnergySealed != nil && socialEnergyPlain == Double.lockedPlaceholder
+            && extraAnswersSealed != nil && extraAnswersPlain.isEmpty
     }
 }
 

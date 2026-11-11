@@ -1,6 +1,6 @@
 # Anchor: what is left
 
-*Only what is still to do. When something is finished, confirmed or answered, it is deleted from this file in the same patch, never moved to a done list. Finished work is in the Progress table of `ANCHOR_PATCH_PLAN.md` and in `docs/PLAN_CHANGELOG.md`. Last updated: 11 Nov 2026, after DOC29.*
+*Only what is still to do. When something is finished, confirmed or answered, it is deleted from this file in the same patch, never moved to a done list. Finished work is in the Progress table of `ANCHOR_PATCH_PLAN.md` and in `docs/PLAN_CHANGELOG.md`. Last updated: 11 Nov 2026, after R5.*
 
 ## 1. Waiting on you
 
@@ -32,6 +32,7 @@ Everything here builds and launches on your phone (confirmed 11 Nov 2026, after 
 
 **Can be tried in the review run** (`scripts/review-on-device.sh`, made-up content)
 
+- R5: the check-in and sleep fixes, six stops at the end of the review bar. Make the safety copy first: a check-in gets a new locked field for its answers. Check-in exports do not carry those answers yet.
 - RV1a: Task cards, the quiet line is now a few small facts that wrap instead of being cut off.
 - 30p2: Settings, After-session reminders, a switch for each person, that evening or the next morning.
 - 35e: Settings now shows Encryption, Safety copy and Lock my data in every build. Open each from Settings and check the names; the Encryption guide page (the question mark) now opens. A new check on the website: Features should show an Encryption entry.

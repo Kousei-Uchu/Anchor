@@ -130,6 +130,18 @@ enum ReviewStops {
          "Open Settings and look for the three rows. Open each and check the names. Tap the question mark on Encryption.", 1, .settings),
         ("35g, SY0, SY1a", "Locked numbers and dates, unique ids gone", "Dates, numbers, marks and typed settings are locked too, the places that sorted on them sort after opening, the database no longer asks for a unique id, and a backup imported twice adds nothing the second time. Every stored property has a default for sync later.",
          "A review run cannot lock anything, so do this on your own copy: Settings, Safety copy first, then Lock my data (More to lock, Lock the rest), close and open the app, and read Last time. Then check-ins in the Journal, Sleep, a Recovery counter, Tasks, Appointments, Trigger windows, the quick lists and Thread. Everything should look as before. Make a new check-in, task and night, and import the same backup twice.", 1, .settings),
+        ("R5", "Sleep question no longer crashes a check-in", "Answering the How did you sleep? question and finishing now saves the check-in and puts the answer on last night. Before, the app closed and nothing was saved.",
+         "Start a check-in on Now, tap A few optional questions, go to the last one (How did you sleep?), type a few words and tap Finish. The app should stay open. Open the Journal: the check-in is there. Open Plan, Sleep: last night has your words.", 0, nil),
+        ("R5", "Answers stay on the check-in", "The answers to the optional questions are kept on the check-in, not in a new Journal entry. Open a check-in in the Journal to read them.",
+         "In the Journal, open the check-in from one day ago: Your answers shows two. Make a new check-in with answers: no new Journal entry appears, and the check-in row shows a small speech icon.", 2, nil),
+        ("R5", "Delete a check-in", "A check-in can be deleted the same way as an entry: press and hold its row. The check-in's sheet also has Delete this check-in, which asks first.",
+         "Journal: press and hold a check-in row, Delete. Open another check-in, scroll down, Delete this check-in, Delete. The sheet closes and the row is gone.", 2, nil),
+        ("R5", "Link a check-in and a Journal entry", "From a check-in, link, change, open or unlink a Journal entry. From an entry's three dots menu, Link a check-in or Unlink the check-in. A linked check-in row shows a small link icon.",
+         "Open a check-in, Link a Journal entry, pick one: the row now shows a link and the sheet shows the entry with Open, Change, Unlink. Then open that entry, three dots: it says which check-in it is linked to. Try Link another check-in and Unlink.", 2, nil),
+        ("R5", "Last night sheet stays open", "On the Last night card, choosing a start time no longer makes the sheet close.",
+         "On Now, tap Log it on Last night, tap the start time and pick a time. The sheet should stay open. Fill in more, then close it.", 0, nil),
+        ("R5", "Sleep in Journaling Suggestions", "The Journaling Suggestions screen starts with Sleep: the night for that entry's day to tap and add, Write down how you slept when there is none, and earlier nights below.",
+         "Open any entry, tap the sparkles button at the bottom. Sleep is first. Today has no night in a review run: tap Write down how you slept, set a time, close it, and the card lands on the page. Then reopen Journaling Suggestions and tap an earlier night.", 2, nil),
     ])
 }
 

@@ -50,6 +50,7 @@ Lock in: none
 | physicalEnergy | Double | locked | sealed | how you rated yourself |
 | socialEnergy | Double | locked | sealed | how you rated yourself |
 | expandedEntryID | UUID? | plain | plain | a link to another item by id, with no content |
+| extraAnswers | String | locked | sealed | what you wrote in answer to the optional questions |
 
 ## TrustedContact
 

@@ -1442,15 +1442,19 @@ struct CheckInDTO: Codable {
     var id: UUID; var timestamp: Date
     var physicalExhaustion: Double; var cognitiveBurnout: Double; var mentalLoad: Double
     var physicalEnergy: Double; var socialEnergy: Double; var expandedEntryID: UUID?
+    /// Patch R5: the answers kept on the check-in. Missing in a backup made before, which reads as none.
+    var extraAnswers: String?
     init(_ m: CheckIn) {
         id = m.id; timestamp = m.timestamp
         physicalExhaustion = m.physicalExhaustion; cognitiveBurnout = m.cognitiveBurnout; mentalLoad = m.mentalLoad
         physicalEnergy = m.physicalEnergy; socialEnergy = m.socialEnergy; expandedEntryID = m.expandedEntryID
+        extraAnswers = m.extraAnswers.isEmpty ? nil : m.extraAnswers
     }
     func toModel() -> CheckIn {
         CheckIn(id: id, timestamp: timestamp, physicalExhaustion: physicalExhaustion,
                 cognitiveBurnout: cognitiveBurnout, mentalLoad: mentalLoad,
-                physicalEnergy: physicalEnergy, socialEnergy: socialEnergy, expandedEntryID: expandedEntryID)
+                physicalEnergy: physicalEnergy, socialEnergy: socialEnergy, expandedEntryID: expandedEntryID,
+                extraAnswers: extraAnswers ?? "")
     }
 }
 
@@ -2261,6 +2265,13 @@ extension JournalEntry: DataBrowsable {
 }
 
 extension CheckIn: DataBrowsable {
+    /// The questions answered after the sliders, each with what was written, for Look at what's stored.
+    fileprivate var answersText: String? {
+        let items = answers
+        guard !items.isEmpty else { return nil }
+        return items.map { "\($0.question)\n\($0.answer)" }.joined(separator: "\n\n")
+    }
+
     static var browseTitle: String { "Check-ins" }
     static var browseSingular: String { "Check-in" }
     static var browseIcon: String { "circle.hexagongrid.fill" }
@@ -2277,7 +2288,8 @@ extension CheckIn: DataBrowsable {
             .decimal("Room in your head", 1 - mentalLoad),
             .decimal("Physical energy to move", physicalEnergy),
             .decimal("Social energy", socialEnergy),
-            .linked("Journal entry written from this", expandedEntryID)
+            .text("Your answers", answersText),
+            .linked("Linked Journal entry", expandedEntryID)
         ]
     }
 }

@@ -19,6 +19,7 @@
 //
 
 import SwiftUI
+import SwiftData
 import EventKit
 import Photos
 import MusicKit
@@ -30,6 +31,17 @@ struct JournalContextSuggestionsView: View {
     let day: Date
     let onInsert: ([JournalBlock.Kind]) -> Void
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    @Query private var nightsStored: [SleepEntry]
+    @AppStorage(SleepFeelWords.storageKey) private var feelWordsRaw = ""
+    /// A night made from here, opened to fill in. It goes onto the page when it is closed with something in it.
+    @State private var creatingNight: SleepEntry?
+    @State private var creatingNightID: UUID?
+
+    init(day: Date, onInsert: @escaping ([JournalBlock.Kind]) -> Void) {
+        self.day = day
+        self.onInsert = onInsert
+    }
 
     @State private var events: [EKEvent] = []
     @State private var calendarAuthDenied = false
@@ -48,6 +60,7 @@ struct JournalContextSuggestionsView: View {
     var body: some View {
         NavigationStack {
             List {
+                sleepSection
                 #if canImport(JournalingSuggestions)
                 if #available(iOS 17.2, *) {
                 Section("Apple's journaling suggestions") {
@@ -164,9 +177,108 @@ struct JournalContextSuggestionsView: View {
                     Button("Close") { dismiss() }
                 }
             }
+            .sheet(item: $creatingNight, onDismiss: finishNewNight) { night in
+                SleepEntryEditor(entry: night)
+            }
             .task {
                 await loadWhatIsAlreadyAllowed()
             }
+        }
+    }
+
+    // MARK: - Sleep (Patch R5)
+
+    private var dayStart: Date { Calendar.current.startOfDay(for: day) }
+
+    private var nights: [SleepEntry] { nightsStored.sortedByKey(descending: true) { $0.nightDate } }
+
+    /// The night written down for this page's day, if it has anything in it.
+    private var nightForDay: SleepEntry? {
+        nights.first { Calendar.current.startOfDay(for: $0.nightDate) == dayStart && !$0.isBlank }
+    }
+
+    /// Nights from days before this page's day, newest first.
+    private var earlierNights: [SleepEntry] {
+        Array(nights.filter { Calendar.current.startOfDay(for: $0.nightDate) < dayStart && !$0.isBlank }.prefix(14))
+    }
+
+    private var dayWords: String {
+        Calendar.current.isDateInToday(day) ? "today" : day.formatted(date: .abbreviated, time: .omitted)
+    }
+
+    @ViewBuilder private var sleepSection: some View {
+        Section("Sleep") {
+            if let night = nightForDay {
+                sleepRow(night, showDate: false)
+            } else {
+                Button { startNewNight() } label: {
+                    Label("Write down how you slept", systemImage: "moon.zzz")
+                }
+                Text("Nothing is written down for \(dayWords) yet. This makes a night for that day and adds it to the page.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            if !earlierNights.isEmpty {
+                ForEach(earlierNights) { night in
+                    sleepRow(night, showDate: true)
+                }
+            }
+        }
+    }
+
+    private func sleepRow(_ night: SleepEntry, showDate: Bool) -> some View {
+        Button {
+            onInsert([.card(sleepCard(for: night, showDate: showDate))])
+            dismiss()
+        } label: {
+            JournalCardView(card: sleepCard(for: night, showDate: showDate))
+        }
+        .buttonStyle(.plain)
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
+    }
+
+    private func sleepCard(for night: SleepEntry, showDate: Bool) -> JournalCard {
+        let title = night.shownMinutes.map { "Slept \(SleepEntry.describe(minutes: $0))" } ?? "Sleep"
+        var detail: [String] = []
+        if showDate {
+            detail.append(night.nightDate.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)))
+        }
+        if let bed = night.bedTime, let wake = night.wakeTime {
+            detail.append("\(bed.formatted(date: .omitted, time: .shortened)) to \(wake.formatted(date: .omitted, time: .shortened))")
+        } else if let bed = night.bedTime {
+            detail.append("To bed at \(bed.formatted(date: .omitted, time: .shortened))")
+        } else if let wake = night.wakeTime {
+            detail.append("Woke at \(wake.formatted(date: .omitted, time: .shortened))")
+        }
+        var extra: [String] = []
+        let words = SleepFeelWords.words(from: feelWordsRaw)
+        if let feel = night.feel, feel >= 0, feel < words.count { extra.append(words[feel]) }
+        let note = night.note.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !note.isEmpty { extra.append(note) }
+        return JournalCard(kind: .sleep, title: title, detail: detail.joined(separator: ", "),
+                           extra: extra.joined(separator: ". "))
+    }
+
+    /// Opens a night for this page's day to fill in, using one already there with nothing in it.
+    private func startNewNight() {
+        let night: SleepEntry
+        if let blank = nightsStored.first(where: { Calendar.current.startOfDay(for: $0.nightDate) == dayStart }) {
+            night = blank
+        } else {
+            night = SleepEntry(nightDate: dayStart)
+            modelContext.insert(night)
+        }
+        creatingNightID = night.id
+        creatingNight = night
+    }
+
+    /// The sheet that fills the night in drops it again when it is left blank, so this looks it up again by id.
+    private func finishNewNight() {
+        guard let id = creatingNightID else { return }
+        creatingNightID = nil
+        if let night = nightsStored.first(where: { $0.id == id }), !night.isBlank {
+            onInsert([.card(sleepCard(for: night, showDate: false))])
+            dismiss()
         }
     }
 

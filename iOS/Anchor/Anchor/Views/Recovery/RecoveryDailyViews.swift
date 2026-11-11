@@ -187,7 +187,7 @@ extension View {
     /// isn't pulled out of what they were looking at.
     func recoveryCheckInSheet(isPresented: Binding<Bool>) -> some View {
         sheet(isPresented: isPresented) {
-            CheckInSliderView { _ in }
+            CheckInSliderView()
                 .presentationDetents([.large])
         }
     }

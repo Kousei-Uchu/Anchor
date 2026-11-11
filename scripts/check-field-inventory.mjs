@@ -61,7 +61,7 @@ for (const file of modelFiles) {
     if (name.endsWith("Sealed")) {
       const base = name.slice(0, -"Sealed".length);
       fields.set(base, { ...(fields.get(base) || { type: "?" }), sealed: true });
-    } else if (name.endsWith("Plain") && /originalName/.test(line)) {
+    } else if (name.endsWith("Plain") && (/originalName/.test(line) || /\/\/ a new locked field/.test(line))) {
       const base = name.slice(0, -"Plain".length);
       fields.set(base, { ...(fields.get(base) || {}), type, sealed: fields.get(base)?.sealed || false });
     } else {

@@ -53,6 +53,8 @@ struct JournalView: View {
     @State private var entryToEdit: JournalEntry?
     @State private var entryToRead: JournalEntry?
     @State private var checkInToView: CheckIn?
+    /// A check-in deleted from inside its sheet is removed once the sheet has closed (Patch R5).
+    @State private var checkInToDelete: CheckIn?
     @State private var addedToBridge = false
     /// Not remembered between launches, so nothing stays hidden by accident.
     @State private var bookmarksOnly = false
@@ -281,8 +283,13 @@ struct JournalView: View {
             .sheet(item: $entryToRead) { entry in
                 JournalEntryReadSheet(entry: entry)
             }
-            .sheet(item: $checkInToView) { checkIn in
-                CheckInDetailSheet(checkIn: checkIn)
+            .sheet(item: $checkInToView, onDismiss: {
+                if let doomed = checkInToDelete {
+                    modelContext.delete(doomed)
+                    checkInToDelete = nil
+                }
+            }) { checkIn in
+                CheckInDetailSheet(checkIn: checkIn) { checkInToDelete = checkIn }
             }
             .sheet(item: $sleepToEdit) { night in
                 SleepEntryEditor(entry: night)
@@ -404,6 +411,17 @@ struct JournalView: View {
                             .font(.system(.caption, design: .rounded).weight(.medium))
                             .foregroundStyle(Anchor.Theme.accent)
 
+                        if !checkIn.answers.isEmpty {
+                            Image(systemName: "text.bubble")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        if checkIn.expandedEntryID != nil {
+                            Image(systemName: "link")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+
                         Image(systemName: "chevron.right")
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(.secondary)
@@ -425,6 +443,13 @@ struct JournalView: View {
             Spacer(minLength: 0)
         }
         .padding(.leading, 5)
+        .contextMenu {
+            Button(role: .destructive) {
+                modelContext.delete(checkIn)
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
     }
 
     /// A small, quiet row at the top of the morning a night belongs to. It
@@ -813,7 +838,24 @@ struct JournalYearView: View {
 /// is no total and no rating.
 private struct CheckInDetailSheet: View {
     let checkIn: CheckIn
+    /// Asked to delete this check-in. The Journal removes it once this sheet has closed.
+    var onDelete: () -> Void
     @Environment(\.dismiss) private var dismiss
+    @Query private var entriesStored: [JournalEntry]
+    @State private var linking = false
+    @State private var entryToOpen: JournalEntry?
+    @State private var confirmingDelete = false
+
+    init(checkIn: CheckIn, onDelete: @escaping () -> Void) {
+        self.checkIn = checkIn
+        self.onDelete = onDelete
+    }
+
+    /// The Journal entry this check-in is linked to, if it still exists.
+    private var linkedEntry: JournalEntry? {
+        guard let id = checkIn.expandedEntryID else { return nil }
+        return entriesStored.first { $0.id == id }
+    }
 
     var body: some View {
         NavigationStack {
@@ -845,6 +887,63 @@ private struct CheckInDetailSheet: View {
                         }
                     }
 
+                    // The answers to the optional questions, kept on the check-in itself.
+                    let answers = checkIn.answers
+                    if !answers.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Label("Your answers", systemImage: "text.bubble")
+                                .font(.system(.caption, design: .rounded))
+                                .foregroundStyle(.secondary)
+                            ForEach(answers) { item in
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(item.question)
+                                        .font(.footnote)
+                                        .foregroundStyle(.secondary)
+                                    Text(item.answer)
+                                        .font(.system(.body, design: .rounded))
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                                .accessibilityElement(children: .combine)
+                            }
+                        }
+                    }
+
+                    // The link to a Journal entry, which can be made, changed, opened or removed here.
+                    VStack(alignment: .leading, spacing: 10) {
+                        Label("Journal entry", systemImage: "link")
+                            .font(.system(.caption, design: .rounded))
+                            .foregroundStyle(.secondary)
+                        if let entry = linkedEntry {
+                            Text(JournalBlocks.previewLine(entry.text) ?? "Empty entry")
+                                .font(.system(.subheadline, design: .rounded))
+                                .lineLimit(3)
+                            Text(entry.createdAt.formatted(date: .abbreviated, time: .shortened))
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                            HStack(spacing: 10) {
+                                Button("Open") { entryToOpen = entry }
+                                    .buttonStyle(.bordered)
+                                Button("Change") { linking = true }
+                                    .buttonStyle(.bordered)
+                                Button("Unlink", role: .destructive) { checkIn.expandedEntryID = nil }
+                                    .buttonStyle(.bordered)
+                            }
+                        } else {
+                            Text("Not linked to a Journal entry.")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                            Button { linking = true } label: {
+                                Label("Link a Journal entry", systemImage: "link.badge.plus")
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                    }
+
+                    Button(role: .destructive) { confirmingDelete = true } label: {
+                        Label("Delete this check-in", systemImage: "trash")
+                    }
+                    .padding(.top, 8)
+
                     Spacer(minLength: 0)
                 }
                 .padding()
@@ -857,8 +956,133 @@ private struct CheckInDetailSheet: View {
                     Button("Close") { dismiss() }
                 }
             }
+            .sheet(isPresented: $linking) {
+                JournalEntryPickerSheet(selectedID: checkIn.expandedEntryID) { entry in
+                    checkIn.expandedEntryID = entry.id
+                }
+            }
+            .sheet(item: $entryToOpen) { entry in
+                JournalEntryEditorView(entry: entry)
+            }
+            .confirmationDialog("Delete this check-in?", isPresented: $confirmingDelete, titleVisibility: .visible) {
+                Button("Delete", role: .destructive) {
+                    onDelete()
+                    dismiss()
+                }
+                Button("Keep it", role: .cancel) {}
+            } message: {
+                Text("The Journal entry it is linked to, if any, is not deleted.")
+            }
         }
         .presentationDetents([.medium, .large])
+    }
+}
+
+/// A list of Journal entries to pick one from, newest first. Used to link a check-in to an entry.
+struct JournalEntryPickerSheet: View {
+    var selectedID: UUID?
+    var onPick: (JournalEntry) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @Query private var entriesStored: [JournalEntry]
+
+    init(selectedID: UUID? = nil, onPick: @escaping (JournalEntry) -> Void) {
+        self.selectedID = selectedID
+        self.onPick = onPick
+    }
+
+    private var entries: [JournalEntry] {
+        Array(entriesStored.sortedByKey(descending: true) { $0.createdAt }.prefix(100))
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if entries.isEmpty {
+                    Text("There are no Journal entries yet.")
+                        .foregroundStyle(.secondary)
+                }
+                ForEach(entries) { entry in
+                    Button {
+                        onPick(entry)
+                        dismiss()
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(entry.createdAt.formatted(date: .abbreviated, time: .shortened))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Text(JournalBlocks.previewLine(entry.text) ?? "Empty entry")
+                                    .font(.system(.subheadline, design: .rounded))
+                                    .lineLimit(2)
+                                    .foregroundStyle(.primary)
+                            }
+                            Spacer(minLength: 8)
+                            if entry.id == selectedID {
+                                Image(systemName: "checkmark").foregroundStyle(Anchor.Theme.accent)
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Link a Journal entry")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+            }
+        }
+    }
+}
+
+/// A list of check-ins to pick one from, newest first. Used to link a Journal entry to a check-in.
+struct CheckInPickerSheet: View {
+    var selectedIDs: Set<UUID> = []
+    var onPick: (CheckIn) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @Query private var checkInsStored: [CheckIn]
+
+    init(selectedIDs: Set<UUID> = [], onPick: @escaping (CheckIn) -> Void) {
+        self.selectedIDs = selectedIDs
+        self.onPick = onPick
+    }
+
+    private var checkIns: [CheckIn] {
+        Array(checkInsStored.sortedByKey(descending: true) { $0.timestamp }.prefix(100))
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if checkIns.isEmpty {
+                    Text("There are no check-ins yet.")
+                        .foregroundStyle(.secondary)
+                }
+                ForEach(checkIns) { checkIn in
+                    Button {
+                        onPick(checkIn)
+                        dismiss()
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(checkIn.timestamp.formatted(date: .abbreviated, time: .shortened))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                CheckInReadingsStrip(readings: checkIn.readings)
+                            }
+                            Spacer(minLength: 8)
+                            if selectedIDs.contains(checkIn.id) {
+                                Image(systemName: "checkmark").foregroundStyle(Anchor.Theme.accent)
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .navigationTitle("Link a check-in")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+            }
+        }
     }
 }
 

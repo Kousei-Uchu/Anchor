@@ -23,7 +23,6 @@ struct NowView: View {
     @State private var showCheckIn = false
     @State private var mascotLine: MascotLine?
     @State private var mascotMood: MascotMood = .neutral
-    @State private var journalDraftToOpen: JournalEntry?
 
     var body: some View {
         NavigationStack {
@@ -87,22 +86,10 @@ struct NowView: View {
                 }
             }
             .sheet(isPresented: $showCheckIn) {
-                CheckInSliderView { checkIn in
-                    // The check-in flow itself already creates and links a
-                    // Journal entry when the user answers any optional
-                    // prompts — this just opens that entry to review/edit,
-                    // rather than creating a second, separate blank one.
-                    guard let entryID = checkIn.expandedEntryID else { return }
-                    let descriptor = FetchDescriptor<JournalEntry>(predicate: #Predicate { $0.id == entryID })
-                    if let entry = try? modelContext.fetch(descriptor).first {
-                        journalDraftToOpen = entry
-                    }
-                }
+                // The answers to the optional questions are kept on the check-in itself (Patch R5).
+                CheckInSliderView()
                 .presentationDetents([.large])
                 .fullHeightPadSheet()
-            }
-            .sheet(item: $journalDraftToOpen) { entry in
-                JournalEntryEditorView(entry: entry)
             }
             .onAppear {
                 MascotEngine.seedIfNeeded(context: modelContext)

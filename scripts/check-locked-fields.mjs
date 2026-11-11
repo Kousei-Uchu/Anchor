@@ -45,9 +45,10 @@ for (const file of modelFiles) {
     const c = line.match(/^final class (\w+)/);
     if (c && /@Model/.test(lines[i - 1] || "")) { cls = c[1]; inInit = false; classFields.clear(); }
     if (cls) {
-      const p = line.match(/^    @Attribute\(originalName: "(\w+)"\) var (\w+)Plain: /);
+      // A field made after locking existed (Patch R5) has no older name, so it has no originalName.
+      const p = line.match(/^    (?:@Attribute\(originalName: "(\w+)"\) )?var (\w+)Plain: /);
       if (p) {
-        if (p[1] !== p[2]) problems.push(`${cls}: ${p[2]}Plain has originalName "${p[1]}".`);
+        if (p[1] !== undefined && p[1] !== p[2]) problems.push(`${cls}: ${p[2]}Plain has originalName "${p[1]}".`);
         classFields.set(p[2], true);
         locked.push({ cls, name: p[2] });
         if (!lines.some((l) => l.startsWith(`    var ${p[2]}Sealed: String? = nil`))) problems.push(`${cls}.${p[2]} has no Sealed twin.`);
