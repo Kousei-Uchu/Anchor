@@ -2138,8 +2138,10 @@ final class AppointmentSeries {
     /// Position in the list of providers.
     var sortOrder: Int = 0
 
-    @Relationship(deleteRule: .cascade)
-    var occurrences: [AppointmentOccurrence] = []
+    /// Patch SY1b-pre: optional with an inverse, which CloudKit asks of a relationship. Read and changed through
+    /// `occurrenceList`, which is never nil, so the rest of the app is unchanged. The stored name is the same as before.
+    @Relationship(deleteRule: .cascade, inverse: \AppointmentOccurrence.series)
+    var occurrences: [AppointmentOccurrence]? = []
 
     init(
         id: UUID = UUID(),
@@ -2181,6 +2183,12 @@ final class AppointmentSeries {
     var exportName: String {
         let trimmed = exportLabel.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? displayName : trimmed
+    }
+
+    /// The sessions of this series, never nil. Use this instead of `occurrences`.
+    var occurrenceList: [AppointmentOccurrence] {
+        get { occurrences ?? [] }
+        set { occurrences = newValue }
     }
 
     var typicalTime: DateComponents? {
@@ -2331,6 +2339,8 @@ final class AppointmentOccurrence {
     var wasMovedSealed: String? = nil
     var prepNoteEntryID: UUID?    // links to a Journal/Bridge prep entry
     var postSessionNoteEntryID: UUID?
+    /// The series this session belongs to: the other end of `AppointmentSeries.occurrences` (Patch SY1b-pre).
+    var series: AppointmentSeries?
     /// What the person wants to have with them for this one session, written
     /// and ticked by them. It reuses the small text-and-tick value that quick
     /// lists use, kept inside the occurrence so there is no new record.
@@ -3085,8 +3095,15 @@ final class DecisionPresetCategory {
     /// The locked form of `name`, empty until locking is turned on. Read and written through `name` only.
     var nameSealed: String? = nil
     var sortOrder: Int = 0
+    /// Patch SY1b-pre: optional, as CloudKit asks. Read and changed through `choiceList`, which is never nil.
     @Relationship(deleteRule: .cascade, inverse: \DecisionPresetChoice.category)
-    var choices: [DecisionPresetChoice] = []
+    var choices: [DecisionPresetChoice]? = []
+
+    /// The choices in this group, never nil. Use this instead of `choices`.
+    var choiceList: [DecisionPresetChoice] {
+        get { choices ?? [] }
+        set { choices = newValue }
+    }
 
     init(id: UUID = UUID(), name: String, sortOrder: Int = 0, choices: [DecisionPresetChoice] = []) {
         self.id = id

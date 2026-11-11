@@ -2,8 +2,8 @@
 // (Patch SY1a, E1). Run it from anywhere:  node scripts/check-cloudkit-ready.mjs
 //   1. Every stored property of every model is optional or has a default value. CloudKit cannot make a row that
 //      is missing a value, so a property with neither would stop sync from starting.
-//   2. The two relationships are listed with what CloudKit also wants of them (optional, with an inverse). Those are
-//      known gaps that SY1b settles on a real device, so they are reported but do not fail this check.
+//   2. Every relationship is optional and has an inverse, which CloudKit also asks. Both were gaps until Patch
+//      SY1b-pre, and now fail this check if they come back.
 // It reads only the stored properties between a model's first line and its init, and skips computed ones.
 
 import { readFileSync } from "node:fs";
@@ -13,7 +13,6 @@ import { dirname, join } from "node:path";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const models = join(root, "iOS/Anchor/Anchor/Models");
 const problems = [];
-const gaps = [];
 let classes = 0, stored = 0;
 
 for (const file of ["AnchorModels.swift", "RecoveryModels.swift"]) {
@@ -30,7 +29,10 @@ for (const file of ["AnchorModels.swift", "RecoveryModels.swift"]) {
         if (/^@Relationship/.test(t)) {
           const next = (lines[i + 1] || "").trim();
           const rel = next.match(/var (\w+)\s*:\s*([^=]+?)\s*(=|$)/);
-          if (rel) gaps.push(`${cls}.${rel[1]}: ${t}${/inverse:/.test(t) ? "" : " (no inverse)"}${rel[2].trim().endsWith("?") ? "" : ", not optional"}`);
+          if (rel) {
+            const bad = [!/inverse:/.test(t) && "has no inverse", !rel[2].trim().endsWith("?") && "is not optional"].filter(Boolean);
+            if (bad.length) problems.push(`${cls}.${rel[1]}: a relationship that ${bad.join(" and ")}.`);
+          }
         }
         return;
       }
@@ -47,8 +49,4 @@ if (problems.length) {
   for (const p of problems.slice(0, 40)) console.log("  - " + p);
   process.exit(1);
 }
-console.log(`The CloudKit readiness check passed. ${stored} stored properties on ${classes} models all have a default or are optional.`);
-if (gaps.length) {
-  console.log(`Known gaps for SY1b (reported, not failed): ${gaps.length}`);
-  for (const g of gaps) console.log("  - " + g);
-}
+console.log(`The CloudKit readiness check passed. ${stored} stored properties on ${classes} models all have a default or are optional, and every relationship is optional with an inverse.`);

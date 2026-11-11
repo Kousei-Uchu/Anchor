@@ -37,7 +37,7 @@ struct DecisionPresetsQuickView: View {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 10) {
                                 ForEach(categories) { category in
-                                    if let firstChoice = category.choices.sorted(by: { $0.sortOrder < $1.sortOrder }).first {
+                                    if let firstChoice = category.choiceList.sorted(by: { $0.sortOrder < $1.sortOrder }).first {
                                         Button {
                                             tap(firstChoice)
                                         } label: {

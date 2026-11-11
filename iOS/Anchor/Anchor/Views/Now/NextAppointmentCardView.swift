@@ -21,7 +21,7 @@ struct NextAppointmentCardView: View {
     /// clinician's calendar, not just the first one found).
     private var nextUpcoming: (series: AppointmentSeries, occurrence: AppointmentOccurrence)? {
         series
-            .flatMap { seriesItem in seriesItem.occurrences.map { (seriesItem, $0) } }
+            .flatMap { seriesItem in seriesItem.occurrenceList.map { (seriesItem, $0) } }
             .filter { $0.1.scheduledDate > .now }
             .min { $0.1.scheduledDate < $1.1.scheduledDate }
     }

@@ -301,7 +301,7 @@ struct AppointmentsWidget: View {
 
     private var next: (series: AppointmentSeries, occurrence: AppointmentOccurrence)? {
         allSeries
-            .flatMap { s in s.occurrences.map { (s, $0) } }
+            .flatMap { s in s.occurrenceList.map { (s, $0) } }
             .filter { $0.1.scheduledDate > .now }
             .min { $0.1.scheduledDate < $1.1.scheduledDate }
     }
@@ -513,7 +513,7 @@ struct NextSessionWidget: View {
 
     private var next: (series: AppointmentSeries, occurrence: AppointmentOccurrence)? {
         allSeries
-            .flatMap { s in s.occurrences.map { (s, $0) } }
+            .flatMap { s in s.occurrenceList.map { (s, $0) } }
             .filter { $0.1.scheduledDate > .now }
             .min { $0.1.scheduledDate < $1.1.scheduledDate }
     }
@@ -521,7 +521,7 @@ struct NextSessionWidget: View {
     /// The provider of the most recent session so far, which is who After session opens on.
     private var lastPastSeries: AppointmentSeries? {
         let past = allSeries
-            .flatMap { s in s.occurrences.map { (s, $0) } }
+            .flatMap { s in s.occurrenceList.map { (s, $0) } }
             .filter { $0.1.scheduledDate <= .now }
         return past.max { $0.1.scheduledDate < $1.1.scheduledDate }?.0
     }

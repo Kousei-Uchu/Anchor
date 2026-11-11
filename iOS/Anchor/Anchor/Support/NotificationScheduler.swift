@@ -365,7 +365,7 @@ enum AppointmentReminders {
         #endif
         let providers = (try? context.fetch(FetchDescriptor<AppointmentSeries>())) ?? []
         refresh(sessions: providers.flatMap { provider in
-            provider.occurrences.map { (id: $0.id, date: $0.scheduledDate, providerID: Optional(provider.id)) }
+            provider.occurrenceList.map { (id: $0.id, date: $0.scheduledDate, providerID: Optional(provider.id)) }
         })
     }
 
@@ -849,7 +849,7 @@ enum HelloReminders {
     /// The start of every session the person has scheduled, from every provider.
     static func sessionStarts(using context: ModelContext) -> [Date] {
         let providers = (try? context.fetch(FetchDescriptor<AppointmentSeries>())) ?? []
-        return providers.flatMap { $0.occurrences.map(\.scheduledDate) }
+        return providers.flatMap { $0.occurrenceList.map(\.scheduledDate) }
     }
 
     /// The lock screen line for a window that starts at this hour. It names no one and no window.

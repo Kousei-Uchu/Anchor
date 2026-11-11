@@ -18,11 +18,11 @@ struct AppointmentPrepView: View {
     @State private var showingOnePage = false
 
     private var nextOccurrence: AppointmentOccurrence? {
-        series.occurrences.filter { $0.scheduledDate > .now }.sorted { $0.scheduledDate < $1.scheduledDate }.first
+        series.occurrenceList.filter { $0.scheduledDate > .now }.sorted { $0.scheduledDate < $1.scheduledDate }.first
     }
 
     private var lastSessionDate: Date? {
-        series.occurrences.map(\.scheduledDate).filter { $0 <= .now }.max()
+        series.occurrenceList.map(\.scheduledDate).filter { $0 <= .now }.max()
     }
 
     /// Where the Recovery summary starts counting: the last session, or a typical gap before now.
@@ -35,7 +35,7 @@ struct AppointmentPrepView: View {
     /// Journal entries that are this series' own prep and post-session notes,
     /// which are not offered back as things written since the last session.
     private var ownNoteIDs: Set<UUID> {
-        Set(series.occurrences.flatMap { [$0.prepNoteEntryID, $0.postSessionNoteEntryID] }.compactMap { $0 })
+        Set(series.occurrenceList.flatMap { [$0.prepNoteEntryID, $0.postSessionNoteEntryID] }.compactMap { $0 })
     }
 
     private func appendToNotes(_ text: String) {

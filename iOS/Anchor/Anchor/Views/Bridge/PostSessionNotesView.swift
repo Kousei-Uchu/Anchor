@@ -24,7 +24,7 @@ struct PostSessionNotesView: View {
     @State private var lastEdited: AppointmentOccurrence?
 
     private var pastOccurrences: [AppointmentOccurrence] {
-        series.occurrences
+        series.occurrenceList
             .filter { $0.scheduledDate <= .now }
             .sorted { $0.scheduledDate > $1.scheduledDate }
     }

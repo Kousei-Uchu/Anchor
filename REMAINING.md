@@ -1,6 +1,6 @@
 # Anchor: what is left
 
-*Only what is still to do. When something is finished, confirmed or answered, it is deleted from this file in the same patch, never moved to a done list. Finished work is in the Progress table of `ANCHOR_PATCH_PLAN.md` and in `docs/PLAN_CHANGELOG.md`. Last updated: 11 Nov 2026, after R5.*
+*Only what is still to do. When something is finished, confirmed or answered, it is deleted from this file in the same patch, never moved to a done list. Finished work is in the Progress table of `ANCHOR_PATCH_PLAN.md` and in `docs/PLAN_CHANGELOG.md`. Last updated: 11 Nov 2026, after SY1b-pre.*
 
 ## 1. Waiting on you
 
@@ -11,9 +11,7 @@
 
 **Needed before SY1b can be written (iCloud sync switch)**
 
-- The iCloud capability and the container `iCloud.page.aspens.anchor` are in `Anchor.entitlements` (your commit `b9e7ca6`). Still to check: that the container is registered in your Apple developer account and ticked on the app target, which only you can see.
-- A second device signed in to the same Apple ID to try it on. A simulator cannot show whether two devices agree.
-- A go-ahead on the two relationships (`AppointmentSeries.occurrences`, `DecisionPresetCategory.choices`): CloudKit wants them optional with an inverse, which changes how a stored link is kept. I will make the change in its own small patch, and it needs the safety copy and your data on a copy first.
+- The iCloud capability and the container `iCloud.page.aspens.anchor` are in `Anchor.entitlements`, registered and ticked on the app target (you confirmed 11 Nov), and you have two devices to try it on. Nothing from you is outstanding for SY1b except the recovery-key screen below, which I check myself.
 - How the second device gets the data key: D40 says the recovery key is typed on the new device. I have not checked that a screen for typing it in on a new device exists; that is the first thing I will look at once the above is in place.
 
 **Things to read and answer**
@@ -32,6 +30,7 @@ Everything here builds and launches on your phone (confirmed 11 Nov 2026, after 
 
 **Can be tried in the review run** (`scripts/review-on-device.sh`, made-up content)
 
+- SY1b-pre: Plan, Appointments and Decision presets, the two links CloudKit needs to be optional with an inverse. Make the safety copy first, and open the new build on a copy of your data if you can: every provider's sessions and every preset group's options should still be there.
 - R5: the check-in and sleep fixes, six stops at the end of the review bar. Make the safety copy first: a check-in gets a new locked field for its answers. Check-in exports do not carry those answers yet.
 - RV1a: Task cards, the quiet line is now a few small facts that wrap instead of being cut off.
 - 30p2: Settings, After-session reminders, a switch for each person, that evening or the next morning.
@@ -66,7 +65,7 @@ Everything here builds and launches on your phone (confirmed 11 Nov 2026, after 
 
 ## 3. Not started, in order
 
-1. **SY1b**: the iCloud sync switch. It must also remove `cloudKitDatabase: .none` from every store (FIX2), or sync stays off. Off by default, the private database, per-device things stay per-device, sleep nights synced except any Apple Health already holds (D39), Clear everything says it clears every device. The two relationships (`AppointmentSeries.occurrences`, `DecisionPresetCategory.choices`) first need to be optional with an inverse, which `scripts/check-cloudkit-ready.mjs` lists; then the CloudKit container and entitlement, which need your Apple developer account and a device. After SY1a is checked on your phone.
+1. **SY1b**: the iCloud sync switch. It must also remove `cloudKitDatabase: .none` from every store (FIX2), or sync stays off. Off by default, the private database, per-device things stay per-device, sleep nights synced except any Apple Health already holds (D39), Clear everything says it clears every device. The two relationships are now optional with an inverse (SY1b-pre). After SY1a and SY1b-pre are checked on your phone.
 2. **SY2**: voice notes and Journal photos in sync. After SY1.
 3. **SY3**: the recovery key shown as a QR code and scanned on the new device, with the typed key still the default (D40). With SY1.
 4. **VN4a**: find who is speaking with a speaker-separation model on the recording, used in memory against the other voices in that one recording only, labelling Person 1, Person 2 and so on, then a people screen (how many were heard, a name for each beside a transcript preview, openable again later). The model ships inside the app; its size is measured first. Nothing is stored. Size L, to be split.

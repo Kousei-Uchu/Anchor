@@ -454,7 +454,7 @@ struct DataControlView: View {
         for dto in export.decisionCategories where existingCategoryIDs.insert(dto.id).inserted {
             let category = dto.toModel()
             modelContext.insert(category)
-            for choice in category.choices { modelContext.insert(choice) }
+            for choice in category.choiceList { modelContext.insert(choice) }
             importedCount += 1
         }
         for dto in export.deEscalationScripts where existingScriptIDs.insert(dto.id).inserted {
@@ -1643,11 +1643,11 @@ struct DecisionPresetCategoryDTO: Codable {
     var id: UUID; var name: String; var sortOrder: Int; var choices: [DecisionPresetChoiceDTO]
     init(_ m: DecisionPresetCategory) {
         id = m.id; name = m.name; sortOrder = m.sortOrder
-        choices = m.choices.map(DecisionPresetChoiceDTO.init)
+        choices = m.choiceList.map(DecisionPresetChoiceDTO.init)
     }
     func toModel() -> DecisionPresetCategory {
         let category = DecisionPresetCategory(id: id, name: name, sortOrder: sortOrder)
-        category.choices = choices.map { choiceDTO in
+        category.choiceList = choices.map { choiceDTO in
             let choice = choiceDTO.toModel()
             choice.category = category
             return choice
@@ -1841,7 +1841,7 @@ struct AppointmentSeriesDTO: Codable {
         id = m.id; clinicianLabel = m.clinicianLabel; role = m.role; exportLabel = m.exportLabel; notes = m.notes
         typicalDayOfWeek = m.typicalDayOfWeek; typicalHour = m.typicalHour; typicalMinute = m.typicalMinute
         typicalCadenceDays = m.typicalCadenceDays; sortOrder = m.sortOrder
-        occurrences = m.occurrences.map(AppointmentOccurrenceDTO.init)
+        occurrences = m.occurrenceList.map(AppointmentOccurrenceDTO.init)
     }
     func toModel() -> AppointmentSeries {
         var time: DateComponents?
@@ -2525,7 +2525,7 @@ extension AppointmentSeries: DataBrowsable {
             .text("Name on exports", exportLabel),
             .text("Notes", notes),
             .number("Position in the list", sortOrder),
-            .lines("Sessions", occurrences.sorted { $0.scheduledDate < $1.scheduledDate }.map { $0.scheduledDate.formatted(date: .abbreviated, time: .shortened) + ($0.wasMoved ? " (moved)" : "") })
+            .lines("Sessions", occurrenceList.sorted { $0.scheduledDate < $1.scheduledDate }.map { $0.scheduledDate.formatted(date: .abbreviated, time: .shortened) + ($0.wasMoved ? " (moved)" : "") })
         ]
     }
 }
@@ -2675,7 +2675,7 @@ extension DecisionPresetCategory: DataBrowsable {
         [
             .text("Name", name),
             .number("Position in the list", sortOrder),
-            .lines("Options", choices.sorted { $0.sortOrder < $1.sortOrder }.map { $0.name + ($0.steps.isEmpty ? "" : ": " + $0.steps) })
+            .lines("Options", choiceList.sorted { $0.sortOrder < $1.sortOrder }.map { $0.name + ($0.steps.isEmpty ? "" : ": " + $0.steps) })
         ]
     }
 }

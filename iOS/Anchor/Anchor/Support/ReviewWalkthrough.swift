@@ -142,6 +142,7 @@ enum ReviewStops {
          "On Now, tap Log it on Last night, tap the start time and pick a time. The sheet should stay open. Fill in more, then close it.", 0, nil),
         ("R5", "Sleep in Journaling Suggestions", "The Journaling Suggestions screen starts with Sleep: the night for that entry's day to tap and add, Write down how you slept when there is none, and earlier nights below.",
          "Open any entry, tap the sparkles button at the bottom. Sleep is first. Today has no night in a review run: tap Write down how you slept, set a time, close it, and the card lands on the page. Then reopen Journaling Suggestions and tap an earlier night.", 2, nil),
+        ("SY1b-pre", "Sessions and presets keep their links", "Sessions stay with their provider and options stay with their preset group. The links are stored a little differently, ready for iCloud sync.", "Open Plan, Appointments: each provider still shows its sessions, and moving or adding a session works. Open Plan, Decision presets: each group still shows its options. Delete a provider you made: its sessions go with it.", 0, nil),
     ])
 }
 

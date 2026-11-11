@@ -101,7 +101,7 @@ struct DecisionFatigueView: View {
     }
 
     private func startNewOption(in category: DecisionPresetCategory) {
-        let new = DecisionPresetChoice(name: "", sortOrder: category.choices.count, category: category)
+        let new = DecisionPresetChoice(name: "", sortOrder: category.choiceList.count, category: category)
         modelContext.insert(new)
         editingChoice = new
     }
@@ -118,10 +118,10 @@ struct DecisionFatigueView: View {
         if let deletingCategory { modelContext.delete(deletingCategory) }
 
         for category in categories where category !== deletingCategory {
-            for choice in category.choices where choice !== deletingChoice && isBlank(choice) {
+            for choice in category.choiceList where choice !== deletingChoice && isBlank(choice) {
                 modelContext.delete(choice)
             }
-            if category.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && category.choices.isEmpty {
+            if category.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && category.choiceList.isEmpty {
                 modelContext.delete(category)
             }
         }
@@ -142,7 +142,7 @@ private struct DecisionCategoryCard: View {
     let onDeleteChoice: (DecisionPresetChoice) -> Void
 
     private var sortedChoices: [DecisionPresetChoice] {
-        category.choices.sorted { $0.sortOrder < $1.sortOrder }
+        category.choiceList.sorted { $0.sortOrder < $1.sortOrder }
     }
 
     private func hasSteps(_ choice: DecisionPresetChoice) -> Bool {

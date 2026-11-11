@@ -238,7 +238,7 @@ Lock in: none
 | exportLabel | String | locked | sealed | a name you typed |
 | notes | String | locked | sealed | your own words |
 | sortOrder | Int | plain | plain | the order on screen |
-| occurrences | [AppointmentOccurrence] | plain | plain | the link from a series to its sessions |
+| occurrences | [AppointmentOccurrence]? | plain | plain | the link from a series to its sessions |
 
 ## AppointmentOccurrence
 
@@ -251,6 +251,7 @@ Lock in: none
 | wasMoved | Bool | locked | sealed | records what you did with a session |
 | prepNoteEntryID | UUID? | plain | plain | a link to another item by id, with no content |
 | postSessionNoteEntryID | UUID? | plain | plain | a link to another item by id, with no content |
+| series | AppointmentSeries? | plain | plain | the link from a session back to its series |
 | prepChecklist | [QuickListItem] | locked | sealed | a checklist you wrote |
 
 ## BridgeDraftItem
@@ -337,7 +338,7 @@ Lock in: none
 | id | UUID | plain | plain | its own id |
 | name | String | locked | sealed | a name you typed |
 | sortOrder | Int | plain | plain | the order on screen |
-| choices | [DecisionPresetChoice] | plain | plain | the link from a category to its choices |
+| choices | [DecisionPresetChoice]? | plain | plain | the link from a category to its choices |
 
 ## DecisionPresetChoice
 

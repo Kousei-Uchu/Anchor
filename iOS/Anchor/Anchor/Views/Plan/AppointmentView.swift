@@ -45,11 +45,11 @@ struct AppointmentView: View {
     private var calendar: Calendar { Calendar.current }
 
     private var occurrencesByDay: [Date: [AppointmentOccurrence]] {
-        Dictionary(grouping: series.occurrences) { calendar.startOfDay(for: $0.scheduledDate) }
+        Dictionary(grouping: series.occurrenceList) { calendar.startOfDay(for: $0.scheduledDate) }
     }
 
     private var sortedOccurrences: [AppointmentOccurrence] {
-        series.occurrences.sorted { $0.scheduledDate < $1.scheduledDate }
+        series.occurrenceList.sorted { $0.scheduledDate < $1.scheduledDate }
     }
 
     /// Today's sessions and every later one, soonest first.
@@ -65,7 +65,7 @@ struct AppointmentView: View {
     }
 
     private var hasMovedSession: Bool {
-        series.occurrences.contains { $0.wasMoved }
+        series.occurrenceList.contains { $0.wasMoved }
     }
 
     var body: some View {
@@ -82,7 +82,7 @@ struct AppointmentView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
-                if !series.occurrences.isEmpty {
+                if !series.occurrenceList.isEmpty {
                     Menu {
                         Button("Remove all sessions", role: .destructive) {
                             showRemoveAllConfirm = true
@@ -105,7 +105,7 @@ struct AppointmentView: View {
         }
         .confirmationDialog("Remove all sessions?", isPresented: $showRemoveAllConfirm, titleVisibility: .visible) {
             Button("Remove all", role: .destructive) {
-                for occurrence in series.occurrences { modelContext.delete(occurrence) }
+                for occurrence in series.occurrenceList { modelContext.delete(occurrence) }
             }
             Button("Cancel", role: .cancel) {}
         }
@@ -402,7 +402,7 @@ private struct ScheduleSessionSheet: View {
     /// have one, or the current time.
     private static func startingTime(for series: AppointmentSeries, on date: Date) -> Date {
         let calendar = Calendar.current
-        if let latest = series.occurrences.max(by: { $0.scheduledDate < $1.scheduledDate }) {
+        if let latest = series.occurrenceList.max(by: { $0.scheduledDate < $1.scheduledDate }) {
             let parts = calendar.dateComponents([.hour, .minute], from: latest.scheduledDate)
             return calendar.date(bySettingHour: parts.hour ?? 9, minute: parts.minute ?? 0, second: 0, of: date) ?? Date()
         }
@@ -453,7 +453,7 @@ private struct ScheduleSessionSheet: View {
         let count = repeats ? numberOfSessions : 1
         for index in 0..<count {
             let sessionDate = Calendar.current.date(byAdding: .day, value: index * gapDays, to: firstDate) ?? firstDate
-            series.occurrences.append(AppointmentOccurrence(scheduledDate: sessionDate))
+            series.occurrenceList.append(AppointmentOccurrence(scheduledDate: sessionDate))
         }
         if repeats { series.typicalCadenceDays = gapDays }
         dismiss()
@@ -588,7 +588,7 @@ struct ProviderPageHost: View {
     }
 
     private var sessionSignature: String {
-        providers.flatMap { $0.occurrences }
+        providers.flatMap { $0.occurrenceList }
             .map { "\($0.id.uuidString)\($0.scheduledDate.timeIntervalSince1970)" }
             .sorted()
             .joined(separator: ",")
@@ -676,7 +676,7 @@ private extension AppointmentSeries {
         clinicianLabel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && role.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && occurrences.isEmpty
+            && occurrenceList.isEmpty
     }
 }
 
