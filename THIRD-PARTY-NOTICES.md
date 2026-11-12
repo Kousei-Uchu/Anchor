@@ -41,6 +41,7 @@ list cannot quietly fall behind. It cannot judge whether a licence is correct.
 |---|---|---|---|---|
 | @fontsource/inter | ^5.3.0 | OFL-1.1 | https://fontsource.org | The Inter typeface, bundled into the site. The SIL Open Font Licence asks that its copyright and licence notice travel with the font files. |
 | @fontsource-variable/fraunces | ^5.3.0 | OFL-1.1 | https://fontsource.org | The Fraunces typeface, bundled into the site. Same condition as Inter. |
+| @fontsource-variable/nunito | ^5.3.0 | OFL-1.1 | https://fontsource.org | The Nunito typeface, bundled into the site as the rounded text fallback in the demo for browsers without Apple's rounded system font. Same condition as Inter. |
 | react | ^19.3.1 | MIT | https://react.dev | |
 | react-dom | ^19.3.1 | MIT | https://react.dev | |
 | react-router-dom | ^7.18.5 | MIT | https://reactrouter.com | |

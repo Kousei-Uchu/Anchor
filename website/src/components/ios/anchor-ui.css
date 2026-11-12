@@ -1,28 +1,46 @@
 /* The website's copy of the app's design system. Colours, radius and spacing come from design.generated.css.
-   Sizes below mirror the SwiftUI components named beside each rule; scripts/sync-design.mjs --check flags when a Swift component changes. */
+   Sizes below mirror the SwiftUI views named beside each rule; scripts/sync-design.mjs --check flags when one of those Swift views changes. */
 
 .au-screen {
-  --au-rounded: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --au-text: ui-sans-serif, -apple-system, system-ui, "Segoe UI", sans-serif;
+  --au-rounded: ui-rounded, "SF Pro Rounded", "Nunito Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --au-text: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, "Segoe UI", sans-serif;
   --au-primary: #000; --au-secondary: rgb(60 60 67 / 0.6); --au-tertiary: rgb(60 60 67 / 0.3);
-  position: relative; width: 393px; height: 852px; overflow: hidden; border-radius: 44px;
+  position: relative; width: 440px; height: 956px; overflow: hidden; border-radius: 55px; flex: none;
   background: var(--anchor-background); color: var(--au-primary);
   font-family: var(--au-text); -webkit-font-smoothing: antialiased; text-align: left;
 }
 .au-screen[data-anchor-scheme="dark"] { --au-primary: #fff; --au-secondary: rgb(235 235 245 / 0.6); --au-tertiary: rgb(235 235 245 / 0.3); }
-.au-scroll { height: 100%; overflow-y: auto; padding: 54px var(--anchor-spacing) 24px; scrollbar-width: none; }
+.au-screen button { font-family: inherit; color: inherit; }
+.au-scroll { height: 100%; overflow-y: auto; padding: 0 var(--anchor-spacing) 120px; scrollbar-width: none; }
 .au-scroll::-webkit-scrollbar { display: none; }
-.au-nav-title { margin: 0 0 8px; font: 700 34px/1.2 var(--au-text); letter-spacing: 0.4px; }
-.au-stack { display: flex; flex-direction: column; gap: var(--anchor-spacing); padding-bottom: 24px; }
+.au-nav-spacer { height: 106px; }
+.au-nav-title { margin: 12px 0 25px; font: 700 34px/41px var(--au-text); letter-spacing: 0.37px; }
+.au-stack { display: flex; flex-direction: column; gap: var(--anchor-spacing); }
+
+/* Status bar, help button and tab bar */
+.au-status { position: absolute; inset: 0 0 auto 0; height: 62px; pointer-events: none; font: 600 17px/22px var(--au-text); }
+.au-status-time { position: absolute; left: 0; top: 20px; width: 180px; text-align: center; }
+.au-status-right { position: absolute; left: 296px; top: 24px; width: 106px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.au-help { position: absolute; top: 63px; right: 20px; width: 43px; height: 43px; display: flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 50%; color: var(--anchor-accent) !important; cursor: pointer;
+  background: color-mix(in srgb, var(--anchor-card-background) 70%, transparent); box-shadow: 0 0 0 1px rgb(0 0 0 / 0.06), 0 4px 14px rgb(0 0 0 / 0.07); }
+.au-tabbar { position: absolute; left: 21px; right: 22px; bottom: 24px; height: 59px; display: flex; align-items: center; justify-content: space-around; padding: 0 4px; border-radius: 30px;
+  background: color-mix(in srgb, var(--anchor-card-background) 55%, transparent); backdrop-filter: blur(22px) saturate(1.6); -webkit-backdrop-filter: blur(22px) saturate(1.6);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.55), 0 8px 28px rgb(0 0 0 / 0.12); }
+.au-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; width: 82px; height: 52px; border-radius: 26px; font: 500 11px/13px var(--au-text); }
+.au-screen[data-anchor-scheme="dark"] .au-tabbar { box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.14), 0 8px 28px rgb(0 0 0 / 0.4); }
+.au-tab-on { color: var(--anchor-accent); background: rgb(120 120 128 / 0.14); }
 
 /* iOS text styles at the default text size */
-.au-headline { font: 600 17px/1.3 var(--au-rounded); }
-.au-body { font: 400 17px/1.3 var(--au-rounded); }
-.au-subheadline { font: 400 15px/1.3 var(--au-rounded); }
-.au-caption { font: 400 12px/1.3 var(--au-text); }
+.au-headline { font: 600 17px/20px var(--au-rounded); }
+.au-body { font: 400 17px/20px var(--au-rounded); }
+.au-callout { font: 400 16px/19px var(--au-rounded); }
+.au-subheadline { font: 400 15px/18px var(--au-rounded); }
+.au-caption { font: 400 12px/14px var(--au-rounded); }
 .au-semibold { font-weight: 600; }
+.au-medium { font-weight: 500; }
+.au-grow { flex: 1; text-align: left; }
 .au-secondary { color: var(--au-secondary); }
-.au-tertiary { color: var(--au-tertiary); }
+.au-tertiary { display: inline-flex; color: var(--au-tertiary); }
 .au-center { text-align: center; }
 .au-pad-x { padding: 0 var(--anchor-spacing); }
 .au-glyph { flex: none; display: block; }
@@ -39,14 +57,15 @@
 .au-section-header { display: flex; align-items: center; gap: 10px; color: var(--au-primary); }
 .au-badge { display: inline-flex; align-items: center; justify-content: center; flex: none; color: var(--tint); background: color-mix(in srgb, var(--tint) 16%, transparent); }
 .au-badge-circle { width: 30px; height: 30px; border-radius: 50%; }
+.au-badge-md { width: 34px; height: 34px; }
 .au-badge-lg { width: 52px; height: 52px; }
 .au-badge-square { width: 34px; height: 34px; border-radius: 10px; background: color-mix(in srgb, var(--tint) 15%, transparent); }
 
 /* Anchor.PrimaryButtonStyle and Anchor.SecondaryButtonStyle */
-.au-btn { --tint: var(--anchor-accent); display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 0; border-radius: 999px; font-family: var(--au-rounded); cursor: pointer; transition: opacity 0.12s, background 0.12s; }
-.au-btn-primary { box-sizing: border-box; width: 100%; padding: 10px 16px; font-size: 15px; font-weight: 600; color: #fff; background: var(--tint); }
+.au-btn { --tint: var(--anchor-accent); display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 0; border-radius: 999px; font-family: var(--au-rounded); cursor: pointer; transition: opacity 0.12s, background 0.12s; white-space: nowrap; }
+.au-btn-primary { box-sizing: border-box; width: 100%; padding: 10px 16px; font-size: 15px; line-height: 18px; font-weight: 600; color: #fff !important; background: var(--tint); }
 .au-btn-primary:active { opacity: 0.78; }
-.au-btn-secondary { padding: 8px 14px; font-size: 15px; font-weight: 500; color: var(--tint); background: color-mix(in srgb, var(--tint) 14%, transparent); }
+.au-btn-secondary { padding: 8px 14px; font-size: 15px; line-height: 18px; font-weight: 500; color: var(--tint) !important; background: color-mix(in srgb, var(--tint) 14%, transparent); }
 .au-btn-secondary:active { background: color-mix(in srgb, var(--tint) 24%, transparent); }
 
 /* Anchor.MenuRow */
@@ -54,9 +73,9 @@
 .au-menu-text { display: flex; flex-direction: column; gap: 2px; }
 
 /* Anchor.TileButtonLabel and Anchor.TileRow */
-.au-tile { --tint: var(--anchor-accent); display: flex; flex-direction: column; align-items: center; gap: 8px; width: 88px; padding: 0; border: 0; background: none; cursor: pointer; color: inherit; }
+.au-tile { --tint: var(--anchor-accent); display: flex; flex-direction: column; align-items: center; gap: 8px; width: 88px; padding: 0; border: 0; background: none; cursor: pointer; }
 .au-tile-icon { display: flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 16px; color: var(--tint); background: color-mix(in srgb, var(--tint) 15%, transparent); }
-.au-tile-title { min-height: 32px; font: 500 12px/1.3 var(--au-rounded); text-align: center; }
+.au-tile-title { min-height: 32px; font: 500 12px/14px var(--au-rounded); text-align: center; }
 .au-tile-row { display: flex; flex-direction: column; gap: 10px; margin: 0 calc(var(--anchor-spacing) * -1); }
 .au-tile-scroll { overflow-x: auto; scrollbar-width: none; }
 .au-tile-scroll::-webkit-scrollbar { display: none; }
@@ -64,3 +83,41 @@
 
 /* Anchor.EmptyState */
 .au-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+
+/* CrisisNumbersView: red gradient, radius 16, padding 14 */
+.au-crisis { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 16px; color: #fff;
+  background: linear-gradient(to bottom right, rgb(255 59 48 / 0.85), rgb(255 59 48 / 0.65)); }
+.au-crisis-title { display: flex; align-items: center; gap: 8px; }
+.au-crisis-row { display: flex; align-items: center; justify-content: space-between; }
+.au-crisis-num { display: inline-flex; align-items: center; gap: 6px; font: 400 17px/20px var(--au-text); }
+.au-crisis-foot { display: flex; align-items: center; gap: 6px; opacity: 0.85; }
+
+/* MascotPresenceView: 64pt body, 28pt corners, bubble with an 8pt tail */
+.au-mascot-row { display: flex; align-items: flex-end; gap: 12px; padding-top: 4px; }
+.au-mascot { position: relative; flex: none; width: 64px; height: 64px; border-radius: 28px; color: #fff;
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--anchor-accent) 90%, transparent), color-mix(in srgb, var(--anchor-accent) 65%, transparent));
+  box-shadow: 0 4px 6px color-mix(in srgb, var(--anchor-accent) 25%, transparent); animation: au-breathe 2.4s ease-in-out infinite alternate; }
+.au-eyes { position: absolute; left: 50%; top: calc(50% - 4px); display: flex; gap: 14px; transform: translate(-50%, -50%); }
+.au-eyes i { display: block; width: 7px; height: 9px; border-radius: 999px; background: #fff; }
+.au-mascot-anchor { position: absolute; left: 50%; top: calc(50% + 16px); transform: translate(-50%, -50%); opacity: 0.85; }
+.au-bubble { position: relative; margin: 0 0 0 8px; padding: 10px 14px; border-radius: 16px; background: var(--anchor-card-background);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--anchor-accent) 15%, transparent); }
+.au-bubble::before { content: ""; position: absolute; left: -8px; top: calc(72% - 6px); width: 8px; height: 12px; background: var(--anchor-card-background); clip-path: polygon(100% 0, 0 50%, 100% 100%); }
+@keyframes au-breathe { from { transform: scale(0.98); } to { transform: scale(1.04); } }
+@media (prefers-reduced-motion: reduce) { .au-mascot { animation: none; } }
+
+/* QuickContactsView chips */
+.au-chips { display: flex; gap: 8px; margin-top: 10px; }
+.au-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 0; border-radius: 999px; background: transparent; cursor: pointer; }
+.au-chip-on { background: var(--anchor-accent-soft); }
+.au-chip-initial { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; font: 700 11px/13px var(--au-text); color: var(--anchor-accent); background: var(--anchor-accent-soft); }
+.au-chip-on .au-chip-initial { color: #fff; background: var(--anchor-accent); }
+.au-stack-10 { display: flex; flex-direction: column; gap: 10px; }
+.au-stack-8 { display: flex; flex-direction: column; gap: 8px; }
+
+/* SafetyPlanShortcutView and the appointment card */
+.au-shortcut { display: flex; align-items: center; gap: 12px; }
+
+/* GroundingToolRow */
+.au-tool-row { --tint: var(--anchor-sage); display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 12px; border: 0; border-radius: 12px; background: var(--anchor-sage-soft); cursor: pointer; text-align: left; }
+.au-tool-icon { display: inline-flex; justify-content: center; width: 20px; color: var(--anchor-sage); }

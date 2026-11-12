@@ -37,6 +37,12 @@
     "TileRow": "87a4dc6e8b",
     "PrimaryButtonStyle": "039c16ca90",
     "SecondaryButtonStyle": "8aba56a7ab",
-    "EmptyState": "f0b0ce5700"
+    "EmptyState": "f0b0ce5700",
+    "CrisisNumbersView": "7be527b402",
+    "MascotPresenceView": "7edaf7f271",
+    "MascotCharacterView": "d6419a7084",
+    "SpeechBubble": "7232dabd77",
+    "SafetyPlanShortcutView": "e88aea8315",
+    "GroundingToolRow": "38877e991e"
   }
 }

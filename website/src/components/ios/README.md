@@ -17,10 +17,18 @@ These files let the website draw the app's screens from real components instead 
 
 Run `cd website && npm run dev` and open `/demo-now`. Add `?dark` for dark mode. The route exists only in dev.
 
+## What the Now preview covers
+
+Status bar, help button, large title, Crisis numbers, mascot with speech bubble, Check in, Quick contact (tap a name to switch),
+Next appointment, safety plan row, the Grounding tools card, and the floating tab bar. It was compared against
+`website/public/shots/now.jpg` (the real app on a Pro Max) and lines up to within a couple of points.
+The Tasks, De-escalation and Affirmations cards further down are not built yet.
+
 ## Known differences from the app
 
-- Icons are small line drawings in `AnchorUI.tsx`. SF Symbols cannot be used outside Apple platforms.
-- Rounded text uses `ui-rounded`, which only Apple browsers have. Other browsers fall back to the system font.
+- Icons are hand-drawn copies of the SF Symbols the app uses (SF Symbols cannot be used outside Apple platforms), so the shapes differ slightly.
+- Rounded text uses `ui-rounded`, which only Safari has. Everywhere else it falls back to Nunito, which is close but not the same.
 - Corners are circular, not iOS continuous corners.
-- Real views read SwiftData and branch on it, so the preview uses made-up appointment, task and empty-state text.
-- Only the Now tab has a preview so far.
+- The tab bar is a plain frosted pill, not the system glass effect.
+- The mascot in the app calls an `anchor` SF Symbol that does not appear on screen, so the website mascot has no anchor mark either.
+- The preview uses the values the app shows in demo mode for contacts, the appointment and the crisis numbers.
