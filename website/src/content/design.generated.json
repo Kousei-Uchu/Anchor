@@ -1,0 +1,42 @@
+{
+  "theme": {
+    "fixed": {
+      "accent": "rgb(202 121 95)",
+      "accentSoft": "rgb(202 121 95 / 0.16)",
+      "sage": "rgb(148 168 140)",
+      "sageSoft": "rgb(148 168 140 / 0.18)"
+    },
+    "scheme": {
+      "background": {
+        "dark": "rgb(28 26 26)",
+        "light": "rgb(251 246 241)"
+      },
+      "cardBackground": {
+        "dark": "rgb(43 40 38)",
+        "light": "rgb(255 255 255)"
+      },
+      "settingsBackground": {
+        "dark": "rgb(22 20 20)",
+        "light": "rgb(240 236 232)"
+      },
+      "settingsRowBackground": {
+        "dark": "rgb(38 36 34)",
+        "light": "rgb(255 255 255)"
+      }
+    },
+    "metrics": {
+      "cornerRadius": 20,
+      "spacing": 16
+    }
+  },
+  "mirrored": {
+    "Card": "81a180dcb0",
+    "SectionHeader": "9f407ee05f",
+    "MenuRow": "6299da8551",
+    "TileButtonLabel": "50d49059e8",
+    "TileRow": "87a4dc6e8b",
+    "PrimaryButtonStyle": "039c16ca90",
+    "SecondaryButtonStyle": "8aba56a7ab",
+    "EmptyState": "f0b0ce5700"
+  }
+}

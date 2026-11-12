@@ -1,4 +1,1450 @@
 {
   "start": "now",
-  "screens": []
+  "screens": [
+    {
+      "id": "now",
+      "image": "/demo/now.jpg",
+      "hot": [
+        {
+          "x": 3.64,
+          "y": 46.83,
+          "w": 92.73,
+          "h": 3.97,
+          "label": "Check in",
+          "to": "now-checkin"
+        },
+        {
+          "x": 23.03,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Plan",
+          "to": "plan"
+        },
+        {
+          "x": 40.39,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Journal",
+          "to": "journal"
+        },
+        {
+          "x": 57.74,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Bridge",
+          "to": "bridge"
+        },
+        {
+          "x": 75.09,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Thread",
+          "to": "thread"
+        }
+      ],
+      "more": "now-more"
+    },
+    {
+      "id": "now-more",
+      "image": "/demo/now-more.jpg",
+      "hot": [
+        {
+          "x": 5.68,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Now",
+          "to": "now"
+        },
+        {
+          "x": 23.03,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Plan",
+          "to": "plan"
+        },
+        {
+          "x": 40.39,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Journal",
+          "to": "journal"
+        },
+        {
+          "x": 57.74,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Bridge",
+          "to": "bridge"
+        },
+        {
+          "x": 75.09,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Thread",
+          "to": "thread"
+        }
+      ],
+      "less": "now"
+    },
+    {
+      "id": "now-checkin",
+      "image": "/demo/now-checkin.jpg",
+      "hot": []
+    },
+    {
+      "id": "plan",
+      "image": "/demo/plan.jpg",
+      "hot": [
+        {
+          "x": 7.27,
+          "y": 20.08,
+          "w": 85.45,
+          "h": 10.95,
+          "label": "Safety plan, Warning signs, Skipping meals, Coping strategies, Cold water on my wrists",
+          "to": "plan-safety"
+        },
+        {
+          "x": 7.27,
+          "y": 54.71,
+          "w": 85.45,
+          "h": 7.78,
+          "label": "Tasks, 4 to do, Drink some water",
+          "to": "plan-tasks"
+        },
+        {
+          "x": 7.27,
+          "y": 81.1,
+          "w": 32.12,
+          "h": 3.56,
+          "label": "All contacts",
+          "to": "plan-contacts"
+        },
+        {
+          "x": 5.68,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Now",
+          "to": "now"
+        },
+        {
+          "x": 40.39,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Journal",
+          "to": "journal"
+        },
+        {
+          "x": 57.74,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Bridge",
+          "to": "bridge"
+        },
+        {
+          "x": 75.09,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Thread",
+          "to": "thread"
+        }
+      ],
+      "more": "plan-more"
+    },
+    {
+      "id": "plan-more",
+      "image": "/demo/plan-more.jpg",
+      "hot": [
+        {
+          "x": 7.27,
+          "y": 11.54,
+          "w": 32.12,
+          "h": 3.56,
+          "label": "All contacts",
+          "to": "plan-contacts"
+        },
+        {
+          "x": 7.27,
+          "y": 38.01,
+          "w": 27.8,
+          "h": 3.56,
+          "label": "All scripts",
+          "to": "plan-deescalation"
+        },
+        {
+          "x": 7.27,
+          "y": 75.03,
+          "w": 25,
+          "h": 3.56,
+          "label": "All tools",
+          "to": "plan-grounding"
+        },
+        {
+          "x": 5.68,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Now",
+          "to": "now"
+        },
+        {
+          "x": 23.03,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Plan",
+          "to": "plan"
+        },
+        {
+          "x": 40.39,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Journal",
+          "to": "journal"
+        },
+        {
+          "x": 57.74,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Bridge",
+          "to": "bridge"
+        },
+        {
+          "x": 75.09,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Thread",
+          "to": "thread"
+        }
+      ],
+      "less": "plan",
+      "more": "plan-more2"
+    },
+    {
+      "id": "plan-more2",
+      "image": "/demo/plan-more2.jpg",
+      "hot": [
+        {
+          "x": 7.27,
+          "y": 3.21,
+          "w": 25,
+          "h": 3.56,
+          "label": "All tools",
+          "to": "plan-grounding"
+        },
+        {
+          "x": 7.27,
+          "y": 49.83,
+          "w": 35.61,
+          "h": 3.73,
+          "label": "All affirmations",
+          "to": "plan-affirmations"
+        },
+        {
+          "x": 7.27,
+          "y": 58.58,
+          "w": 85.45,
+          "h": 7.78,
+          "label": "Recovery, Day 12, Energy drinks",
+          "to": "plan-recovery"
+        },
+        {
+          "x": 5.68,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Now",
+          "to": "now"
+        },
+        {
+          "x": 23.03,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Plan",
+          "to": "plan"
+        },
+        {
+          "x": 40.39,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Journal",
+          "to": "journal"
+        },
+        {
+          "x": 57.74,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Bridge",
+          "to": "bridge"
+        },
+        {
+          "x": 75.09,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Thread",
+          "to": "thread"
+        }
+      ],
+      "less": "plan-more",
+      "more": "plan-more3"
+    },
+    {
+      "id": "plan-more3",
+      "image": "/demo/plan-more3.jpg",
+      "hot": [
+        {
+          "x": 7.27,
+          "y": 32.71,
+          "w": 35.61,
+          "h": 3.73,
+          "label": "All affirmations",
+          "to": "plan-affirmations"
+        },
+        {
+          "x": 7.27,
+          "y": 41.46,
+          "w": 85.45,
+          "h": 7.78,
+          "label": "Recovery, Day 12, Energy drinks",
+          "to": "plan-recovery"
+        },
+        {
+          "x": 5.68,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Now",
+          "to": "now"
+        },
+        {
+          "x": 23.03,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Plan",
+          "to": "plan"
+        },
+        {
+          "x": 40.39,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Journal",
+          "to": "journal"
+        },
+        {
+          "x": 57.74,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Bridge",
+          "to": "bridge"
+        },
+        {
+          "x": 75.09,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Thread",
+          "to": "thread"
+        }
+      ],
+      "less": "plan-more2"
+    },
+    {
+      "id": "plan-contacts",
+      "image": "/demo/plan-contacts.jpg",
+      "hot": [
+        {
+          "x": 4.55,
+          "y": 6.49,
+          "w": 10,
+          "h": 4.6,
+          "label": "Plan",
+          "to": "plan"
+        },
+        {
+          "x": 5.68,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Now",
+          "to": "now"
+        },
+        {
+          "x": 40.39,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Journal",
+          "to": "journal"
+        },
+        {
+          "x": 57.74,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Bridge",
+          "to": "bridge"
+        },
+        {
+          "x": 75.09,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Thread",
+          "to": "thread"
+        }
+      ]
+    },
+    {
+      "id": "plan-safety",
+      "image": "/demo/plan-safety.jpg",
+      "hot": [
+        {
+          "x": 4.55,
+          "y": 6.49,
+          "w": 10,
+          "h": 4.6,
+          "label": "Plan",
+          "to": "plan"
+        },
+        {
+          "x": 5.68,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Now",
+          "to": "now"
+        },
+        {
+          "x": 40.39,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Journal",
+          "to": "journal"
+        },
+        {
+          "x": 57.74,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Bridge",
+          "to": "bridge"
+        },
+        {
+          "x": 75.09,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Thread",
+          "to": "thread"
+        }
+      ]
+    },
+    {
+      "id": "plan-grounding",
+      "image": "/demo/plan-grounding.jpg",
+      "hot": [
+        {
+          "x": 4.55,
+          "y": 6.49,
+          "w": 10,
+          "h": 4.6,
+          "label": "Plan",
+          "to": "plan"
+        },
+        {
+          "x": 5.68,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Now",
+          "to": "now"
+        },
+        {
+          "x": 40.39,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Journal",
+          "to": "journal"
+        },
+        {
+          "x": 57.74,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Bridge",
+          "to": "bridge"
+        },
+        {
+          "x": 75.09,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Thread",
+          "to": "thread"
+        }
+      ]
+    },
+    {
+      "id": "plan-tasks",
+      "image": "/demo/plan-tasks.jpg",
+      "hot": [
+        {
+          "x": 4.55,
+          "y": 6.49,
+          "w": 10,
+          "h": 4.6,
+          "label": "Plan",
+          "to": "plan"
+        },
+        {
+          "x": 5.68,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Now",
+          "to": "now"
+        },
+        {
+          "x": 40.39,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Journal",
+          "to": "journal"
+        },
+        {
+          "x": 57.74,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Bridge",
+          "to": "bridge"
+        },
+        {
+          "x": 75.09,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Thread",
+          "to": "thread"
+        }
+      ]
+    },
+    {
+      "id": "plan-deescalation",
+      "image": "/demo/plan-deescalation.jpg",
+      "hot": [
+        {
+          "x": 4.55,
+          "y": 6.49,
+          "w": 10,
+          "h": 4.6,
+          "label": "Plan",
+          "to": "plan"
+        },
+        {
+          "x": 5.68,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Now",
+          "to": "now"
+        },
+        {
+          "x": 40.39,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Journal",
+          "to": "journal"
+        },
+        {
+          "x": 57.74,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Bridge",
+          "to": "bridge"
+        },
+        {
+          "x": 75.09,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Thread",
+          "to": "thread"
+        }
+      ]
+    },
+    {
+      "id": "plan-affirmations",
+      "image": "/demo/plan-affirmations.jpg",
+      "hot": [
+        {
+          "x": 4.55,
+          "y": 6.49,
+          "w": 10,
+          "h": 4.6,
+          "label": "Plan",
+          "to": "plan"
+        },
+        {
+          "x": 5.68,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Now",
+          "to": "now"
+        },
+        {
+          "x": 40.39,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Journal",
+          "to": "journal"
+        },
+        {
+          "x": 57.74,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Bridge",
+          "to": "bridge"
+        },
+        {
+          "x": 75.09,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Thread",
+          "to": "thread"
+        }
+      ]
+    },
+    {
+      "id": "plan-recovery",
+      "image": "/demo/plan-recovery.jpg",
+      "hot": [
+        {
+          "x": 4.55,
+          "y": 6.49,
+          "w": 10,
+          "h": 4.6,
+          "label": "Plan",
+          "to": "plan"
+        },
+        {
+          "x": 5.68,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Now",
+          "to": "now"
+        },
+        {
+          "x": 40.39,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Journal",
+          "to": "journal"
+        },
+        {
+          "x": 57.74,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Bridge",
+          "to": "bridge"
+        },
+        {
+          "x": 75.09,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Thread",
+          "to": "thread"
+        }
+      ]
+    },
+    {
+      "id": "journal",
+      "image": "/demo/journal.jpg",
+      "hot": [
+        {
+          "x": 5.68,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Now",
+          "to": "now"
+        },
+        {
+          "x": 23.03,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Plan",
+          "to": "plan"
+        },
+        {
+          "x": 57.74,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Bridge",
+          "to": "bridge"
+        },
+        {
+          "x": 75.09,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Thread",
+          "to": "thread"
+        }
+      ],
+      "more": "journal-more"
+    },
+    {
+      "id": "journal-more",
+      "image": "/demo/journal-more.jpg",
+      "hot": [
+        {
+          "x": 5.68,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Now",
+          "to": "now"
+        },
+        {
+          "x": 23.03,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Plan",
+          "to": "plan"
+        },
+        {
+          "x": 40.39,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Journal",
+          "to": "journal"
+        },
+        {
+          "x": 57.74,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Bridge",
+          "to": "bridge"
+        },
+        {
+          "x": 75.09,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Thread",
+          "to": "thread"
+        }
+      ],
+      "less": "journal"
+    },
+    {
+      "id": "bridge",
+      "image": "/demo/bridge.jpg",
+      "hot": [
+        {
+          "x": 7.27,
+          "y": 44.21,
+          "w": 26.59,
+          "h": 3.56,
+          "label": "Session prep",
+          "to": "bridge-prep"
+        },
+        {
+          "x": 55,
+          "y": 52.79,
+          "w": 37.73,
+          "h": 9.03,
+          "label": "Feedback loops, 3 diagrams, How a hard day spreads",
+          "to": "bridge-feedback"
+        },
+        {
+          "x": 7.27,
+          "y": 66.84,
+          "w": 85.45,
+          "h": 5.44,
+          "label": "Personal goals, Get outside for a short walk most days",
+          "to": "bridge-goals"
+        },
+        {
+          "x": 5.68,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Now",
+          "to": "now"
+        },
+        {
+          "x": 23.03,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Plan",
+          "to": "plan"
+        },
+        {
+          "x": 40.39,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Journal",
+          "to": "journal"
+        },
+        {
+          "x": 75.09,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Thread",
+          "to": "thread"
+        }
+      ],
+      "more": "bridge-more"
+    },
+    {
+      "id": "bridge-more",
+      "image": "/demo/bridge-more.jpg",
+      "hot": [
+        {
+          "x": 7.27,
+          "y": 44.21,
+          "w": 26.59,
+          "h": 3.56,
+          "label": "Session prep",
+          "to": "bridge-prep"
+        },
+        {
+          "x": 55,
+          "y": 52.79,
+          "w": 37.73,
+          "h": 9.03,
+          "label": "Feedback loops, 3 diagrams, How a hard day spreads",
+          "to": "bridge-feedback"
+        },
+        {
+          "x": 7.27,
+          "y": 66.84,
+          "w": 85.45,
+          "h": 5.44,
+          "label": "Personal goals, Get outside for a short walk most days",
+          "to": "bridge-goals"
+        },
+        {
+          "x": 5.68,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Now",
+          "to": "now"
+        },
+        {
+          "x": 23.03,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Plan",
+          "to": "plan"
+        },
+        {
+          "x": 40.39,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Journal",
+          "to": "journal"
+        },
+        {
+          "x": 57.74,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Bridge",
+          "to": "bridge"
+        },
+        {
+          "x": 75.09,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Thread",
+          "to": "thread"
+        }
+      ],
+      "less": "bridge"
+    },
+    {
+      "id": "bridge-prep",
+      "image": "/demo/bridge-prep.jpg",
+      "hot": [
+        {
+          "x": 4.55,
+          "y": 6.49,
+          "w": 10,
+          "h": 4.6,
+          "label": "Bridge",
+          "to": "bridge"
+        },
+        {
+          "x": 5.68,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Now",
+          "to": "now"
+        },
+        {
+          "x": 23.03,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Plan",
+          "to": "plan"
+        },
+        {
+          "x": 40.39,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Journal",
+          "to": "journal"
+        },
+        {
+          "x": 75.09,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Thread",
+          "to": "thread"
+        }
+      ]
+    },
+    {
+      "id": "bridge-feedback",
+      "image": "/demo/bridge-feedback.jpg",
+      "hot": [
+        {
+          "x": 4.55,
+          "y": 6.49,
+          "w": 10,
+          "h": 4.6,
+          "label": "Bridge",
+          "to": "bridge"
+        },
+        {
+          "x": 5.68,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Now",
+          "to": "now"
+        },
+        {
+          "x": 23.03,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Plan",
+          "to": "plan"
+        },
+        {
+          "x": 40.39,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Journal",
+          "to": "journal"
+        },
+        {
+          "x": 75.09,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Thread",
+          "to": "thread"
+        }
+      ]
+    },
+    {
+      "id": "bridge-goals",
+      "image": "/demo/bridge-goals.jpg",
+      "hot": [
+        {
+          "x": 4.55,
+          "y": 6.49,
+          "w": 10,
+          "h": 4.6,
+          "label": "Bridge",
+          "to": "bridge"
+        },
+        {
+          "x": 5.68,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Now",
+          "to": "now"
+        },
+        {
+          "x": 23.03,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Plan",
+          "to": "plan"
+        },
+        {
+          "x": 40.39,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Journal",
+          "to": "journal"
+        },
+        {
+          "x": 75.09,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Thread",
+          "to": "thread"
+        }
+      ]
+    },
+    {
+      "id": "thread",
+      "image": "/demo/thread.jpg",
+      "hot": [
+        {
+          "x": 7.27,
+          "y": 20.08,
+          "w": 85.45,
+          "h": 7.15,
+          "label": "Message log, 12 Nov 2026 at 6:48 am, Thinking of you. Hope the week is going alright.",
+          "to": "thread-log"
+        },
+        {
+          "x": 7.27,
+          "y": 36.99,
+          "w": 85.45,
+          "h": 9.03,
+          "label": "Support calendar, M, 9, Tu, 10, W, 11, Th, 12, F, 13, Sa, 14, Su, 15",
+          "to": "thread-calendar"
+        },
+        {
+          "x": 7.27,
+          "y": 51.05,
+          "w": 85.45,
+          "h": 5.06,
+          "label": "People, Sam, Alex, and Jordan",
+          "to": "thread-people"
+        },
+        {
+          "x": 7.27,
+          "y": 61.12,
+          "w": 85.45,
+          "h": 5.06,
+          "label": "To future me, Next unlocks in 14 days",
+          "to": "thread-future"
+        },
+        {
+          "x": 7.27,
+          "y": 84,
+          "w": 85.45,
+          "h": 6.94,
+          "label": "Boundaries, Things I'd like people to know, I go quiet when I am overwhelmed. It is not about you.",
+          "to": "thread-boundaries"
+        },
+        {
+          "x": 5.68,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Now",
+          "to": "now"
+        },
+        {
+          "x": 23.03,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Plan",
+          "to": "plan"
+        },
+        {
+          "x": 40.39,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Journal",
+          "to": "journal"
+        },
+        {
+          "x": 57.74,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Bridge",
+          "to": "bridge"
+        }
+      ],
+      "more": "thread-more"
+    },
+    {
+      "id": "thread-more",
+      "image": "/demo/thread-more.jpg",
+      "hot": [
+        {
+          "x": 7.27,
+          "y": 11.68,
+          "w": 85.45,
+          "h": 7.15,
+          "label": "Message log, 12 Nov 2026 at 6:48 am, Thinking of you. Hope the week is going alright.",
+          "to": "thread-log"
+        },
+        {
+          "x": 7.27,
+          "y": 28.59,
+          "w": 85.45,
+          "h": 9.03,
+          "label": "Support calendar, M, 9, Tu, 10, W, 11, Th, 12, F, 13, Sa, 14, Su, 15",
+          "to": "thread-calendar"
+        },
+        {
+          "x": 7.27,
+          "y": 42.64,
+          "w": 85.45,
+          "h": 5.06,
+          "label": "People, Sam, Alex, and Jordan",
+          "to": "thread-people"
+        },
+        {
+          "x": 7.27,
+          "y": 52.72,
+          "w": 85.45,
+          "h": 5.06,
+          "label": "To future me, Next unlocks in 14 days",
+          "to": "thread-future"
+        },
+        {
+          "x": 7.27,
+          "y": 75.59,
+          "w": 85.45,
+          "h": 6.94,
+          "label": "Boundaries, Things I'd like people to know, I go quiet when I am overwhelmed. It is not about you.",
+          "to": "thread-boundaries"
+        },
+        {
+          "x": 5.68,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Now",
+          "to": "now"
+        },
+        {
+          "x": 23.03,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Plan",
+          "to": "plan"
+        },
+        {
+          "x": 40.39,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Journal",
+          "to": "journal"
+        },
+        {
+          "x": 57.74,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Bridge",
+          "to": "bridge"
+        },
+        {
+          "x": 75.09,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Thread",
+          "to": "thread"
+        }
+      ],
+      "less": "thread"
+    },
+    {
+      "id": "thread-log",
+      "image": "/demo/thread-log.jpg",
+      "hot": [
+        {
+          "x": 4.55,
+          "y": 6.49,
+          "w": 10,
+          "h": 4.6,
+          "label": "Thread",
+          "to": "thread"
+        },
+        {
+          "x": 5.68,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Now",
+          "to": "now"
+        },
+        {
+          "x": 23.03,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Plan",
+          "to": "plan"
+        },
+        {
+          "x": 40.39,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Journal",
+          "to": "journal"
+        },
+        {
+          "x": 57.74,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Bridge",
+          "to": "bridge"
+        }
+      ]
+    },
+    {
+      "id": "thread-calendar",
+      "image": "/demo/thread-calendar.jpg",
+      "hot": [
+        {
+          "x": 4.55,
+          "y": 6.49,
+          "w": 10,
+          "h": 4.6,
+          "label": "Thread",
+          "to": "thread"
+        },
+        {
+          "x": 5.68,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Now",
+          "to": "now"
+        },
+        {
+          "x": 23.03,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Plan",
+          "to": "plan"
+        },
+        {
+          "x": 40.39,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Journal",
+          "to": "journal"
+        },
+        {
+          "x": 57.74,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Bridge",
+          "to": "bridge"
+        }
+      ]
+    },
+    {
+      "id": "thread-people",
+      "image": "/demo/thread-people.jpg",
+      "hot": [
+        {
+          "x": 4.55,
+          "y": 6.49,
+          "w": 10,
+          "h": 4.6,
+          "label": "Thread",
+          "to": "thread"
+        },
+        {
+          "x": 5.68,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Now",
+          "to": "now"
+        },
+        {
+          "x": 23.03,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Plan",
+          "to": "plan"
+        },
+        {
+          "x": 40.39,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Journal",
+          "to": "journal"
+        },
+        {
+          "x": 57.74,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Bridge",
+          "to": "bridge"
+        }
+      ]
+    },
+    {
+      "id": "thread-future",
+      "image": "/demo/thread-future.jpg",
+      "hot": [
+        {
+          "x": 4.55,
+          "y": 6.49,
+          "w": 10,
+          "h": 4.6,
+          "label": "Thread",
+          "to": "thread"
+        },
+        {
+          "x": 5.68,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Now",
+          "to": "now"
+        },
+        {
+          "x": 23.03,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Plan",
+          "to": "plan"
+        },
+        {
+          "x": 40.39,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Journal",
+          "to": "journal"
+        },
+        {
+          "x": 57.74,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Bridge",
+          "to": "bridge"
+        }
+      ]
+    },
+    {
+      "id": "thread-boundaries",
+      "image": "/demo/thread-boundaries.jpg",
+      "hot": [
+        {
+          "x": 4.55,
+          "y": 6.49,
+          "w": 10,
+          "h": 4.6,
+          "label": "Thread",
+          "to": "thread"
+        },
+        {
+          "x": 5.68,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Now",
+          "to": "now"
+        },
+        {
+          "x": 23.03,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Plan",
+          "to": "plan"
+        },
+        {
+          "x": 40.39,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Journal",
+          "to": "journal"
+        },
+        {
+          "x": 57.74,
+          "y": 91.74,
+          "w": 19.23,
+          "h": 5.65,
+          "label": "Bridge",
+          "to": "bridge"
+        }
+      ]
+    }
+  ]
 }

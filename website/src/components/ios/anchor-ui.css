@@ -1,0 +1,66 @@
+/* The website's copy of the app's design system. Colours, radius and spacing come from design.generated.css.
+   Sizes below mirror the SwiftUI components named beside each rule; scripts/sync-design.mjs --check flags when a Swift component changes. */
+
+.au-screen {
+  --au-rounded: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --au-text: ui-sans-serif, -apple-system, system-ui, "Segoe UI", sans-serif;
+  --au-primary: #000; --au-secondary: rgb(60 60 67 / 0.6); --au-tertiary: rgb(60 60 67 / 0.3);
+  position: relative; width: 393px; height: 852px; overflow: hidden; border-radius: 44px;
+  background: var(--anchor-background); color: var(--au-primary);
+  font-family: var(--au-text); -webkit-font-smoothing: antialiased; text-align: left;
+}
+.au-screen[data-anchor-scheme="dark"] { --au-primary: #fff; --au-secondary: rgb(235 235 245 / 0.6); --au-tertiary: rgb(235 235 245 / 0.3); }
+.au-scroll { height: 100%; overflow-y: auto; padding: 54px var(--anchor-spacing) 24px; scrollbar-width: none; }
+.au-scroll::-webkit-scrollbar { display: none; }
+.au-nav-title { margin: 0 0 8px; font: 700 34px/1.2 var(--au-text); letter-spacing: 0.4px; }
+.au-stack { display: flex; flex-direction: column; gap: var(--anchor-spacing); padding-bottom: 24px; }
+
+/* iOS text styles at the default text size */
+.au-headline { font: 600 17px/1.3 var(--au-rounded); }
+.au-body { font: 400 17px/1.3 var(--au-rounded); }
+.au-subheadline { font: 400 15px/1.3 var(--au-rounded); }
+.au-caption { font: 400 12px/1.3 var(--au-text); }
+.au-semibold { font-weight: 600; }
+.au-secondary { color: var(--au-secondary); }
+.au-tertiary { color: var(--au-tertiary); }
+.au-center { text-align: center; }
+.au-pad-x { padding: 0 var(--anchor-spacing); }
+.au-glyph { flex: none; display: block; }
+
+/* Anchor.Card */
+.au-card {
+  --tint: var(--anchor-accent);
+  box-sizing: border-box; width: 100%; padding: var(--anchor-spacing);
+  background: var(--anchor-card-background); border-radius: var(--anchor-corner-radius);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint) 12%, transparent);
+}
+
+/* Anchor.SectionHeader */
+.au-section-header { display: flex; align-items: center; gap: 10px; color: var(--au-primary); }
+.au-badge { display: inline-flex; align-items: center; justify-content: center; flex: none; color: var(--tint); background: color-mix(in srgb, var(--tint) 16%, transparent); }
+.au-badge-circle { width: 30px; height: 30px; border-radius: 50%; }
+.au-badge-lg { width: 52px; height: 52px; }
+.au-badge-square { width: 34px; height: 34px; border-radius: 10px; background: color-mix(in srgb, var(--tint) 15%, transparent); }
+
+/* Anchor.PrimaryButtonStyle and Anchor.SecondaryButtonStyle */
+.au-btn { --tint: var(--anchor-accent); display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 0; border-radius: 999px; font-family: var(--au-rounded); cursor: pointer; transition: opacity 0.12s, background 0.12s; }
+.au-btn-primary { box-sizing: border-box; width: 100%; padding: 10px 16px; font-size: 15px; font-weight: 600; color: #fff; background: var(--tint); }
+.au-btn-primary:active { opacity: 0.78; }
+.au-btn-secondary { padding: 8px 14px; font-size: 15px; font-weight: 500; color: var(--tint); background: color-mix(in srgb, var(--tint) 14%, transparent); }
+.au-btn-secondary:active { background: color-mix(in srgb, var(--tint) 24%, transparent); }
+
+/* Anchor.MenuRow */
+.au-menu-row { display: flex; align-items: center; gap: 12px; padding: 4px 0; }
+.au-menu-text { display: flex; flex-direction: column; gap: 2px; }
+
+/* Anchor.TileButtonLabel and Anchor.TileRow */
+.au-tile { --tint: var(--anchor-accent); display: flex; flex-direction: column; align-items: center; gap: 8px; width: 88px; padding: 0; border: 0; background: none; cursor: pointer; color: inherit; }
+.au-tile-icon { display: flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 16px; color: var(--tint); background: color-mix(in srgb, var(--tint) 15%, transparent); }
+.au-tile-title { min-height: 32px; font: 500 12px/1.3 var(--au-rounded); text-align: center; }
+.au-tile-row { display: flex; flex-direction: column; gap: 10px; margin: 0 calc(var(--anchor-spacing) * -1); }
+.au-tile-scroll { overflow-x: auto; scrollbar-width: none; }
+.au-tile-scroll::-webkit-scrollbar { display: none; }
+.au-tile-track { display: flex; align-items: flex-start; gap: 14px; padding: 0 var(--anchor-spacing) 4px; width: max-content; }
+
+/* Anchor.EmptyState */
+.au-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; }

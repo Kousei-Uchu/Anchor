@@ -13,6 +13,7 @@ import Philosophy from './pages/Philosophy';
 import Privacy from './pages/Privacy';
 import Support from './pages/Support';
 import NotFound from './pages/NotFound';
+import DemoNow from './pages/DemoNow';
 
 /** New page → top. Page with a #hash → that section (the browser can't, since React renders after navigation). */
 function ScrollManager() {
@@ -46,6 +47,7 @@ export function App() {
           <Route path="/demo" element={<Demo />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/support" element={<Support />} />
+          {import.meta.env.DEV && <Route path="/demo-now" element={<DemoNow />} />}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </div>
