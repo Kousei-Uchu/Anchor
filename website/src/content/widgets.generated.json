@@ -1,0 +1,190 @@
+{
+ "widgets": {
+  "safetyPlan": {
+   "title": "Safety plan",
+   "icon": "shield.fill",
+   "tint": "accent",
+   "half": false
+  },
+  "triggerWindows": {
+   "title": "Trigger windows",
+   "icon": "clock.fill",
+   "tint": "sage",
+   "half": true
+  },
+  "appointments": {
+   "title": "Appointments",
+   "icon": "calendar",
+   "tint": "sage",
+   "half": true
+  },
+  "contacts": {
+   "title": "Contacts",
+   "icon": "person.2.fill",
+   "tint": "accent",
+   "half": false
+  },
+  "deEscalation": {
+   "title": "De-escalation",
+   "icon": "wind",
+   "tint": "sage",
+   "half": false
+  },
+  "grounding": {
+   "title": "Grounding tools",
+   "icon": "leaf.fill",
+   "tint": "sage",
+   "half": false
+  },
+  "decisionPresets": {
+   "title": "Decision presets",
+   "icon": "checklist",
+   "tint": "accent",
+   "half": false
+  },
+  "affirmations": {
+   "title": "Affirmations",
+   "icon": "sparkles",
+   "tint": "accent",
+   "half": false
+  },
+  "recovery": {
+   "title": "Recovery",
+   "icon": "calendar.badge.checkmark",
+   "tint": "sage",
+   "half": true
+  },
+  "motivations": {
+   "title": "Who I'm doing this for",
+   "icon": "heart.fill",
+   "tint": "accent",
+   "half": false
+  },
+  "tasks": {
+   "title": "Tasks",
+   "icon": "checkmark.circle.fill",
+   "tint": "accent",
+   "half": false
+  },
+  "sleep": {
+   "title": "Sleep",
+   "icon": "moon.zzz.fill",
+   "tint": "accent",
+   "half": true
+  },
+  "thingsToRaise": {
+   "title": "Things to raise",
+   "icon": "doc.text.fill",
+   "tint": "accent",
+   "half": false
+  },
+  "nextSession": {
+   "title": "Next session",
+   "icon": "calendar.badge.clock",
+   "tint": "accent",
+   "half": false
+  },
+  "reframing": {
+   "title": "Reframing",
+   "icon": "arrow.triangle.2.circlepath",
+   "tint": "sage",
+   "half": true
+  },
+  "feedbackLoops": {
+   "title": "Feedback loops",
+   "icon": "point.3.connected.trianglepath.dotted",
+   "tint": "sage",
+   "half": true
+  },
+  "nswLaw": {
+   "title": "NSW mental health law",
+   "icon": "building.columns.fill",
+   "tint": "accent",
+   "half": false
+  },
+  "personalGoals": {
+   "title": "Personal goals",
+   "icon": "flag.fill",
+   "tint": "sage",
+   "half": false
+  },
+  "messageLog": {
+   "title": "Message log",
+   "icon": "bubble.left.and.bubble.right.fill",
+   "tint": "accent",
+   "half": false
+  },
+  "supportCalendar": {
+   "title": "Support calendar",
+   "icon": "calendar.badge.clock",
+   "tint": "accent",
+   "half": false
+  },
+  "futureNotes": {
+   "title": "To future me",
+   "icon": "envelope.open.badge.clock",
+   "tint": "sage",
+   "half": true
+  },
+  "unsentDrafts": {
+   "title": "Things I haven't said",
+   "icon": "square.and.pencil",
+   "tint": "sage",
+   "half": false
+  },
+  "boundaries": {
+   "title": "Boundaries",
+   "icon": "hand.raised.fill",
+   "tint": "sage",
+   "half": false
+  },
+  "people": {
+   "title": "People",
+   "icon": "person.crop.circle.fill",
+   "tint": "accent",
+   "half": false
+  }
+ },
+ "tabs": {
+  "plan": {
+   "order": [
+    "safetyPlan",
+    "triggerWindows",
+    "appointments",
+    "tasks",
+    "contacts",
+    "deEscalation",
+    "grounding",
+    "decisionPresets",
+    "affirmations",
+    "recovery",
+    "motivations",
+    "sleep"
+   ],
+   "hidden": [
+    "sleep"
+   ]
+  },
+  "bridge": {
+   "order": [
+    "thingsToRaise",
+    "nextSession",
+    "reframing",
+    "feedbackLoops",
+    "personalGoals"
+   ],
+   "hidden": []
+  },
+  "thread": {
+   "order": [
+    "messageLog",
+    "supportCalendar",
+    "people",
+    "futureNotes",
+    "unsentDrafts",
+    "boundaries"
+   ],
+   "hidden": []
+  }
+ }
+}

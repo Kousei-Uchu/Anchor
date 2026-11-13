@@ -3,9 +3,6 @@
  "bindings": {
   "tuesday": {
    "$expr": "Calendar.current.nextDate(after: now, matching: DateComponents(hour: 10, minute: 30, weekday: 3), matchingPolicy: .nextTime) ?? now.addingTimeInterval(3 * 86_400)"
-  },
-  "boundaryHeadings": {
-   "$expr": "BoundarySection.startingSections()"
   }
  },
  "models": {
@@ -102,6 +99,55 @@
     "iconName": "doc.text.fill",
     "tintName": "lilac",
     "sortOrder": 0
+   }
+  ],
+  "SafetyPlanSection": [
+   {
+    "_type": "SafetyPlanSection",
+    "title": "Warning signs",
+    "text": "Skipping meals\nStaying up very late\nNot answering messages",
+    "iconName": "exclamationmark.triangle.fill",
+    "tintName": "accent",
+    "sortOrder": 0,
+    "lastEditedAt": {
+     "$ref": "edited"
+    }
+   },
+   {
+    "_type": "SafetyPlanSection",
+    "title": "Coping strategies",
+    "text": "Cold water on my wrists\nA short walk\nPut on a familiar playlist",
+    "iconName": "leaf.fill",
+    "tintName": "sage",
+    "sortOrder": 1,
+    "lastEditedAt": {
+     "$ref": "edited"
+    }
+   },
+   {
+    "_type": "SafetyPlanSection",
+    "title": "Reasons to keep going",
+    "text": "My sister's wedding next year\nMy dog needs me\nI want to finish my course",
+    "iconName": "heart.fill",
+    "tintName": "accent",
+    "sortOrder": 2,
+    "role": {
+     "$ref": "SafetyPlanSection.reasonsRole"
+    },
+    "lastEditedAt": {
+     "$ref": "edited"
+    }
+   },
+   {
+    "_type": "SafetyPlanSection",
+    "title": "Making the environment safer",
+    "text": "Keep my phone charged\nLet Sam know when I have a rough night",
+    "iconName": "house.fill",
+    "tintName": "sage",
+    "sortOrder": 3,
+    "lastEditedAt": {
+     "$ref": "edited"
+    }
    }
   ],
   "GroundingTool": [
@@ -783,6 +829,29 @@
       "text": "Lights out"
      }
     ]
+   }
+  ],
+  "BoundarySection": [
+   {
+    "_type": "BoundarySection",
+    "title": "Things I'd like people to know",
+    "iconName": "person.2.fill",
+    "tintName": "sage",
+    "sortOrder": 0
+   },
+   {
+    "_type": "BoundarySection",
+    "title": "Things that help",
+    "iconName": "heart.fill",
+    "tintName": "accent",
+    "sortOrder": 1
+   },
+   {
+    "_type": "BoundarySection",
+    "title": "Things that don't",
+    "iconName": "hand.raised.fill",
+    "tintName": "sage",
+    "sortOrder": 2
    }
   ],
   "MessageStarter": [

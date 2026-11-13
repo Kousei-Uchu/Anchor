@@ -32,6 +32,22 @@ const MIRRORED_VIEWS = [
   ["Views/Now/NextHourChecklistView.swift", "TasksNowCard"],
   ["Views/Now/DeEscalationAndQuietRoomView.swift", "DeEscalationCardView"],
   ["Views/Now/AffirmationsView.swift", "AffirmationsCardView"],
+  ["Views/Widgets/TabWidgets.swift", "Widget"],
+  ["Views/Widgets/TabWidgets.swift", "WidgetBig"],
+  ["Views/Widgets/TabWidgets.swift", "WidgetCaption"],
+  ["Views/Widgets/TabWidgets.swift", "WidgetPair"],
+  ["Views/Widgets/WidgetCustomisation.swift", "WidgetStack"],
+  ["Views/Widgets/WidgetCustomisation.swift", "MoreTile"],
+  ["Views/Widgets/TabWidgets.swift", "SafetyPlanWidget"],
+  ["Views/Widgets/TabWidgets.swift", "TriggerWindowsWidget"],
+  ["Views/Widgets/TabWidgets.swift", "AppointmentsWidget"],
+  ["Views/Widgets/TabWidgets.swift", "ContactsWidget"],
+  ["Views/Widgets/TabWidgets.swift", "DeEscalationWidget"],
+  ["Views/Widgets/TabWidgets.swift", "GroundingWidget"],
+  ["Views/Widgets/TabWidgets.swift", "AffirmationsWidget"],
+  ["Views/Widgets/TabWidgets.swift", "RecoveryWidget"],
+  ["Views/Widgets/TabWidgets.swift", "MotivationsWidget"],
+  ["Views/Widgets/TabWidgets.swift", "TasksWidget"],
 ];
 
 const src = readFileSync(SWIFT, "utf8");

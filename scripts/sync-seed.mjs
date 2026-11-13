@@ -61,7 +61,32 @@ function tokenize(src) {
   return toks;
 }
 
-function parseBody(src) {
+// Models that the demo builds through a helper such as SafetyPlanSections.makeSections(warningSigns: "...").
+// The helper's definition is read from the Swift source and its parameters are filled in from the call.
+const FACTORY_SOURCES = ["Models/AnchorModels.swift"].map((f) => readFileSync(join(root, "iOS/Anchor/Anchor", f), "utf8"));
+function expandFactory(call) {
+  const fn = call.$static.split(".")[1];
+  for (const text of FACTORY_SOURCES) {
+    const m = new RegExp(`static func ${fn}\\(([^)]*)\\)[^{]*\\{`).exec(text);
+    if (!m) continue;
+    const open = m.index + m[0].length - 1;
+    const body = text.slice(open + 1, matchBrace(text, open));
+    const arr = parseBody(body, "expr");
+    if (!Array.isArray(arr)) continue;
+    const sub = (n) => {
+      if (Array.isArray(n)) return n.map(sub);
+      if (n && typeof n === "object") {
+        if (n.$ref !== undefined && Object.prototype.hasOwnProperty.call(call.args, n.$ref)) return call.args[n.$ref];
+        return Object.fromEntries(Object.entries(n).map(([k, v]) => [k, sub(v)]));
+      }
+      return n;
+    };
+    return arr.map(sub).filter((x) => x && x._type);
+  }
+  throw new Error(`Could not find the Swift definition of ${call.$static}`);
+}
+
+function parseBody(src, mode) {
   const toks = tokenize(src); let p = 0;
   const T = (o = 0) => toks[p + o] || { t: "eof", v: "", s: src.length, e: src.length };
   const isP = (v, o = 0) => T(o).t === "p" && T(o).v === v;
@@ -70,6 +95,7 @@ function parseBody(src) {
   const raw = (s) => ({ $expr: src.slice(s, toks[p - 1].e).replace(/\s+/g, " ") });
   const BIN = new Set(["+", "-", "*", "/", "%", "??", "==", "!=", "<", ">", "<=", ">=", "&&", "||", "...", "..<"]);
 
+  let noTrailing = false;
   function skipBalanced(open, close) { let d = 0; do { if (isP(open)) d++; else if (isP(close)) d--; p++; } while (d > 0 && T().t !== "eof"); }
 
   function parseArgs() {
@@ -114,7 +140,7 @@ function parseBody(src) {
         else if (isP("[") && !call) { skipBalanced("[", "]"); return raw(s); }
         else break;
       }
-      if (isP("{") && call) skipBalanced("{", "}");
+      if (isP("{") && call && !noTrailing) skipBalanced("{", "}");
       if (!call) return { $ref: name };
       if (isP(".") || isP("[")) { while (isP(".") || isP("[") || isP("(")) { if (isP(".")) p += 2; else if (isP("(")) skipBalanced("(", ")"); else skipBalanced("[", "]"); } return raw(s); }
       if (/^[A-Z]\w*$/.test(name)) {
@@ -123,10 +149,16 @@ function parseBody(src) {
         return o;
       }
       if (/^[a-z]\w*$/.test(name)) return { $call: name, args: call.map((a) => (a.label ? { [a.label]: a.value } : a.value)) };
+      if (/^[A-Z]\w*\.[a-z]\w*$/.test(name) && call.every((a) => a.label && (typeof a.value !== "object" || a.value === null))) {
+        return { $static: name, args: Object.fromEntries(call.map((a) => [a.label, a.value])) };
+      }
+      if (/^[A-Z]\w*\.[a-z]\w*$/.test(name) && call.length === 0) return { $static: name, args: {} };
       return raw(s);
     }
     p++; return raw(s);
   }
+
+  if (mode === "expr") return parseExpr();
 
   const env = {}, inserted = [];
   const insert = (n) => { if (n && n._type && !inserted.includes(n)) inserted.push(n); };
@@ -140,9 +172,13 @@ function parseBody(src) {
       continue;
     }
     if (isId("for") && T(1).t === "id" && isId("in", 2)) {
-      const loopVar = T(1).v; p += 3; const list = parseExpr();
+      const loopVar = T(1).v; p += 3; noTrailing = true; const list = parseExpr(); noTrailing = false;
       if (isP("{")) { const s = p; skipBalanced("{", "}"); const body = toks.slice(s, p).map((x) => x.v).join(" ");
-        if (new RegExp(`context \\. insert \\( ${loopVar.replace("$", "\\$")} \\)`).test(body) && Array.isArray(list)) for (const r of list) if (r?.$ref && bound(r.$ref)) insert(env[r.$ref]); }
+        if (new RegExp(`context \\. insert \\( ${loopVar.replace("$", "\\$")} \\)`).test(body)) {
+          if (Array.isArray(list)) { for (const r of list) if (r?.$ref && bound(r.$ref)) insert(env[r.$ref]); }
+          else if (list?.$static) for (const item of expandFactory(list)) insert(item);
+          else if (list?.$ref && bound(list.$ref) && env[list.$ref]?.$static) for (const item of expandFactory(env[list.$ref])) insert(item);
+        } }
       continue;
     }
     if (T().t === "id" && bound(T().v) && isP(".", 1) && T(2).t === "id") {

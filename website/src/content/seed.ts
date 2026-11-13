@@ -112,3 +112,58 @@ export const messageStarters = () => [...rows('MessageStarter')].sort((a, b) => 
 export const groundingTools = () => [...rows('GroundingTool')].sort((a, b) => Number(a.sortOrder) - Number(b.sortOrder)).map((t) => String(t.title));
 export const affirmations = () => [...rows('Affirmation')].sort((a, b) => Number(a.sortOrder) - Number(b.sortOrder)).map((a) => String(a.text));
 export const deEscalationScripts = () => [...rows('DeEscalationScript')].sort((a, b) => Number(a.sortOrder) - Number(b.sortOrder)).map((a) => String(a.text));
+
+/** SafetyPlanWidget: the first line of the first two sections that have text. */
+export function safetyGlance(): { title: string; line: string }[] {
+  return [...rows('SafetyPlanSection')]
+    .filter((s) => !s.isHidden)
+    .sort((a, b) => Number(a.sortOrder) - Number(b.sortOrder))
+    .flatMap((s) => {
+      const line = String(s.text ?? '').split('\n').map((l) => l.trim()).find(Boolean);
+      return line ? [{ title: String(s.title || 'Untitled'), line }] : [];
+    })
+    .slice(0, 2);
+}
+
+const weekdayTime = (d: Date) => {
+  const day = new Intl.DateTimeFormat('en-AU', { weekday: 'short' }).format(d);
+  const time = new Intl.DateTimeFormat('en-AU', { hour: 'numeric', minute: '2-digit', hour12: true }).format(d).toLowerCase();
+  return `${day} ${time}`;
+};
+export const formatWeekdayTime = weekdayTime;
+
+/** TriggerWindowsWidget: the soonest start among windows that are switched on. */
+export function soonestTriggerWindow(now: Date = new Date()): { label: string; when: string } | null {
+  let best: { label: string; date: Date } | null = null;
+  for (const w of rows('TriggerWindow')) {
+    if (w.isActive === false) continue;
+    const days: number[] = w.daysOfWeek ?? [];
+    for (let i = 0; i < 8; i++) {
+      const c = startOfDay(new Date(now.getTime() + i * DAY));
+      c.setHours(Number(w.startTime?.hour ?? 0), Number(w.startTime?.minute ?? 0), 0, 0);
+      if (c > now && days.includes(c.getDay() + 1)) { if (!best || c < best.date) best = { label: String(w.label ?? ''), date: c }; break; }
+    }
+  }
+  return best ? { label: best.label, when: weekdayTime(best.date) } : null;
+}
+
+/** AppointmentsWidget: the same next appointment as the Now card, written as "Tue 10:30 am". */
+export function appointmentWidget(now: Date = new Date()) {
+  const next = nextAppointment(now);
+  return next ? { when: weekdayTime(next.date), caption: `${next.name} \u00b7 ${daysUntilLabel(next.date, now)}` } : null;
+}
+
+/** MotivationsWidget */
+export function motivationsSummary() {
+  const list = [...rows('RecoveryMotivation')].sort((a, b) => Number(a.sortOrder) - Number(b.sortOrder));
+  return list.length ? { count: list.length, first: String(list[0].text) } : null;
+}
+
+/** RecoveryWidget: "Day 12" and the counter's name. */
+export function recoveryWidget(now: Date = new Date()) {
+  const c = recoveryCounters(now)[0];
+  return c ? { big: Number(c.number) >= 1 ? `Day ${c.number}` : 'Just started', name: c.name } : null;
+}
+
+/** TasksWidget */
+export const tasksSummary = () => { const o = openTasks(); return o.length ? { count: o.length, first: o[0].title } : null; };

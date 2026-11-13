@@ -15,21 +15,34 @@ These files let the website draw the app's screens from real components instead 
   `scripts/sync-seed.mjs` reads `DemoMode.makeContainer` in `AnchorApp.swift` and writes `website/src/content/demo.seed.generated.json`.
   `website/src/content/seed.ts` turns that into what each card shows: the next appointment, the open tasks, the recovery counter and so on.
   Dates are worked out from today, so "In 4 days" stays correct. If the demo data changes in Swift, `check-all.sh` fails until you run `node scripts/sync-seed.mjs`.
+- `scripts/sync-widgets.mjs` reads the widget table the Plan, Bridge and Thread tabs are built from (`WidgetID` and `WidgetTab` in
+  `Views/Widgets`) into `website/src/content/widgets.generated.json`: each widget's title, icon and tint, which ones pair two to a row,
+  the default order, and which are hidden by default (Sleep, so it sits under "More").
+- `scripts/sync-seed.mjs` also expands helper calls the demo uses, such as `SafetyPlanSections.makeSections(...)`, by reading the helper's
+  definition from the Swift.
+- `IosApp.tsx` is the app shell: the status bar, help and settings buttons, large title and a tab bar that switches between the tabs in `tabs/`.
+  `cards.tsx` holds the cards the Now tab and the Plan widgets share.
 - Mascot text and the rest of the older demo content still come from `demo.generated.json` (`scripts/sync-demo.mjs`).
 
 ## Looking at it
 
 Run `cd website && npm run dev` and open `/demo-now`. Add `?dark` for dark mode. The route exists only in dev.
 
-## What the Now preview covers
+## What is built
 
-The whole Now tab, in the order `NowView.swift` lays it out: Crisis numbers, mascot, Check in, Quick contact, Recovery, Next appointment,
-safety plan row, Decision presets, Grounding tools, Tasks, De-escalation script, Something to hold onto, and the tab bar.
-The Sleep card is left out because the app only shows it when its setting is on, and the demo does not turn it on.
-Quick contact names, tasks you tick off or add, "Try another" and "Another" all work.
+- **Now**: the whole tab, in the order `NowView.swift` lays it out. The Sleep card is left out because the app only shows it when its
+  setting is on, and the demo does not turn it on.
+- **Plan**: the widget layout from `PlanView.swift`, with half-width widgets paired, the "More" row and the Customise button.
+- Journal, Bridge and Thread say they are not rebuilt yet. Tapping a card does not open its detail screen yet.
 
-Add `?full` to the address to lay the whole screen out without scrolling, and `?dark` for dark mode.
-The older screenshot `website/public/shots/now.jpg` only shows the top of the tab as it was before the newer cards were added.
+Open `/demo-now` in `npm run dev`. Add `?tab=plan` to open a tab, `?full` to lay the whole screen out without scrolling,
+and `?dark` for dark mode. Names, tasks you tick off or add, "Try another" and "Another" all work.
+
+## Comparing against the app
+
+`scripts/save-reference-shots.sh` (Mac with Xcode) records every screen of the real app into `reference-shots/` at 660 pixels wide,
+with a `.json` beside each listing its buttons. Compare a rebuilt screen against `reference-shots/<name>.jpg`.
+The older `website/public/shots/now.jpg` only shows the top of the Now tab as it was before the newer cards were added.
 
 ## Known differences from the app
 
@@ -39,4 +52,3 @@ The older screenshot `website/public/shots/now.jpg` only shows the top of the ta
 - The tab bar is a plain frosted pill, not the system glass effect.
 - The mascot in the app calls an `anchor` SF Symbol that does not appear on screen, so the website mascot has no anchor mark either.
 - The crisis numbers are fixed for Australia, as in the app's demo.
-- Tapping a card does not open its detail screen yet. Only the other four tabs and their detail screens are still to build.

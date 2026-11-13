@@ -31,6 +31,14 @@ const GLYPHS: Record<string, (w: number) => ReactNode> = {
   'pencil.and.outline': (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"><path d="M20 12.5a8.5 8.5 0 1 1-6-8.1" /><path d="M20.5 3.5l-9 9-.6 3 3-.6 9-9z" /></g>,
   'arrow.left.arrow.right': (w) => <path fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" d="M3 8h17m-4-4 4 4-4 4M21 16H4m4-4-4 4 4 4" />,
   'bubble.left.and.bubble.right.fill': () => <g fill={F}><path d="M9.5 4C5 4 1.5 6.8 1.5 10.3c0 1.6.8 3 2 4.1L3 17.5l3.2-1.7c1 .3 2.1.5 3.3.5 4.5 0 8-2.8 8-6.3S14 4 9.5 4z" /><path d="M19.8 19.5c1.3-.9 2.2-2.3 2.2-3.8 0-1.7-1-3.1-2.6-4 .1.4.1.8.1 1.2 0 4-3.5 7-8.1 7.4 1 .9 2.5 1.5 4.2 1.5.8 0 1.5-.1 2.2-.3l2.4 1.3z" /></g>,
+  'clock.fill': () => <path fill={F} fillRule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm.8 4.5v5.2l3.6 2.1a.8.8 0 0 1-.8 1.4l-4-2.3a.8.8 0 0 1-.4-.7V6.5a.8.8 0 0 1 1.6 0z" />,
+  calendar: () => GLYPHS['calendar.badge.clock'](2),
+  'person.2.fill': () => <g fill={F}><circle cx="9" cy="8" r="3.6" /><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6z" /><circle cx="17.5" cy="9" r="2.8" /><path d="M16.6 14.2c3.2-.3 5.7 1.7 5.7 5.800h-5c0-2.2-.2-4-.7-5.800z" /></g>,
+  'heart.fill': () => <path fill={F} d="M12 21s-8.5-5.2-8.5-11.200A4.8 4.8 0 0 1 12 7.200a4.8 4.8 0 0 1 8.5 2.600C20.5 15.8 12 21 12 21z" />,
+  'moon.zzz.fill': (w) => <g><path fill={F} d="M19 15.500A8 8 0 0 1 8.5 5a8 8 0 1 0 10.5 10.500z" /><path fill="none" stroke={F} strokeWidth={w * 0.8} strokeLinecap="round" strokeLinejoin="round" d="M14.5 3.500h4l-4 4.500h4" /></g>,
+  'slider.horizontal.3': (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round"><path d="M3 6h8M17 6h4M3 12h3M12 12h9M3 18h10M19 18h2" /><circle cx="14" cy="6" r="2.2" /><circle cx="9" cy="12" r="2.2" /><circle cx="16" cy="18" r="2.2" /></g>,
+  gearshape: (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinejoin="round"><path d="M19.4 10.2 L22.1 10.4 L22.1 13.6 L19.4 13.8 L18.5 15.9 L20.3 18.0 L18.0 20.3 L15.9 18.5 L13.8 19.4 L13.6 22.1 L10.4 22.1 L10.2 19.4 L8.1 18.5 L6.0 20.3 L3.7 18.0 L5.5 15.9 L4.6 13.8 L1.9 13.6 L1.9 10.4 L4.6 10.2 L5.5 8.1 L3.7 6.0 L6.0 3.7 L8.1 5.5 L10.2 4.6 L10.4 1.9 L13.6 1.9 L13.8 4.6 L15.9 5.5 L18.0 3.7 L20.3 6.0 L18.5 8.1z" /><circle cx="12" cy="12" r="3" /></g>,
+  shield: (w) => <path fill="none" stroke={F} strokeWidth={w} strokeLinejoin="round" d="M12 3l7.5 2.800v5.700c0 4.7-3.2 8.5-7.5 10-4.3-1.5-7.5-5.3-7.5-10V5.800z" />,
   sparkles: () => <g fill={F}><path d="M10 5l1.8 5.2L17 12l-5.2 1.8L10 19l-1.8-5.2L3 12l5.2-1.8z" /><path d="M18 2.5l.9 2.6 2.6.9-2.6.9L18 9.500l-.9-2.6-2.6-.9 2.6-.9zM18.5 14.500l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z" /></g>,
   'checkmark.circle.fill': () => <path fill={F} fillRule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.7 6.800a1 1 0 0 1 0 1.400l-5.3 5.300a1 1 0 0 1-1.4 0l-2.3-2.300a1 1 0 1 1 1.4-1.400l1.6 1.6 4.6-4.600a1 1 0 0 1 1.4 0z" />,
   checklist: (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"><path d="M3 6.500l1.6 1.600L7.5 5M3 12.500l1.6 1.6 2.9-3.100M3 18.500l1.6 1.6 2.9-3.100M11 7h10M11 13h10M11 19h10" /></g>,
@@ -52,13 +60,13 @@ export function Glyph({ name, size = 16, weight = 2, className = '' }: { name: s
 const TABS: [string, string][] = [['Now', 'sun.max.fill'], ['Plan', 'map.fill'], ['Journal', 'pencil.and.outline'], ['Bridge', 'arrow.left.arrow.right'], ['Thread', 'bubble.left.and.bubble.right.fill']];
 
 /** The 440 x 956 pt Pro Max screen: status bar, help button, large title, scrolling cards 16 apart, floating tab bar. */
-export function AnchorScreen({ title, tab, scheme = 'light', full = false, children }: { title: string; tab: string; scheme?: 'light' | 'dark'; full?: boolean; children: ReactNode }) {
+export function AnchorScreen({ title, tab, onTab, gear = false, inset = 16, scheme = 'light', full = false, children }: { title: string; tab: string; onTab?: (tab: string) => void; gear?: boolean; inset?: number; scheme?: 'light' | 'dark'; full?: boolean; children: ReactNode }) {
   return (
     <div className="au-screen" data-anchor-scheme={scheme} data-full={full ? '' : undefined}>
       <div className="au-scroll">
         <div className="au-nav-spacer" />
         <h1 className="au-nav-title">{title}</h1>
-        <div className="au-stack">{children}</div>
+        <div className="au-stack" style={{ paddingTop: inset }}>{children}</div>
       </div>
       <div className="au-status">
         <span className="au-status-time">9:41</span>
@@ -68,13 +76,14 @@ export function AnchorScreen({ title, tab, scheme = 'light', full = false, child
           <svg width="34" height="20" viewBox="0 0 27 18" className="au-battery"><g fill="none"><rect x="1" y="3" width="22" height="12" rx="3.5" stroke="currentColor" strokeOpacity=".4" /><rect x="3" y="5" width="18" height="8" rx="2" fill="#34c759" /></g></svg>
         </span>
       </div>
+      {gear && <button type="button" className="au-help au-gear" aria-label="Settings"><Glyph name="gearshape" size={22} weight={1.8} /></button>}
       <button type="button" className="au-help" aria-label="Help for this screen"><Glyph name="questionmark.circle" size={22} weight={1.8} /></button>
       <nav className="au-tabbar" aria-label="Tabs">
         {TABS.map(([name, icon]) => (
-          <span key={name} className={`au-tab${name === tab ? ' au-tab-on' : ''}`}>
+          <button key={name} type="button" className={`au-tab${name === tab ? ' au-tab-on' : ''}`} onClick={() => onTab?.(name)} aria-current={name === tab ? 'page' : undefined}>
             <Glyph name={icon} size={29} weight={1.9} />
             <span>{name}</span>
-          </span>
+          </button>
         ))}
       </nav>
     </div>
@@ -253,5 +262,42 @@ export function TaskRow({ title, onDone }: { title: string; onDone?: () => void 
       <button type="button" className="au-task-check" aria-label={`Mark ${title} as done`} onClick={onDone}><Glyph name="circle" size={22} weight={1.6} /></button>
       <span className="au-subheadline">{title}</span>
     </div>
+  );
+}
+
+/** Anchor.Widget: a card with an icon badge, a title, a chevron, then content and an optional footer. */
+export function Widget({ icon, title, tint = 'accent', children, footer }: { icon: string; title: string; tint?: Tint; children?: ReactNode; footer?: ReactNode }) {
+  return (
+    <Card tint={tint}>
+      <div className="au-widget" style={tintStyle(tint)}>
+        <div className="au-widget-main">
+          <div className="au-widget-head">
+            <span className="au-badge au-badge-circle au-badge-sm"><Glyph name={icon} size={15} /></span>
+            <span className="au-subheadline au-semibold au-widget-title">{title}</span>
+            <span className="au-tertiary"><Glyph name="chevron.right" size={10} weight={2.8} /></span>
+          </div>
+          {children}
+        </div>
+        {footer}
+      </div>
+    </Card>
+  );
+}
+export function WidgetBig({ text }: { text: string }) { return <div className="au-widget-big">{text}</div>; }
+export function WidgetCaption({ text, lines = 3 }: { text: string; lines?: number }) { return <div className="au-caption au-secondary au-clamp" style={{ WebkitLineClamp: lines }}>{text}</div>; }
+export function WidgetPair({ left, right }: { left: ReactNode; right: ReactNode }) { return <div className="au-pair"><div>{left}</div><div>{right}</div></div>; }
+
+/** The "More" row and "Customise" button at the end of a widget tab (WidgetStack). */
+export function WidgetFooter({ tucked }: { tucked: { id: string; icon: string; title: string; tint: Tint }[] }) {
+  return (
+    <>
+      {tucked.length > 0 && (
+        <div className="au-more">
+          <div className="au-subheadline au-semibold au-secondary">More</div>
+          <div className="au-tile-scroll au-more-scroll"><div className="au-tile-track au-more-track">{tucked.map((t) => <Tile key={t.id} icon={t.icon} title={t.title} tint={t.tint} />)}</div></div>
+        </div>
+      )}
+      <button type="button" className="au-customise"><Glyph name="slider.horizontal.3" size={17} weight={1.8} />Customise</button>
+    </>
   );
 }

@@ -51,6 +51,22 @@
     "DecisionPresetsQuickView": "dfaab343d7",
     "TasksNowCard": "ec2eb278b6",
     "DeEscalationCardView": "05680677e2",
-    "AffirmationsCardView": "f6f87022e1"
+    "AffirmationsCardView": "f6f87022e1",
+    "Widget": "a9ef60bb9d",
+    "WidgetBig": "f5f7f8c604",
+    "WidgetCaption": "ea119558f4",
+    "WidgetPair": "873e0d0224",
+    "WidgetStack": "37b6850915",
+    "MoreTile": "f350e66034",
+    "SafetyPlanWidget": "5058054f2b",
+    "TriggerWindowsWidget": "ddae649be4",
+    "AppointmentsWidget": "60c29581e6",
+    "ContactsWidget": "aaba9b1b62",
+    "DeEscalationWidget": "68d620d79b",
+    "GroundingWidget": "00256f595b",
+    "AffirmationsWidget": "bd6ff3b174",
+    "RecoveryWidget": "de69b5ea51",
+    "MotivationsWidget": "3b0266fd36",
+    "TasksWidget": "b02745c72c"
   }
 }
