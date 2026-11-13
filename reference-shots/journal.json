@@ -1,0 +1,123 @@
+{
+  "elements" : [
+    {
+      "h" : 36,
+      "label" : "Help for this screen",
+      "w" : 30,
+      "x" : 27,
+      "y" : 66
+    },
+    {
+      "h" : 36,
+      "label" : "Compose",
+      "w" : 41,
+      "x" : 321,
+      "y" : 66
+    },
+    {
+      "h" : 36,
+      "label" : "More",
+      "w" : 38,
+      "x" : 378,
+      "y" : 66
+    },
+    {
+      "h" : 32,
+      "label" : "Days",
+      "w" : 136,
+      "x" : 16,
+      "y" : 230
+    },
+    {
+      "h" : 32,
+      "label" : "Month",
+      "w" : 136,
+      "x" : 152,
+      "y" : 230
+    },
+    {
+      "h" : 32,
+      "label" : "Year",
+      "w" : 136,
+      "x" : 288,
+      "y" : 230
+    },
+    {
+      "h" : 82.666656494140625,
+      "label" : "7:25 am, Slept badly, but the walk helped a bit., Energy drinks · 11 days",
+      "w" : 382,
+      "x" : 42,
+      "y" : 333
+    },
+    {
+      "h" : 102.66665649414062,
+      "label" : "10:25 am, Ask whether the new wake-up time is helping, and whether the evening call is still worth keeping., Energy drinks · 11 days",
+      "w" : 382,
+      "x" : 42,
+      "y" : 491.66665649414062
+    },
+    {
+      "h" : 102.66668701171875,
+      "label" : "8:25 am, Quiet day. Made toast, answered one message, and that was enough., Energy drinks · 10 days",
+      "w" : 382,
+      "x" : 42,
+      "y" : 606.33331298828125
+    },
+    {
+      "h" : 65.666666666666629,
+      "label" : "5:25 am, Check-in",
+      "w" : 346,
+      "x" : 42,
+      "y" : 721
+    },
+    {
+      "h" : 102.6666259765625,
+      "label" : "6:25 am, On Tuesday I went to the clinic and waited forty minutes before Dr Lee could see me. I told her the nights have been harder since the last appointment and that I keep waking at three. She said we could look at the evening routine again and asked me to bring my notes next time., Energy drinks · 9 days",
+      "w" : 382,
+      "x" : 42,
+      "y" : 850.66668701171875
+    },
+    {
+      "h" : 54,
+      "label" : "Now",
+      "w" : 84.599999999999994,
+      "x" : 25,
+      "y" : 877
+    },
+    {
+      "h" : 54,
+      "label" : "Plan",
+      "w" : 84.599999999999994,
+      "x" : 101.34999999999999,
+      "y" : 877
+    },
+    {
+      "h" : 54,
+      "label" : "Journal",
+      "w" : 84.599999999999966,
+      "x" : 177.69999999999999,
+      "y" : 877
+    },
+    {
+      "h" : 54,
+      "label" : "Bridge",
+      "w" : 84.600000000000023,
+      "x" : 254.04999999999995,
+      "y" : 877
+    },
+    {
+      "h" : 54,
+      "label" : "Thread",
+      "w" : 84.600000000000023,
+      "x" : 330.39999999999998,
+      "y" : 877
+    }
+  ],
+  "height" : 956,
+  "name" : "journal",
+  "path" : [
+    "Journal"
+  ],
+  "scale" : 3,
+  "width" : 440
+}

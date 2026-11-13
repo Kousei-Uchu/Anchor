@@ -1,0 +1,145 @@
+{
+  "elements" : [
+    {
+      "h" : 36,
+      "label" : "Help for this screen",
+      "w" : 30,
+      "x" : 27,
+      "y" : 66
+    },
+    {
+      "h" : 36,
+      "label" : "Compose",
+      "w" : 41,
+      "x" : 321,
+      "y" : 66
+    },
+    {
+      "h" : 36,
+      "label" : "More",
+      "w" : 38,
+      "x" : 378,
+      "y" : 66
+    },
+    {
+      "h" : 32,
+      "label" : "Days",
+      "w" : 136,
+      "x" : 16,
+      "y" : 230
+    },
+    {
+      "h" : 32,
+      "label" : "Month",
+      "w" : 136,
+      "x" : 152,
+      "y" : 230
+    },
+    {
+      "h" : 32,
+      "label" : "Year",
+      "w" : 136,
+      "x" : 288,
+      "y" : 230
+    },
+    {
+      "h" : 61.666671752929688,
+      "label" : "8:25 am, Quiet day. Made toast, answered one message, and that was enough., Energy drinks · 10 days",
+      "w" : 382,
+      "x" : 42,
+      "y" : 0
+    },
+    {
+      "h" : 65.666666666666629,
+      "label" : "5:25 am, Check-in",
+      "w" : 346,
+      "x" : 42,
+      "y" : 73.666666666666629
+    },
+    {
+      "h" : 102.66667175292969,
+      "label" : "6:25 am, On Tuesday I went to the clinic and waited forty minutes before Dr Lee could see me. I told her the nights have been harder since the last appointment and that I keep waking at three. She said we could look at the evening routine again and asked me to bring my notes next time., Energy drinks · 9 days",
+      "w" : 382,
+      "x" : 42,
+      "y" : 203.33332824707031
+    },
+    {
+      "h" : 102.66665649414062,
+      "label" : "10:25 am, Felt tense before the call, but it went better than I expected., Energy drinks · 9 days",
+      "w" : 382,
+      "x" : 42,
+      "y" : 382
+    },
+    {
+      "h" : 65.666666666666629,
+      "label" : "4:25 am, Check-in",
+      "w" : 346,
+      "x" : 42,
+      "y" : 496.66666666666663
+    },
+    {
+      "h" : 65.666666666666629,
+      "label" : "6:25 am, Check-in",
+      "w" : 346,
+      "x" : 42,
+      "y" : 626.33333333333326
+    },
+    {
+      "h" : 103,
+      "label" : "10:25 am, Bookmarked, Walked past the pottery studio and did not turn around. That was something., Energy drinks · 6 days",
+      "w" : 382,
+      "x" : 42,
+      "y" : 756
+    },
+    {
+      "h" : 21,
+      "label" : "8:25 am, Cleaned the kitchen in short bursts and rested in between., Energy drinks · 3 days",
+      "w" : 382,
+      "x" : 42,
+      "y" : 935
+    },
+    {
+      "h" : 54,
+      "label" : "Now",
+      "w" : 84.599999999999994,
+      "x" : 25,
+      "y" : 877
+    },
+    {
+      "h" : 54,
+      "label" : "Plan",
+      "w" : 84.599999999999994,
+      "x" : 101.34999999999999,
+      "y" : 877
+    },
+    {
+      "h" : 54,
+      "label" : "Journal",
+      "w" : 84.599999999999966,
+      "x" : 177.69999999999999,
+      "y" : 877
+    },
+    {
+      "h" : 54,
+      "label" : "Bridge",
+      "w" : 84.600000000000023,
+      "x" : 254.04999999999995,
+      "y" : 877
+    },
+    {
+      "h" : 54,
+      "label" : "Thread",
+      "w" : 84.600000000000023,
+      "x" : 330.39999999999998,
+      "y" : 877
+    }
+  ],
+  "height" : 956,
+  "name" : "journal-more",
+  "path" : [
+    "Journal",
+    "@scroll"
+  ],
+  "scale" : 3,
+  "width" : 440
+}

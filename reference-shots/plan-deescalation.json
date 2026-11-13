@@ -1,0 +1,96 @@
+{
+  "elements" : [
+    {
+      "h" : 44,
+      "label" : "Plan",
+      "w" : 44,
+      "x" : 20,
+      "y" : 62
+    },
+    {
+      "h" : 36,
+      "label" : "Help for this screen",
+      "w" : 40,
+      "x" : 231.66666666666669,
+      "y" : 66
+    },
+    {
+      "h" : 36,
+      "label" : "Reorder",
+      "w" : 74.666666666666629,
+      "x" : 287.66666666666663,
+      "y" : 66
+    },
+    {
+      "h" : 36,
+      "label" : "Write a script",
+      "w" : 37.666666666666686,
+      "x" : 378.33333333333331,
+      "y" : 66
+    },
+    {
+      "h" : 97,
+      "label" : "“I need ten minutes. I will come back and we can finish this.”",
+      "w" : 440,
+      "x" : 0,
+      "y" : 116
+    },
+    {
+      "h" : 97,
+      "label" : "“I want to keep talking, but not while I am this wound up.”",
+      "w" : 440,
+      "x" : 0,
+      "y" : 213
+    },
+    {
+      "h" : 97,
+      "label" : "“Can we take a break and pick this up after dinner?”",
+      "w" : 440,
+      "x" : 0,
+      "y" : 310
+    },
+    {
+      "h" : 54,
+      "label" : "Now",
+      "w" : 84.599999999999994,
+      "x" : 25,
+      "y" : 877
+    },
+    {
+      "h" : 54,
+      "label" : "Plan",
+      "w" : 84.599999999999994,
+      "x" : 101.34999999999999,
+      "y" : 877
+    },
+    {
+      "h" : 54,
+      "label" : "Journal",
+      "w" : 84.599999999999966,
+      "x" : 177.69999999999999,
+      "y" : 877
+    },
+    {
+      "h" : 54,
+      "label" : "Bridge",
+      "w" : 84.600000000000023,
+      "x" : 254.04999999999995,
+      "y" : 877
+    },
+    {
+      "h" : 54,
+      "label" : "Thread",
+      "w" : 84.600000000000023,
+      "x" : 330.39999999999998,
+      "y" : 877
+    }
+  ],
+  "height" : 956,
+  "name" : "plan-deescalation",
+  "path" : [
+    "Plan",
+    "All scripts"
+  ],
+  "scale" : 3,
+  "width" : 440
+}

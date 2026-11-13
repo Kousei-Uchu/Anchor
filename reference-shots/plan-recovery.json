@@ -1,0 +1,96 @@
+{
+  "elements" : [
+    {
+      "h" : 44,
+      "label" : "Plan",
+      "w" : 44,
+      "x" : 20,
+      "y" : 62
+    },
+    {
+      "h" : 36,
+      "label" : "Recovery settings",
+      "w" : 41.333333333333314,
+      "x" : 318.66666666666663,
+      "y" : 66
+    },
+    {
+      "h" : 36,
+      "label" : "Help for this screen",
+      "w" : 40,
+      "x" : 376,
+      "y" : 66
+    },
+    {
+      "h" : 76.666656494140625,
+      "label" : "Riding out an urge, A timer, your reasons, and your grounding tools",
+      "w" : 408,
+      "x" : 16,
+      "y" : 186
+    },
+    {
+      "h" : 94.333343505859375,
+      "label" : "Energy drinks, 51 days in total, Next: 14 days, 12, days",
+      "w" : 408,
+      "x" : 16,
+      "y" : 278.66665649414062
+    },
+    {
+      "h" : 34,
+      "label" : "Add a counter",
+      "w" : 148.66666666666666,
+      "x" : 145.66666666666666,
+      "y" : 389
+    },
+    {
+      "h" : 76.66668701171875,
+      "label" : "Who I'm doing this for, People and reasons, in your own words",
+      "w" : 408,
+      "x" : 16,
+      "y" : 439
+    },
+    {
+      "h" : 54,
+      "label" : "Now",
+      "w" : 84.599999999999994,
+      "x" : 25,
+      "y" : 877
+    },
+    {
+      "h" : 54,
+      "label" : "Plan",
+      "w" : 84.599999999999994,
+      "x" : 101.34999999999999,
+      "y" : 877
+    },
+    {
+      "h" : 54,
+      "label" : "Journal",
+      "w" : 84.599999999999966,
+      "x" : 177.69999999999999,
+      "y" : 877
+    },
+    {
+      "h" : 54,
+      "label" : "Bridge",
+      "w" : 84.600000000000023,
+      "x" : 254.04999999999995,
+      "y" : 877
+    },
+    {
+      "h" : 54,
+      "label" : "Thread",
+      "w" : 84.600000000000023,
+      "x" : 330.39999999999998,
+      "y" : 877
+    }
+  ],
+  "height" : 956,
+  "name" : "plan-recovery",
+  "path" : [
+    "Plan",
+    "Recovery"
+  ],
+  "scale" : 3,
+  "width" : 440
+}

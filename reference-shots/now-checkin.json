@@ -1,0 +1,32 @@
+{
+  "elements" : [
+    {
+      "h" : 36,
+      "label" : "Skip",
+      "w" : 57,
+      "x" : 24,
+      "y" : 86
+    },
+    {
+      "h" : 34,
+      "label" : "A few optional questions",
+      "w" : 196.66666666666666,
+      "x" : 121.66666666666666,
+      "y" : 811.66666666666663
+    },
+    {
+      "h" : 38,
+      "label" : "Finish",
+      "w" : 408,
+      "x" : 16,
+      "y" : 853.66666666666663
+    }
+  ],
+  "height" : 956,
+  "name" : "now-checkin",
+  "path" : [
+    "Check in"
+  ],
+  "scale" : 3,
+  "width" : 440
+}

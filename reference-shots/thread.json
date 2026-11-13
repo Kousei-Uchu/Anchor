@@ -1,0 +1,109 @@
+{
+  "elements" : [
+    {
+      "h" : 36,
+      "label" : "Help for this screen",
+      "w" : 30,
+      "x" : 383,
+      "y" : 66
+    },
+    {
+      "h" : 68.333333333333314,
+      "label" : "Message log, 14 Nov 2026 at 8:27 am, Thinking of you. Hope the week is going alright.",
+      "w" : 376,
+      "x" : 32,
+      "y" : 192
+    },
+    {
+      "h" : 35.33331298828125,
+      "label" : "Write",
+      "w" : 91.666664123535156,
+      "x" : 32,
+      "y" : 270.33334350585938
+    },
+    {
+      "h" : 86.333333333333371,
+      "label" : "Support calendar, M, 9, Tu, 10, W, 11, Th, 12, F, 13, Sa, 14, Su, 15",
+      "w" : 376,
+      "x" : 32,
+      "y" : 353.66666666666663
+    },
+    {
+      "h" : 48.333333333333258,
+      "label" : "People, Sam, Alex, and Jordan",
+      "w" : 376,
+      "x" : 32,
+      "y" : 488
+    },
+    {
+      "h" : 48.333333333333371,
+      "label" : "To future me, Next unlocks in 14 days",
+      "w" : 376,
+      "x" : 32,
+      "y" : 584.33333333333326
+    },
+    {
+      "h" : 74.333333333333371,
+      "label" : "Things I haven't said, 2 drafts, Private. For big things you might never send.",
+      "w" : 376,
+      "x" : 32,
+      "y" : 680.66666666666663
+    },
+    {
+      "h" : 66.333333333333371,
+      "label" : "Boundaries, Things I'd like people to know, I go quiet when I am overwhelmed. It is not about you.",
+      "w" : 376,
+      "x" : 32,
+      "y" : 803
+    },
+    {
+      "h" : 15.66668701171875,
+      "label" : "Customise",
+      "w" : 85.66668701171875,
+      "x" : 178,
+      "y" : 915.45111083984375
+    },
+    {
+      "h" : 54,
+      "label" : "Now",
+      "w" : 84.599999999999994,
+      "x" : 25,
+      "y" : 877
+    },
+    {
+      "h" : 54,
+      "label" : "Plan",
+      "w" : 84.599999999999994,
+      "x" : 101.34999999999999,
+      "y" : 877
+    },
+    {
+      "h" : 54,
+      "label" : "Journal",
+      "w" : 84.599999999999966,
+      "x" : 177.69999999999999,
+      "y" : 877
+    },
+    {
+      "h" : 54,
+      "label" : "Bridge",
+      "w" : 84.600000000000023,
+      "x" : 254.04999999999995,
+      "y" : 877
+    },
+    {
+      "h" : 54,
+      "label" : "Thread",
+      "w" : 84.600000000000023,
+      "x" : 330.39999999999998,
+      "y" : 877
+    }
+  ],
+  "height" : 956,
+  "name" : "thread",
+  "path" : [
+    "Thread"
+  ],
+  "scale" : 3,
+  "width" : 440
+}
