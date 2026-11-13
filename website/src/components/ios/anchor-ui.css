@@ -36,6 +36,9 @@
 .au-callout { font: 400 16px/19px var(--au-rounded); }
 .au-subheadline { font: 400 15px/18px var(--au-rounded); }
 .au-caption { font: 400 12px/14px var(--au-rounded); }
+.au-caption2 { font: 400 11px/13px var(--au-rounded); }
+.au-title3 { font: 400 20px/24px var(--au-rounded); }
+.au-italic { font-style: italic; }
 .au-semibold { font-weight: 600; }
 .au-medium { font-weight: 500; }
 .au-grow { flex: 1; text-align: left; }
@@ -121,3 +124,39 @@
 /* GroundingToolRow */
 .au-tool-row { --tint: var(--anchor-sage); display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 12px; border: 0; border-radius: 12px; background: var(--anchor-sage-soft); cursor: pointer; text-align: left; }
 .au-tool-icon { display: inline-flex; justify-content: center; width: 20px; color: var(--anchor-sage); }
+
+/* Full-length mode, for seeing the whole scrolling screen at once */
+.au-screen[data-full] { height: auto; min-height: 956px; }
+.au-screen[data-full] .au-scroll { height: auto; overflow: visible; }
+
+.au-divider { height: 1px; background: rgb(60 60 67 / 0.29); }
+.au-screen[data-anchor-scheme="dark"] .au-divider { background: rgb(84 84 88 / 0.6); }
+.au-hscroll { overflow-x: auto; scrollbar-width: none; margin: 0 calc(var(--anchor-spacing) * -1); }
+.au-hscroll::-webkit-scrollbar { display: none; }
+.au-hscroll-track { display: flex; gap: 10px; padding: 0 var(--anchor-spacing); width: max-content; max-width: none; }
+
+/* RecoveryNowCard */
+.au-recovery-row { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+.au-recovery-text { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+.au-recovery-num { display: flex; flex-direction: column; align-items: center; }
+.au-recovery-big { font: 600 30px/36px var(--au-rounded); color: var(--anchor-accent); }
+
+/* DecisionPresetsQuickView */
+.au-preset { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 12px; border: 0; border-radius: 14px; background: var(--anchor-accent-soft); cursor: pointer; text-align: left; white-space: nowrap; }
+.au-preset-row { flex-direction: row; align-items: center; gap: 6px; }
+.au-link { font: 400 12px/14px var(--au-rounded); color: var(--anchor-accent); }
+.au-row-between { display: flex; align-items: center; justify-content: space-between; }
+
+/* DeEscalationCardView and AffirmationsCardView */
+.au-quote { box-sizing: border-box; width: 100%; padding: 16px; border-radius: 12px; font: 400 20px/24px var(--au-rounded); text-align: left; }
+
+/* TasksNowCard */
+.au-task { display: flex; align-items: center; gap: 10px; }
+.au-task-check { display: inline-flex; padding: 0; border: 0; background: none; cursor: pointer; color: var(--au-secondary); }
+.au-add-row { display: flex; align-items: center; gap: 8px; }
+.au-field { flex: 1; min-width: 0; box-sizing: border-box; height: 34px; padding: 0 10px; border: 0; border-radius: 10px; background: rgb(118 118 128 / 0.12); color: var(--au-primary); font: 400 17px/20px var(--au-text); outline: none; }
+.au-field::placeholder { color: var(--au-tertiary); }
+.au-field:focus { box-shadow: 0 0 0 2px color-mix(in srgb, var(--anchor-accent) 40%, transparent); }
+.au-nowrap-clip { display: inline-block; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+.au-stack-12 { display: flex; flex-direction: column; gap: 12px; }
+.au-quote.au-italic { font-style: italic; }

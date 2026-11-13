@@ -13,6 +13,8 @@ echo "=== sync-demo.mjs --check ==="
 node scripts/sync-demo.mjs --check || status=1
 echo "=== sync-demo-screens.mjs --check ==="
 node scripts/sync-demo-screens.mjs --check || status=1
+echo "=== sync-seed.mjs --check ==="
+node scripts/sync-seed.mjs --check || status=1
 echo "=== sync-design.mjs --check ==="
 node scripts/sync-design.mjs --check || status=1
 echo "=== check-promo-shots.mjs ==="

@@ -24,6 +24,14 @@ const MIRRORED_VIEWS = [
   ["Views/Now/MascotPresenceView.swift", "SpeechBubble"],
   ["Views/Now/SafetyPlanShortcutView.swift", "SafetyPlanShortcutView"],
   ["Views/Now/GroundingToolsView.swift", "GroundingToolRow"],
+  ["Views/Now/GroundingToolsView.swift", "GroundingToolsView"],
+  ["Views/Now/QuickContactsView.swift", "QuickContactsView"],
+  ["Views/Recovery/RecoveryHomeView.swift", "RecoveryNowCard"],
+  ["Views/Now/NextAppointmentCardView.swift", "NextAppointmentCardView"],
+  ["Views/Now/DecisionPresetsQuickView.swift", "DecisionPresetsQuickView"],
+  ["Views/Now/NextHourChecklistView.swift", "TasksNowCard"],
+  ["Views/Now/DeEscalationAndQuietRoomView.swift", "DeEscalationCardView"],
+  ["Views/Now/AffirmationsView.swift", "AffirmationsCardView"],
 ];
 
 const src = readFileSync(SWIFT, "utf8");

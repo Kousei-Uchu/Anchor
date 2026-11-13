@@ -1,0 +1,1696 @@
+{
+ "source": "DemoMode.makeContainer and addRecoveryContent in iOS/Anchor/Anchor/AnchorApp.swift",
+ "bindings": {
+  "tuesday": {
+   "$expr": "Calendar.current.nextDate(after: now, matching: DateComponents(hour: 10, minute: 30, weekday: 3), matchingPolicy: .nextTime) ?? now.addingTimeInterval(3 * 86_400)"
+  },
+  "boundaryHeadings": {
+   "$expr": "BoundarySection.startingSections()"
+  }
+ },
+ "models": {
+  "TrustedContact": [
+   {
+    "_type": "TrustedContact",
+    "name": "Sam",
+    "phoneNumber": "0400 000 001",
+    "sortOrder": 0,
+    "helloEnabled": true,
+    "helloDays": [
+     1
+    ],
+    "helloHour": 17,
+    "helloMinute": 0,
+    "supportDaysEnabled": true,
+    "supportDaysDayBefore": true,
+    "_id": "demoSam",
+    "afterSessionEnabled": true
+   },
+   {
+    "_type": "TrustedContact",
+    "name": "Alex",
+    "phoneNumber": "0400 000 002",
+    "sortOrder": 1,
+    "_id": "demoAlex",
+    "companionEnabled": true,
+    "companionWindowIDs": [
+     {
+      "$id": "demoSundayEvenings"
+     }
+    ]
+   },
+   {
+    "_type": "TrustedContact",
+    "name": "Jordan",
+    "phoneNumber": "0400 000 003",
+    "sortOrder": 2,
+    "_id": "demoJordan"
+   }
+  ],
+  "PersonSection": [
+   {
+    "_type": "PersonSection",
+    "contactID": {
+     "$id": "demoSam"
+    },
+    "title": "Notes",
+    "text": "Prefers a short text to a call.\nUsually free on Sunday evenings.",
+    "iconName": "doc.text.fill",
+    "tintName": "sage",
+    "sortOrder": 0
+   },
+   {
+    "_type": "PersonSection",
+    "contactID": {
+     "$id": "demoSam"
+    },
+    "title": "Things I've told them",
+    "text": "That sleep has been rough lately.",
+    "iconName": "heart.fill",
+    "tintName": "accent",
+    "sortOrder": 1
+   },
+   {
+    "_type": "PersonSection",
+    "contactID": {
+     "$id": "demoAlex"
+    },
+    "title": "Notes",
+    "text": "Good at sitting quietly with me.\nDoes not mind a late message.",
+    "iconName": "doc.text.fill",
+    "tintName": "sky",
+    "sortOrder": 0
+   },
+   {
+    "_type": "PersonSection",
+    "contactID": {
+     "$id": "demoAlex"
+    },
+    "title": "What helps",
+    "text": "A walk, even a short one.",
+    "iconName": "leaf.fill",
+    "tintName": "sage",
+    "sortOrder": 1
+   },
+   {
+    "_type": "PersonSection",
+    "contactID": {
+     "$id": "demoJordan"
+    },
+    "title": "Notes",
+    "text": "Lives nearby. Happy to come over if I ask.",
+    "iconName": "doc.text.fill",
+    "tintName": "lilac",
+    "sortOrder": 0
+   }
+  ],
+  "GroundingTool": [
+   {
+    "_type": "GroundingTool",
+    "title": "5-4-3-2-1",
+    "kind": {
+     "$enum": "physicalAction"
+    },
+    "steps": "Name 5 things you can see.\nName 4 things you can touch.\nName 3 things you can hear.\nName 2 things you can smell.\nTake 1 slow breath.",
+    "sortOrder": 0
+   },
+   {
+    "_type": "GroundingTool",
+    "title": "Cold water",
+    "kind": {
+     "$enum": "physicalAction"
+    },
+    "steps": "Go to a tap.\nRun cold water over your wrists.\nBreathe out slowly, twice.",
+    "sortOrder": 1
+   },
+   {
+    "_type": "GroundingTool",
+    "title": "Slow breathing",
+    "kind": {
+     "$enum": "physicalAction"
+    },
+    "steps": "Breathe in for four.\nHold for four.\nBreathe out for six.",
+    "sortOrder": 2
+   },
+   {
+    "_type": "GroundingTool",
+    "title": "Ten slow steps",
+    "kind": {
+     "$enum": "physicalAction"
+    },
+    "steps": "Stand up.\nWalk across the room, slowly.\nCount ten steps.\nNotice your feet on the floor.",
+    "sortOrder": 3
+   },
+   {
+    "_type": "GroundingTool",
+    "title": "Something warm",
+    "kind": {
+     "$enum": "physicalAction"
+    },
+    "steps": "Make a warm drink, or hold a warm mug.\nFeel the warmth in your hands.\nTake a few slow sips.",
+    "sortOrder": 4
+   }
+  ],
+  "TriggerWindow": [
+   {
+    "_type": "TriggerWindow",
+    "label": "Sunday evenings",
+    "daysOfWeek": [
+     1
+    ],
+    "startTime": {
+     "_type": "DateComponents",
+     "hour": 17
+    },
+    "endTime": {
+     "_type": "DateComponents",
+     "hour": 20
+    },
+    "_id": "demoSundayEvenings"
+   },
+   {
+    "_type": "TriggerWindow",
+    "label": "Before the Monday call",
+    "daysOfWeek": [
+     2
+    ],
+    "startTime": {
+     "_type": "DateComponents",
+     "hour": 8,
+     "minute": 30
+    },
+    "endTime": {
+     "_type": "DateComponents",
+     "hour": 10
+    }
+   },
+   {
+    "_type": "TriggerWindow",
+    "label": "Exam weeks, afternoons",
+    "daysOfWeek": [
+     3,
+     5
+    ],
+    "startTime": {
+     "_type": "DateComponents",
+     "hour": 14
+    },
+    "endTime": {
+     "_type": "DateComponents",
+     "hour": 16
+    },
+    "isActive": false
+   }
+  ],
+  "JournalEntry": [
+   {
+    "_type": "JournalEntry",
+    "createdAt": {
+     "$call": "ago",
+     "args": [
+      29
+     ]
+    },
+    "text": "Want to ask about sleep, and whether the evening call is worth keeping.",
+    "_id": "leePrepNote"
+   },
+   {
+    "_type": "JournalEntry",
+    "createdAt": {
+     "$call": "ago",
+     "args": [
+      14
+     ]
+    },
+    "text": "Talked about the sleep. Try the same wake-up time for two weeks and see.\n[ ] Pick a wake-up time\n[ ] Ask Sam to check in on Sunday",
+    "_id": "leeNoteRecent"
+   },
+   {
+    "_type": "JournalEntry",
+    "createdAt": {
+     "$call": "ago",
+     "args": [
+      28
+     ]
+    },
+    "text": "Went over the month. Dr Lee thought the walks were worth keeping.",
+    "_id": "leeNoteOlder"
+   },
+   {
+    "_type": "JournalEntry",
+    "createdAt": {
+     "$call": "ago",
+     "args": [
+      60
+     ]
+    },
+    "text": "Short visit. Booked the next one for the longer appointment.",
+    "_id": "patelNote"
+   },
+   {
+    "_type": "JournalEntry",
+    "createdAt": {
+     "$call": "ago",
+     "args": [
+      1
+     ]
+    },
+    "text": "Ask whether the new wake-up time is helping, and whether the evening call is still worth keeping.",
+    "_id": "leePrepNext"
+   },
+   {
+    "_type": "JournalEntry",
+    "createdAt": {
+     "$call": "ago",
+     "args": [
+      0,
+      {
+       "hour": 3
+      }
+     ]
+    },
+    "text": "Slept badly, but the walk helped a bit."
+   },
+   {
+    "_type": "JournalEntry",
+    "id": {
+     "_type": "UUID",
+     "_id": "optimisedEntryID"
+    },
+    "createdAt": {
+     "$call": "ago",
+     "args": [
+      2,
+      {
+       "hour": 4
+      }
+     ]
+    },
+    "text": {
+     "$expr": "optimisedOriginal + \"\\n\" + JournalAssist(rewrite: optimisedShort, original: optimisedOriginal).markdownLine"
+    }
+   },
+   {
+    "_type": "JournalEntry",
+    "createdAt": {
+     "$call": "ago",
+     "args": [
+      1,
+      {
+       "hour": 2
+      }
+     ]
+    },
+    "text": "Quiet day. Made toast, answered one message, and that was enough."
+   },
+   {
+    "_type": "JournalEntry",
+    "createdAt": {
+     "$call": "ago",
+     "args": [
+      3
+     ]
+    },
+    "text": "Felt tense before the call, but it went better than I expected."
+   },
+   {
+    "_type": "JournalEntry",
+    "createdAt": {
+     "$call": "ago",
+     "args": [
+      6
+     ]
+    },
+    "text": "Walked past the pottery studio and did not turn around. That was something.",
+    "_id": "favouriteEntry",
+    "isFavorited": true
+   },
+   {
+    "_type": "JournalEntry",
+    "createdAt": {
+     "$call": "ago",
+     "args": [
+      8,
+      {
+       "hour": 2
+      }
+     ]
+    },
+    "text": "Cleaned the kitchen in short bursts and rested in between."
+   },
+   {
+    "_type": "JournalEntry",
+    "createdAt": {
+     "$call": "ago",
+     "args": [
+      11
+     ]
+    },
+    "text": "Bad sleep again. Told Sam, which helped more than I thought it would."
+   },
+   {
+    "_type": "JournalEntry",
+    "createdAt": {
+     "$call": "ago",
+     "args": [
+      15
+     ]
+    },
+    "text": "A good day. Not a great one, just an easy one."
+   },
+   {
+    "_type": "JournalEntry",
+    "createdAt": {
+     "$call": "ago",
+     "args": [
+      19,
+      {
+       "hour": 5
+      }
+     ]
+    },
+    "text": "Cancelled plans and felt guilty, then relieved. Both are true."
+   },
+   {
+    "_type": "JournalEntry",
+    "createdAt": {
+     "$call": "ago",
+     "args": [
+      24
+     ]
+    },
+    "text": "Wrote down three things to bring to the next appointment."
+   },
+   {
+    "_type": "JournalEntry",
+    "createdAt": {
+     "$call": "ago",
+     "args": [
+      31
+     ]
+    },
+    "text": "Rained all day. Stayed in and read for an hour."
+   },
+   {
+    "_type": "JournalEntry",
+    "createdAt": {
+     "$call": "ago",
+     "args": [
+      40
+     ]
+    },
+    "text": "First week back in the routine. It still feels like a lot."
+   },
+   {
+    "_type": "JournalEntry",
+    "createdAt": {
+     "$call": "ago",
+     "args": [
+      55
+     ]
+    },
+    "text": "Not much to say today. Writing this anyway."
+   }
+  ],
+  "AppointmentSeries": [
+   {
+    "_type": "AppointmentSeries",
+    "clinicianLabel": "Dr Lee",
+    "typicalDayOfWeek": 3,
+    "typicalTime": {
+     "_type": "DateComponents",
+     "hour": 10,
+     "minute": 30
+    },
+    "typicalCadenceDays": 14,
+    "occurrences": [
+     {
+      "_type": "AppointmentOccurrence",
+      "scheduledDate": {
+       "$ref": "tuesday"
+      },
+      "prepNoteEntryID": {
+       "$id": "leePrepNext"
+      },
+      "prepChecklist": [
+       {
+        "_type": "QuickListItem",
+        "text": "Medicare card"
+       },
+       {
+        "_type": "QuickListItem",
+        "text": "My notes from this week",
+        "isDone": true
+       }
+      ]
+     },
+     {
+      "_type": "AppointmentOccurrence",
+      "scheduledDate": {
+       "$call": "ago",
+       "args": [
+        14
+       ]
+      },
+      "postSessionNoteEntryID": {
+       "$id": "leeNoteRecent"
+      }
+     },
+     {
+      "_type": "AppointmentOccurrence",
+      "scheduledDate": {
+       "$call": "ago",
+       "args": [
+        28
+       ]
+      },
+      "prepNoteEntryID": {
+       "$id": "leePrepNote"
+      },
+      "postSessionNoteEntryID": {
+       "$id": "leeNoteOlder"
+      }
+     }
+    ],
+    "role": "Psychologist",
+    "sortOrder": 0,
+    "_id": "lee"
+   },
+   {
+    "_type": "AppointmentSeries",
+    "clinicianLabel": "Dr Patel",
+    "typicalCadenceDays": 60,
+    "occurrences": [
+     {
+      "_type": "AppointmentOccurrence",
+      "scheduledDate": {
+       "$expr": "now.addingTimeInterval(12 * 86_400)"
+      }
+     },
+     {
+      "_type": "AppointmentOccurrence",
+      "scheduledDate": {
+       "$call": "ago",
+       "args": [
+        60
+       ]
+      },
+      "wasMoved": true,
+      "postSessionNoteEntryID": {
+       "$id": "patelNote"
+      }
+     }
+    ],
+    "role": "GP",
+    "exportLabel": "My GP",
+    "notes": "Ask for the longer appointment.",
+    "sortOrder": 1,
+    "_id": "patel"
+   }
+  ],
+  "TaskItem": [
+   {
+    "_type": "TaskItem",
+    "title": "Drink some water",
+    "sortOrder": 0,
+    "energy": {
+     "$enum": "little"
+    },
+    "estimateMinutes": 5,
+    "_id": "water",
+    "_calls": [
+     {
+      "name": "setDue",
+      "args": [
+       {
+        "$enum": "today"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "_type": "TaskItem",
+    "title": "Reply to one message",
+    "notes": "Just the easy one.",
+    "sortOrder": 1,
+    "energy": {
+     "$enum": "some"
+    },
+    "focusSessions": 2,
+    "focusMinutes": 50,
+    "estimateMinutes": 30,
+    "_id": "reply",
+    "_calls": [
+     {
+      "name": "setDue",
+      "args": [
+       {
+        "$enum": "thisWeek"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "_type": "TaskItem",
+    "title": "Pick the easy one",
+    "isDone": true,
+    "completedAt": {
+     "$call": "ago",
+     "args": [
+      0,
+      {
+       "hour": 1
+      }
+     ]
+    },
+    "sortOrder": 0,
+    "parentID": {
+     "$id": "reply"
+    }
+   },
+   {
+    "_type": "TaskItem",
+    "title": "Write two lines",
+    "sortOrder": 1,
+    "parentID": {
+     "$id": "reply"
+    }
+   },
+   {
+    "_type": "TaskItem",
+    "title": "Send it",
+    "sortOrder": 2,
+    "parentID": {
+     "$id": "reply"
+    }
+   },
+   {
+    "_type": "TaskItem",
+    "title": "Call to book the appointment",
+    "sortOrder": 3,
+    "energy": {
+     "$enum": "some"
+    },
+    "firstStep": "Find the number and put it on the screen.",
+    "estimateMinutes": 15,
+    "_id": "call"
+   },
+   {
+    "_type": "TaskItem",
+    "title": "Bring the form along",
+    "sortOrder": 4,
+    "blockedByIDs": [
+     {
+      "$id": "call"
+     }
+    ]
+   },
+   {
+    "_type": "TaskItem",
+    "title": "Bring my notes to the next appointment",
+    "sortOrder": 6,
+    "sourceEntryID": {
+     "_type": "UUID",
+     "_id": "optimisedEntryID"
+    }
+   },
+   {
+    "_type": "TaskItem",
+    "title": "Step outside for five minutes",
+    "isDone": true,
+    "completedAt": {
+     "$call": "ago",
+     "args": [
+      0,
+      {
+       "hour": 2
+      }
+     ]
+    },
+    "sortOrder": 2
+   },
+   {
+    "_type": "TaskItem",
+    "title": "Sort out the old paperwork",
+    "sortOrder": 5,
+    "status": {
+     "$enum": "setAside"
+    },
+    "energy": {
+     "$enum": "lots"
+    }
+   }
+  ],
+  "QuickList": [
+   {
+    "_type": "QuickList",
+    "title": "Before I leave the house",
+    "createdAt": {
+     "$call": "ago",
+     "args": [
+      0,
+      {
+       "hour": 4
+      }
+     ]
+    },
+    "items": [
+     {
+      "_type": "QuickListItem",
+      "text": "Keys",
+      "isDone": true
+     },
+     {
+      "_type": "QuickListItem",
+      "text": "Phone and charger",
+      "isDone": true
+     },
+     {
+      "_type": "QuickListItem",
+      "text": "Water bottle"
+     },
+     {
+      "_type": "QuickListItem",
+      "text": "Wallet"
+     }
+    ]
+   },
+   {
+    "_type": "QuickList",
+    "title": "Shopping",
+    "createdAt": {
+     "$call": "ago",
+     "args": [
+      2
+     ]
+    },
+    "items": [
+     {
+      "_type": "QuickListItem",
+      "text": "Bread",
+      "isDone": true
+     },
+     {
+      "_type": "QuickListItem",
+      "text": "Milk",
+      "isDone": true
+     },
+     {
+      "_type": "QuickListItem",
+      "text": "Bananas",
+      "isDone": true
+     }
+    ],
+    "archivedAt": {
+     "$call": "ago",
+     "args": [
+      1
+     ]
+    }
+   }
+  ],
+  "Routine": [
+   {
+    "_type": "Routine",
+    "name": "School mornings",
+    "createdAt": {
+     "$call": "ago",
+     "args": [
+      5
+     ]
+    },
+    "steps": [
+     {
+      "_type": "RoutineStep",
+      "text": "Drink a glass of water",
+      "minutes": 2
+     },
+     {
+      "_type": "RoutineStep",
+      "text": "Get dressed",
+      "minutes": 10
+     },
+     {
+      "_type": "RoutineStep",
+      "text": "Eat something, even something small",
+      "minutes": 15
+     },
+     {
+      "_type": "RoutineStep",
+      "text": "Pack the bag and check for keys and phone",
+      "minutes": 5
+     },
+     {
+      "_type": "RoutineStep",
+      "text": "Head out"
+     }
+    ]
+   },
+   {
+    "_type": "Routine",
+    "name": "Winding down",
+    "createdAt": {
+     "$call": "ago",
+     "args": [
+      3
+     ]
+    },
+    "steps": [
+     {
+      "_type": "RoutineStep",
+      "text": "Put the phone on the charger across the room",
+      "minutes": 1
+     },
+     {
+      "_type": "RoutineStep",
+      "text": "Wash my face and brush my teeth",
+      "minutes": 5
+     },
+     {
+      "_type": "RoutineStep",
+      "text": "Set out tomorrow's clothes",
+      "minutes": 3
+     },
+     {
+      "_type": "RoutineStep",
+      "text": "Read a few pages",
+      "minutes": 15
+     },
+     {
+      "_type": "RoutineStep",
+      "text": "Lights out"
+     }
+    ]
+   }
+  ],
+  "MessageStarter": [
+   {
+    "_type": "MessageStarter",
+    "text": "I'm not up to talking right now, but I'm safe.",
+    "sortOrder": 0
+   },
+   {
+    "_type": "MessageStarter",
+    "text": "Could you check in on me tomorrow?",
+    "sortOrder": 1
+   }
+  ],
+  "ItemList": [
+   {
+    "_type": "ItemList",
+    "name": "Weekend away",
+    "createdAt": {
+     "$call": "ago",
+     "args": [
+      4
+     ]
+    },
+    "variables": [
+     {
+      "_type": "ListVariable",
+      "name": "Day",
+      "value": 3,
+      "_id": "days"
+     }
+    ],
+    "items": [
+     {
+      "_type": "ListItem",
+      "name": "Phone charger",
+      "category": "Things",
+      "isDone": true
+     },
+     {
+      "_type": "ListItem",
+      "name": "Keys",
+      "category": "Things"
+     },
+     {
+      "_type": "ListItem",
+      "name": "T-shirts",
+      "category": "Clothes",
+      "rule": {
+       "_type": "QuantityRule",
+       "variableID": {
+        "$id": "days"
+       },
+       "per": 1
+      }
+     },
+     {
+      "_type": "ListItem",
+      "name": "Socks",
+      "category": "Clothes",
+      "rule": {
+       "_type": "QuantityRule",
+       "variableID": {
+        "$id": "days"
+       },
+       "per": 1,
+       "extra": 1,
+       "extraEvery": 3
+      }
+     },
+     {
+      "_type": "ListItem",
+      "name": "Toothbrush",
+      "category": "Wash bag",
+      "isDone": true
+     },
+     {
+      "_type": "ListItem",
+      "name": "Medication organiser",
+      "category": "Wash bag"
+     }
+    ],
+    "_id": "weekend"
+   }
+  ],
+  "Affirmation": [
+   {
+    "_type": "Affirmation",
+    "text": "I got through today. That counts.",
+    "sortOrder": 0
+   },
+   {
+    "_type": "Affirmation",
+    "text": "Small steps still move me forward.",
+    "sortOrder": 1
+   },
+   {
+    "_type": "Affirmation",
+    "text": "I do not have to do all of it today.",
+    "sortOrder": 2
+   },
+   {
+    "_type": "Affirmation",
+    "text": "Resting is allowed.",
+    "sortOrder": 3
+   }
+  ],
+  "DeEscalationScript": [
+   {
+    "_type": "DeEscalationScript",
+    "text": "I need ten minutes. I will come back and we can finish this.",
+    "sortOrder": 0
+   },
+   {
+    "_type": "DeEscalationScript",
+    "text": "I want to keep talking, but not while I am this wound up.",
+    "sortOrder": 1
+   },
+   {
+    "_type": "DeEscalationScript",
+    "text": "Can we take a break and pick this up after dinner?",
+    "sortOrder": 2
+   }
+  ],
+  "DecisionPresetCategory": [
+   {
+    "_type": "DecisionPresetCategory",
+    "name": "Outfit",
+    "sortOrder": 0,
+    "_id": "outfit"
+   },
+   {
+    "_type": "DecisionPresetCategory",
+    "name": "Food",
+    "sortOrder": 1,
+    "_id": "food"
+   },
+   {
+    "_type": "DecisionPresetCategory",
+    "name": "Morning routine",
+    "sortOrder": 2,
+    "_id": "morning"
+   }
+  ],
+  "DecisionPresetChoice": [
+   {
+    "_type": "DecisionPresetChoice",
+    "name": "Grey jumper and jeans",
+    "sortOrder": 0,
+    "category": {
+     "$id": "outfit"
+    }
+   },
+   {
+    "_type": "DecisionPresetChoice",
+    "name": "Green shirt and black trousers",
+    "sortOrder": 1,
+    "category": {
+     "$id": "outfit"
+    }
+   },
+   {
+    "_type": "DecisionPresetChoice",
+    "name": "Something warm for a cold day",
+    "steps": "Pick the big jumper.\nPick the thick socks.\nAdd a scarf by the door.",
+    "sortOrder": 2,
+    "category": {
+     "$id": "outfit"
+    }
+   },
+   {
+    "_type": "DecisionPresetChoice",
+    "name": "Toast and fruit",
+    "sortOrder": 0,
+    "category": {
+     "$id": "food"
+    }
+   },
+   {
+    "_type": "DecisionPresetChoice",
+    "name": "Pasta from the freezer",
+    "steps": "Take the packet out of the freezer.\nPut it in the microwave for four minutes.\nStir it and eat.",
+    "sortOrder": 1,
+    "category": {
+     "$id": "food"
+    }
+   },
+   {
+    "_type": "DecisionPresetChoice",
+    "name": "Soup and bread",
+    "sortOrder": 2,
+    "category": {
+     "$id": "food"
+    }
+   },
+   {
+    "_type": "DecisionPresetChoice",
+    "name": "Slow start",
+    "steps": "Drink a glass of water.\nSit by the window for ten minutes.\nGet dressed.",
+    "sortOrder": 0,
+    "category": {
+     "$id": "morning"
+    }
+   },
+   {
+    "_type": "DecisionPresetChoice",
+    "name": "Quick start",
+    "sortOrder": 1,
+    "category": {
+     "$id": "morning"
+    }
+   }
+  ],
+  "CheckIn": [
+   {
+    "_type": "CheckIn",
+    "timestamp": {
+     "$call": "ago",
+     "args": [
+      1,
+      {
+       "hour": 5
+      }
+     ]
+    },
+    "physicalExhaustion": 0.4,
+    "cognitiveBurnout": 0.5,
+    "mentalLoad": 0.45,
+    "physicalEnergy": 0.5,
+    "socialEnergy": 0.35,
+    "extraAnswers": {
+     "$expr": "CheckInAnswers.encode([ CheckInAnswer(question: \"What's currently on your mind?\", answer: \"The appointment on Thursday, and whether I have everything ready.\"), CheckInAnswer(question: \"What's something you're looking forward to?\", answer: \"A quiet evening with a book.\") ])"
+    }
+   },
+   {
+    "_type": "CheckIn",
+    "timestamp": {
+     "$call": "ago",
+     "args": [
+      3,
+      {
+       "hour": 6
+      }
+     ]
+    },
+    "physicalExhaustion": 0.75,
+    "cognitiveBurnout": 0.7,
+    "mentalLoad": 0.8,
+    "physicalEnergy": 0.2,
+    "socialEnergy": 0.15
+   },
+   {
+    "_type": "CheckIn",
+    "timestamp": {
+     "$call": "ago",
+     "args": [
+      5,
+      {
+       "hour": 4
+      }
+     ]
+    },
+    "physicalExhaustion": 0.2,
+    "cognitiveBurnout": 0.3,
+    "mentalLoad": 0.35,
+    "physicalEnergy": 0.8,
+    "socialEnergy": 0.7
+   },
+   {
+    "_type": "CheckIn",
+    "timestamp": {
+     "$call": "ago",
+     "args": [
+      8,
+      {
+       "hour": 5
+      }
+     ]
+    },
+    "physicalExhaustion": 0.55,
+    "cognitiveBurnout": 0.4,
+    "mentalLoad": 0.6,
+    "physicalEnergy": 0.45,
+    "socialEnergy": 0.5
+   },
+   {
+    "_type": "CheckIn",
+    "timestamp": {
+     "$call": "ago",
+     "args": [
+      12,
+      {
+       "hour": 4
+      }
+     ]
+    },
+    "physicalExhaustion": 0.65,
+    "cognitiveBurnout": 0.6,
+    "mentalLoad": 0.7,
+    "physicalEnergy": 0.3,
+    "socialEnergy": 0.25
+   },
+   {
+    "_type": "CheckIn",
+    "timestamp": {
+     "$call": "ago",
+     "args": [
+      17,
+      {
+       "hour": 6
+      }
+     ]
+    },
+    "physicalExhaustion": 0.3,
+    "cognitiveBurnout": 0.35,
+    "mentalLoad": 0.3,
+    "physicalEnergy": 0.7,
+    "socialEnergy": 0.6
+   }
+  ],
+  "BridgeDraftItem": [
+   {
+    "_type": "BridgeDraftItem",
+    "text": "Sleep has been off"
+   },
+   {
+    "_type": "BridgeDraftItem",
+    "text": "Medication question",
+    "providerID": {
+     "$id": "patel"
+    }
+   },
+   {
+    "_type": "BridgeDraftItem",
+    "text": "Ask about next steps",
+    "isQuestion": true,
+    "providerID": {
+     "$id": "lee"
+    }
+   },
+   {
+    "_type": "BridgeDraftItem",
+    "text": "Ask whether the evening routine can change",
+    "sourceEntryID": {
+     "_type": "UUID",
+     "_id": "optimisedEntryID"
+    }
+   },
+   {
+    "_type": "BridgeDraftItem",
+    "createdAt": {
+     "$call": "ago",
+     "args": [
+      9
+     ]
+    },
+    "text": "Is it worth trying a different time of day?",
+    "isResolved": true,
+    "isQuestion": true,
+    "answer": "Worth a try for two weeks, then we look again."
+   }
+  ],
+  "PersonalGoal": [
+   {
+    "_type": "PersonalGoal",
+    "title": "Get outside for a short walk most days",
+    "why": "It helps my head more than I expect.",
+    "notes": [
+     {
+      "_type": "GoalNote",
+      "date": {
+       "$call": "ago",
+       "args": [
+        3
+       ]
+      },
+      "text": "Walked to the end of the street and back. That counted."
+     },
+     {
+      "_type": "GoalNote",
+      "date": {
+       "$call": "ago",
+       "args": [
+        1
+       ]
+      },
+      "text": "Skipped it today and that was fine."
+     }
+    ],
+    "sortOrder": 0,
+    "usesSMART": true,
+    "smartSpecific": "Walk to the end of the street and back.",
+    "smartMeasurable": "Count the days I went. Not a streak, just a count.",
+    "smartAchievable": "Five minutes is enough, and a skipped day is fine."
+   },
+   {
+    "_type": "PersonalGoal",
+    "title": "Go back to the pottery class",
+    "status": {
+     "$enum": "reached"
+    },
+    "sortOrder": 1
+   }
+  ],
+  "FeedbackLoopDiagram": [
+   {
+    "_type": "FeedbackLoopDiagram",
+    "title": "Waking in the night",
+    "graphJSON": {
+     "$expr": "DiagramGraph.loop([ (\"I wake up and check the time\", .same), (\"I start thinking about tomorrow\", .same), (\"I feel tense and wide awake\", .same) ]).encoded()"
+    }
+   },
+   {
+    "_type": "FeedbackLoopDiagram",
+    "title": "Taking on too much",
+    "graphJSON": {
+     "$expr": "DiagramGraph.loop([ (\"I take on more\", .same), (\"I feel stretched thin\", .same), (\"I say no to something\", .opposite) ]).encoded()"
+    }
+   },
+   {
+    "_type": "FeedbackLoopDiagram",
+    "title": "How a hard day spreads",
+    "graphJSON": {
+     "$expr": "DiagramGraph.demoMap().encoded()"
+    }
+   }
+  ],
+  "FutureNote": [
+   {
+    "_type": "FutureNote",
+    "unlockDate": {
+     "$expr": "now.addingTimeInterval(14 * 86_400)"
+    },
+    "text": "You got through last time too."
+   },
+   {
+    "_type": "FutureNote",
+    "unlockDate": {
+     "$ref": "now"
+    },
+    "text": "Be gentle with yourself tonight. Some water, something small to eat, and one message to someone.",
+    "openWhen": "it is a hard night"
+   }
+  ],
+  "ThreadMessage": [
+   {
+    "_type": "ThreadMessage",
+    "timestamp": {
+     "$call": "ago",
+     "args": [
+      2
+     ]
+    },
+    "text": "Thanks for checking in on me.",
+    "withContactID": {
+     "$id": "demoSam"
+    }
+   },
+   {
+    "_type": "ThreadMessage",
+    "timestamp": {
+     "$call": "ago",
+     "args": [
+      9
+     ]
+    },
+    "text": "Rough week. Can I call you on Sunday?",
+    "withContactID": {
+     "$id": "demoSam"
+    }
+   },
+   {
+    "_type": "ThreadMessage",
+    "timestamp": {
+     "$call": "ago",
+     "args": [
+      1,
+      {
+       "hour": 6
+      }
+     ]
+    },
+    "text": "Sleeping badly again. Just letting you know.",
+    "withContactID": {
+     "$id": "demoSam"
+    }
+   },
+   {
+    "_type": "ThreadMessage",
+    "timestamp": {
+     "$call": "ago",
+     "args": [
+      5,
+      {
+       "hour": 2
+      }
+     ]
+    },
+    "text": "Made it to the walk today.",
+    "withContactID": {
+     "$id": "demoAlex"
+    }
+   },
+   {
+    "_type": "ThreadMessage",
+    "timestamp": {
+     "$call": "ago",
+     "args": [
+      4
+     ]
+    },
+    "text": "I'm not up to talking right now, but I'm safe.",
+    "withContactID": {
+     "$id": "demoAlex"
+    }
+   },
+   {
+    "_type": "ThreadMessage",
+    "timestamp": {
+     "$call": "ago",
+     "args": [
+      3
+     ]
+    },
+    "text": "Thank you for coming over the other night.",
+    "withContactID": {
+     "$id": "demoJordan"
+    }
+   },
+   {
+    "_type": "ThreadMessage",
+    "timestamp": {
+     "$call": "ago",
+     "args": [
+      0,
+      {
+       "hour": 2
+      }
+     ]
+    },
+    "text": "Thinking of you. Hope the week is going alright.",
+    "withContactID": {
+     "$id": "demoJordan"
+    },
+    "followUpAt": {
+     "$expr": "Calendar.current.startOfDay(for: now.addingTimeInterval(2 * 86_400))"
+    }
+   }
+  ],
+  "SupportCalendarEntry": [
+   {
+    "_type": "SupportCalendarEntry",
+    "date": {
+     "$expr": "now.addingTimeInterval(5 * 86_400)"
+    },
+    "note": "A hard day coming up. A check-in would help.",
+    "visibleToContactIDs": [
+     {
+      "$id": "demoSam"
+     }
+    ]
+   },
+   {
+    "_type": "SupportCalendarEntry",
+    "date": {
+     "$expr": "now.addingTimeInterval(9 * 86_400)"
+    },
+    "note": "Seeing family. A text that evening would help.",
+    "visibleToContactIDs": [
+     {
+      "$id": "demoAlex"
+     },
+     {
+      "$id": "demoJordan"
+     }
+    ]
+   },
+   {
+    "_type": "SupportCalendarEntry",
+    "date": {
+     "$expr": "now.addingTimeInterval(-3 * 86_400)"
+    },
+    "note": "A hard morning. Thanks for the message.",
+    "visibleToContactIDs": [
+     {
+      "$id": "demoSam"
+     }
+    ]
+   }
+  ],
+  "UnsentDraft": [
+   {
+    "_type": "UnsentDraft",
+    "createdAt": {
+     "$call": "ago",
+     "args": [
+      6
+     ]
+    },
+    "recipientLabel": "an old friend",
+    "text": "I have been meaning to write for months. I am sorry I went quiet. It was never about you."
+   },
+   {
+    "_type": "UnsentDraft",
+    "createdAt": {
+     "$call": "ago",
+     "args": [
+      2
+     ]
+    },
+    "recipientLabel": "my manager",
+    "text": "I will need a bit more notice on the next deadline. Here is what would help."
+   },
+   {
+    "_type": "UnsentDraft",
+    "createdAt": {
+     "$call": "ago",
+     "args": [
+      20
+     ]
+    },
+    "recipientLabel": "my sister",
+    "text": "Thank you for coming on Sunday.",
+    "wasSent": true
+   }
+  ],
+  "RecoveryCounter": [
+   {
+    "_type": "RecoveryCounter",
+    "name": "Energy drinks",
+    "discreetLabel": "Your counter",
+    "mode": {
+     "$enum": "runAndTotal"
+    },
+    "startDate": {
+     "$call": "ago",
+     "args": [
+      12,
+      0
+     ]
+    },
+    "savingsAmount": 5,
+    "savingsPeriod": {
+     "$enum": "day"
+    },
+    "sortOrder": 2,
+    "createdAt": {
+     "$call": "ago",
+     "args": [
+      52,
+      0
+     ]
+    },
+    "_id": "counter",
+    "runs": [
+     {
+      "_type": "RecoveryRun",
+      "start": {
+       "$call": "ago",
+       "args": [
+        52,
+        0
+       ]
+      },
+      "end": {
+       "$call": "ago",
+       "args": [
+        13,
+        0
+       ]
+      }
+     },
+     {
+      "_type": "RecoveryRun",
+      "start": {
+       "$call": "ago",
+       "args": [
+        12,
+        0
+       ]
+      },
+      "end": null
+     }
+    ],
+    "acknowledgedMilestones": [
+     1,
+     3,
+     7
+    ],
+    "priorTimesPerDay": 2
+   }
+  ],
+  "RecoveryMotivation": [
+   {
+    "_type": "RecoveryMotivation",
+    "kind": {
+     "$enum": "person"
+    },
+    "text": "My sister",
+    "sortOrder": 0
+   },
+   {
+    "_type": "RecoveryMotivation",
+    "kind": {
+     "$enum": "person"
+    },
+    "text": "My dog",
+    "sortOrder": 1
+   },
+   {
+    "_type": "RecoveryMotivation",
+    "kind": {
+     "$enum": "reason"
+    },
+    "text": "Steadier energy through the afternoon",
+    "sortOrder": 0
+   },
+   {
+    "_type": "RecoveryMotivation",
+    "kind": {
+     "$enum": "reason"
+    },
+    "text": "More money for the pottery class",
+    "sortOrder": 1
+   }
+  ],
+  "RecoveryDayEntry": [
+   {
+    "_type": "RecoveryDayEntry",
+    "counterID": {
+     "$id": "counter"
+    },
+    "day": {
+     "$call": "day",
+     "args": [
+      13
+     ]
+    },
+    "reviewedAt": {
+     "$call": "at",
+     "args": [
+      13,
+      {
+       "hour": 21
+      }
+     ]
+    },
+    "helped": "Sam answered straight away.",
+    "hard": "A long night, and I gave in mid-afternoon.",
+    "tomorrow": "Start again in the morning.",
+    "slipTimes": 1
+   },
+   {
+    "_type": "RecoveryDayEntry",
+    "counterID": {
+     "$id": "counter"
+    },
+    "day": {
+     "$call": "day",
+     "args": [
+      8
+     ]
+    },
+    "pledgedAt": {
+     "$call": "at",
+     "args": [
+      8,
+      {
+       "hour": 8
+      }
+     ]
+    },
+    "reviewedAt": {
+     "$call": "at",
+     "args": [
+      8,
+      {
+       "hour": 21
+      }
+     ]
+    },
+    "helped": "A glass of water first.",
+    "hard": "The afternoon dip.",
+    "tomorrow": "Water on my desk before I sit down."
+   },
+   {
+    "_type": "RecoveryDayEntry",
+    "counterID": {
+     "$id": "counter"
+    },
+    "day": {
+     "$call": "day",
+     "args": [
+      2
+     ]
+    },
+    "pledgedAt": {
+     "$call": "at",
+     "args": [
+      2,
+      {
+       "hour": 8
+      }
+     ]
+    },
+    "reviewedAt": {
+     "$call": "at",
+     "args": [
+      2,
+      {
+       "hour": 21
+      }
+     ]
+    },
+    "helped": "A short walk after lunch.",
+    "hard": "Nothing much today.",
+    "tomorrow": "Same again."
+   },
+   {
+    "_type": "RecoveryDayEntry",
+    "counterID": {
+     "$id": "counter"
+    },
+    "day": {
+     "$call": "day",
+     "args": [
+      1
+     ]
+    },
+    "pledgedAt": {
+     "$call": "at",
+     "args": [
+      1,
+      {
+       "hour": 8
+      }
+     ]
+    }
+   }
+  ],
+  "RecoveryUrge": [
+   {
+    "_type": "RecoveryUrge",
+    "counterID": {
+     "$id": "counter"
+    },
+    "date": {
+     "$call": "ago",
+     "args": [
+      2,
+      3
+     ]
+    },
+    "strength": {
+     "$enum": "mild"
+    },
+    "note": "Mid-afternoon dip. Went for water and a walk."
+   },
+   {
+    "_type": "RecoveryUrge",
+    "counterID": {
+     "$id": "counter"
+    },
+    "date": {
+     "$call": "ago",
+     "args": [
+      5,
+      4
+     ]
+    },
+    "strength": {
+     "$enum": "strong"
+    },
+    "note": "After the call. It passed by the evening."
+   },
+   {
+    "_type": "RecoveryUrge",
+    "counterID": {
+     "$id": "counter"
+    },
+    "date": {
+     "$call": "ago",
+     "args": [
+      9,
+      2
+     ]
+    },
+    "strength": {
+     "$enum": "intense"
+    },
+    "note": "Very late at night. Messaged Sam."
+   },
+   {
+    "_type": "RecoveryUrge",
+    "counterID": {
+     "$id": "counter"
+    },
+    "date": {
+     "$call": "ago",
+     "args": [
+      20,
+      0
+     ]
+    },
+    "strength": {
+     "$enum": "mild"
+    }
+   }
+  ]
+ }
+}

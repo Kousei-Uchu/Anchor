@@ -43,6 +43,14 @@
     "MascotCharacterView": "d6419a7084",
     "SpeechBubble": "7232dabd77",
     "SafetyPlanShortcutView": "e88aea8315",
-    "GroundingToolRow": "38877e991e"
+    "GroundingToolRow": "38877e991e",
+    "GroundingToolsView": "1b2054361d",
+    "QuickContactsView": "4bbc53074d",
+    "RecoveryNowCard": "a2251f25e9",
+    "NextAppointmentCardView": "2fca40f725",
+    "DecisionPresetsQuickView": "dfaab343d7",
+    "TasksNowCard": "ec2eb278b6",
+    "DeEscalationCardView": "05680677e2",
+    "AffirmationsCardView": "f6f87022e1"
   }
 }

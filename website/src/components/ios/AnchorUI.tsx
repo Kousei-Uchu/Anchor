@@ -1,5 +1,6 @@
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import '@fontsource-variable/nunito';
+import '@fontsource-variable/nunito/wght-italic.css';
 import '../../styles/design.generated.css';
 import './anchor-ui.css';
 
@@ -30,7 +31,13 @@ const GLYPHS: Record<string, (w: number) => ReactNode> = {
   'pencil.and.outline': (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"><path d="M20 12.5a8.5 8.5 0 1 1-6-8.1" /><path d="M20.5 3.5l-9 9-.6 3 3-.6 9-9z" /></g>,
   'arrow.left.arrow.right': (w) => <path fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" d="M3 8h17m-4-4 4 4-4 4M21 16H4m4-4-4 4 4 4" />,
   'bubble.left.and.bubble.right.fill': () => <g fill={F}><path d="M9.5 4C5 4 1.5 6.8 1.5 10.3c0 1.6.8 3 2 4.1L3 17.5l3.2-1.7c1 .3 2.1.5 3.3.5 4.5 0 8-2.8 8-6.3S14 4 9.5 4z" /><path d="M19.8 19.5c1.3-.9 2.2-2.3 2.2-3.8 0-1.7-1-3.1-2.6-4 .1.4.1.8.1 1.2 0 4-3.5 7-8.1 7.4 1 .9 2.5 1.5 4.2 1.5.8 0 1.5-.1 2.2-.3l2.4 1.3z" /></g>,
-  'battery.100': () => <g fill="none"><rect x="1" y="3" width="22" height="12" rx="3.5" stroke={F} strokeOpacity=".4" /><rect x="3" y="5" width="18" height="8" rx="2" fill={F} /><path d="M25 7v4" stroke={F} strokeOpacity=".4" strokeLinecap="round" /></g>,
+  sparkles: () => <g fill={F}><path d="M10 5l1.8 5.2L17 12l-5.2 1.8L10 19l-1.8-5.2L3 12l5.2-1.8z" /><path d="M18 2.5l.9 2.6 2.6.9-2.6.9L18 9.500l-.9-2.6-2.6-.9 2.6-.9zM18.5 14.500l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z" /></g>,
+  'checkmark.circle.fill': () => <path fill={F} fillRule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.7 6.800a1 1 0 0 1 0 1.400l-5.3 5.300a1 1 0 0 1-1.4 0l-2.3-2.300a1 1 0 1 1 1.4-1.400l1.6 1.6 4.6-4.600a1 1 0 0 1 1.4 0z" />,
+  checklist: (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"><path d="M3 6.500l1.6 1.600L7.5 5M3 12.500l1.6 1.6 2.9-3.100M3 18.500l1.6 1.6 2.9-3.100M11 7h10M11 13h10M11 19h10" /></g>,
+  'calendar.badge.checkmark': () => GLYPHS['calendar.badge.clock'](2),
+  wind: (w) => <path fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" d="M3 9h10a2.5 2.5 0 1 0-2.5-2.500M3 14h14a2.5 2.5 0 1 1-2.5 2.500M3 19h7" />,
+  'play.fill': () => <path fill={F} d="M8 4.800v14.400a1 1 0 0 0 1.5.9l11.6-7.200a1 1 0 0 0 0-1.800L9.5 3.900A1 1 0 0 0 8 4.800z" />,
+  circle: (w) => <circle cx="12" cy="12" r="9.5" fill="none" stroke={F} strokeWidth={w} />,
 };
 
 export function Glyph({ name, size = 16, weight = 2, className = '' }: { name: string; size?: number; weight?: number; className?: string }) {
@@ -45,9 +52,9 @@ export function Glyph({ name, size = 16, weight = 2, className = '' }: { name: s
 const TABS: [string, string][] = [['Now', 'sun.max.fill'], ['Plan', 'map.fill'], ['Journal', 'pencil.and.outline'], ['Bridge', 'arrow.left.arrow.right'], ['Thread', 'bubble.left.and.bubble.right.fill']];
 
 /** The 440 x 956 pt Pro Max screen: status bar, help button, large title, scrolling cards 16 apart, floating tab bar. */
-export function AnchorScreen({ title, tab, scheme = 'light', children }: { title: string; tab: string; scheme?: 'light' | 'dark'; children: ReactNode }) {
+export function AnchorScreen({ title, tab, scheme = 'light', full = false, children }: { title: string; tab: string; scheme?: 'light' | 'dark'; full?: boolean; children: ReactNode }) {
   return (
-    <div className="au-screen" data-anchor-scheme={scheme}>
+    <div className="au-screen" data-anchor-scheme={scheme} data-full={full ? '' : undefined}>
       <div className="au-scroll">
         <div className="au-nav-spacer" />
         <h1 className="au-nav-title">{title}</h1>
@@ -206,5 +213,45 @@ export function ToolRow({ title, icon = 'list.number' }: { title: string; icon?:
   );
 }
 
-/** Convenience for pages that need a selectable list of chips. */
-export function useChoice<T>(first: T) { return useState<T>(first); }
+
+/** A thin separator, like SwiftUI's Divider. */
+export function Divider() { return <div className="au-divider" role="separator" />; }
+
+/** A horizontally scrolling row with no scroll bar, like ScrollView(.horizontal, showsIndicators: false). */
+export function HScroll({ children }: { children: ReactNode }) {
+  return <div className="au-hscroll"><div className="au-hscroll-track">{children}</div></div>;
+}
+
+/** RecoveryNowCard counter row */
+export function RecoveryRow({ name, line, number, label }: { name: string; line: string; number: string; label: string }) {
+  return (
+    <div className="au-recovery-row">
+      <div className="au-recovery-text"><span className="au-headline">{name}</span><span className="au-caption au-secondary">{line}</span></div>
+      <div className="au-recovery-num"><span className="au-recovery-big">{number}</span><span className="au-caption au-secondary">{label}</span></div>
+      <span className="au-tertiary"><Glyph name="chevron.right" size={12} weight={2.8} /></span>
+    </div>
+  );
+}
+
+/** DecisionPresetsQuickView chips */
+export function PresetChip({ category, name }: { category: string; name: string }) {
+  return <button type="button" className="au-preset"><span className="au-caption2 au-secondary">{category}</span><span className="au-subheadline au-medium">{name}</span></button>;
+}
+export function RoutineChip({ name }: { name: string }) {
+  return <button type="button" className="au-preset au-preset-row"><Glyph name="play.fill" size={14} /><span className="au-subheadline au-medium">{name}</span></button>;
+}
+
+/** The soft box used by DeEscalationCardView and AffirmationsCardView */
+export function QuoteBox({ tint = 'accent', italic = false, children }: { tint?: Tint; italic?: boolean; children: ReactNode }) {
+  return <div className={`au-quote${italic ? ' au-italic' : ''}`} style={{ background: `var(--anchor-${tint}-soft)` }}>{children}</div>;
+}
+
+/** A task row from TasksNowCard */
+export function TaskRow({ title, onDone }: { title: string; onDone?: () => void }) {
+  return (
+    <div className="au-task">
+      <button type="button" className="au-task-check" aria-label={`Mark ${title} as done`} onClick={onDone}><Glyph name="circle" size={22} weight={1.6} /></button>
+      <span className="au-subheadline">{title}</span>
+    </div>
+  );
+}
