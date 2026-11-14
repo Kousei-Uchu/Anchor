@@ -67,6 +67,10 @@
     "AffirmationsWidget": "bd6ff3b174",
     "RecoveryWidget": "de69b5ea51",
     "MotivationsWidget": "3b0266fd36",
-    "TasksWidget": "b02745c72c"
+    "TasksWidget": "b02745c72c",
+    "JournalView": "7a38222f77",
+    "CheckInBar": "72778f083e",
+    "CheckInReadingsStrip": "06bb32575b",
+    "RecoveryDayChips": "4f667eba8f"
   }
 }

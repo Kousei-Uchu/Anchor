@@ -3,7 +3,9 @@
  "bindings": {
   "tuesday": {
    "$expr": "Calendar.current.nextDate(after: now, matching: DateComponents(hour: 10, minute: 30, weekday: 3), matchingPolicy: .nextTime) ?? now.addingTimeInterval(3 * 86_400)"
-  }
+  },
+  "optimisedOriginal": "On Tuesday I went to the clinic and waited forty minutes before Dr Lee could see me. I told her the nights have been harder since the last appointment and that I keep waking at three. She said we could look at the evening routine again and asked me to bring my notes next time.",
+  "optimisedShort": "Waited forty minutes at the clinic on Tuesday. Told Dr Lee the nights are harder and I wake at three. She will look at the evening routine again and wants my notes next time."
  },
  "models": {
   "TrustedContact": [

@@ -5,24 +5,27 @@ import raw from './demo.seed.generated.json';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Row = Record<string, any>;
 const models = raw.models as unknown as Record<string, Row[]>;
-const bindings = raw.bindings as unknown as Record<string, { $expr?: string }>;
+const bindings = raw.bindings as unknown as Record<string, { $expr?: string } | string>;
 
 export const rows = (type: string): Row[] => models[type] ?? [];
 export const enumOf = (v: unknown): string => (v && typeof v === 'object' && '$enum' in (v as object) ? String((v as Row).$enum) : String(v ?? ''));
 export const idOf = (v: unknown): string | null => (v && typeof v === 'object' && '$id' in (v as object) ? String((v as Row).$id) : null);
 
 const DAY = 86_400_000;
+/** The demo's "now": today at 10:25 am, the time of day the app's demo data is built around, so every visitor sees the same day grouping. */
+export const demoNow = () => { const d = new Date(); d.setHours(10, 25, 0, 0); return d; };
 export const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 
 /** Works out a date the way the Swift seed writes it: ago(days, hour), day(n), at(n, hour), now.addingTimeInterval(n * 86_400), or the `tuesday` Calendar lookup. */
-export function resolveDate(v: unknown, now: Date = new Date()): Date | null {
+export function resolveDate(v: unknown, now: Date = demoNow()): Date | null {
   if (!v || typeof v !== 'object') return null;
   const o = v as Row;
   const hourArg = (a: unknown) => (typeof a === 'number' ? a : typeof a === 'object' && a ? Number((a as Row).hour ?? 0) : 0);
   if (o.$call === 'ago') return new Date(now.getTime() - Number(o.args[0]) * DAY - hourArg(o.args[1]) * 3_600_000);
   if (o.$call === 'day') return startOfDay(new Date(now.getTime() - Number(o.args[0]) * DAY));
   if (o.$call === 'at') return new Date(startOfDay(new Date(now.getTime() - Number(o.args[0]) * DAY)).getTime() + hourArg(o.args[1]) * 3_600_000);
-  const expr: string | undefined = o.$expr ?? (o.$ref ? bindings[o.$ref]?.$expr : undefined);
+  const bound = o.$ref ? bindings[o.$ref] : undefined;
+  const expr: string | undefined = o.$expr ?? (typeof bound === 'object' ? bound?.$expr : undefined);
   if (!expr) return null;
   const add = /now\.addingTimeInterval\((-?\d+) \* 86_400\)/.exec(expr);
   const cal = /DateComponents\(hour: (\d+), minute: (\d+), weekday: (\d+)\)/.exec(expr);
@@ -44,7 +47,7 @@ export function formatAppointment(d: Date): string {
   return `${date} at ${time}`;
 }
 
-export function daysUntilLabel(d: Date, now: Date = new Date()): string {
+export function daysUntilLabel(d: Date, now: Date = demoNow()): string {
   const days = Math.round((startOfDay(d).getTime() - startOfDay(now).getTime()) / DAY);
   if (days <= 0) return 'Today';
   if (days === 1) return 'Tomorrow';
@@ -52,7 +55,7 @@ export function daysUntilLabel(d: Date, now: Date = new Date()): string {
 }
 
 /** NextAppointmentCardView: the earliest future occurrence across all series. */
-export function nextAppointment(now: Date = new Date()) {
+export function nextAppointment(now: Date = demoNow()) {
   let best: { name: string; date: Date } | null = null;
   for (const s of rows('AppointmentSeries')) {
     for (const o of s.occurrences ?? []) {
@@ -68,7 +71,7 @@ const daysText = (n: number) => `${n} ${n === 1 ? 'day' : 'days'}`;
 const milestoneLabel = (n: number) => (n >= 365 && n % 365 === 0 ? `${n / 365} ${n / 365 === 1 ? 'year' : 'years'}` : daysText(n));
 
 /** RecoveryNowCard: the counters, with the big number and the line under the name. */
-export function recoveryCounters(now: Date = new Date()) {
+export function recoveryCounters(now: Date = demoNow()) {
   return rows('RecoveryCounter').filter((c) => !c.isArchived).map((c) => {
     const run = (c.runs ?? []).find((r: Row) => r.end === null || r.end === undefined);
     const start = run ? resolveDate(run.start, now) : null;
@@ -133,7 +136,7 @@ const weekdayTime = (d: Date) => {
 export const formatWeekdayTime = weekdayTime;
 
 /** TriggerWindowsWidget: the soonest start among windows that are switched on. */
-export function soonestTriggerWindow(now: Date = new Date()): { label: string; when: string } | null {
+export function soonestTriggerWindow(now: Date = demoNow()): { label: string; when: string } | null {
   let best: { label: string; date: Date } | null = null;
   for (const w of rows('TriggerWindow')) {
     if (w.isActive === false) continue;
@@ -148,7 +151,7 @@ export function soonestTriggerWindow(now: Date = new Date()): { label: string; w
 }
 
 /** AppointmentsWidget: the same next appointment as the Now card, written as "Tue 10:30 am". */
-export function appointmentWidget(now: Date = new Date()) {
+export function appointmentWidget(now: Date = demoNow()) {
   const next = nextAppointment(now);
   return next ? { when: weekdayTime(next.date), caption: `${next.name} \u00b7 ${daysUntilLabel(next.date, now)}` } : null;
 }
@@ -160,10 +163,75 @@ export function motivationsSummary() {
 }
 
 /** RecoveryWidget: "Day 12" and the counter's name. */
-export function recoveryWidget(now: Date = new Date()) {
+export function recoveryWidget(now: Date = demoNow()) {
   const c = recoveryCounters(now)[0];
   return c ? { big: Number(c.number) >= 1 ? `Day ${c.number}` : 'Just started', name: c.name } : null;
 }
 
 /** TasksWidget */
 export const tasksSummary = () => { const o = openTasks(); return o.length ? { count: o.length, first: o[0].title } : null; };
+
+/** The text of a journal entry. A few demo entries are built from a variable, such as `optimisedOriginal + "\n" + ...`. */
+function entryText(e: Row): string {
+  if (typeof e.text === 'string') return e.text;
+  const name = /^(\w+) \+/.exec(String(e.text?.$expr ?? ''))?.[1];
+  const value = name ? bindings[name] : undefined;
+  return typeof value === 'string' ? value : '';
+}
+
+/** JournalBlocks.previewLine: the first line with words, without leading # > * - marks. */
+export function previewLine(text: string): string | null {
+  for (const line of text.split('\n')) {
+    const t = line.replace(/^[#>*\-\s]+/, '').trim();
+    if (t) return t;
+  }
+  return null;
+}
+
+export type JournalItem =
+  | { kind: 'entry'; time: Date; preview: string | null; bookmarked: boolean; chips: string[] }
+  | { kind: 'checkin'; time: Date; answered: boolean; readings: { short: string; value: number }[] };
+
+/** RecoveryJournalTag.chips: "Energy drinks \u00b7 11 days" for the run a date falls in. */
+function recoveryChips(date: Date, now: Date): string[] {
+  const out: string[] = [];
+  for (const c of rows('RecoveryCounter')) {
+    if (c.isArchived) continue;
+    for (const run of c.runs ?? []) {
+      const start = resolveDate(run.start, now);
+      const end = run.end ? resolveDate(run.end, now) : null;
+      if (start && date >= start && (!end || date < end)) {
+        const n = Math.floor((date.getTime() - start.getTime()) / DAY);
+        out.push(`${c.name} \u00b7 ${n} ${n === 1 ? 'day' : 'days'}`);
+      }
+    }
+  }
+  return out.slice(0, 2);
+}
+
+/** JournalView: entries and check-ins, newest first, grouped by day. */
+export function journalDays(now: Date = demoNow()): { day: Date; items: JournalItem[] }[] {
+  const clamp = (v: unknown) => Math.min(Math.max(Number(v ?? 0), 0), 1);
+  const items: JournalItem[] = [];
+  for (const e of rows('JournalEntry')) {
+    const time = resolveDate(e.createdAt, now);
+    if (time) items.push({ kind: 'entry', time, preview: previewLine(entryText(e)), bookmarked: !!e.isFavorited, chips: recoveryChips(time, now) });
+  }
+  for (const c of rows('CheckIn')) {
+    const time = resolveDate(c.timestamp, now);
+    if (!time) continue;
+    items.push({
+      kind: 'checkin', time, answered: !!c.extraAnswers,
+      readings: [
+        { short: 'Energy', value: clamp(1 - Number(c.physicalExhaustion)) }, { short: 'Clarity', value: clamp(1 - Number(c.cognitiveBurnout)) },
+        { short: 'Room', value: clamp(1 - Number(c.mentalLoad)) }, { short: 'Moving', value: clamp(c.physicalEnergy) }, { short: 'Social', value: clamp(c.socialEnergy) },
+      ],
+    });
+  }
+  items.sort((a, b) => b.time.getTime() - a.time.getTime());
+  const groups = new Map<number, JournalItem[]>();
+  for (const it of items) { const k = startOfDay(it.time).getTime(); groups.set(k, [...(groups.get(k) ?? []), it]); }
+  return [...groups.entries()].sort((a, b) => b[0] - a[0]).map(([k, list]) => ({ day: new Date(k), items: list }));
+}
+
+export const formatClock = (d: Date) => new Intl.DateTimeFormat('en-AU', { hour: 'numeric', minute: '2-digit', hour12: true }).format(d).toLowerCase();

@@ -39,6 +39,11 @@ const GLYPHS: Record<string, (w: number) => ReactNode> = {
   'slider.horizontal.3': (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round"><path d="M3 6h8M17 6h4M3 12h3M12 12h9M3 18h10M19 18h2" /><circle cx="14" cy="6" r="2.2" /><circle cx="9" cy="12" r="2.2" /><circle cx="16" cy="18" r="2.2" /></g>,
   gearshape: (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinejoin="round"><path d="M19.4 10.2 L22.1 10.4 L22.1 13.6 L19.4 13.8 L18.5 15.9 L20.3 18.0 L18.0 20.3 L15.9 18.5 L13.8 19.4 L13.6 22.1 L10.4 22.1 L10.2 19.4 L8.1 18.5 L6.0 20.3 L3.7 18.0 L5.5 15.9 L4.6 13.8 L1.9 13.6 L1.9 10.4 L4.6 10.2 L5.5 8.1 L3.7 6.0 L6.0 3.7 L8.1 5.5 L10.2 4.6 L10.4 1.9 L13.6 1.9 L13.8 4.6 L15.9 5.5 L18.0 3.7 L20.3 6.0 L18.5 8.1z" /><circle cx="12" cy="12" r="3" /></g>,
   shield: (w) => <path fill="none" stroke={F} strokeWidth={w} strokeLinejoin="round" d="M12 3l7.5 2.800v5.700c0 4.7-3.2 8.5-7.5 10-4.3-1.5-7.5-5.3-7.5-10V5.800z" />,
+  'square.and.pencil': (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H6.500A2.5 2.5 0 0 0 4 6.500v11A2.5 2.5 0 0 0 6.5 20h11a2.5 2.5 0 0 0 2.5-2.500V13" /><path d="M18.5 3.500a1.9 1.9 0 0 1 2.7 2.700L12 15.400l-3.6 1 1-3.600z" /></g>,
+  ellipsis: () => <g fill={F}><circle cx="5" cy="12" r="1.9" /><circle cx="12" cy="12" r="1.9" /><circle cx="19" cy="12" r="1.9" /></g>,
+  magnifyingglass: (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round"><circle cx="10.5" cy="10.5" r="6.5" /><path d="M15.5 15.500L21 21" /></g>,
+  'bookmark.fill': () => <path fill={F} d="M7 3h10a1 1 0 0 1 1 1v17l-6-4.500L6 21V4a1 1 0 0 1 1-1z" />,
+  'text.bubble': (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"><path d="M5 4h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-7l-5 4v-4H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" /><path d="M7.5 9h9M7.5 12.500h6" /></g>,
   sparkles: () => <g fill={F}><path d="M10 5l1.8 5.2L17 12l-5.2 1.8L10 19l-1.8-5.2L3 12l5.2-1.8z" /><path d="M18 2.5l.9 2.6 2.6.9-2.6.9L18 9.500l-.9-2.6-2.6-.9 2.6-.9zM18.5 14.500l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z" /></g>,
   'checkmark.circle.fill': () => <path fill={F} fillRule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.7 6.800a1 1 0 0 1 0 1.400l-5.3 5.300a1 1 0 0 1-1.4 0l-2.3-2.300a1 1 0 1 1 1.4-1.400l1.6 1.6 4.6-4.600a1 1 0 0 1 1.4 0z" />,
   checklist: (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"><path d="M3 6.500l1.6 1.600L7.5 5M3 12.500l1.6 1.6 2.9-3.100M3 18.500l1.6 1.6 2.9-3.100M11 7h10M11 13h10M11 19h10" /></g>,
@@ -60,14 +65,45 @@ export function Glyph({ name, size = 16, weight = 2, className = '' }: { name: s
 const TABS: [string, string][] = [['Now', 'sun.max.fill'], ['Plan', 'map.fill'], ['Journal', 'pencil.and.outline'], ['Bridge', 'arrow.left.arrow.right'], ['Thread', 'bubble.left.and.bubble.right.fill']];
 
 /** The 440 x 956 pt Pro Max screen: status bar, help button, large title, scrolling cards 16 apart, floating tab bar. */
-export function AnchorScreen({ title, tab, onTab, gear = false, inset = 16, scheme = 'light', full = false, children }: { title: string; tab: string; onTab?: (tab: string) => void; gear?: boolean; inset?: number; scheme?: 'light' | 'dark'; full?: boolean; children: ReactNode }) {
+export type Toolbar = { leading?: string[]; trailing?: string[] };
+const PLAIN_TOOLBAR = new Set(['ellipsis']);
+
+function ToolbarGroup({ names, side }: { names: string[]; side: 'leading' | 'trailing' }) {
+  if (names.length === 0) return null;
   return (
-    <div className="au-screen" data-anchor-scheme={scheme} data-full={full ? '' : undefined}>
-      <div className="au-scroll">
-        <div className="au-nav-spacer" />
-        <h1 className="au-nav-title">{title}</h1>
-        <div className="au-stack" style={{ paddingTop: inset }}>{children}</div>
-      </div>
+    <div className={`au-toolbar au-toolbar-${side}`}>
+      {names.map((n) => (
+        <button key={n} type="button" className={`au-toolbar-btn${PLAIN_TOOLBAR.has(n) ? ' au-toolbar-plain' : ''}`} aria-label={n === 'questionmark.circle' ? 'Help for this screen' : n === 'gearshape' ? 'Settings' : n === 'square.and.pencil' ? 'New entry' : 'More'}>
+          <Glyph name={n} size={22} weight={1.8} />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** The 440 x 956 pt Pro Max screen: status bar, toolbar buttons, large title, scrolling cards 16 apart, floating tab bar.
+ *  With `pinned`, the title and that content stay fixed and only what follows scrolls (the Journal tab does this). */
+export function AnchorScreen({ title, tab, onTab, toolbar = { trailing: ['questionmark.circle'] }, pinned, inset = 16, scheme = 'light', full = false, children }: { title: string; tab: string; onTab?: (tab: string) => void; toolbar?: Toolbar; pinned?: ReactNode; inset?: number; scheme?: 'light' | 'dark'; full?: boolean; children: ReactNode }) {
+  const header = (
+    <>
+      <div className="au-nav-spacer" />
+      <h1 className="au-nav-title">{title}</h1>
+      {pinned}
+    </>
+  );
+  return (
+    <div className="au-screen" data-anchor-scheme={scheme} data-full={full ? '' : undefined} data-pinned={pinned && !full ? '' : undefined}>
+      {pinned && !full ? (
+        <div className="au-body">
+          <div className="au-fixed">{header}</div>
+          <div className="au-scroll au-scroll-below"><div className="au-stack" style={{ paddingTop: inset }}>{children}</div></div>
+        </div>
+      ) : (
+        <div className="au-scroll">
+          {header}
+          <div className="au-stack" style={{ paddingTop: inset }}>{children}</div>
+        </div>
+      )}
       <div className="au-status">
         <span className="au-status-time">9:41</span>
         <span className="au-status-right">
@@ -76,8 +112,8 @@ export function AnchorScreen({ title, tab, onTab, gear = false, inset = 16, sche
           <svg width="34" height="20" viewBox="0 0 27 18" className="au-battery"><g fill="none"><rect x="1" y="3" width="22" height="12" rx="3.5" stroke="currentColor" strokeOpacity=".4" /><rect x="3" y="5" width="18" height="8" rx="2" fill="#34c759" /></g></svg>
         </span>
       </div>
-      {gear && <button type="button" className="au-help au-gear" aria-label="Settings"><Glyph name="gearshape" size={22} weight={1.8} /></button>}
-      <button type="button" className="au-help" aria-label="Help for this screen"><Glyph name="questionmark.circle" size={22} weight={1.8} /></button>
+      <ToolbarGroup names={toolbar.leading ?? []} side="leading" />
+      <ToolbarGroup names={toolbar.trailing ?? []} side="trailing" />
       <nav className="au-tabbar" aria-label="Tabs">
         {TABS.map(([name, icon]) => (
           <button key={name} type="button" className={`au-tab${name === tab ? ' au-tab-on' : ''}`} onClick={() => onTab?.(name)} aria-current={name === tab ? 'page' : undefined}>
@@ -299,5 +335,68 @@ export function WidgetFooter({ tucked }: { tucked: { id: string; icon: string; t
       )}
       <button type="button" className="au-customise"><Glyph name="slider.horizontal.3" size={17} weight={1.8} />Customise</button>
     </>
+  );
+}
+
+/** A search field like the one .searchable puts under the large title. */
+export function SearchField({ value, onChange, prompt }: { value: string; onChange: (v: string) => void; prompt: string }) {
+  return (
+    <label className="au-search">
+      <Glyph name="magnifyingglass" size={19} weight={2.2} />
+      <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={prompt} aria-label={prompt} />
+    </label>
+  );
+}
+
+/** Picker(...).pickerStyle(.segmented) */
+export function Segmented({ options, value, onChange }: { options: string[]; value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="au-segmented" role="tablist">
+      {options.map((o) => <button key={o} type="button" role="tab" aria-selected={o === value} className={o === value ? 'au-seg-on' : ''} onClick={() => onChange(o)}>{o}</button>)}
+    </div>
+  );
+}
+
+/** Journal timeline pieces */
+export function DayMarker({ day, month }: { day: string; month: string }) {
+  return (
+    <div className="au-day">
+      <span className="au-day-badge"><b>{day}</b><i>{month}</i></span>
+      <span className="au-day-line" />
+    </div>
+  );
+}
+export function TimelineRow({ checkIn = false, children }: { checkIn?: boolean; children: ReactNode }) {
+  return (
+    <div className="au-tl-row">
+      <span className="au-tl-conn"><span className="au-tl-dot" />{!checkIn && <span className="au-tl-stub" />}</span>
+      <div className="au-tl-body">{children}</div>
+    </div>
+  );
+}
+export function EntryCard({ time, bookmarked, preview, chips }: { time: string; bookmarked: boolean; preview: string | null; chips: string[] }) {
+  return (
+    <button type="button" className="au-entry">
+      <span className="au-entry-top"><span className="au-caption2 au-secondary">{time}</span>{bookmarked && <span className="au-accent"><Glyph name="bookmark.fill" size={12} /></span>}</span>
+      <span className={`au-subheadline au-clamp2${preview ? '' : ' au-secondary'}`}>{preview ?? 'Empty entry'}</span>
+      {chips.length > 0 && <span className="au-chips-row">{chips.map((c) => <span key={c} className="au-tag au-caption2 au-secondary">{c}</span>)}</span>}
+    </button>
+  );
+}
+export function CheckInRowCard({ time, answered, readings }: { time: string; answered: boolean; readings: { short: string; value: number }[] }) {
+  return (
+    <button type="button" className="au-checkin">
+      <span className="au-checkin-top">
+        <span className="au-caption2 au-secondary">{time}</span>
+        <span className="au-caption au-medium au-accent">Check-in</span>
+        {answered && <span className="au-secondary au-inline"><Glyph name="text.bubble" size={12} weight={2} /></span>}
+        <span className="au-secondary au-inline"><Glyph name="chevron.right" size={10} weight={2.8} /></span>
+      </span>
+      <span className="au-readings">
+        {readings.map((r) => (
+          <span key={r.short} className="au-reading"><span className="au-caption2 au-secondary">{r.short}</span><span className="au-bar"><span style={{ width: `${r.value * 100}%` }} /></span></span>
+        ))}
+      </span>
+    </button>
   );
 }

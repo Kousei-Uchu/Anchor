@@ -33,7 +33,11 @@ Run `cd website && npm run dev` and open `/demo-now`. Add `?dark` for dark mode.
 - **Now**: the whole tab, in the order `NowView.swift` lays it out. The Sleep card is left out because the app only shows it when its
   setting is on, and the demo does not turn it on.
 - **Plan**: the widget layout from `PlanView.swift`, with half-width widgets paired, the "More" row and the Customise button.
-- Journal, Bridge and Thread say they are not rebuilt yet. Tapping a card does not open its detail screen yet.
+- **Journal**: the Days timeline from `JournalView.swift`: day badges, entries with their recovery-day chips, check-ins with their five bars,
+  bookmarks, search, and the title, search and Days / Month / Year control pinned while the entries scroll. Month and Year are not rebuilt yet.
+- Bridge and Thread say they are not rebuilt yet. Tapping a card does not open its detail screen yet.
+- Dates in the demo are worked out from a fixed "now" of 10:25 am on today's date (`demoNow` in `seed.ts`), which is the time of day the app's
+  demo data is built around, so every visitor sees the same day grouping whatever their time zone.
 
 Open `/demo-now` in `npm run dev`. Add `?tab=plan` to open a tab, `?full` to lay the whole screen out without scrolling,
 and `?dark` for dark mode. Names, tasks you tick off or add, "Try another" and "Another" all work.

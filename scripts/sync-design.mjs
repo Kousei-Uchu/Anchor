@@ -48,6 +48,10 @@ const MIRRORED_VIEWS = [
   ["Views/Widgets/TabWidgets.swift", "RecoveryWidget"],
   ["Views/Widgets/TabWidgets.swift", "MotivationsWidget"],
   ["Views/Widgets/TabWidgets.swift", "TasksWidget"],
+  ["Views/Journal/JournalView.swift", "JournalView"],
+  ["Views/Journal/JournalView.swift", "CheckInBar"],
+  ["Views/Journal/JournalView.swift", "CheckInReadingsStrip"],
+  ["Views/Recovery/RecoveryDailyViews.swift", "RecoveryDayChips"],
 ];
 
 const src = readFileSync(SWIFT, "utf8");

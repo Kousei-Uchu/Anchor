@@ -217,7 +217,7 @@ function build() {
   for (const n of all.inserted) (models[n._type] ??= []).push(resolve(n));
   // Plain values such as `let tuesday = Calendar.current.nextDate(...)`, which other objects refer to by name.
   const bindings = {};
-  for (const [k, v] of Object.entries(all.env)) if (v && typeof v === "object" && !v._type && (v.$expr || v.$call)) bindings[k] = v;
+  for (const [k, v] of Object.entries(all.env)) if ((v && typeof v === "object" && !v._type && (v.$expr || v.$call)) || typeof v === "string") bindings[k] = v;
   return { source: "DemoMode.makeContainer and addRecoveryContent in iOS/Anchor/Anchor/AnchorApp.swift", bindings, models };
 }
 

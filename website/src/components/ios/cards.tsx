@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Card, ContactChip, Divider, Glyph, HScroll, PresetChip, QuoteBox, RecoveryRow, RoutineChip, SecondaryButton, SectionHeader, TaskRow, ToolRow } from './AnchorUI';
 import {
   affirmations, daysUntilLabel, deEscalationScripts, decisionPresets, formatAppointment, groundingTools, messageStarters, nextAppointment,
-  openTasks, quickContacts, recoveryCounters,
+  demoNow, openTasks, quickContacts, recoveryCounters,
 } from '../../content/seed';
 
 /** The cards the Now tab and the Plan widgets share. Each one mirrors the SwiftUI view of the same name. */
@@ -47,7 +47,7 @@ export function RecoveryNowCard() {
 
 /** NextAppointmentCardView */
 export function NextAppointmentCard() {
-  const now = new Date();
+  const now = demoNow();
   const appointment = nextAppointment(now);
   if (!appointment) return null;
   return (
