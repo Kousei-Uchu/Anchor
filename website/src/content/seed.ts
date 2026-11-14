@@ -235,3 +235,90 @@ export function journalDays(now: Date = demoNow()): { day: Date; items: JournalI
 }
 
 export const formatClock = (d: Date) => new Intl.DateTimeFormat('en-AU', { hour: 'numeric', minute: '2-digit', hour12: true }).format(d).toLowerCase();
+
+/** The app sorts by creation time, newest first. The demo rows without a creation date were all made together, so the one inserted last counts as newest. */
+function newestFirst(list: Row[], field: string, now: Date): Row[] {
+  const base = now.getTime();
+  return list.map((r, i) => ({ r, t: resolveDate(r[field], now)?.getTime() ?? base + i * 1000 })).sort((a, b) => b.t - a.t).map((x) => x.r);
+}
+
+/** ThingsToRaiseWidget: the open items, newest first. */
+export function thingsToRaise(now: Date = demoNow()): { id: string; text: string }[] {
+  return newestFirst(rows('BridgeDraftItem'), 'createdAt', now).filter((i) => !i.isResolved).map((i) => ({ id: String(i._id ?? i.text), text: String(i.text) }));
+}
+
+/** NextSessionWidget caption */
+export function nextSessionCaption(now: Date = demoNow()): string {
+  const next = nextAppointment(now);
+  return next ? `${next.name} \u00b7 ${formatAppointment(next.date)}` : 'No session scheduled. You can still prep.';
+}
+
+/** FeedbackLoopsWidget */
+export function feedbackLoopsSummary(now: Date = demoNow()) {
+  const list = newestFirst(rows('FeedbackLoopDiagram'), 'lastEditedAt', now);
+  return list.length ? { count: list.length, latest: String(list[0].title || 'Untitled') } : null;
+}
+
+/** PersonalGoalsWidget: goals that are still active and have a title. */
+export function personalGoalsSummary() {
+  const working = [...rows('PersonalGoal')].sort((a, b) => Number(a.sortOrder) - Number(b.sortOrder))
+    .filter((g) => (enumOf(g.status) === 'active' || g.status === undefined) && String(g.title ?? '').trim());
+  return working.length ? { first: String(working[0].title), more: working.length - 1 } : null;
+}
+
+/** MessageLogWidget: the latest message. */
+export function latestMessage(now: Date = demoNow()) {
+  const list = rows('ThreadMessage').map((m) => ({ m, t: resolveDate(m.timestamp, now) })).filter((x) => x.t).sort((a, b) => b.t!.getTime() - a.t!.getTime());
+  return list.length ? { when: formatAppointment(list[0].t!), text: String(list[0].m.text || 'Voice note') } : null;
+}
+
+/** SupportCalendarWidget: this week, Monday first, with a dot on days that have an entry. */
+export function supportWeek(now: Date = demoNow()) {
+  const NARROW = ['M', 'Tu', 'W', 'Th', 'F', 'Sa', 'Su'];
+  const start = startOfDay(now); start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+  const entryDays = rows('SupportCalendarEntry').map((e) => resolveDate(e.date, now)).filter(Boolean).map((d) => startOfDay(d!).getTime());
+  return NARROW.map((narrow, i) => {
+    const d = new Date(start); d.setDate(start.getDate() + i);
+    return { narrow, day: d.getDate(), today: d.getTime() === startOfDay(now).getTime(), hasEntry: entryDays.includes(d.getTime()) };
+  });
+}
+
+/** FutureNotesWidget */
+export function futureNotesSummary(now: Date = demoNow()): { big?: string; caption: string } {
+  const notes = [...rows('FutureNote')].sort((a, b) => (resolveDate(a.unlockDate, now)?.getTime() ?? 0) - (resolveDate(b.unlockDate, now)?.getTime() ?? 0));
+  const isLetter = (n: Row) => String(n.openWhen ?? '').trim() !== '';
+  const dated = notes.filter((n) => !isLetter(n));
+  const ready = dated.filter((n) => (resolveDate(n.unlockDate, now)?.getTime() ?? 0) <= now.getTime()).length;
+  const upcoming = dated.find((n) => (resolveDate(n.unlockDate, now)?.getTime() ?? 0) > now.getTime());
+  const letters = notes.length - dated.length;
+  if (ready > 0) return { big: `${ready} ready`, caption: 'Tap to open' };
+  if (upcoming) {
+    const days = Math.max(1, Math.round((startOfDay(resolveDate(upcoming.unlockDate, now)!).getTime() - startOfDay(now).getTime()) / DAY));
+    return { caption: `Next unlocks in ${days} ${days === 1 ? 'day' : 'days'}` };
+  }
+  if (letters > 0) return { caption: letters === 1 ? '1 letter to open when you choose.' : `${letters} letters to open when you choose.` };
+  return { caption: 'Write something for a later day.' };
+}
+
+/** BoundariesWidget: the first visible section that has text. */
+export function boundariesGlance() {
+  for (const s of [...rows('BoundarySection')].sort((a, b) => Number(a.sortOrder) - Number(b.sortOrder))) {
+    if (s.isHidden) continue;
+    const line = String(s.text ?? '').split('\n').map((l) => l.trim()).find(Boolean);
+    if (line) return { title: String(s.title || 'Untitled'), line };
+  }
+  return null;
+}
+
+/** PeopleWidget caption */
+export function peopleCaption(): string {
+  const names = [...rows('TrustedContact')].sort((a, b) => Number(a.sortOrder) - Number(b.sortOrder)).map((c) => String(c.name).trim()).filter(Boolean);
+  if (names.length === 0) return 'Add people under Contacts in Plan. Each gets a page of their own.';
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  if (names.length === 3) return `${names[0]}, ${names[1]}, and ${names[2]}`;
+  return `${names[0]}, ${names[1]} and ${names.length - 2} more`;
+}
+
+/** UnsentDraftsWidget */
+export const unsentDraftCount = () => rows('UnsentDraft').filter((d) => !d.wasSent).length;

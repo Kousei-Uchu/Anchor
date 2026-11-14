@@ -177,8 +177,15 @@ function parseBody(src, mode) {
         if (new RegExp(`context \\. insert \\( ${loopVar.replace("$", "\\$")} \\)`).test(body)) {
           if (Array.isArray(list)) { for (const r of list) if (r?.$ref && bound(r.$ref)) insert(env[r.$ref]); }
           else if (list?.$static) for (const item of expandFactory(list)) insert(item);
+          else if (list?.$ref && bound(list.$ref) && Array.isArray(env[list.$ref])) { for (const item of env[list.$ref]) insert(item); }
           else if (list?.$ref && bound(list.$ref) && env[list.$ref]?.$static) for (const item of expandFactory(env[list.$ref])) insert(item);
         } }
+      continue;
+    }
+    if (T().t === "id" && bound(T().v) && isP("[", 1) && T(2).t === "num" && isP("]", 3) && isP(".", 4) && T(5).t === "id" && isP("=", 6)) {
+      const name = T().v, index = T(2).v, prop = T(5).v; p += 7; const v = parseExpr();
+      if (env[name]?.$static) env[name] = expandFactory(env[name]);
+      if (Array.isArray(env[name]) && env[name][index]) env[name][index][prop] = v;
       continue;
     }
     if (T().t === "id" && bound(T().v) && isP(".", 1) && T(2).t === "id") {

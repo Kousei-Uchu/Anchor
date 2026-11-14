@@ -839,21 +839,26 @@
     "title": "Things I'd like people to know",
     "iconName": "person.2.fill",
     "tintName": "sage",
-    "sortOrder": 0
+    "sortOrder": 0,
+    "text": "I go quiet when I am overwhelmed. It is not about you.\nI need a bit of notice before plans change.",
+    "isShareable": true
    },
    {
     "_type": "BoundarySection",
     "title": "Things that help",
     "iconName": "heart.fill",
     "tintName": "accent",
-    "sortOrder": 1
+    "sortOrder": 1,
+    "text": "A short text asking how I am\nSitting nearby without needing to talk",
+    "isShareable": true
    },
    {
     "_type": "BoundarySection",
     "title": "Things that don't",
     "iconName": "hand.raised.fill",
     "tintName": "sage",
-    "sortOrder": 2
+    "sortOrder": 2,
+    "text": "Being asked to explain myself in the moment"
    }
   ],
   "MessageStarter": [

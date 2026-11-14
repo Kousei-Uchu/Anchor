@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import '@fontsource-variable/nunito';
 import '@fontsource-variable/nunito/wght-italic.css';
 import '../../styles/design.generated.css';
@@ -33,23 +33,32 @@ const GLYPHS: Record<string, (w: number) => ReactNode> = {
   'bubble.left.and.bubble.right.fill': () => <g fill={F}><path d="M9.5 4C5 4 1.5 6.8 1.5 10.3c0 1.6.8 3 2 4.1L3 17.5l3.2-1.7c1 .3 2.1.5 3.3.5 4.5 0 8-2.8 8-6.3S14 4 9.5 4z" /><path d="M19.8 19.5c1.3-.9 2.2-2.3 2.2-3.8 0-1.7-1-3.1-2.6-4 .1.4.1.8.1 1.2 0 4-3.5 7-8.1 7.4 1 .9 2.5 1.5 4.2 1.5.8 0 1.5-.1 2.2-.3l2.4 1.3z" /></g>,
   'clock.fill': () => <path fill={F} fillRule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm.8 4.5v5.2l3.6 2.1a.8.8 0 0 1-.8 1.4l-4-2.3a.8.8 0 0 1-.4-.7V6.5a.8.8 0 0 1 1.6 0z" />,
   calendar: () => GLYPHS['calendar.badge.clock'](2),
-  'person.2.fill': () => <g fill={F}><circle cx="9" cy="8" r="3.6" /><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6z" /><circle cx="17.5" cy="9" r="2.8" /><path d="M16.6 14.2c3.2-.3 5.7 1.7 5.7 5.800h-5c0-2.2-.2-4-.7-5.800z" /></g>,
-  'heart.fill': () => <path fill={F} d="M12 21s-8.5-5.2-8.5-11.200A4.8 4.8 0 0 1 12 7.200a4.8 4.8 0 0 1 8.5 2.600C20.5 15.8 12 21 12 21z" />,
-  'moon.zzz.fill': (w) => <g><path fill={F} d="M19 15.500A8 8 0 0 1 8.5 5a8 8 0 1 0 10.5 10.500z" /><path fill="none" stroke={F} strokeWidth={w * 0.8} strokeLinecap="round" strokeLinejoin="round" d="M14.5 3.500h4l-4 4.500h4" /></g>,
+  'person.2.fill': () => <g fill={F}><circle cx="9" cy="8" r="3.6" /><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6z" /><circle cx="17.5" cy="9" r="2.8" /><path d="M16.6 14.2c3.2-.3 5.7 1.7 5.7 5.8h-5c0-2.2-.2-4-.7-5.8z" /></g>,
+  'heart.fill': () => <path fill={F} d="M12 21s-8.5-5.2-8.5-11.2A4.8 4.8 0 0 1 12 7.2a4.8 4.8 0 0 1 8.5 2.6C20.5 15.8 12 21 12 21z" />,
+  'moon.zzz.fill': (w) => <g><path fill={F} d="M19 15.5A8 8 0 0 1 8.5 5a8 8 0 1 0 10.5 10.5z" /><path fill="none" stroke={F} strokeWidth={w * 0.8} strokeLinecap="round" strokeLinejoin="round" d="M14.5 3.5h4l-4 4.5h4" /></g>,
   'slider.horizontal.3': (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round"><path d="M3 6h8M17 6h4M3 12h3M12 12h9M3 18h10M19 18h2" /><circle cx="14" cy="6" r="2.2" /><circle cx="9" cy="12" r="2.2" /><circle cx="16" cy="18" r="2.2" /></g>,
   gearshape: (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinejoin="round"><path d="M19.4 10.2 L22.1 10.4 L22.1 13.6 L19.4 13.8 L18.5 15.9 L20.3 18.0 L18.0 20.3 L15.9 18.5 L13.8 19.4 L13.6 22.1 L10.4 22.1 L10.2 19.4 L8.1 18.5 L6.0 20.3 L3.7 18.0 L5.5 15.9 L4.6 13.8 L1.9 13.6 L1.9 10.4 L4.6 10.2 L5.5 8.1 L3.7 6.0 L6.0 3.7 L8.1 5.5 L10.2 4.6 L10.4 1.9 L13.6 1.9 L13.8 4.6 L15.9 5.5 L18.0 3.7 L20.3 6.0 L18.5 8.1z" /><circle cx="12" cy="12" r="3" /></g>,
-  shield: (w) => <path fill="none" stroke={F} strokeWidth={w} strokeLinejoin="round" d="M12 3l7.5 2.800v5.700c0 4.7-3.2 8.5-7.5 10-4.3-1.5-7.5-5.3-7.5-10V5.800z" />,
-  'square.and.pencil': (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H6.500A2.5 2.5 0 0 0 4 6.500v11A2.5 2.5 0 0 0 6.5 20h11a2.5 2.5 0 0 0 2.5-2.500V13" /><path d="M18.5 3.500a1.9 1.9 0 0 1 2.7 2.700L12 15.400l-3.6 1 1-3.600z" /></g>,
+  shield: (w) => <path fill="none" stroke={F} strokeWidth={w} strokeLinejoin="round" d="M12 3l7.5 2.8v5.7c0 4.7-3.2 8.5-7.5 10-4.3-1.5-7.5-5.3-7.5-10V5.8z" />,
+  'square.and.pencil': (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H6.5A2.5 2.5 0 0 0 4 6.5v11A2.5 2.5 0 0 0 6.5 20h11a2.5 2.5 0 0 0 2.5-2.5V13" /><path d="M18.5 3.5a1.9 1.9 0 0 1 2.7 2.7L12 15.4l-3.6 1 1-3.6z" /></g>,
   ellipsis: () => <g fill={F}><circle cx="5" cy="12" r="1.9" /><circle cx="12" cy="12" r="1.9" /><circle cx="19" cy="12" r="1.9" /></g>,
-  magnifyingglass: (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round"><circle cx="10.5" cy="10.5" r="6.5" /><path d="M15.5 15.500L21 21" /></g>,
-  'bookmark.fill': () => <path fill={F} d="M7 3h10a1 1 0 0 1 1 1v17l-6-4.500L6 21V4a1 1 0 0 1 1-1z" />,
-  'text.bubble': (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"><path d="M5 4h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-7l-5 4v-4H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" /><path d="M7.5 9h9M7.5 12.500h6" /></g>,
-  sparkles: () => <g fill={F}><path d="M10 5l1.8 5.2L17 12l-5.2 1.8L10 19l-1.8-5.2L3 12l5.2-1.8z" /><path d="M18 2.5l.9 2.6 2.6.9-2.6.9L18 9.500l-.9-2.6-2.6-.9 2.6-.9zM18.5 14.500l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z" /></g>,
-  'checkmark.circle.fill': () => <path fill={F} fillRule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.7 6.800a1 1 0 0 1 0 1.400l-5.3 5.300a1 1 0 0 1-1.4 0l-2.3-2.300a1 1 0 1 1 1.4-1.400l1.6 1.6 4.6-4.600a1 1 0 0 1 1.4 0z" />,
-  checklist: (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"><path d="M3 6.500l1.6 1.600L7.5 5M3 12.500l1.6 1.6 2.9-3.100M3 18.500l1.6 1.6 2.9-3.100M11 7h10M11 13h10M11 19h10" /></g>,
+  magnifyingglass: (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round"><circle cx="10.5" cy="10.5" r="6.5" /><path d="M15.5 15.5L21 21" /></g>,
+  'bookmark.fill': () => <path fill={F} d="M7 3h10a1 1 0 0 1 1 1v17l-6-4.5L6 21V4a1 1 0 0 1 1-1z" />,
+  'text.bubble': (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"><path d="M5 4h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-7l-5 4v-4H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" /><path d="M7.5 9h9M7.5 12.5h6" /></g>,
+  'doc.text.fill': () => <path fill={F} fillRule="evenodd" d="M6 2h8l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm2 10v1.5h8V12zm0 3.5V17h8v-1.5zM8 8.5V10h4V8.5z" />,
+  'arrow.triangle.2.circlepath': (w) => <path fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" d="M20 11a8 8 0 0 0-14.5-3.5M4 4v4h4M4 13a8 8 0 0 0 14.5 3.5M20 20v-4h-4" />,
+  'point.3.connected.trianglepath.dotted': (w) => <g fill="none" stroke={F} strokeWidth={w * 0.8} strokeLinecap="round"><circle cx="12" cy="5.5" r="2.3" /><circle cx="5.5" cy="18" r="2.3" /><circle cx="18.5" cy="18" r="2.3" /><path d="M10.8 8 6.8 15.8M13.2 8l4 7.8M8.3 18h7.4" strokeDasharray="0.1 3" /></g>,
+  'flag.fill': () => <path fill={F} d="M5 3a1 1 0 0 1 2 0v1h11l-2.5 4 2.5 4H7v8a1 1 0 0 1-2 0z" />,
+  'envelope.open.badge.clock': (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"><path d="M3 10l9-6 9 6v8.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5zM3 10l9 6 9-6" /><circle cx="18.5" cy="18.5" r="3.6" fill={F} stroke="none" /></g>,
+  'hand.raised.fill': () => <g fill={F}><rect x="5" y="10" width="14" height="11" rx="4.5" /><rect x="6" y="5.5" width="2.5" height="9" rx="1.250" /><rect x="9.5" y="3" width="2.5" height="10" rx="1.250" /><rect x="13" y="3.5" width="2.5" height="9.5" rx="1.250" /><rect x="16.5" y="6" width="2.5" height="8" rx="1.250" /></g>,
+  'person.crop.circle.fill': () => <path fill={F} fillRule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 4a3.2 3.2 0 1 1 0 6.4A3.2 3.2 0 0 1 12 6zm0 14.2a8 8 0 0 1-6-2.7c.1-2 4-3.1 6-3.1s5.9 1.1 6 3.1a8 8 0 0 1-6 2.7z" />,
+  'square.and.arrow.up': (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"><path d="M12 15V3.5M8 7.5l4-4 4 4M8 10.5H6.5A2.5 2.5 0 0 0 4 13v5.5A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V13a2.5 2.5 0 0 0-2.5-2.5H16" /></g>,
+  square: (w) => <rect x="4" y="4" width="16" height="16" rx="3.5" fill="none" stroke={F} strokeWidth={w} />,
+  sparkles: () => <g fill={F}><path d="M10 5l1.8 5.2L17 12l-5.2 1.8L10 19l-1.8-5.2L3 12l5.2-1.8z" /><path d="M18 2.5l.9 2.6 2.6.9-2.6.9L18 9.5l-.9-2.6-2.6-.9 2.6-.9zM18.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z" /></g>,
+  'checkmark.circle.fill': () => <path fill={F} fillRule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.7 6.8a1 1 0 0 1 0 1.4l-5.3 5.3a1 1 0 0 1-1.4 0l-2.3-2.3a1 1 0 1 1 1.4-1.4l1.6 1.6 4.6-4.6a1 1 0 0 1 1.4 0z" />,
+  checklist: (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"><path d="M3 6.5l1.6 1.6L7.5 5M3 12.5l1.6 1.6 2.9-3.1M3 18.5l1.6 1.6 2.9-3.1M11 7h10M11 13h10M11 19h10" /></g>,
   'calendar.badge.checkmark': () => GLYPHS['calendar.badge.clock'](2),
-  wind: (w) => <path fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" d="M3 9h10a2.5 2.5 0 1 0-2.5-2.500M3 14h14a2.5 2.5 0 1 1-2.5 2.500M3 19h7" />,
-  'play.fill': () => <path fill={F} d="M8 4.800v14.400a1 1 0 0 0 1.5.9l11.6-7.200a1 1 0 0 0 0-1.800L9.5 3.900A1 1 0 0 0 8 4.800z" />,
+  wind: (w) => <path fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" d="M3 9h10a2.5 2.5 0 1 0-2.5-2.5M3 14h14a2.5 2.5 0 1 1-2.5 2.5M3 19h7" />,
+  'play.fill': () => <path fill={F} d="M8 4.8v14.4a1 1 0 0 0 1.5.9l11.6-7.2a1 1 0 0 0 0-1.8L9.5 3.9A1 1 0 0 0 8 4.8z" />,
   circle: (w) => <circle cx="12" cy="12" r="9.5" fill="none" stroke={F} strokeWidth={w} />,
 };
 
@@ -84,6 +93,7 @@ function ToolbarGroup({ names, side }: { names: string[]; side: 'leading' | 'tra
 /** The 440 x 956 pt Pro Max screen: status bar, toolbar buttons, large title, scrolling cards 16 apart, floating tab bar.
  *  With `pinned`, the title and that content stay fixed and only what follows scrolls (the Journal tab does this). */
 export function AnchorScreen({ title, tab, onTab, toolbar = { trailing: ['questionmark.circle'] }, pinned, inset = 16, scheme = 'light', full = false, children }: { title: string; tab: string; onTab?: (tab: string) => void; toolbar?: Toolbar; pinned?: ReactNode; inset?: number; scheme?: 'light' | 'dark'; full?: boolean; children: ReactNode }) {
+  const [collapsed, setCollapsed] = useState(false);
   const header = (
     <>
       <div className="au-nav-spacer" />
@@ -99,11 +109,12 @@ export function AnchorScreen({ title, tab, onTab, toolbar = { trailing: ['questi
           <div className="au-scroll au-scroll-below"><div className="au-stack" style={{ paddingTop: inset }}>{children}</div></div>
         </div>
       ) : (
-        <div className="au-scroll">
+        <div className="au-scroll" onScroll={(e) => setCollapsed(e.currentTarget.scrollTop > 40)}>
           {header}
           <div className="au-stack" style={{ paddingTop: inset }}>{children}</div>
         </div>
       )}
+      {!(pinned && !full) && <div className="au-navbar" data-on={collapsed && !full ? '' : undefined}><span>{title}</span></div>}
       <div className="au-status">
         <span className="au-status-time">9:41</span>
         <span className="au-status-right">
@@ -241,7 +252,7 @@ export function ShortcutRow({ icon, title }: { icon: string; title: string }) {
       <div className="au-shortcut">
         <span className="au-badge au-badge-circle au-badge-md"><Glyph name={icon} size={19} /></span>
         <span className="au-subheadline au-medium au-grow">{title}</span>
-        <span className="au-tertiary"><Glyph name="chevron.right" size={12} weight={2.8} /></span>
+        <span className="au-tertiary"><Glyph name="chevron.right" size={20} weight={2.8} /></span>
       </div>
     </Card>
   );
@@ -253,7 +264,7 @@ export function ToolRow({ title, icon = 'list.number' }: { title: string; icon?:
     <button type="button" className="au-tool-row" style={tintStyle('sage')}>
       <span className="au-tool-icon"><Glyph name={icon} size={20} weight={2} /></span>
       <span className="au-subheadline au-grow">{title}</span>
-      <span className="au-tertiary"><Glyph name="chevron.right" size={11} weight={2.6} /></span>
+      <span className="au-tertiary"><Glyph name="chevron.right" size={19} weight={2.6} /></span>
     </button>
   );
 }
@@ -273,7 +284,7 @@ export function RecoveryRow({ name, line, number, label }: { name: string; line:
     <div className="au-recovery-row">
       <div className="au-recovery-text"><span className="au-headline">{name}</span><span className="au-caption au-secondary">{line}</span></div>
       <div className="au-recovery-num"><span className="au-recovery-big">{number}</span><span className="au-caption au-secondary">{label}</span></div>
-      <span className="au-tertiary"><Glyph name="chevron.right" size={12} weight={2.8} /></span>
+      <span className="au-tertiary"><Glyph name="chevron.right" size={20} weight={2.8} /></span>
     </div>
   );
 }
@@ -310,7 +321,7 @@ export function Widget({ icon, title, tint = 'accent', children, footer }: { ico
           <div className="au-widget-head">
             <span className="au-badge au-badge-circle au-badge-sm"><Glyph name={icon} size={15} /></span>
             <span className="au-subheadline au-semibold au-widget-title">{title}</span>
-            <span className="au-tertiary"><Glyph name="chevron.right" size={10} weight={2.8} /></span>
+            <span className="au-tertiary"><Glyph name="chevron.right" size={18} weight={2.8} /></span>
           </div>
           {children}
         </div>
@@ -390,7 +401,7 @@ export function CheckInRowCard({ time, answered, readings }: { time: string; ans
         <span className="au-caption2 au-secondary">{time}</span>
         <span className="au-caption au-medium au-accent">Check-in</span>
         {answered && <span className="au-secondary au-inline"><Glyph name="text.bubble" size={12} weight={2} /></span>}
-        <span className="au-secondary au-inline"><Glyph name="chevron.right" size={10} weight={2.8} /></span>
+        <span className="au-secondary au-inline"><Glyph name="chevron.right" size={18} weight={2.8} /></span>
       </span>
       <span className="au-readings">
         {readings.map((r) => (
@@ -398,5 +409,30 @@ export function CheckInRowCard({ time, answered, readings }: { time: string; ans
         ))}
       </span>
     </button>
+  );
+}
+
+/** One of the "things to raise" rows: an outlined square and the text. */
+export function RaiseRow({ text, onToggle }: { text: string; onToggle: () => void }) {
+  return (
+    <button type="button" className="au-raise" onClick={onToggle}>
+      <span className="au-accent au-raise-box"><Glyph name="square" size={24} weight={1.5} /></span>
+      <span className="au-subheadline au-clamp2">{text}</span>
+    </button>
+  );
+}
+
+/** The week strip in SupportCalendarWidget */
+export function WeekStrip({ days }: { days: { narrow: string; day: number; today: boolean; hasEntry: boolean }[] }) {
+  return (
+    <div className="au-week">
+      {days.map((d) => (
+        <div key={d.narrow} className="au-week-day">
+          <span className="au-caption2 au-secondary">{d.narrow}</span>
+          <span className={`au-week-num au-caption${d.today ? ' au-week-today' : ''}`}>{d.day}</span>
+          <span className={`au-week-dot${d.hasEntry ? ' au-week-dot-on' : ''}`} />
+        </div>
+      ))}
+    </div>
   );
 }

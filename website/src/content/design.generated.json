@@ -71,6 +71,17 @@
     "JournalView": "7a38222f77",
     "CheckInBar": "72778f083e",
     "CheckInReadingsStrip": "06bb32575b",
-    "RecoveryDayChips": "4f667eba8f"
+    "RecoveryDayChips": "4f667eba8f",
+    "ThingsToRaiseWidget": "b578ec425e",
+    "NextSessionWidget": "cdb6459a96",
+    "ReframingWidget": "23a3443f3e",
+    "FeedbackLoopsWidget": "032b7cb29d",
+    "PersonalGoalsWidget": "43693697b1",
+    "MessageLogWidget": "80dd2655b0",
+    "SupportCalendarWidget": "0af7dd719c",
+    "FutureNotesWidget": "d0a7c1992e",
+    "BoundariesWidget": "355a387501",
+    "PeopleWidget": "3b2ff61792",
+    "UnsentDraftsWidget": "74f30513d0"
   }
 }

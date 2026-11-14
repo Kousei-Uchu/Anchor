@@ -52,6 +52,17 @@ const MIRRORED_VIEWS = [
   ["Views/Journal/JournalView.swift", "CheckInBar"],
   ["Views/Journal/JournalView.swift", "CheckInReadingsStrip"],
   ["Views/Recovery/RecoveryDailyViews.swift", "RecoveryDayChips"],
+  ["Views/Widgets/TabWidgets.swift", "ThingsToRaiseWidget"],
+  ["Views/Widgets/TabWidgets.swift", "NextSessionWidget"],
+  ["Views/Widgets/TabWidgets.swift", "ReframingWidget"],
+  ["Views/Widgets/TabWidgets.swift", "FeedbackLoopsWidget"],
+  ["Views/Widgets/TabWidgets.swift", "PersonalGoalsWidget"],
+  ["Views/Widgets/TabWidgets.swift", "MessageLogWidget"],
+  ["Views/Widgets/TabWidgets.swift", "SupportCalendarWidget"],
+  ["Views/Widgets/TabWidgets.swift", "FutureNotesWidget"],
+  ["Views/Widgets/TabWidgets.swift", "BoundariesWidget"],
+  ["Views/Widgets/TabWidgets.swift", "PeopleWidget"],
+  ["Views/Widgets/TabWidgets.swift", "UnsentDraftsWidget"],
 ];
 
 const src = readFileSync(SWIFT, "utf8");

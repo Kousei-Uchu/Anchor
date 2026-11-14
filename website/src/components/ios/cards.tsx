@@ -58,7 +58,7 @@ export function NextAppointmentCard() {
           <div className="au-subheadline" style={{ marginTop: 2 }}>{appointment.name} · {formatAppointment(appointment.date)}</div>
           <div className="au-caption au-secondary">{daysUntilLabel(appointment.date, now)}</div>
         </div>
-        <span className="au-tertiary"><Glyph name="chevron.right" size={12} weight={2.8} /></span>
+        <span className="au-tertiary"><Glyph name="chevron.right" size={20} weight={2.8} /></span>
       </div>
     </Card>
   );
@@ -107,7 +107,7 @@ export function TasksNow() {
     <div className="au-stack-10">
       <div className="au-row-between">
         <SectionHeader icon="checkmark.circle.fill" title="Tasks" />
-        <span className="au-tertiary"><Glyph name="chevron.right" size={12} weight={2.8} /></span>
+        <span className="au-tertiary"><Glyph name="chevron.right" size={20} weight={2.8} /></span>
       </div>
       {open.length === 0 && <div className="au-caption au-tertiary" style={{ padding: '4px 0' }}>All ticked off.</div>}
       {open.slice(0, SHOWN_TASKS).map((t) => <TaskRow key={t.id} title={t.title} onDone={() => setDone((d) => [...d, t.id])} />)}

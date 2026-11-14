@@ -1,16 +1,13 @@
 import type { ReactNode } from 'react';
-import { Card, Glyph, SecondaryButton, Widget, WidgetBig, WidgetCaption, WidgetFooter, WidgetPair, type Tint } from '../AnchorUI';
+import { Card, Glyph, SecondaryButton, Widget, WidgetBig, WidgetCaption } from '../AnchorUI';
+import WidgetStackView, { widgetTable } from './WidgetStackView';
 import { Affirmations, DecisionPresetsCard, DeEscalation, GroundingTools, QuickContacts } from '../cards';
-import layout from '../../../content/widgets.generated.json';
 import { appointmentWidget, motivationsSummary, recoveryWidget, safetyGlance, soonestTriggerWindow, tasksSummary } from '../../../content/seed';
 
 /**
- * The Plan tab: PlanView.swift's widget layout. Which widgets show, in what order, which pair two to a row and which are tucked under
- * "More" all come from widgets.generated.json, which scripts/sync-widgets.mjs reads from the Swift (WidgetID and WidgetTab).
+ * The Plan tab: PlanView.swift's widgets, laid out by WidgetStackView.
  */
-type Meta = { title: string; icon: string; tint: Tint; half: boolean };
-const widgets = layout.widgets as unknown as Record<string, Meta>;
-const plan = layout.tabs.plan;
+const widgets = widgetTable;
 
 const Pair = ({ big, caption }: { big: string; caption: string }) => (
   <div className="au-stack-2"><WidgetBig text={big} /><WidgetCaption text={caption} lines={1} /></div>
@@ -71,20 +68,5 @@ function renderWidget(id: string): ReactNode {
 }
 
 export default function PlanTab() {
-  const hidden = new Set(plan.hidden);
-  const visible = plan.order.filter((id) => !hidden.has(id));
-  const rows: string[][] = [];
-  for (let i = 0; i < visible.length; i++) {
-    const a = visible[i], b = visible[i + 1];
-    if (widgets[a].half && b && widgets[b].half) { rows.push([a, b]); i++; } else rows.push([a]);
-  }
-  const tucked = plan.order.filter((id) => hidden.has(id)).map((id) => ({ id, icon: widgets[id].icon, title: widgets[id].title, tint: widgets[id].tint }));
-  return (
-    <div className="au-widget-stack">
-      {rows.map((row) => row.length === 2
-        ? <WidgetPair key={row.join('+')} left={renderWidget(row[0])} right={renderWidget(row[1])} />
-        : <div key={row[0]}>{renderWidget(row[0])}</div>)}
-      <WidgetFooter tucked={tucked} />
-    </div>
-  );
+  return <WidgetStackView tab="plan" render={(id) => renderWidget(id)} />;
 }

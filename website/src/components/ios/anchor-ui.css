@@ -223,3 +223,17 @@
 .au-bar { display: block; height: 5px; border-radius: 3px; background: var(--anchor-accent-soft); }
 .au-bar > span { display: block; height: 100%; border-radius: 3px; background: var(--anchor-accent); }
 .au-journal-empty { padding: 40px 0; text-align: center; }
+
+.au-navbar { position: absolute; top: 0; left: 0; right: 0; height: 115px; opacity: 0; pointer-events: none; transition: opacity 0.15s;
+  background: color-mix(in srgb, var(--anchor-background) 95%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: 0 1px 0 rgb(0 0 0 / 0.05); }
+.au-navbar[data-on] { opacity: 1; }
+.au-navbar span { position: absolute; left: 0; right: 0; top: 73px; text-align: center; font: 600 17px/22px var(--au-text); }
+.au-raise { display: flex; align-items: flex-start; gap: 8px; width: 100%; padding: 0; border: 0; background: none; text-align: left; cursor: pointer; }
+.au-week { display: flex; }
+.au-week-day { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.au-week-num { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; }
+.au-week-today { background: var(--anchor-accent); color: #fff; }
+.au-week-dot { width: 5px; height: 5px; border-radius: 50%; }
+.au-week-dot-on { background: var(--anchor-sage); }
+.au-btn-row { display: flex; gap: 8px; }
+.au-raise-box { margin: -3px; }

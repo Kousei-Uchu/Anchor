@@ -1,21 +1,21 @@
 import { useState, type ReactNode } from 'react';
-import { AnchorScreen, Card, type Toolbar } from './AnchorUI';
+import { AnchorScreen, type Toolbar } from './AnchorUI';
 import NowTab from './tabs/NowTab';
 import PlanTab from './tabs/PlanTab';
+import BridgeTab from './tabs/BridgeTab';
+import ThreadTab from './tabs/ThreadTab';
 import { useJournalTab } from './tabs/JournalTab';
 
 /**
  * The app's five tabs. Each one says what its toolbar holds, how far its content sits below the title, and whether part of it is pinned.
- * Tabs that are not rebuilt yet say so (this is only shown in development).
  */
 type Parts = { toolbar?: Toolbar; inset: number; pinned?: ReactNode; body: ReactNode };
-const Soon = ({ name }: { name: string }) => <Card><div className="au-subheadline">The {name} tab is not rebuilt yet.</div></Card>;
 
 function useNow(): Parts { return { inset: 16, body: <NowTab /> }; }
 function usePlan(): Parts { return { toolbar: { trailing: ['gearshape', 'questionmark.circle'] }, inset: 8, body: <PlanTab /> }; }
 function useJournal(): Parts { return { toolbar: { leading: ['questionmark.circle'], trailing: ['square.and.pencil', 'ellipsis'] }, inset: 0, ...useJournalTab() }; }
-const useBridge = (): Parts => ({ inset: 16, body: <Soon name="Bridge" /> });
-const useThread = (): Parts => ({ inset: 16, body: <Soon name="Thread" /> });
+const useBridge = (): Parts => ({ toolbar: { trailing: ['square.and.arrow.up', 'questionmark.circle'] }, inset: 8, body: <BridgeTab /> });
+const useThread = (): Parts => ({ inset: 8, body: <ThreadTab /> });
 const TABS: Record<string, () => Parts> = { Now: useNow, Plan: usePlan, Journal: useJournal, Bridge: useBridge, Thread: useThread };
 
 /** Isolated per tab so each tab's own state starts fresh when it is opened. */
