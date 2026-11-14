@@ -38,7 +38,10 @@ Run `cd website && npm run dev` and open `/demo-now`. Add `?dark` for dark mode.
 - **Bridge** and **Thread**: their widget layouts, laid out by the same `WidgetStackView` as Plan. Things to raise has tickable rows, Next session has its two
   buttons, and Thread has the message log, the support calendar week strip, People, To future me, Things I haven't said and Boundaries.
 - On tabs where the whole page scrolls (Now, Plan, Bridge, Thread), the large title collapses into a centred inline title as it does in the app.
-- Tapping a card does not open its detail screen yet.
+- **Pushed screens**: each tab has its own navigation stack (`nav.tsx`, `IosApp.tsx`), with a back button, an inline title and a trailing pill, as in the app.
+  Built so far: Contacts, Grounding tools, De-escalation scripts and Affirmations, opened from the Plan widgets' "All ..." buttons.
+  Open one directly with `?tab=plan&screen=contacts` (also grounding, deescalation, affirmations). Tapping the tab you are on goes back to its first screen.
+- Cards and widgets that do not have a screen yet do nothing when tapped.
 - Dates in the demo are worked out from a fixed "now" of 10:25 am on today's date (`demoNow` in `seed.ts`), which is the time of day the app's
   demo data is built around, so every visitor sees the same day grouping whatever their time zone.
 

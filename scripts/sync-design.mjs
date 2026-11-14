@@ -63,6 +63,8 @@ const MIRRORED_VIEWS = [
   ["Views/Widgets/TabWidgets.swift", "BoundariesWidget"],
   ["Views/Widgets/TabWidgets.swift", "PeopleWidget"],
   ["Views/Widgets/TabWidgets.swift", "UnsentDraftsWidget"],
+  ["Views/Plan/ContactsEditorView.swift", "ContactCard"],
+  ["Views/Plan/GroundingToolsEditorView.swift", "GroundingToolCard"],
 ];
 
 const src = readFileSync(SWIFT, "utf8");

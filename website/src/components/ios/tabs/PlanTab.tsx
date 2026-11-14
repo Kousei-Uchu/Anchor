@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Card, Glyph, SecondaryButton, Widget, WidgetBig, WidgetCaption } from '../AnchorUI';
 import WidgetStackView, { widgetTable } from './WidgetStackView';
+import { useNav, type Nav } from '../nav';
 import { Affirmations, DecisionPresetsCard, DeEscalation, GroundingTools, QuickContacts } from '../cards';
 import { appointmentWidget, motivationsSummary, recoveryWidget, safetyGlance, soonestTriggerWindow, tasksSummary } from '../../../content/seed';
 
@@ -13,7 +14,7 @@ const Pair = ({ big, caption }: { big: string; caption: string }) => (
   <div className="au-stack-2"><WidgetBig text={big} /><WidgetCaption text={caption} lines={1} /></div>
 );
 
-function renderWidget(id: string): ReactNode {
+function renderWidget(id: string, nav: Nav): ReactNode {
   const m = widgets[id];
   switch (id) {
     case 'safetyPlan': {
@@ -41,15 +42,15 @@ function renderWidget(id: string): ReactNode {
       return <Widget icon={m.icon} title={m.title} tint={m.tint}>{t ? <Pair big={`${t.count} to do`} caption={t.first} /> : <WidgetCaption text="Nothing here yet. Tap to add something small." />}</Widget>;
     }
     case 'contacts':
-      return <Card><div className="au-stack-10"><QuickContacts /><div><SecondaryButton><Glyph name="person.2.fill" size={17} />All contacts</SecondaryButton></div></div></Card>;
+      return <Card><div className="au-stack-10"><QuickContacts /><div><SecondaryButton onClick={() => nav.push('contacts')}><Glyph name="person.2.fill" size={17} />All contacts</SecondaryButton></div></div></Card>;
     case 'deEscalation':
-      return <Card tint="sage"><div className="au-stack-10"><DeEscalation /><div><SecondaryButton tint="sage"><Glyph name="wind" size={17} />All scripts</SecondaryButton></div></div></Card>;
+      return <Card tint="sage"><div className="au-stack-10"><DeEscalation /><div><SecondaryButton tint="sage" onClick={() => nav.push('deescalation')}><Glyph name="wind" size={17} />All scripts</SecondaryButton></div></div></Card>;
     case 'grounding':
-      return <Card tint="sage"><div className="au-stack-10"><GroundingTools /><div><SecondaryButton tint="sage"><Glyph name="leaf.fill" size={17} />All tools</SecondaryButton></div></div></Card>;
+      return <Card tint="sage"><div className="au-stack-10"><GroundingTools /><div><SecondaryButton tint="sage" onClick={() => nav.push('grounding')}><Glyph name="leaf.fill" size={17} />All tools</SecondaryButton></div></div></Card>;
     case 'decisionPresets':
       return <DecisionPresetsCard />;
     case 'affirmations':
-      return <Card><div className="au-stack-10"><Affirmations /><div><SecondaryButton><Glyph name="sparkles" size={17} />All affirmations</SecondaryButton></div></div></Card>;
+      return <Card><div className="au-stack-10"><Affirmations /><div><SecondaryButton onClick={() => nav.push('affirmations')}><Glyph name="sparkles" size={17} />All affirmations</SecondaryButton></div></div></Card>;
     case 'recovery': {
       const r = recoveryWidget();
       return (
@@ -68,5 +69,6 @@ function renderWidget(id: string): ReactNode {
 }
 
 export default function PlanTab() {
-  return <WidgetStackView tab="plan" render={(id) => renderWidget(id)} />;
+  const nav = useNav();
+  return <WidgetStackView tab="plan" render={(id) => renderWidget(id, nav)} />;
 }

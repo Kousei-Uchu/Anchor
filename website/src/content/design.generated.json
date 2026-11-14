@@ -82,6 +82,8 @@
     "FutureNotesWidget": "d0a7c1992e",
     "BoundariesWidget": "355a387501",
     "PeopleWidget": "3b2ff61792",
-    "UnsentDraftsWidget": "74f30513d0"
+    "UnsentDraftsWidget": "74f30513d0",
+    "ContactCard": "789febde6c",
+    "GroundingToolCard": "e0acd3484b"
   }
 }

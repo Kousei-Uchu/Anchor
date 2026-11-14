@@ -53,6 +53,12 @@ const GLYPHS: Record<string, (w: number) => ReactNode> = {
   'person.crop.circle.fill': () => <path fill={F} fillRule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 4a3.2 3.2 0 1 1 0 6.4A3.2 3.2 0 0 1 12 6zm0 14.2a8 8 0 0 1-6-2.7c.1-2 4-3.1 6-3.1s5.9 1.1 6 3.1a8 8 0 0 1-6 2.7z" />,
   'square.and.arrow.up': (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"><path d="M12 15V3.5M8 7.5l4-4 4 4M8 10.5H6.5A2.5 2.5 0 0 0 4 13v5.5A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V13a2.5 2.5 0 0 0-2.5-2.5H16" /></g>,
   square: (w) => <rect x="4" y="4" width="16" height="16" rx="3.5" fill="none" stroke={F} strokeWidth={w} />,
+  'chevron.left': (w) => <path fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" d="M15 6l-6 6 6 6" />,
+  'bolt.fill': () => <path fill={F} d="M13.5 2 5 13.5h6L10 22l9-12h-6.5z" />,
+  'play.circle.fill': () => <path fill={F} fillRule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm-2 5.8a.8.8 0 0 1 1.2-.7l6 4.2a.8.8 0 0 1 0 1.4l-6 4.2a.8.8 0 0 1-1.2-.7z" />,
+  'plus': (w) => <path fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" d="M12 4v16M4 12h16" />,
+  'book.fill': () => <path fill={F} fillRule="evenodd" d="M6 3h12a1.5 1.5 0 0 1 1.5 1.5v16A1.5 1.5 0 0 1 18 22H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm1.5 4v1.5h8V7zm0 3.5V12h8v-1.5z" />,
+  sunrise: (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round"><path d="M6.5 16a5.5 5.5 0 0 1 11 0M3 16h18M12 5.500v2.200M5.2 9.200l1.5 1.500M18.8 9.200l-1.5 1.500M7 20h10" /></g>,
   sparkles: () => <g fill={F}><path d="M10 5l1.8 5.2L17 12l-5.2 1.8L10 19l-1.8-5.2L3 12l5.2-1.8z" /><path d="M18 2.5l.9 2.6 2.6.9-2.6.9L18 9.5l-.9-2.6-2.6-.9 2.6-.9zM18.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z" /></g>,
   'checkmark.circle.fill': () => <path fill={F} fillRule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.7 6.8a1 1 0 0 1 0 1.4l-5.3 5.3a1 1 0 0 1-1.4 0l-2.3-2.3a1 1 0 1 1 1.4-1.4l1.6 1.6 4.6-4.6a1 1 0 0 1 1.4 0z" />,
   checklist: (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"><path d="M3 6.5l1.6 1.6L7.5 5M3 12.5l1.6 1.6 2.9-3.1M3 18.5l1.6 1.6 2.9-3.1M11 7h10M11 13h10M11 19h10" /></g>,
@@ -77,29 +83,35 @@ const TABS: [string, string][] = [['Now', 'sun.max.fill'], ['Plan', 'map.fill'],
 export type Toolbar = { leading?: string[]; trailing?: string[] };
 const PLAIN_TOOLBAR = new Set(['ellipsis']);
 
-function ToolbarGroup({ names, side }: { names: string[]; side: 'leading' | 'trailing' }) {
+function ToolbarGroup({ names, side, detail = false }: { names: string[]; side: 'leading' | 'trailing'; detail?: boolean }) {
   if (names.length === 0) return null;
   return (
-    <div className={`au-toolbar au-toolbar-${side}`}>
-      {names.map((n) => (
-        <button key={n} type="button" className={`au-toolbar-btn${PLAIN_TOOLBAR.has(n) ? ' au-toolbar-plain' : ''}`} aria-label={n === 'questionmark.circle' ? 'Help for this screen' : n === 'gearshape' ? 'Settings' : n === 'square.and.pencil' ? 'New entry' : 'More'}>
-          <Glyph name={n} size={22} weight={1.8} />
-        </button>
-      ))}
+    <div className={`au-toolbar au-toolbar-${side}${detail ? ' au-toolbar-detail' : ''}`}>
+      {names.map((n) => n.startsWith('text:')
+        ? <button key={n} type="button" className="au-toolbar-btn au-toolbar-text">{n.slice(5)}</button>
+        : (
+          <button key={n} type="button" className={`au-toolbar-btn${PLAIN_TOOLBAR.has(n) ? ' au-toolbar-plain' : ''}`} aria-label={n === 'questionmark.circle' ? 'Help for this screen' : n === 'gearshape' ? 'Settings' : n === 'square.and.pencil' ? 'New entry' : n === 'plus' ? 'Add' : 'More'}>
+            <Glyph name={n} size={n === 'plus' ? 20 : 22} weight={n === 'plus' ? 2.2 : 1.8} />
+          </button>
+        ))}
     </div>
   );
 }
 
 /** The 440 x 956 pt Pro Max screen: status bar, toolbar buttons, large title, scrolling cards 16 apart, floating tab bar.
  *  With `pinned`, the title and that content stay fixed and only what follows scrolls (the Journal tab does this). */
-export function AnchorScreen({ title, tab, onTab, toolbar = { trailing: ['questionmark.circle'] }, pinned, inset = 16, scheme = 'light', full = false, children }: { title: string; tab: string; onTab?: (tab: string) => void; toolbar?: Toolbar; pinned?: ReactNode; inset?: number; scheme?: 'light' | 'dark'; full?: boolean; children: ReactNode }) {
+export function AnchorScreen({ title, tab, onTab, onBack, toolbar = { trailing: ['questionmark.circle'] }, pinned, inset = 16, scheme = 'light', full = false, children }: { title: string; tab: string; onTab?: (tab: string) => void; onBack?: () => void; toolbar?: Toolbar; pinned?: ReactNode; inset?: number; scheme?: 'light' | 'dark'; full?: boolean; children: ReactNode }) {
+  const detail = !!onBack;
+  const wide = (toolbar.trailing ?? []).length > 2 || (toolbar.trailing ?? []).some((n) => n.startsWith('text:'));
   const [collapsed, setCollapsed] = useState(false);
   const header = (
-    <>
-      <div className="au-nav-spacer" />
-      <h1 className="au-nav-title">{title}</h1>
-      {pinned}
-    </>
+    detail ? <div className="au-nav-spacer au-nav-spacer-detail" /> : (
+      <>
+        <div className="au-nav-spacer" />
+        <h1 className="au-nav-title">{title}</h1>
+        {pinned}
+      </>
+    )
   );
   return (
     <div className="au-screen" data-anchor-scheme={scheme} data-full={full ? '' : undefined} data-pinned={pinned && !full ? '' : undefined}>
@@ -109,12 +121,13 @@ export function AnchorScreen({ title, tab, onTab, toolbar = { trailing: ['questi
           <div className="au-scroll au-scroll-below"><div className="au-stack" style={{ paddingTop: inset }}>{children}</div></div>
         </div>
       ) : (
-        <div className="au-scroll" onScroll={(e) => setCollapsed(e.currentTarget.scrollTop > 40)}>
+        <div className="au-scroll" onScroll={(e) => setCollapsed(e.currentTarget.scrollTop > (detail ? 8 : 40))}>
           {header}
           <div className="au-stack" style={{ paddingTop: inset }}>{children}</div>
         </div>
       )}
-      {!(pinned && !full) && <div className="au-navbar" data-on={collapsed && !full ? '' : undefined}><span>{title}</span></div>}
+      {!(pinned && !full) && !detail && <div className="au-navbar" data-on={collapsed && !full ? '' : undefined}><span>{title}</span></div>}
+      {detail && <div className="au-navbar au-navbar-detail" data-on={collapsed && !full ? '' : undefined} />}
       <div className="au-status">
         <span className="au-status-time">9:41</span>
         <span className="au-status-right">
@@ -123,8 +136,11 @@ export function AnchorScreen({ title, tab, onTab, toolbar = { trailing: ['questi
           <svg width="34" height="20" viewBox="0 0 27 18" className="au-battery"><g fill="none"><rect x="1" y="3" width="22" height="12" rx="3.5" stroke="currentColor" strokeOpacity=".4" /><rect x="3" y="5" width="18" height="8" rx="2" fill="#34c759" /></g></svg>
         </span>
       </div>
-      <ToolbarGroup names={toolbar.leading ?? []} side="leading" />
-      <ToolbarGroup names={toolbar.trailing ?? []} side="trailing" />
+      {detail
+        ? <button type="button" className="au-toolbar au-toolbar-leading au-back" aria-label="Back" onClick={onBack}><Glyph name="chevron.left" size={24} weight={2.4} /></button>
+        : <ToolbarGroup names={toolbar.leading ?? []} side="leading" />}
+      {detail && <div className={`au-dtitle${wide ? ' au-dtitle-left' : ''}`}><span>{title}</span></div>}
+      <ToolbarGroup names={toolbar.trailing ?? []} side="trailing" detail={detail} />
       <nav className="au-tabbar" aria-label="Tabs">
         {TABS.map(([name, icon]) => (
           <button key={name} type="button" className={`au-tab${name === tab ? ' au-tab-on' : ''}`} onClick={() => onTab?.(name)} aria-current={name === tab ? 'page' : undefined}>
@@ -138,8 +154,8 @@ export function AnchorScreen({ title, tab, onTab, toolbar = { trailing: ['questi
 }
 
 /** Anchor.Card */
-export function Card({ tint = 'accent', children }: { tint?: Tint; children: ReactNode }) {
-  return <div className="au-card" style={tintStyle(tint)}>{children}</div>;
+export function Card({ tint = 'accent', children, onClick }: { tint?: Tint; children: ReactNode; onClick?: () => void }) {
+  return <div className={`au-card${onClick ? ' au-card-tap' : ''}`} style={tintStyle(tint)} onClick={onClick} role={onClick ? 'button' : undefined}>{children}</div>;
 }
 
 /** Anchor.SectionHeader */
@@ -313,9 +329,9 @@ export function TaskRow({ title, onDone }: { title: string; onDone?: () => void 
 }
 
 /** Anchor.Widget: a card with an icon badge, a title, a chevron, then content and an optional footer. */
-export function Widget({ icon, title, tint = 'accent', children, footer }: { icon: string; title: string; tint?: Tint; children?: ReactNode; footer?: ReactNode }) {
+export function Widget({ icon, title, tint = 'accent', children, footer, onOpen }: { icon: string; title: string; tint?: Tint; children?: ReactNode; footer?: ReactNode; onOpen?: () => void }) {
   return (
-    <Card tint={tint}>
+    <Card tint={tint} onClick={onOpen}>
       <div className="au-widget" style={tintStyle(tint)}>
         <div className="au-widget-main">
           <div className="au-widget-head">
@@ -434,5 +450,21 @@ export function WeekStrip({ days }: { days: { narrow: string; day: number; today
         </div>
       ))}
     </div>
+  );
+}
+
+/** Rows on the pushed list screens: a Card with room for a title line, a caption line and something on the right. */
+export function ListCard({ tint = 'accent', title, subtitle, accessory, onClick, children }: { tint?: Tint; title?: string; subtitle?: string; accessory?: ReactNode; onClick?: () => void; children?: ReactNode }) {
+  return (
+    <Card tint={tint} onClick={onClick}>
+      <div className="au-listcard">
+        <div className="au-listcard-main">
+          {title && <span className="au-headline">{title}</span>}
+          {subtitle && <span className="au-subheadline au-secondary">{subtitle}</span>}
+          {children}
+        </div>
+        {accessory}
+      </div>
+    </Card>
   );
 }

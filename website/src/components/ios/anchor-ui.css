@@ -237,3 +237,26 @@
 .au-week-dot-on { background: var(--anchor-sage); }
 .au-btn-row { display: flex; gap: 8px; }
 .au-raise-box { margin: -3px; }
+
+/* Pushed detail screens: back button, inline title, 36pt toolbar pill, rows 16 apart */
+.au-nav-spacer-detail { height: 106px; }
+.au-navbar-detail { height: 106px; }
+.au-back { width: 44px; height: 44px; top: 62px; justify-content: center; padding: 0; border: 0; color: var(--au-primary); cursor: pointer; }
+.au-toolbar-detail { top: 62px; right: 20px; height: 44px; border-radius: 22px; padding: 0 4px; }
+.au-toolbar-detail .au-toolbar-btn { width: 44px; height: 44px; border-radius: 22px; }
+.au-toolbar-detail .au-toolbar-btn:not(:only-child) { width: 44px; }
+.au-toolbar-btn.au-toolbar-text { width: auto !important; padding: 0 18px; font: 400 17px/22px var(--au-text); }
+.au-dtitle { position: absolute; top: 62px; height: 44px; left: 77px; right: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; font: 600 17px/22px var(--au-text); }
+.au-dtitle span { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.au-dtitle-left { justify-content: flex-start; right: 215px; left: 77px; }
+.au-card-tap { cursor: pointer; }
+.au-listcard { display: flex; align-items: center; gap: 12px; }
+.au-listcard-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; text-align: left; }
+.au-row-top { display: flex; align-items: baseline; gap: 6px; }
+.au-row-top .au-grow { flex: 1; }
+.au-label-sage { display: inline-flex; align-items: center; gap: 4px; color: var(--anchor-sage); }
+.au-play { display: inline-flex; color: var(--anchor-sage); }
+.au-rowtext { font: 400 20px/24px var(--au-text); text-align: left; }
+.au-rowtext-sm { font: 400 17px/22px var(--au-text); text-align: left; }
+.au-center-row { display: flex; justify-content: center; }
+.au-label-plain { display: inline-flex; align-items: center; gap: 4px; }

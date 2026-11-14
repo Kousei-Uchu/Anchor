@@ -322,3 +322,23 @@ export function peopleCaption(): string {
 
 /** UnsentDraftsWidget */
 export const unsentDraftCount = () => rows('UnsentDraft').filter((d) => !d.wasSent).length;
+
+/** ContactsEditorView: every contact, with "On Now" on the ones that are quick contacts (the first two). */
+export function contactRows(): { name: string; phone: string; onNow: boolean }[] {
+  return [...rows('TrustedContact')].sort((a, b) => Number(a.sortOrder) - Number(b.sortOrder))
+    .map((c, i) => ({ name: String(c.name || 'Unnamed'), phone: String(c.phoneNumber ?? ''), onNow: i < 2 }));
+}
+
+/** GroundingToolsEditorView: each tool with whether it has steps and when it applies. */
+export function groundingToolRows(): { title: string; kindLabel: string; when: string; hasSteps: boolean }[] {
+  const label: Record<string, string> = { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening', lateNight: 'Late night' };
+  return [...rows('GroundingTool')].sort((a, b) => Number(a.sortOrder) - Number(b.sortOrder)).map((t) => {
+    const windows: string[] = (t.relevantTimeWindows ?? []).map((w: unknown) => label[enumOf(w)] ?? enumOf(w));
+    return {
+      title: String(t.title || 'Untitled tool'),
+      kindLabel: enumOf(t.kind) === 'deepLink' ? 'Opens a link' : 'Steps',
+      when: windows.length ? windows.join(' \u00b7 ') : 'Any time of day',
+      hasSteps: String(t.steps ?? '').trim() !== '',
+    };
+  });
+}
