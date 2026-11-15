@@ -73,6 +73,12 @@ const MIRRORED_VIEWS = [
   ["Views/Thread/SupportCalendarView.swift", "SupportCalendarView"],
   ["Views/Thread/ThreadMessagesView.swift", "ThreadMessagesView"],
   ["Views/Plan/SafetyPlanEditorView.swift", "SafetyPlanView"],
+  ["Views/Now/NextHourChecklistView.swift", "TasksView"],
+  ["Views/Now/NextHourChecklistView.swift", "TaskCard"],
+  ["Views/Now/NextHourChecklistView.swift", "QuickListCard"],
+  ["Views/Recovery/RecoveryHomeView.swift", "RecoveryHomeView"],
+  ["Views/Recovery/RecoveryHomeView.swift", "RecoveryCounterCard"],
+  ["Views/Now/CheckInSliderView.swift", "CheckInSliderView"],
 ];
 
 const src = readFileSync(SWIFT, "utf8");

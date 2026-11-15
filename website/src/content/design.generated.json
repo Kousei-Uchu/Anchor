@@ -92,6 +92,12 @@
     "BoundariesView": "f11930bf64",
     "SupportCalendarView": "4044da4d95",
     "ThreadMessagesView": "fdbbfa3c88",
-    "SafetyPlanView": "cf57624041"
+    "SafetyPlanView": "cf57624041",
+    "TasksView": "676cb939a9",
+    "TaskCard": "5a5be40074",
+    "QuickListCard": "52494113e2",
+    "RecoveryHomeView": "a35e7daa81",
+    "RecoveryCounterCard": "268327ef02",
+    "CheckInSliderView": "6aaba2fdfa"
   }
 }

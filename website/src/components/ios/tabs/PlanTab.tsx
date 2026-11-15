@@ -39,7 +39,7 @@ function renderWidget(id: string, nav: Nav): ReactNode {
     }
     case 'tasks': {
       const t = tasksSummary();
-      return <Widget icon={m.icon} title={m.title} tint={m.tint}>{t ? <Pair big={`${t.count} to do`} caption={t.first} /> : <WidgetCaption text="Nothing here yet. Tap to add something small." />}</Widget>;
+      return <Widget icon={m.icon} title={m.title} tint={m.tint} onOpen={() => nav.push('tasks')}>{t ? <Pair big={`${t.count} to do`} caption={t.first} /> : <WidgetCaption text="Nothing here yet. Tap to add something small." />}</Widget>;
     }
     case 'contacts':
       return <Card><div className="au-stack-10"><QuickContacts /><div><SecondaryButton onClick={() => nav.push('contacts')}><Glyph name="person.2.fill" size={17} />All contacts</SecondaryButton></div></div></Card>;
@@ -54,7 +54,7 @@ function renderWidget(id: string, nav: Nav): ReactNode {
     case 'recovery': {
       const r = recoveryWidget();
       return (
-        <Widget icon={m.icon} title={m.title} tint={m.tint} footer={<div><SecondaryButton tint="sage">Ride out urge</SecondaryButton></div>}>
+        <Widget icon={m.icon} title={m.title} tint={m.tint} onOpen={() => nav.push('recovery')} footer={<div><SecondaryButton tint="sage">Ride out urge</SecondaryButton></div>}>
           {r ? <Pair big={r.big} caption={r.name} /> : <WidgetCaption text="Start a counter whenever you're ready." />}
         </Widget>
       );

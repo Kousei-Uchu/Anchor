@@ -3,7 +3,7 @@ import { Card, Glyph, ListCard, SecondaryButton } from '../AnchorUI';
 import { affirmations, contactRows, deEscalationScripts, groundingToolRows } from '../../../content/seed';
 
 /** Pushed list screens. Each hook returns what the shell needs: the title, the toolbar, and the body. */
-export type DetailParts = { title: string; toolbar: { trailing: string[] }; inset: number; body: ReactNode };
+export type DetailParts = { title: string; toolbar: { trailing: string[] }; inset: number; body: ReactNode; bottomBar?: ReactNode };
 const REORDER_ADD = ['questionmark.circle', 'text:Reorder', 'plus'];
 
 /** ContactsEditorView */

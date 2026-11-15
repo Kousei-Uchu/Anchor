@@ -66,6 +66,20 @@ const GLYPHS: Record<string, (w: number) => ReactNode> = {
   'line.3.horizontal.decrease.circle': (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round"><circle cx="12" cy="12" r="9.5" /><path d="M7.5 9h9M9 12h6M10.5 15h3" /></g>,
   'exclamationmark.triangle.fill': () => <path fill={F} fillRule="evenodd" d="M12 3.5a1.6 1.6 0 0 1 1.4.8l8 14A1.6 1.6 0 0 1 20 21H4a1.6 1.6 0 0 1-1.4-2.7l8-14A1.6 1.6 0 0 1 12 3.5zm-.9 6.5v4.5h1.8V10zm.9 6.2a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2z" />,
   'house.fill': () => <path fill={F} d="M12 3 2.5 11.5h2.7V20a1 1 0 0 0 1 1h3.8v-5.5h4V21h3.8a1 1 0 0 0 1-1v-8.5h2.7z" />,
+  'list.clipboard': (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="4.5" width="14" height="17" rx="2.5" /><path d="M9 4.5V3.8a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v.7M8.5 10h7M8.5 14h7M8.5 18h4" /></g>,
+  clock: (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></g>,
+  'play.circle': (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M10 8.5v7l5.5-3.5z" fill={F} /></g>,
+  'battery.25percent': (w) => <g fill="none" stroke={F} strokeWidth={w * 0.8}><rect x="2" y="7" width="18" height="10" rx="2.8" /><path d="M22 10.5v3" strokeLinecap="round" /><rect x="4.5" y="9.5" width="3.5" height="5" rx="1" fill={F} stroke="none" /></g>,
+  'battery.50percent': (w) => <g fill="none" stroke={F} strokeWidth={w * 0.8}><rect x="2" y="7" width="18" height="10" rx="2.8" /><path d="M22 10.5v3" strokeLinecap="round" /><rect x="4.5" y="9.5" width="6.5" height="5" rx="1" fill={F} stroke="none" /></g>,
+  'battery.100percent': (w) => <g fill="none" stroke={F} strokeWidth={w * 0.8}><rect x="2" y="7" width="18" height="10" rx="2.8" /><path d="M22 10.5v3" strokeLinecap="round" /><rect x="4.5" y="9.5" width="13" height="5" rx="1" fill={F} stroke="none" /></g>,
+  timer: (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round"><circle cx="12" cy="13.5" r="7.5" /><path d="M12 9.5v4l2.5 1.5M9.5 3h5M12 3v3" /></g>,
+  'arrow.turn.down.right': (w) => <path fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" d="M5 5v6a3 3 0 0 0 3 3h11M15 10l4 4-4 4" />,
+  'chevron.down': (w) => <path fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />,
+  'ellipsis.circle': (w) => <g><circle cx="12" cy="12" r="9.5" fill="none" stroke={F} strokeWidth={w} /><g fill={F}><circle cx="7.5" cy="12" r="1.3" /><circle cx="12" cy="12" r="1.3" /><circle cx="16.5" cy="12" r="1.3" /></g></g>,
+  'lightbulb.fill': () => <path fill={F} d="M12 2.5a6.5 6.5 0 0 0-3.8 11.8c.5.4.8 1 .8 1.6v.6h6v-.6c0-.6.3-1.2.8-1.6A6.5 6.5 0 0 0 12 2.5zM9.5 18.5h5a1 1 0 0 1 0 2h-.3a2 2 0 0 1-4.4 0h-.3a1 1 0 0 1 0-2z" />,
+  'cloud.fill': () => <path fill={F} d="M7.5 19a4.5 4.5 0 0 1-.6-8.9 5.5 5.5 0 0 1 10.6-.8A4.8 4.8 0 0 1 17 19z" />,
+  'figure.walk': () => <g fill={F}><circle cx="13" cy="4.5" r="2.2" /><path d="M11 8.5l-3.5 1.8-1 3.7a1 1 0 0 0 1.9.5l.8-2.8 1.3-.6-1.3 5.6-2.5 4.2a1 1 0 0 0 1.7 1l2.7-4.2 1.5 1.5v3.2a1 1 0 0 0 2 0v-3.8a1 1 0 0 0-.3-.7l-1.8-1.8 1-4.2 1.5 2.3a1 1 0 0 0 .8.4h2.2a1 1 0 0 0 0-2h-1.7l-2-3.1a2.5 2.5 0 0 0-3.9-.5z" /></g>,
+  'list.bullet.rectangle': (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="3" /><path d="M7.5 9h.1M7.5 12.5h.1M7.5 16h.1M11 9h6M11 12.5h6M11 16h6" /></g>,
   sparkles: () => <g fill={F}><path d="M10 5l1.8 5.2L17 12l-5.2 1.8L10 19l-1.8-5.2L3 12l5.2-1.8z" /><path d="M18 2.5l.9 2.6 2.6.9-2.6.9L18 9.5l-.9-2.6-2.6-.9 2.6-.9zM18.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z" /></g>,
   'checkmark.circle.fill': () => <path fill={F} fillRule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.7 6.8a1 1 0 0 1 0 1.4l-5.3 5.3a1 1 0 0 1-1.4 0l-2.3-2.3a1 1 0 1 1 1.4-1.4l1.6 1.6 4.6-4.6a1 1 0 0 1 1.4 0z" />,
   checklist: (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"><path d="M3 6.5l1.6 1.6L7.5 5M3 12.5l1.6 1.6 2.9-3.1M3 18.5l1.6 1.6 2.9-3.1M11 7h10M11 13h10M11 19h10" /></g>,
@@ -128,7 +142,7 @@ function ToolbarGroup({ names, side, detail = false }: { names: string[]; side: 
 
 /** The 440 x 956 pt Pro Max screen: status bar, toolbar buttons, large title, scrolling cards 16 apart, floating tab bar.
  *  With `pinned`, the title and that content stay fixed and only what follows scrolls (the Journal tab does this). */
-export function AnchorScreen({ title, tab, onTab, onBack, toolbar = { trailing: ['questionmark.circle'] }, pinned, inset = 16, scheme = 'light', full = false, children }: { title: string; tab: string; onTab?: (tab: string) => void; onBack?: () => void; toolbar?: Toolbar; pinned?: ReactNode; inset?: number; scheme?: 'light' | 'dark'; full?: boolean; children: ReactNode }) {
+export function AnchorScreen({ title, tab, onTab, onBack, toolbar = { trailing: ['questionmark.circle'] }, pinned, bottomBar, inset = 16, scheme = 'light', full = false, children }: { title: string; tab: string; onTab?: (tab: string) => void; onBack?: () => void; toolbar?: Toolbar; pinned?: ReactNode; bottomBar?: ReactNode; inset?: number; scheme?: 'light' | 'dark'; full?: boolean; children: ReactNode }) {
   const detail = !!onBack;
   const [collapsed, setCollapsed] = useState(false);
   const header = (
@@ -168,6 +182,7 @@ export function AnchorScreen({ title, tab, onTab, onBack, toolbar = { trailing: 
         : <ToolbarGroup names={toolbar.leading ?? []} side="leading" />}
       {detail && <DetailTitle title={title} trailing={toolbar.trailing ?? []} />}
       <ToolbarGroup names={toolbar.trailing ?? []} side="trailing" detail={detail} />
+      {bottomBar && <div className="au-bottombar">{bottomBar}</div>}
       <nav className="au-tabbar" aria-label="Tabs">
         {TABS.map(([name, icon]) => (
           <button key={name} type="button" className={`au-tab${name === tab ? ' au-tab-on' : ''}`} onClick={() => onTab?.(name)} aria-current={name === tab ? 'page' : undefined}>
@@ -269,10 +284,10 @@ export function CrisisCard({ numbers, region }: { numbers: { label: string; disp
 }
 
 /** MascotPresenceView, MascotCharacterView and SpeechBubble */
-export function MascotPresence({ line }: { line: string }) {
+export function MascotPresence({ line, tone = 'accent' }: { line: string; tone?: 'accent' | 'sage' }) {
   return (
     <div className="au-mascot-row">
-      <div className="au-mascot"><span className="au-eyes"><i /><i /></span></div>
+      <div className={`au-mascot${tone === 'sage' ? ' au-mascot-sage' : ''}`}><span className="au-eyes"><i /><i /></span></div>
       <div className="au-bubble"><span className="au-callout">{line}</span></div>
     </div>
   );
@@ -289,9 +304,9 @@ export function ContactChip({ name, selected, onClick }: { name: string; selecte
 }
 
 /** SafetyPlanShortcutView */
-export function ShortcutRow({ icon, title }: { icon: string; title: string }) {
+export function ShortcutRow({ icon, title, onClick }: { icon: string; title: string; onClick?: () => void }) {
   return (
-    <Card>
+    <Card onClick={onClick}>
       <div className="au-shortcut">
         <span className="au-badge au-badge-circle au-badge-md"><Glyph name={icon} size={19} /></span>
         <span className="au-subheadline au-medium au-grow">{title}</span>
@@ -322,9 +337,9 @@ export function HScroll({ children }: { children: ReactNode }) {
 }
 
 /** RecoveryNowCard counter row */
-export function RecoveryRow({ name, line, number, label }: { name: string; line: string; number: string; label: string }) {
+export function RecoveryRow({ name, line, number, label, onClick }: { name: string; line: string; number: string; label: string; onClick?: () => void }) {
   return (
-    <div className="au-recovery-row">
+    <div className="au-recovery-row" onClick={onClick}>
       <div className="au-recovery-text"><span className="au-headline">{name}</span><span className="au-caption au-secondary">{line}</span></div>
       <div className="au-recovery-num"><span className="au-recovery-big">{number}</span><span className="au-caption au-secondary">{label}</span></div>
       <span className="au-tertiary"><Glyph name="chevron.right" size={20} weight={2.8} /></span>
@@ -504,4 +519,35 @@ export function NavRow({ children, onClick }: { children: ReactNode; onClick?: (
       <span className="au-tertiary au-navrow-chev"><Glyph name="chevron.right" size={20} weight={2.8} /></span>
     </div>
   );
+}
+
+/** A task card from TasksView: a ring, the title, a row of small facts, and the first step or what it is waiting on. */
+export function TaskCardView({ title, done, facts, firstStep, waitingOn, steps, expanded, onToggleDone, onToggleSteps }: {
+  title: string; done: boolean; facts: { icon: string; text: string }[]; firstStep?: string; waitingOn?: string; steps: { title: string; done: boolean }[];
+  expanded: boolean; onToggleDone: () => void; onToggleSteps: () => void;
+}) {
+  return (
+    <Card>
+      <div className="au-stack-8">
+        <div className="au-taskcard-top">
+          <button type="button" className="au-ring" aria-label={`Mark ${title} as ${done ? 'not done' : 'done'}`} onClick={onToggleDone}><Glyph name={done ? 'checkmark.circle.fill' : 'circle'} size={26} weight={1.5} /></button>
+          <div className="au-taskcard-text">
+            <span className={`au-body${done ? ' au-secondary au-strike' : ''}`}>{title}</span>
+            {waitingOn && <span className="au-caption au-secondary">{waitingOn}</span>}
+            {facts.length > 0 && <span className="au-facts">{facts.map((f) => <span key={f.icon + f.text} className="au-fact"><Glyph name={f.icon} size={16} weight={1.8} />{f.text}</span>)}</span>}
+            {firstStep && <span className="au-fact au-fact-step"><Glyph name="arrow.turn.down.right" size={16} weight={1.8} />{firstStep}</span>}
+          </div>
+          {steps.length > 0 && !done && <button type="button" className="au-step-toggle" aria-label={expanded ? 'Hide steps' : 'Show steps'} onClick={onToggleSteps}><Glyph name={expanded ? 'chevron.right' : 'chevron.down'} size={20} weight={2.6} /></button>}
+        </div>
+        {expanded && steps.length > 0 && !done && (
+          <div className="au-steps">{steps.map((st) => <div key={st.title} className="au-step"><Glyph name={st.done ? 'checkmark.circle.fill' : 'circle'} size={20} weight={1.5} /><span className={`au-subheadline${st.done ? ' au-secondary au-strike' : ''}`}>{st.title}</span></div>)}</div>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+/** Slider(value:in:0...1) with the app's accent colour */
+export function RangeSlider({ value, onChange, label }: { value: number; onChange: (v: number) => void; label: string }) {
+  return <input type="range" className="au-range" min={0} max={1} step={0.01} value={value} aria-label={label} style={{ ['--v' as string]: `${value * 100}%` }} onChange={(e) => onChange(Number(e.target.value))} />;
 }

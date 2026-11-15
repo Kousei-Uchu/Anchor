@@ -1,4 +1,5 @@
 import { Card, CrisisCard, Glyph, MascotPresence, PrimaryButton, ShortcutRow } from '../AnchorUI';
+import { useNav } from '../nav';
 import { Affirmations, DecisionPresetsCard, DeEscalation, GroundingTools, NextAppointmentCard, QuickContacts, RecoveryNowCard, TasksNow } from '../cards';
 import demo from '../../../content/demo.generated.json';
 
@@ -13,15 +14,16 @@ const NUMBERS = [
 ];
 
 export default function NowTab() {
+  const nav = useNav();
   return (
     <>
       <CrisisCard numbers={NUMBERS} region="Australia" />
       <MascotPresence line={demo.mascot.hello} />
-      <PrimaryButton><Glyph name="circle.hexagongrid.fill" size={22} />Check in</PrimaryButton>
+      <PrimaryButton onClick={() => nav.present('checkin')}><Glyph name="circle.hexagongrid.fill" size={22} />Check in</PrimaryButton>
       <Card><QuickContacts /></Card>
       <RecoveryNowCard />
       <NextAppointmentCard />
-      <ShortcutRow icon="shield.fill" title="Open my safety plan" />
+      <ShortcutRow icon="shield.fill" title="Open my safety plan" onClick={() => nav.push('safety')} />
       <DecisionPresetsCard />
       <Card tint="sage"><GroundingTools /></Card>
       <Card><TasksNow /></Card>

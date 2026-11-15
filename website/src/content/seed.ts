@@ -413,3 +413,66 @@ export function safetyPlan(now: Date = demoNow()) {
     .map((s) => ({ title: String(s.title || 'Untitled'), icon: String(s.iconName || 'doc.text.fill'), tint: (String(s.tintName) === 'sage' ? 'sage' : 'accent') as 'sage' | 'accent', lines: String(s.text ?? '').split('\n').map((l) => l.trim()).filter(Boolean) }));
   return { sections, updated: `Last updated ${dateOnly(now)}` };
 }
+
+/** RecoveryHomeView: each counter with its totals and the next milestone. */
+export function recoveryHome(now: Date = demoNow()) {
+  return rows('RecoveryCounter').filter((c) => !c.isArchived).map((c) => {
+    const runs: { start: Date; end: Date }[] = (c.runs ?? []).map((r: Row) => ({ start: resolveDate(r.start, now)!, end: (r.end ? resolveDate(r.end, now) : null) ?? now })).filter((r: { start: Date | null }) => r.start);
+    const runDays = (r: { start: Date; end: Date }) => Math.max(0, Math.floor((r.end.getTime() - r.start.getTime()) / DAY));
+    const current = (c.runs ?? []).findIndex((r: Row) => !r.end);
+    const days = current >= 0 ? runDays(runs[current]) : 0;
+    const total = runs.reduce((n, r) => n + runDays(r), 0);
+    const summary = recoveryCounters(now).find((x) => x.name === c.name);
+    return { name: String(c.name), days, total, showTotal: total !== days, number: String(days), label: days === 1 ? 'day' : 'days', next: summary?.line ?? '' };
+  });
+}
+
+const TASK_BUCKETS = ['Today', 'This week', 'Later', 'No date', 'Waiting on something else', 'Set aside for now'];
+const ENERGY_LABEL: Record<string, string> = { little: 'A little', some: 'Some', lots: 'A lot' };
+const ENERGY_ICON: Record<string, string> = { little: 'battery.25percent', some: 'battery.50percent', lots: 'battery.100percent' };
+const durationText = (m: number) => { const h = Math.floor(m / 60), r = m % 60; return h === 0 ? `${r} min` : r === 0 ? `${h} hr` : `${h} hr ${r} min`; };
+
+export type TaskCardData = { id: string; title: string; done: boolean; facts: { icon: string; text: string }[]; firstStep?: string; waitingOn?: string; steps: { title: string; done: boolean }[] };
+
+/** TasksView: quick lists, then open tasks grouped by when they are due, then done tasks. */
+export function taskScreen(now: Date = demoNow()) {
+  const all = rows('TaskItem');
+  const byId = (id: string | null) => all.find((t) => t._id === id);
+  const top = all.filter((t) => !t.parentID);
+  const stepsOf = (t: Row) => all.filter((s) => idOf(s.parentID) === t._id).sort((a, b) => Number(a.sortOrder) - Number(b.sortOrder));
+  const dueKind = (t: Row) => enumOf((t._calls ?? []).find((c: Row) => c.name === 'setDue')?.args?.[0] ?? t.dueKind);
+  const openBlockers = (t: Row) => (t.blockedByIDs ?? []).map((b: unknown) => byId(idOf(b))).filter((b: Row | undefined) => b && !b.isDone) as Row[];
+  const bucketOf = (t: Row) => {
+    if (enumOf(t.status) === 'setAside') return 'Set aside for now';
+    if (openBlockers(t).length) return 'Waiting on something else';
+    const k = dueKind(t);
+    return k === 'today' || k === 'asap' ? 'Today' : k === 'thisWeek' ? 'This week' : k === 'thisMonth' || k === 'exact' ? 'Later' : 'No date';
+  };
+  const dueText: Record<string, string> = { today: 'Today', thisWeek: 'This week', thisMonth: 'This month', asap: 'Soon' };
+  const card = (t: Row): TaskCardData => {
+    const steps = stepsOf(t);
+    const doneSteps = steps.filter((s) => s.isDone).length;
+    const started = !t.isDone && enumOf(t.status) !== 'setAside' && (enumOf(t.status) === 'inProgress' || doneSteps > 0);
+    const blockers = openBlockers(t);
+    const facts: { icon: string; text: string }[] = [];
+    if (!t.isDone && dueText[dueKind(t)]) facts.push({ icon: 'calendar', text: dueText[dueKind(t)] });
+    if (!t.isDone && Number(t.estimateMinutes) > 0) facts.push({ icon: 'clock', text: durationText(Number(t.estimateMinutes)) });
+    if (started) facts.push({ icon: 'play.circle', text: 'Started' });
+    const energy = enumOf(t.energy);
+    if (!t.isDone && ENERGY_LABEL[energy]) facts.push({ icon: ENERGY_ICON[energy], text: ENERGY_LABEL[energy] });
+    if (!t.isDone && steps.length) facts.push({ icon: 'checklist', text: `${doneSteps}/${steps.length}` });
+    if (Number(t.focusSessions) > 0) facts.push({ icon: 'timer', text: Number(t.focusSessions) === 1 ? '1 session' : `${t.focusSessions} sessions` });
+    const showsFirstStep = !t.isDone && !blockers.length && enumOf(t.status) !== 'setAside' && !started && String(t.firstStep ?? '').trim() !== '';
+    return {
+      id: String(t._id ?? t.title), title: String(t.title), done: !!t.isDone, facts,
+      firstStep: showsFirstStep ? String(t.firstStep) : undefined,
+      waitingOn: blockers.length ? (blockers.length === 1 ? `Waiting on ${blockers[0].title}` : `Waiting on ${blockers[0].title} and ${blockers.length - 1} more`) : undefined,
+      steps: steps.map((s) => ({ title: String(s.title), done: !!s.isDone })),
+    };
+  };
+  const open = top.filter((t) => !t.isDone).sort((a, b) => Number(a.sortOrder) - Number(b.sortOrder));
+  const buckets = TASK_BUCKETS.map((title) => ({ title, tasks: open.filter((t) => bucketOf(t) === title).map(card) })).filter((b) => b.tasks.length > 0);
+  const done = top.filter((t) => t.isDone).map(card);
+  const quickLists = rows('QuickList').filter((l) => !l.archivedAt).map((l) => ({ title: String(l.title), ticked: (l.items ?? []).filter((i: Row) => i.isDone).length, total: (l.items ?? []).length }));
+  return { quickLists, buckets, done };
+}

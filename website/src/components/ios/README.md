@@ -43,7 +43,10 @@ Run `cd website && npm run dev` and open `/demo-now`. Add `?dark` for dark mode.
   Personal goals and Feedback-loop diagrams (Bridge); Message log, Support calendar, People, To future me and Boundaries (Thread).
   Open one directly with `?tab=plan&screen=contacts`. The names are contacts, grounding, deescalation, affirmations, safety (tab plan),
   goals, diagrams (tab bridge), and messages, calendar, people, future, boundaries (tab thread).
-  Still to build: Tasks, Recovery, Session prep, the Now check-in, Things I haven't said, and the editors behind each row.
+  Tasks (quick lists, tasks grouped by when they are due, the facts on each card, ticking and adding) and Recovery are built too, opened from the Now and Plan cards.
+  Still to build: Session prep, Things I haven't said, and the editors behind each row.
+- **Sheets**: `nav.present('checkin')` shows the Now check-in over the whole app, with five working sliders (the Check in button on the Now tab opens it).
+  Open it directly with `?sheet=checkin`.
 - Inline titles are centred on the screen when they fit clear of the toolbar buttons, and sit next to the back button when they do not, as in iOS. Tapping the tab you are on goes back to its first screen.
 - Cards and widgets that do not have a screen yet do nothing when tapped.
 - Dates in the demo are worked out from a fixed "now" of 10:25 am on today's date (`demoNow` in `seed.ts`), which is the time of day the app's

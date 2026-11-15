@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNav } from './nav';
 import { Card, ContactChip, Divider, Glyph, HScroll, PresetChip, QuoteBox, RecoveryRow, RoutineChip, SecondaryButton, SectionHeader, TaskRow, ToolRow } from './AnchorUI';
 import {
   affirmations, daysUntilLabel, deEscalationScripts, decisionPresets, formatAppointment, groundingTools, messageStarters, nextAppointment,
@@ -27,6 +28,7 @@ export function QuickContacts() {
 
 /** RecoveryNowCard */
 export function RecoveryNowCard() {
+  const nav = useNav();
   const counters = recoveryCounters();
   if (counters.length === 0) return null;
   return (
@@ -36,7 +38,7 @@ export function RecoveryNowCard() {
         {counters.slice(0, 3).map((c, i) => (
           <div key={c.name} className="au-stack-12">
             {i > 0 && <Divider />}
-            <RecoveryRow name={c.name} line={c.line} number={c.number} label={c.label} />
+            <RecoveryRow name={c.name} line={c.line} number={c.number} label={c.label} onClick={() => nav.push('recovery')} />
           </div>
         ))}
         <div><SecondaryButton><Glyph name="wind" size={17} />Ride out an urge</SecondaryButton></div>
@@ -93,6 +95,7 @@ export function GroundingTools() {
 const SHOWN_TASKS = 4;
 /** TasksNowCard */
 export function TasksNow() {
+  const nav = useNav();
   const [done, setDone] = useState<string[]>([]);
   const [added, setAdded] = useState<{ id: string; title: string }[]>([]);
   const [draft, setDraft] = useState('');
@@ -105,7 +108,7 @@ export function TasksNow() {
   };
   return (
     <div className="au-stack-10">
-      <div className="au-row-between">
+      <div className="au-row-between" onClick={() => nav.push('tasks')} style={{ cursor: 'pointer' }}>
         <SectionHeader icon="checkmark.circle.fill" title="Tasks" />
         <span className="au-tertiary"><Glyph name="chevron.right" size={20} weight={2.8} /></span>
       </div>
