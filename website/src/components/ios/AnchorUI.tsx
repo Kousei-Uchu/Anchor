@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import '@fontsource-variable/nunito';
 import '@fontsource-variable/nunito/wght-italic.css';
 import '../../styles/design.generated.css';
@@ -58,7 +58,14 @@ const GLYPHS: Record<string, (w: number) => ReactNode> = {
   'play.circle.fill': () => <path fill={F} fillRule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm-2 5.8a.8.8 0 0 1 1.2-.7l6 4.2a.8.8 0 0 1 0 1.4l-6 4.2a.8.8 0 0 1-1.2-.7z" />,
   'plus': (w) => <path fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" d="M12 4v16M4 12h16" />,
   'book.fill': () => <path fill={F} fillRule="evenodd" d="M6 3h12a1.5 1.5 0 0 1 1.5 1.5v16A1.5 1.5 0 0 1 18 22H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm1.5 4v1.5h8V7zm0 3.5V12h8v-1.5z" />,
-  sunrise: (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round"><path d="M6.5 16a5.5 5.5 0 0 1 11 0M3 16h18M12 5.500v2.200M5.2 9.200l1.5 1.500M18.8 9.200l-1.5 1.500M7 20h10" /></g>,
+  sunrise: (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round"><path d="M6.5 16a5.5 5.5 0 0 1 11 0M3 16h18M12 5.5v2.2M5.2 9.2l1.5 1.5M18.8 9.2l-1.5 1.5M7 20h10" /></g>,
+  lock: (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="10.5" width="14" height="10" rx="2.5" /><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" /></g>,
+  envelope: (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5.5" width="18" height="13" rx="2.5" /><path d="M3.5 7l8.5 6 8.5-6" /></g>,
+  pencil: (w) => <path fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" d="M4 20l1-4 11-11a2 2 0 0 1 3 3L8 19z" />,
+  eye: (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"><path d="M2.5 12S6 6 12 6s9.5 6 9.5 6-3.5 6-9.5 6S2.5 12 2.5 12z" /><circle cx="12" cy="12" r="2.5" /></g>,
+  'line.3.horizontal.decrease.circle': (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round"><circle cx="12" cy="12" r="9.5" /><path d="M7.5 9h9M9 12h6M10.5 15h3" /></g>,
+  'exclamationmark.triangle.fill': () => <path fill={F} fillRule="evenodd" d="M12 3.5a1.6 1.6 0 0 1 1.4.8l8 14A1.6 1.6 0 0 1 20 21H4a1.6 1.6 0 0 1-1.4-2.7l8-14A1.6 1.6 0 0 1 12 3.5zm-.9 6.5v4.5h1.8V10zm.9 6.2a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2z" />,
+  'house.fill': () => <path fill={F} d="M12 3 2.5 11.5h2.7V20a1 1 0 0 0 1 1h3.8v-5.5h4V21h3.8a1 1 0 0 0 1-1v-8.5h2.7z" />,
   sparkles: () => <g fill={F}><path d="M10 5l1.8 5.2L17 12l-5.2 1.8L10 19l-1.8-5.2L3 12l5.2-1.8z" /><path d="M18 2.5l.9 2.6 2.6.9-2.6.9L18 9.5l-.9-2.6-2.6-.9 2.6-.9zM18.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z" /></g>,
   'checkmark.circle.fill': () => <path fill={F} fillRule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.7 6.8a1 1 0 0 1 0 1.4l-5.3 5.3a1 1 0 0 1-1.4 0l-2.3-2.3a1 1 0 1 1 1.4-1.4l1.6 1.6 4.6-4.6a1 1 0 0 1 1.4 0z" />,
   checklist: (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"><path d="M3 6.5l1.6 1.6L7.5 5M3 12.5l1.6 1.6 2.9-3.1M3 18.5l1.6 1.6 2.9-3.1M11 7h10M11 13h10M11 19h10" /></g>,
@@ -81,6 +88,27 @@ const TABS: [string, string][] = [['Now', 'sun.max.fill'], ['Plan', 'map.fill'],
 
 /** The 440 x 956 pt Pro Max screen: status bar, help button, large title, scrolling cards 16 apart, floating tab bar. */
 export type Toolbar = { leading?: string[]; trailing?: string[] };
+
+/** The inline title of a pushed screen. iOS centres it on the screen when it fits clear of the buttons, and otherwise moves it next to the back button. */
+function DetailTitle({ title, trailing }: { title: string; trailing: string[] }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [centred, setCentred] = useState(true);
+  const pill = trailing.reduce((w, n) => w + (n.startsWith('text:') ? 90 : 52), 0);
+  useLayoutEffect(() => {
+    const measure = () => {
+      const w = ref.current?.scrollWidth ?? 0;
+      const left = 72, right = 440 - 20 - pill - 8, middle = 220;
+      setCentred(w <= 2 * Math.min(middle - left, right - middle));
+    };
+    measure();
+    document.fonts?.ready.then(measure);
+  }, [title, pill]);
+  return (
+    <div className={`au-dtitle${centred ? '' : ' au-dtitle-left'}`} style={centred ? undefined : { right: 440 - (440 - 20 - pill - 8) }}>
+      <span ref={ref}>{title}</span>
+    </div>
+  );
+}
 const PLAIN_TOOLBAR = new Set(['ellipsis']);
 
 function ToolbarGroup({ names, side, detail = false }: { names: string[]; side: 'leading' | 'trailing'; detail?: boolean }) {
@@ -102,7 +130,6 @@ function ToolbarGroup({ names, side, detail = false }: { names: string[]; side: 
  *  With `pinned`, the title and that content stay fixed and only what follows scrolls (the Journal tab does this). */
 export function AnchorScreen({ title, tab, onTab, onBack, toolbar = { trailing: ['questionmark.circle'] }, pinned, inset = 16, scheme = 'light', full = false, children }: { title: string; tab: string; onTab?: (tab: string) => void; onBack?: () => void; toolbar?: Toolbar; pinned?: ReactNode; inset?: number; scheme?: 'light' | 'dark'; full?: boolean; children: ReactNode }) {
   const detail = !!onBack;
-  const wide = (toolbar.trailing ?? []).length > 2 || (toolbar.trailing ?? []).some((n) => n.startsWith('text:'));
   const [collapsed, setCollapsed] = useState(false);
   const header = (
     detail ? <div className="au-nav-spacer au-nav-spacer-detail" /> : (
@@ -116,7 +143,7 @@ export function AnchorScreen({ title, tab, onTab, onBack, toolbar = { trailing: 
   return (
     <div className="au-screen" data-anchor-scheme={scheme} data-full={full ? '' : undefined} data-pinned={pinned && !full ? '' : undefined}>
       {pinned && !full ? (
-        <div className="au-body">
+        <div className="au-pinned">
           <div className="au-fixed">{header}</div>
           <div className="au-scroll au-scroll-below"><div className="au-stack" style={{ paddingTop: inset }}>{children}</div></div>
         </div>
@@ -139,7 +166,7 @@ export function AnchorScreen({ title, tab, onTab, onBack, toolbar = { trailing: 
       {detail
         ? <button type="button" className="au-toolbar au-toolbar-leading au-back" aria-label="Back" onClick={onBack}><Glyph name="chevron.left" size={24} weight={2.4} /></button>
         : <ToolbarGroup names={toolbar.leading ?? []} side="leading" />}
-      {detail && <div className={`au-dtitle${wide ? ' au-dtitle-left' : ''}`}><span>{title}</span></div>}
+      {detail && <DetailTitle title={title} trailing={toolbar.trailing ?? []} />}
       <ToolbarGroup names={toolbar.trailing ?? []} side="trailing" detail={detail} />
       <nav className="au-tabbar" aria-label="Tabs">
         {TABS.map(([name, icon]) => (
@@ -454,17 +481,27 @@ export function WeekStrip({ days }: { days: { narrow: string; day: number; today
 }
 
 /** Rows on the pushed list screens: a Card with room for a title line, a caption line and something on the right. */
-export function ListCard({ tint = 'accent', title, subtitle, accessory, onClick, children }: { tint?: Tint; title?: string; subtitle?: string; accessory?: ReactNode; onClick?: () => void; children?: ReactNode }) {
+export function ListCard({ tint = 'accent', title, subtitle, small = false, accessory, onClick, children }: { tint?: Tint; title?: string; subtitle?: string; small?: boolean; accessory?: ReactNode; onClick?: () => void; children?: ReactNode }) {
   return (
     <Card tint={tint} onClick={onClick}>
       <div className="au-listcard">
-        <div className="au-listcard-main">
+        <div className="au-listcard-main" style={small ? { gap: 4 } : undefined}>
           {title && <span className="au-headline">{title}</span>}
-          {subtitle && <span className="au-subheadline au-secondary">{subtitle}</span>}
+          {subtitle && <span className={`${small ? 'au-caption' : 'au-subheadline'} au-secondary`}>{subtitle}</span>}
           {children}
         </div>
         {accessory}
       </div>
     </Card>
+  );
+}
+
+/** A pushed-screen row whose chevron sits outside the card, as NavigationLink rows do in a List. */
+export function NavRow({ children, onClick }: { children: ReactNode; onClick?: () => void }) {
+  return (
+    <div className="au-navrow" onClick={onClick} role={onClick ? 'button' : undefined}>
+      <Card><div className="au-navrow-card">{children}</div></Card>
+      <span className="au-tertiary au-navrow-chev"><Glyph name="chevron.right" size={20} weight={2.8} /></span>
+    </div>
   );
 }

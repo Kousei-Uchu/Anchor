@@ -65,6 +65,14 @@ const MIRRORED_VIEWS = [
   ["Views/Widgets/TabWidgets.swift", "UnsentDraftsWidget"],
   ["Views/Plan/ContactsEditorView.swift", "ContactCard"],
   ["Views/Plan/GroundingToolsEditorView.swift", "GroundingToolCard"],
+  ["Views/Journal/PeopleScreen.swift", "PeopleScreen"],
+  ["Views/Thread/FutureNoteView.swift", "FutureNoteListView"],
+  ["Views/Bridge/BridgeDraftListView.swift", "PersonalGoalsView"],
+  ["Views/Bridge/FeedbackLoopDiagramView.swift", "FeedbackLoopDiagramListView"],
+  ["Views/Thread/ThreadView.swift", "BoundariesView"],
+  ["Views/Thread/SupportCalendarView.swift", "SupportCalendarView"],
+  ["Views/Thread/ThreadMessagesView.swift", "ThreadMessagesView"],
+  ["Views/Plan/SafetyPlanEditorView.swift", "SafetyPlanView"],
 ];
 
 const src = readFileSync(SWIFT, "utf8");

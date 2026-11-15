@@ -342,3 +342,74 @@ export function groundingToolRows(): { title: string; kindLabel: string; when: s
     };
   });
 }
+
+const dateOnly = (d: Date) => new Intl.DateTimeFormat('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }).format(d);
+const contactName = (ref: unknown) => { const id = idOf(ref); return String(rows('TrustedContact').find((c) => c._id === id)?.name ?? ''); };
+const firstLine = (text: unknown) => String(text ?? '').split('\n').map((l) => l.trim()).find(Boolean) ?? '';
+
+/** PeopleScreen: each contact with the first line of their first note. */
+export function peopleRows(): { name: string; summary: string }[] {
+  const sections = [...rows('PersonSection')].sort((a, b) => Number(a.sortOrder) - Number(b.sortOrder));
+  return [...rows('TrustedContact')].sort((a, b) => Number(a.sortOrder) - Number(b.sortOrder)).map((c) => ({
+    name: String(c.name),
+    summary: firstLine(sections.find((s) => idOf(s.contactID) === c._id && firstLine(s.text))?.text) || 'Nothing written yet',
+  }));
+}
+
+/** FutureNotesView: dated notes (locked or ready) and the "open when" letters. */
+export function futureNoteRows(now: Date = demoNow()) {
+  const all = rows('FutureNote');
+  const isLetter = (n: Row) => String(n.openWhen ?? '').trim() !== '';
+  const written = `Written ${dateOnly(now)}`;
+  const dated = all.filter((n) => !isLetter(n)).sort((a, b) => (resolveDate(a.unlockDate, now)?.getTime() ?? 0) - (resolveDate(b.unlockDate, now)?.getTime() ?? 0)).map((n) => {
+    const unlock = resolveDate(n.unlockDate, now);
+    const locked = !!unlock && unlock > now;
+    return { title: locked ? `Locked until ${dateOnly(unlock!)}` : 'Ready to open', subtitle: written, locked };
+  });
+  const letters = all.filter(isLetter).map((n) => ({ title: `Open when ${String(n.openWhen).trim()}`, subtitle: written }));
+  return { dated, letters };
+}
+
+/** PersonalGoalsView: goals still being worked on, and the ones reached. */
+export function goalGroups() {
+  const sorted = [...rows('PersonalGoal')].sort((a, b) => Number(a.sortOrder) - Number(b.sortOrder));
+  const card = (g: Row) => {
+    const bits = [g.usesSMART ? 'SMART' : '', (g.notes ?? []).length ? `${g.notes.length} ${g.notes.length === 1 ? 'note' : 'notes'}` : ''].filter(Boolean);
+    return { title: String(g.title), why: String(g.why ?? ''), meta: bits.join(' \u00b7 ') };
+  };
+  return { working: sorted.filter((g) => enumOf(g.status) === 'active' || g.status === undefined).map(card), reached: sorted.filter((g) => enumOf(g.status) === 'reached').map(card) };
+}
+
+/** FeedbackLoopDiagramView's list. Ties in edit time are arbitrary in the demo, so this follows what the app shows: the map first, then the loops as added. */
+export function diagramRows(): { title: string; summary: string }[] {
+  const list = rows('FeedbackLoopDiagram').map((d) => ({ title: String(d.title || 'Untitled'), summary: String(d._summary ?? '') }));
+  return [...list.filter((d) => d.summary.startsWith('Map')), ...list.filter((d) => !d.summary.startsWith('Map'))];
+}
+
+/** BoundariesView */
+export function boundaryCards() {
+  return [...rows('BoundarySection')].sort((a, b) => Number(a.sortOrder) - Number(b.sortOrder)).filter((s) => !s.isHidden)
+    .map((s) => ({ title: String(s.title || 'Untitled'), icon: String(s.iconName || 'doc.text.fill'), tint: (String(s.tintName) === 'sage' ? 'sage' : 'accent') as 'sage' | 'accent', text: String(s.text ?? ''), shareable: !!s.isShareable }));
+}
+
+/** SupportCalendarView */
+export function calendarEntries(now: Date = demoNow()) {
+  return rows('SupportCalendarEntry').map((e) => ({ date: resolveDate(e.date, now)!, note: String(e.note ?? ''), visible: (e.visibleToContactIDs ?? []).map(contactName).filter(Boolean) }))
+    .filter((e) => e.date).sort((a, b) => a.date.getTime() - b.date.getTime())
+    .map((e) => ({ when: dateOnly(e.date), note: e.note, visibleTo: e.visible.length ? `Visible to ${e.visible.join(', ')}` : '' }));
+}
+
+/** ThreadMessagesView */
+export function messageLog(now: Date = demoNow()) {
+  return rows('ThreadMessage').map((m) => ({ t: resolveDate(m.timestamp, now)!, who: contactName(m.withContactID), text: String(m.text ?? '') }))
+    .filter((m) => m.t).sort((a, b) => b.t.getTime() - a.t.getTime())
+    .map((m) => ({ who: m.who, text: m.text, when: formatAppointment(m.t) }));
+}
+export const writeToNames = (): string[] => [...rows('TrustedContact')].sort((a, b) => Number(a.sortOrder) - Number(b.sortOrder)).map((c) => String(c.name));
+
+/** SafetyPlanEditorView */
+export function safetyPlan(now: Date = demoNow()) {
+  const sections = [...rows('SafetyPlanSection')].sort((a, b) => Number(a.sortOrder) - Number(b.sortOrder)).filter((s) => !s.isHidden)
+    .map((s) => ({ title: String(s.title || 'Untitled'), icon: String(s.iconName || 'doc.text.fill'), tint: (String(s.tintName) === 'sage' ? 'sage' : 'accent') as 'sage' | 'accent', lines: String(s.text ?? '').split('\n').map((l) => l.trim()).filter(Boolean) }));
+  return { sections, updated: `Last updated ${dateOnly(now)}` };
+}

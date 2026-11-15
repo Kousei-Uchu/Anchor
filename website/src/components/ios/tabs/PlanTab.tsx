@@ -20,7 +20,7 @@ function renderWidget(id: string, nav: Nav): ReactNode {
     case 'safetyPlan': {
       const glance = safetyGlance();
       return (
-        <Widget icon={m.icon} title={m.title} tint={m.tint} footer={<div><SecondaryButton><Glyph name="shield" size={17} weight={1.8} />Open plan</SecondaryButton></div>}>
+        <Widget icon={m.icon} title={m.title} tint={m.tint} onOpen={() => nav.push('safety')} footer={<div><SecondaryButton onClick={() => nav.push('safety')}><Glyph name="shield" size={17} weight={1.8} />Open plan</SecondaryButton></div>}>
           {glance.length === 0 ? <WidgetCaption text="Not filled in yet. Tap to write yours." /> : (
             <div className="au-stack-6">{glance.map((g) => (
               <div key={g.title} className="au-stack-1"><span className="au-caption2 au-secondary">{g.title}</span><span className="au-subheadline au-clamp2">{g.line}</span></div>

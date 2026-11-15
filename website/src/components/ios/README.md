@@ -39,8 +39,12 @@ Run `cd website && npm run dev` and open `/demo-now`. Add `?dark` for dark mode.
   buttons, and Thread has the message log, the support calendar week strip, People, To future me, Things I haven't said and Boundaries.
 - On tabs where the whole page scrolls (Now, Plan, Bridge, Thread), the large title collapses into a centred inline title as it does in the app.
 - **Pushed screens**: each tab has its own navigation stack (`nav.tsx`, `IosApp.tsx`), with a back button, an inline title and a trailing pill, as in the app.
-  Built so far: Contacts, Grounding tools, De-escalation scripts and Affirmations, opened from the Plan widgets' "All ..." buttons.
-  Open one directly with `?tab=plan&screen=contacts` (also grounding, deescalation, affirmations). Tapping the tab you are on goes back to its first screen.
+  Built so far, each opened from its widget: Contacts, Grounding tools, De-escalation scripts, Affirmations and the Safety plan (Plan);
+  Personal goals and Feedback-loop diagrams (Bridge); Message log, Support calendar, People, To future me and Boundaries (Thread).
+  Open one directly with `?tab=plan&screen=contacts`. The names are contacts, grounding, deescalation, affirmations, safety (tab plan),
+  goals, diagrams (tab bridge), and messages, calendar, people, future, boundaries (tab thread).
+  Still to build: Tasks, Recovery, Session prep, the Now check-in, Things I haven't said, and the editors behind each row.
+- Inline titles are centred on the screen when they fit clear of the toolbar buttons, and sit next to the back button when they do not, as in iOS. Tapping the tab you are on goes back to its first screen.
 - Cards and widgets that do not have a screen yet do nothing when tapped.
 - Dates in the demo are worked out from a fixed "now" of 10:25 am on today's date (`demoNow` in `seed.ts`), which is the time of day the app's
   demo data is built around, so every visitor sees the same day grouping whatever their time zone.

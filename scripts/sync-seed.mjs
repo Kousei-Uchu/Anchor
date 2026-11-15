@@ -222,6 +222,20 @@ function build() {
   };
   const models = {};
   for (const n of all.inserted) (models[n._type] ??= []).push(resolve(n));
+  // FeedbackLoopDiagramView writes each row's second line ("Loop, reinforcing", "Map, 4 items") from the diagram itself. Work it out the same way.
+  const diagramSwift = readFileSync(join(root, "iOS/Anchor/Anchor/Views/Bridge/FeedbackLoopDiagramView.swift"), "utf8");
+  for (const d of models.FeedbackLoopDiagram ?? []) {
+    const expr = String(d.graphJSON?.$expr ?? "");
+    if (/DiagramGraph\.loop\(/.test(expr)) {
+      const steps = (expr.match(/\(\s*"/g) ?? []).length, opposite = (expr.match(/\.opposite/g) ?? []).length;
+      d._summary = steps < 2 ? "Loop, not closed yet" : `Loop, ${opposite % 2 === 0 ? "reinforcing" : "balancing"}`;
+    } else if (/DiagramGraph\.demoMap\(\)/.test(expr)) {
+      const at = diagramSwift.indexOf("static func demoMap()");
+      const names = /let names = \[([^\]]*)\]/.exec(diagramSwift.slice(at))?.[1] ?? "";
+      const count = (names.match(/"/g) ?? []).length / 2;
+      d._summary = count === 0 ? "Map, nothing drawn yet" : `Map, ${count} ${count === 1 ? "item" : "items"}`;
+    }
+  }
   // Plain values such as `let tuesday = Calendar.current.nextDate(...)`, which other objects refer to by name.
   const bindings = {};
   for (const [k, v] of Object.entries(all.env)) if ((v && typeof v === "object" && !v._type && (v.$expr || v.$call)) || typeof v === "string") bindings[k] = v;

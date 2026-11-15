@@ -7,6 +7,7 @@ import BridgeTab from './tabs/BridgeTab';
 import ThreadTab from './tabs/ThreadTab';
 import { useJournalTab } from './tabs/JournalTab';
 import { useAffirmations, useContacts, useDeEscalation, useGrounding, type DetailParts } from './screens/ListScreens';
+import { useBoundaries, useFeedbackLoops, useFutureNotes, useMessageLog, usePeople, usePersonalGoals, useSafetyPlan, useSupportCalendar } from './screens/MoreScreens';
 
 /**
  * The app's five tabs, each with its own stack of pushed screens like the NavigationStack each tab has in the app.
@@ -24,6 +25,8 @@ const TABS: Record<string, () => Parts> = { Now: useNow, Plan: usePlan, Journal:
 /** Pushed screens, by the name a screen passes to nav.push(). */
 const DETAILS: Record<string, () => DetailParts> = {
   contacts: useContacts, grounding: useGrounding, deescalation: useDeEscalation, affirmations: useAffirmations,
+  people: usePeople, future: useFutureNotes, goals: usePersonalGoals, diagrams: useFeedbackLoops,
+  boundaries: useBoundaries, calendar: useSupportCalendar, messages: useMessageLog, safety: useSafetyPlan,
 };
 
 type Common = { scheme: 'light' | 'dark'; full: boolean; onTab: (t: string) => void };

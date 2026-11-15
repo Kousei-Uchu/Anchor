@@ -186,7 +186,7 @@
 .au-clamp2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
 /* Screens that keep their title and search fixed while the content scrolls */
-.au-body { position: absolute; inset: 0; display: flex; flex-direction: column; }
+.au-pinned { position: absolute; inset: 0; display: flex; flex-direction: column; }
 .au-fixed { flex: none; padding: 0 var(--anchor-spacing); }
 .au-scroll.au-scroll-below { flex: 1; min-height: 0; height: auto; padding-bottom: 120px; }
 .au-screen[data-full] .au-fixed { padding: 0; }
@@ -242,13 +242,13 @@
 .au-nav-spacer-detail { height: 106px; }
 .au-navbar-detail { height: 106px; }
 .au-back { width: 44px; height: 44px; top: 62px; justify-content: center; padding: 0; border: 0; color: var(--au-primary); cursor: pointer; }
-.au-toolbar-detail { top: 62px; right: 20px; height: 44px; border-radius: 22px; padding: 0 4px; }
-.au-toolbar-detail .au-toolbar-btn { width: 44px; height: 44px; border-radius: 22px; }
-.au-toolbar-detail .au-toolbar-btn:not(:only-child) { width: 44px; }
-.au-toolbar-btn.au-toolbar-text { width: auto !important; padding: 0 18px; font: 400 17px/22px var(--au-text); }
-.au-dtitle { position: absolute; top: 62px; height: 44px; left: 77px; right: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; font: 600 17px/22px var(--au-text); }
+.au-toolbar-detail { top: 62px; right: 20px; height: 44px; border-radius: 22px; }
+.au-toolbar-detail .au-toolbar-btn { width: 52px; height: 44px; border-radius: 22px; }
+.au-toolbar-detail .au-toolbar-btn:not(:only-child) { width: 52px; }
+.au-toolbar-btn.au-toolbar-text { width: 90px !important; padding: 0; font: 400 17px/22px var(--au-text); }
+.au-dtitle { position: absolute; top: 62px; height: 44px; left: 72px; right: 72px; display: flex; align-items: center; justify-content: center; pointer-events: none; font: 600 17px/22px var(--au-text); }
 .au-dtitle span { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.au-dtitle-left { justify-content: flex-start; right: 215px; left: 77px; }
+.au-dtitle-left { justify-content: flex-start; left: 76px; }
 .au-card-tap { cursor: pointer; }
 .au-listcard { display: flex; align-items: center; gap: 12px; }
 .au-listcard-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; text-align: left; }
@@ -260,3 +260,24 @@
 .au-rowtext-sm { font: 400 17px/22px var(--au-text); text-align: left; }
 .au-center-row { display: flex; justify-content: center; }
 .au-label-plain { display: inline-flex; align-items: center; gap: 4px; }
+
+.au-navrow { display: flex; align-items: center; }
+.au-navrow > .au-card { flex: 1; min-width: 0; margin-right: 0; }
+.au-navrow-chev { width: 23px; justify-content: center; }
+.au-navrow-card { display: flex; align-items: center; gap: 12px; text-align: left; }
+.au-icon-badge { color: var(--anchor-accent); display: inline-flex; }
+.au-row-meta { font: 400 12px/14px var(--au-text); color: var(--au-tertiary); }
+.au-section-label { font: 500 17px/20px var(--au-rounded); color: var(--au-secondary); padding: 14px 4px 0; text-align: left; }
+.au-section-label-sm { font: 400 13px/16px var(--au-text); color: var(--au-secondary); padding: 4px 0 0; text-align: left; }
+.au-intro { font: 400 12px/16px var(--au-text); color: var(--au-secondary); text-align: left; padding: 0 2px; }
+.au-minor { font: 600 12px/14px var(--au-text); color: var(--au-secondary); text-align: left; padding: 0 2px; }
+.au-filter { display: inline-flex; align-items: center; gap: 6px; color: var(--anchor-accent); font: 500 15px/18px var(--au-rounded); padding: 0 2px; }
+.au-msg-who { font: 400 12px/14px var(--au-text); color: var(--au-secondary); }
+.au-msg-text { font: 400 17px/22px var(--au-text); text-align: left; }
+.au-corner { position: absolute; top: 12px; right: 14px; display: flex; gap: 10px; color: var(--au-tertiary); }
+.au-card-rel { position: relative; }
+.au-lines { display: flex; flex-direction: column; gap: 2px; font: 400 17px/22px var(--au-text); text-align: left; }
+.au-updated { text-align: center; font: 400 12px/14px var(--au-text); color: var(--au-tertiary); padding-top: 4px; }
+.au-chips-wrap { display: flex; gap: 10px; flex-wrap: wrap; }
+.au-card-rel .au-listcard-main { padding-right: 22px; }
+.au-filter-row { margin-top: -6px; }

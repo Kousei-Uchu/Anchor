@@ -1269,21 +1269,24 @@
     "title": "Waking in the night",
     "graphJSON": {
      "$expr": "DiagramGraph.loop([ (\"I wake up and check the time\", .same), (\"I start thinking about tomorrow\", .same), (\"I feel tense and wide awake\", .same) ]).encoded()"
-    }
+    },
+    "_summary": "Loop, reinforcing"
    },
    {
     "_type": "FeedbackLoopDiagram",
     "title": "Taking on too much",
     "graphJSON": {
      "$expr": "DiagramGraph.loop([ (\"I take on more\", .same), (\"I feel stretched thin\", .same), (\"I say no to something\", .opposite) ]).encoded()"
-    }
+    },
+    "_summary": "Loop, balancing"
    },
    {
     "_type": "FeedbackLoopDiagram",
     "title": "How a hard day spreads",
     "graphJSON": {
      "$expr": "DiagramGraph.demoMap().encoded()"
-    }
+    },
+    "_summary": "Map, 4 items"
    }
   ],
   "FutureNote": [

@@ -84,6 +84,14 @@
     "PeopleWidget": "3b2ff61792",
     "UnsentDraftsWidget": "74f30513d0",
     "ContactCard": "789febde6c",
-    "GroundingToolCard": "e0acd3484b"
+    "GroundingToolCard": "e0acd3484b",
+    "PeopleScreen": "c6df9328e7",
+    "FutureNoteListView": "7eb2c63b7e",
+    "PersonalGoalsView": "e1930fd9da",
+    "FeedbackLoopDiagramListView": "f38b0ab956",
+    "BoundariesView": "f11930bf64",
+    "SupportCalendarView": "4044da4d95",
+    "ThreadMessagesView": "fdbbfa3c88",
+    "SafetyPlanView": "cf57624041"
   }
 }
