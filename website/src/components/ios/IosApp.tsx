@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from 'react';
-import { AnchorScreen, type Toolbar } from './AnchorUI';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { AnchorScreen, Glyph, type Toolbar } from './AnchorUI';
 import { NavContext, type Nav } from './nav';
 import NowTab from './tabs/NowTab';
 import PlanTab from './tabs/PlanTab';
@@ -48,11 +48,16 @@ function DetailView({ id, tab, onBack, scheme, full, onTab }: Common & { id: str
   return <AnchorScreen title={d.title} tab={tab} onTab={onTab} onBack={onBack} toolbar={d.toolbar} inset={d.inset} bottomBar={d.bottomBar} scheme={scheme} full={full}>{d.body}</AnchorScreen>;
 }
 
-export default function IosApp({ initialTab = 'Now', initialScreen, initialSheet, scheme = 'light', full = false }: { initialTab?: string; initialScreen?: string; initialSheet?: string; scheme?: 'light' | 'dark'; full?: boolean }) {
+/** The app. By default you tap around. Pass `controlledTab` (and `scrollTo`, `locked`) to drive it from outside, as the intro on the home page does. */
+export default function IosApp({ initialTab = 'Now', initialScreen, initialSheet, controlledTab, scrollTo, locked = false, scheme = 'light', full = false }: {
+  initialTab?: string; initialScreen?: string; initialSheet?: string; controlledTab?: string; scrollTo?: number; locked?: boolean; scheme?: 'light' | 'dark'; full?: boolean;
+}) {
   const first = initialTab in TABS ? initialTab : 'Now';
-  const [tab, setTab] = useState(first);
+  const [own, setOwn] = useState(first);
+  const tab = controlledTab && controlledTab in TABS ? controlledTab : own;
   const [stacks, setStacks] = useState<Record<string, string[]>>(initialScreen && initialScreen in DETAILS ? { [first]: [initialScreen] } : {});
   const [sheet, setSheet] = useState<string | null>(initialSheet && initialSheet in SHEETS ? initialSheet : null);
+  const frame = useRef<HTMLDivElement>(null);
   const stack = stacks[tab] ?? [];
   const nav: Nav = {
     push: (id) => { if (id in DETAILS) setStacks((s) => ({ ...s, [tab]: [...(s[tab] ?? []), id] })); },
@@ -61,15 +66,32 @@ export default function IosApp({ initialTab = 'Now', initialScreen, initialSheet
     dismiss: () => setSheet(null),
   };
   // Tapping the tab you are on goes back to its first screen, as in iOS.
-  const onTab = (t: string) => (t === tab ? setStacks((s) => ({ ...s, [t]: [] })) : setTab(t));
+  const onTab = (t: string) => {
+    if (controlledTab) return;
+    if (t === tab) setStacks((s) => ({ ...s, [t]: [] })); else setOwn(t);
+  };
+  // When driven from outside, scroll the visible screen to the requested position once it has appeared.
+  useEffect(() => {
+    if (scrollTo === undefined) return;
+    const id = window.setTimeout(() => {
+      const el = [...(frame.current?.querySelectorAll<HTMLElement>('.au-scroll') ?? [])].find((e) => e.offsetParent !== null);
+      el?.scrollTo({ top: scrollTo, behavior: 'smooth' });
+    }, 60);
+    return () => window.clearTimeout(id);
+  }, [tab, scrollTo]);
   const top = stack[stack.length - 1];
   const Sheet = sheet ? SHEETS[sheet] : null;
   return (
     <NavContext.Provider value={nav}>
-      <div className="au-frame">
+      <div className="au-frame" ref={frame}>
         <div style={{ display: top ? 'none' : undefined }}><ActiveTab key={tab} tab={tab} scheme={scheme} full={full} onTab={onTab} /></div>
         {top && <DetailView key={`${tab}/${stack.join('/')}`} id={top} tab={tab} onBack={nav.pop} scheme={scheme} full={full} onTab={onTab} />}
         {Sheet && <Sheet scheme={scheme} onClose={nav.dismiss} />}
+        <div className={`au-lock${locked ? ' on' : ''}`} data-anchor-scheme={scheme} aria-hidden={!locked}>
+          <span className="au-lock-ic"><Glyph name="lock" size={34} weight={1.6} /></span>
+          <b>Anchor is locked</b>
+          <span>Unlock with Face ID</span>
+        </div>
       </div>
     </NavContext.Provider>
   );

@@ -331,3 +331,13 @@
 .au-range::-webkit-slider-thumb { -webkit-appearance: none; width: 30px; height: 30px; margin-top: -12px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgb(0 0 0 / 0.3), 0 0 0 0.5px rgb(0 0 0 / 0.08); }
 .au-range::-moz-range-thumb { width: 30px; height: 30px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgb(0 0 0 / 0.3); }
 .au-stack-16 { display: flex; flex-direction: column; gap: 16px; }
+
+/* On the website: the dynamic island and the lock screen the intro shows */
+.au-demo { position: relative; width: 440px; height: 956px; }
+.au-island { position: absolute; top: 11px; left: 50%; width: 120px; height: 34px; margin-left: -60px; border-radius: 20px; background: #000; z-index: 80; pointer-events: none; }
+.au-lock { position: absolute; inset: 0; z-index: 70; border-radius: 55px; background: var(--anchor-background); color: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; opacity: 0; pointer-events: none; transition: opacity 0.6s; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif; }
+.au-lock[data-anchor-scheme="dark"] { color: #fff; }
+.au-lock.on { opacity: 1; pointer-events: auto; }
+.au-lock b { font-size: 22px; font-weight: 600; }
+.au-lock span:last-child { font-size: 15px; opacity: 0.6; }
+.au-lock-ic { width: 76px; height: 76px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--anchor-accent) 15%, transparent); color: var(--anchor-accent); margin-bottom: 10px; }

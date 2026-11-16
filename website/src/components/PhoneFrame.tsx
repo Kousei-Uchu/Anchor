@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
-export const DEVICE_W = 413;
-export const DEVICE_H = 872;
+export const DEVICE_W = 460;
+export const DEVICE_H = 976;
 
 /** A phone body sized to `scale`. The content is laid out at full size, then scaled, so it never reflows. */
 export function PhoneFrame({ scale, children }: { scale: number; children: ReactNode }) {

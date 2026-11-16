@@ -7,8 +7,8 @@ import XCTest
 ///   <name>.png   the screen
 ///   <name>.json  where every button is on it (in points), so the website can put a tappable area on top
 ///
-/// scripts/make-demo-capture.sh runs this and scripts/sync-demo-screens.mjs turns the result into the demo.
-/// The table is the one place that says which screens are in the demo. The script reads it from here.
+/// scripts/save-reference-shots.sh runs this and keeps the pictures in reference-shots/, which the website's rebuilt screens are compared against.
+/// The table is the one place that says which screens are recorded. The script reads it from here.
 ///
 /// A step is one of:
 ///   a tab name (Now, Plan, Journal, Bridge, Thread)  taps that tab
@@ -63,7 +63,7 @@ final class DemoCaptureTests: XCTestCase {
 
     func testCapture() throws {
         guard let outDir = env["SHOT_DIR"] else {
-            XCTFail("SHOT_DIR is not set. Run scripts/make-demo-capture.sh.")
+            XCTFail("SHOT_DIR is not set. Run scripts/save-reference-shots.sh.")
             return
         }
         let dir = URL(fileURLWithPath: outDir)

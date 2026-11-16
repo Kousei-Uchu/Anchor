@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { MotionConfig } from 'motion/react';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { IconSprite } from './components/Icons';
@@ -13,7 +13,8 @@ import Philosophy from './pages/Philosophy';
 import Privacy from './pages/Privacy';
 import Support from './pages/Support';
 import NotFound from './pages/NotFound';
-import DemoNow from './pages/DemoNow';
+// The development preview of the rebuilt app. Loaded only while developing, so none of it reaches the built site.
+const DemoNow = import.meta.env.DEV ? lazy(() => import('./pages/DemoNow')) : null;
 
 /** New page → top. Page with a #hash → that section (the browser can't, since React renders after navigation). */
 function ScrollManager() {
@@ -47,7 +48,7 @@ export function App() {
           <Route path="/demo" element={<Demo />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/support" element={<Support />} />
-          {import.meta.env.DEV && <Route path="/demo-now" element={<DemoNow />} />}
+          {DemoNow && <Route path="/demo-now" element={<Suspense fallback={null}><DemoNow /></Suspense>} />}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </div>

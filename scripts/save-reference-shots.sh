@@ -1,7 +1,7 @@
 #!/bin/bash
 # Records every screen of the real app in demo mode and keeps the pictures in reference-shots/, so the website's
 # rebuild of each screen can be compared against the app. Nothing in reference-shots/ is shipped on the website,
-# and this script does not touch website/public/demo or the generated demo screens file.
+# and this script does not touch anything the website ships.
 #
 #   scripts/save-reference-shots.sh                 records the screens not saved yet
 #   REDO=1 scripts/save-reference-shots.sh          starts again from nothing

@@ -9,7 +9,7 @@
 //                                      affirmations, the first task, the newest journal entry
 //   Views/Now/CheckInSliderView.swift  the check-in questions (the first three) and the five slider names
 //   Support/MascotEngine.swift         the mascot's two opening lines
-// The look of the screens is not made here. It stays hand-built in DemoApp.tsx.
+// The look of the screens is not made here. It is website/src/components/ios, built to match the app.
 
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useMotionValueEvent, useReducedMotion, useScroll, useSpring, useTransform } from 'motion/react';
 import { SLIDES } from '../content/story';
-import { DemoApp } from '../components/DemoApp';
+import { DemoPhone } from '../components/DemoPhone';
 import { DEVICE_H, DEVICE_W, PhoneFrame } from '../components/PhoneFrame';
 import { Mascot } from '../components/Mascot';
 import { Icon } from '../components/Icons';
@@ -107,7 +107,7 @@ export function HeroStory() {
             <div className="rings"><i /><i /><i /></div>
             <motion.div className="hero-phone" style={reduce ? undefined : { rotate: tilt, y: lift }} inert>
               <PhoneFrame scale={scale}>
-                <DemoApp tab={s.tab} scrollTo={s.scroll ?? 0} locked={!!s.locked} />
+                <DemoPhone tab={s.tab} scrollTo={s.scroll ?? 0} locked={!!s.locked} />
               </PhoneFrame>
             </motion.div>
           </div>

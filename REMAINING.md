@@ -75,7 +75,7 @@ Everything here builds and launches on your phone (confirmed 11 Nov 2026, after 
 **Parked on purpose**
 
 - **49, 50**: demo routes A and C, replaced by 55.
-- **55**: the web demo. 55a (the content, from the app's demo store) is done; 55b (the screens, recorded from the app on a simulator) is written and waits for you to run `scripts/make-demo-capture.sh`; 55c is the thin script that runs the capture, the sync and the website build together, to do after you have run 55b once. See D82 and D83.
+- **55**: the web demo, done as 56a to 56j instead of recorded pictures: the screens are rebuilt in `website/src/components/ios` and read their content, colours and layout from the Swift. 55b's recording scripts are removed. Still to build there: Session prep, Things I haven't said, the Journal Month and Year views and the editors behind each row.
 
 ## 4. Offered but not built
 

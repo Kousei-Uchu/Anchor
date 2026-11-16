@@ -212,7 +212,7 @@ svg.ic.anchor { stroke-width: 6.5; }
   /* big blurred layers and filter shadows on a moving, scaled phone are what make phones stutter */
   .glow { display: none; }
   .hero-phone { filter: none; will-change: auto; }
-  .hero-phone .pf { box-shadow: 0 18px 28px rgba(60, 30, 20, 0.2); border-radius: 15.5% / 7.3%; }
+  .hero-phone .pf { box-shadow: 0 18px 28px rgba(60, 30, 20, 0.2); border-radius: 13.9% / 6.6%; }
   .mascot { filter: none; }
 }
 @media (max-width: 800px) {

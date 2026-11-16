@@ -1,5 +1,6 @@
 # Changelog
 
+- Patches 56a to 56j: the website demo is rebuilt from components that match the app, in place of recorded pictures. All five tabs, the check-in and most pushed screens work (tap, scroll, tick, type), and the colours, spacing, widget layout and made-up content are read from the Swift source by scripts that fail `check-all.sh` when the app changes. The older hand-built demo, the recorded pictures and the scripts that made them are gone. `scripts/save-reference-shots.sh` records the app's screens into `reference-shots/` for comparing against. See `website/src/components/ios/README.md`.
 - Settings is now a short list. Reminders, Recovery, Sleep, Journal and Your data and help each open their own page, with the same switches as before.
 - Patches 55b and 52: the website demo can now be recorded from the real app screen by screen (scripts/make-demo-capture.sh); until it is, the website keeps the hand-built demo. The promo video's pictures can be refreshed from the app's screenshots (scripts/refresh-promo-shots.sh).
 - Patch 55a: the website demo now takes its made-up content from the app's own demo content, so the two cannot drift apart. The demo shows all five grounding tools, as the app does.
