@@ -1,0 +1,89 @@
+{
+  "elements" : [
+    {
+      "h" : 44,
+      "label" : "Thread",
+      "w" : 44,
+      "x" : 20,
+      "y" : 62
+    },
+    {
+      "h" : 36,
+      "label" : "Help for this screen",
+      "w" : 40,
+      "x" : 322.33333333333331,
+      "y" : 66
+    },
+    {
+      "h" : 36,
+      "label" : "New draft",
+      "w" : 37.666666666666686,
+      "x" : 378.33333333333331,
+      "y" : 66
+    },
+    {
+      "h" : 94.333333333333314,
+      "label" : "my manager, I will need a bit more notice on the next deadline. Here is what would help.",
+      "w" : 408,
+      "x" : 16,
+      "y" : 132
+    },
+    {
+      "h" : 94.333333333333314,
+      "label" : "an old friend, I have been meaning to write for months. I am sorry I went quiet. It was never about you.",
+      "w" : 408,
+      "x" : 16,
+      "y" : 242.33333333333331
+    },
+    {
+      "h" : 74.333333333333371,
+      "label" : "my sister, Sent, Thank you for coming on Sunday.",
+      "w" : 408,
+      "x" : 16,
+      "y" : 352.66666666666663
+    },
+    {
+      "h" : 54,
+      "label" : "Now",
+      "w" : 84.599999999999994,
+      "x" : 25,
+      "y" : 877
+    },
+    {
+      "h" : 54,
+      "label" : "Plan",
+      "w" : 84.599999999999994,
+      "x" : 101.34999999999999,
+      "y" : 877
+    },
+    {
+      "h" : 54,
+      "label" : "Journal",
+      "w" : 84.599999999999966,
+      "x" : 177.69999999999999,
+      "y" : 877
+    },
+    {
+      "h" : 54,
+      "label" : "Bridge",
+      "w" : 84.600000000000023,
+      "x" : 254.04999999999995,
+      "y" : 877
+    },
+    {
+      "h" : 54,
+      "label" : "Thread",
+      "w" : 84.600000000000023,
+      "x" : 330.39999999999998,
+      "y" : 877
+    }
+  ],
+  "height" : 956,
+  "name" : "thread-drafts",
+  "path" : [
+    "Thread",
+    "Things I haven't said"
+  ],
+  "scale" : 3,
+  "width" : 440
+}
