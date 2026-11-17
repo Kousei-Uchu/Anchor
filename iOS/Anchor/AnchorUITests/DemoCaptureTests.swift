@@ -49,6 +49,22 @@ final class DemoCaptureTests: XCTestCase {
         ("thread-people", ["Thread", "People"]),
         ("thread-future", ["Thread", "To future me"]),
         ("thread-boundaries", ["Thread", "Boundaries"]),
+        // Added for rebuilding the website's copy of the app: the lower parts of long screens, and screens not recorded before.
+        ("now-checkin-more", ["Check in", "@scroll"]),
+        ("plan-tasks-more", ["Plan", "Tasks", "@scroll"]),
+        ("plan-safety-more", ["Plan", "Safety plan", "@scroll"]),
+        ("plan-grounding-tool", ["Plan", "All tools", "5-4-3-2-1"]),
+        ("plan-recovery-counter", ["Plan", "Recovery", "Energy drinks"]),
+        ("journal-month", ["Journal", "Month"]),
+        ("journal-year", ["Journal", "Year"]),
+        ("bridge-prep-more", ["Bridge", "Session prep", "@scroll"]),
+        ("bridge-prep-more2", ["Bridge", "Session prep", "@scroll", "@scroll"]),
+        ("bridge-prep-patel", ["Bridge", "Session prep", "Dr Patel"]),
+        ("bridge-after", ["Bridge", "After session"]),
+        ("bridge-raise", ["Bridge", "Things to raise"]),
+        ("bridge-loop", ["Bridge", "Feedback loops", "Waking in the night"]),
+        ("thread-drafts", ["Thread", "Things I haven't said"]),
+        ("thread-person", ["Thread", "People", "Sam"]),
     ]
     // END SCREENS
 
