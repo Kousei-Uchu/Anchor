@@ -239,7 +239,12 @@ function build() {
   // Plain values such as `let tuesday = Calendar.current.nextDate(...)`, which other objects refer to by name.
   const bindings = {};
   for (const [k, v] of Object.entries(all.env)) if ((v && typeof v === "object" && !v._type && (v.$expr || v.$call)) || typeof v === "string") bindings[k] = v;
-  return { source: "DemoMode.makeContainer and addRecoveryContent in iOS/Anchor/Anchor/AnchorApp.swift", bindings, models };
+  // The demo's sleep nights come from a loop with arithmetic, not from model initialisers. Keep its numbers, and its source text so that a change to the loop changes this file.
+  const asleep = /let demoAsleep = \[([^\]]*)\]/.exec(full)?.[1];
+  const loop = /for index in 0\.\.<demoAsleep\.count \{[\s\S]*?\n        \}/.exec(full)?.[0];
+  if (!asleep || !loop) throw new Error("Could not find the demo sleep loop in AnchorApp.swift");
+  const sleep = { asleep: asleep.split(",").map((n) => Number(n.trim())), loop: loop.replace(/\s+/g, " ") };
+  return { source: "DemoMode.makeContainer and addRecoveryContent in iOS/Anchor/Anchor/AnchorApp.swift", bindings, sleep, models };
 }
 
 const json = JSON.stringify(build(), null, 1) + "\n";

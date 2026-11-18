@@ -5,12 +5,12 @@ import { useNav, type Nav } from '../nav';
 import { feedbackLoopsSummary, nextSessionCaption, personalGoalsSummary, thingsToRaise } from '../../../content/seed';
 
 /** The Bridge tab: BridgeView's widgets, laid out by WidgetStackView. */
-function ThingsToRaise({ icon, title, tint }: { icon: string; title: string; tint: 'accent' | 'sage' }) {
+function ThingsToRaise({ icon, title, tint, nav }: { icon: string; title: string; tint: 'accent' | 'sage'; nav: Nav }) {
   const [resolved, setResolved] = useState<string[]>([]);
   const open = thingsToRaise().filter((i) => !resolved.includes(i.id));
   return (
-    <Widget icon={icon} title={title} tint={tint}
-      footer={<div className="au-stack-6">{open.slice(0, 3).map((i) => <RaiseRow key={i.id} text={i.text} onToggle={() => setResolved((r) => [...r, i.id])} />)}</div>}>
+    <Widget icon={icon} title={title} tint={tint} onOpen={() => nav.push('raise')}
+      footer={<div className="au-stack-6" onClick={(e) => e.stopPropagation()}>{open.slice(0, 3).map((i) => <RaiseRow key={i.id} text={i.text} onToggle={() => setResolved((r) => [...r, i.id])} />)}</div>}>
       <WidgetCaption lines={1} text={open.length === 0 ? 'Nothing queued. Tap to add something for your next session.' : `${open.length} for your next session`} />
     </Widget>
   );
@@ -19,11 +19,11 @@ function ThingsToRaise({ icon, title, tint }: { icon: string; title: string; tin
 function render(id: string, m: { title: string; icon: string; tint: 'accent' | 'sage' }, nav: Nav): ReactNode {
   switch (id) {
     case 'thingsToRaise':
-      return <ThingsToRaise icon={m.icon} title={m.title} tint={m.tint} />;
+      return <ThingsToRaise icon={m.icon} title={m.title} tint={m.tint} nav={nav} />;
     case 'nextSession':
       return (
-        <Widget icon={m.icon} title={m.title} tint={m.tint}
-          footer={<div className="au-btn-row"><SecondaryButton>Session prep</SecondaryButton><SecondaryButton>After session</SecondaryButton></div>}>
+        <Widget icon={m.icon} title={m.title} tint={m.tint} onOpen={() => nav.push('prep')}
+          footer={<div className="au-btn-row" onClick={(e) => e.stopPropagation()}><SecondaryButton onClick={() => nav.push('prep')}>Session prep</SecondaryButton><SecondaryButton onClick={() => nav.push('after')}>After session</SecondaryButton></div>}>
           <WidgetCaption lines={1} text={nextSessionCaption()} />
         </Widget>
       );

@@ -79,6 +79,16 @@ const MIRRORED_VIEWS = [
   ["Views/Recovery/RecoveryHomeView.swift", "RecoveryHomeView"],
   ["Views/Recovery/RecoveryHomeView.swift", "RecoveryCounterCard"],
   ["Views/Now/CheckInSliderView.swift", "CheckInSliderView"],
+  ["Views/Bridge/AppointmentPrepView.swift", "AppointmentPrepView"],
+  ["Views/Bridge/AppointmentPrepView.swift", "RecoverySessionSummaryCard"],
+  ["Views/Bridge/AppointmentPrepView.swift", "JournalSessionSummaryCard"],
+  ["Views/Bridge/AppointmentPrepView.swift", "SleepSessionSummaryCard"],
+  ["Views/Bridge/AppointmentPrepView.swift", "RaiseSessionCard"],
+  ["Views/Bridge/AppointmentPrepView.swift", "PrepChecklistCard"],
+  ["Views/Bridge/BridgeDraftListView.swift", "BridgeDraftListView"],
+  ["Views/Thread/UnsentDraftsView.swift", "UnsentDraftsView"],
+  ["Views/Journal/JournalView.swift", "JournalMonthView"],
+  ["Views/Journal/JournalView.swift", "JournalYearView"],
 ];
 
 const src = readFileSync(SWIFT, "utf8");

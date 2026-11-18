@@ -34,7 +34,7 @@ Run `cd website && npm run dev` and open `/demo-now`. Add `?dark` for dark mode.
   setting is on, and the demo does not turn it on.
 - **Plan**: the widget layout from `PlanView.swift`, with half-width widgets paired, the "More" row and the Customise button.
 - **Journal**: the Days timeline from `JournalView.swift`: day badges, entries with their recovery-day chips, check-ins with their five bars,
-  bookmarks, search, and the title, search and Days / Month / Year control pinned while the entries scroll. Month and Year are not rebuilt yet.
+  bookmarks, search, and the title, search and Days / Month / Year control pinned while the entries scroll. 
 - **Bridge** and **Thread**: their widget layouts, laid out by the same `WidgetStackView` as Plan. Things to raise has tickable rows, Next session has its two
   buttons, and Thread has the message log, the support calendar week strip, People, To future me, Things I haven't said and Boundaries.
 - On tabs where the whole page scrolls (Now, Plan, Bridge, Thread), the large title collapses into a centred inline title as it does in the app.
@@ -44,7 +44,9 @@ Run `cd website && npm run dev` and open `/demo-now`. Add `?dark` for dark mode.
   Open one directly with `?tab=plan&screen=contacts`. The names are contacts, grounding, deescalation, affirmations, safety (tab plan),
   goals, diagrams (tab bridge), and messages, calendar, people, future, boundaries (tab thread).
   Tasks (quick lists, tasks grouped by when they are due, the facts on each card, ticking and adding) and Recovery are built too, opened from the Now and Plan cards.
-  Still to build: Session prep, Things I haven't said, and the editors behind each row.
+  Session prep (for each clinician: next session, recovery, journal and sleep summaries worked out with the app's own rules, what is waiting to be raised, the bring list and prep notes, each card's "Add to prep notes"), Post-session notes,
+  the Bridge draft list behind Things to raise, and Things I haven't said are built as well. The sleep numbers come from the demo's own loop, which `sync-seed.mjs` keeps a copy of so a change to it fails the check.
+  Still to build: the editors behind each row, the Feedback-loop diagram itself, the live Recovery counter, and the guided Grounding tool screens.
 - **Sheets**: `nav.present('checkin')` shows the Now check-in over the whole app, with five working sliders (the Check in button on the Now tab opens it).
   Open it directly with `?sheet=checkin`.
 - Inline titles are centred on the screen when they fit clear of the toolbar buttons, and sit next to the back button when they do not, as in iOS. Tapping the tab you are on goes back to its first screen.

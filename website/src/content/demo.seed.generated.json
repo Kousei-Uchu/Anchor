@@ -7,6 +7,25 @@
   "optimisedOriginal": "On Tuesday I went to the clinic and waited forty minutes before Dr Lee could see me. I told her the nights have been harder since the last appointment and that I keep waking at three. She said we could look at the evening routine again and asked me to bring my notes next time.",
   "optimisedShort": "Waited forty minutes at the clinic on Tuesday. Told Dr Lee the nights are harder and I wake at three. She will look at the evening routine again and wants my notes next time."
  },
+ "sleep": {
+  "asleep": [
+   450,
+   410,
+   480,
+   390,
+   465,
+   435,
+   420,
+   400,
+   455,
+   430,
+   385,
+   470,
+   440,
+   415
+  ],
+  "loop": "for index in 0..<demoAsleep.count { let cal = Calendar.current let night = cal.startOfDay(for: ago(Double(index))) let wake = night.addingTimeInterval(7 * 3_600 + Double(index % 3) * 900) let bed = wake.addingTimeInterval(-Double(demoAsleep[index] + 20) * 60) context.insert(SleepEntry(nightDate: night, bedTime: bed, wakeTime: wake, minutesAsleep: index == 3 ? demoAsleep[index] : nil, feel: demoFeel[index], note: index == 3 ? \"Woke a few times. Mind was busy.\" : \"\")) }"
+ },
  "models": {
   "TrustedContact": [
    {

@@ -83,6 +83,9 @@ export function useTasks(): DetailParts {
         )}
         {open.map((g) => (<div key={g.title} className="au-stack-16"><div className="au-tasks-label"><span>{g.title}</span></div>{g.tasks.map(card)}</div>))}
         {done.length > 0 && <div className="au-stack-16"><div className="au-tasks-label"><span>Done</span><button type="button">Clear done</button></div>{done.map(card)}</div>}
+        {base.archivedLists > 0 && (
+          <Card><div className="au-listcard"><span className="au-secondary"><Glyph name="archivebox" size={28} weight={1.5} /></span><span className="au-body au-grow" style={{ textAlign: 'left' }}>Archive</span><span className="au-secondary">{base.archivedLists}</span><span className="au-tertiary"><Glyph name="chevron.right" size={20} weight={2.8} /></span></div></Card>
+        )}
         <div style={{ height: 70 }} />
       </>
     ),

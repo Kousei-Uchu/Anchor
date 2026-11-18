@@ -8,8 +8,9 @@ import ThreadTab from './tabs/ThreadTab';
 import { useJournalTab } from './tabs/JournalTab';
 import { useAffirmations, useContacts, useDeEscalation, useGrounding, type DetailParts } from './screens/ListScreens';
 import { useRecovery, useTasks } from './screens/TasksRecoveryScreens';
+import { useAfterSession, useBridgeDraft, usePrep } from './screens/BridgeScreens';
 import CheckInSheet from './sheets/CheckInSheet';
-import { useBoundaries, useFeedbackLoops, useFutureNotes, useMessageLog, usePeople, usePersonalGoals, useSafetyPlan, useSupportCalendar } from './screens/MoreScreens';
+import { useBoundaries, useFeedbackLoops, useFutureNotes, useMessageLog, usePeople, usePersonalGoals, useSafetyPlan, useSupportCalendar, useUnsentDrafts } from './screens/MoreScreens';
 
 /**
  * The app's five tabs, each with its own stack of pushed screens like the NavigationStack each tab has in the app.
@@ -29,7 +30,7 @@ const DETAILS: Record<string, () => DetailParts> = {
   contacts: useContacts, grounding: useGrounding, deescalation: useDeEscalation, affirmations: useAffirmations,
   people: usePeople, future: useFutureNotes, goals: usePersonalGoals, diagrams: useFeedbackLoops,
   boundaries: useBoundaries, calendar: useSupportCalendar, messages: useMessageLog, safety: useSafetyPlan,
-  tasks: useTasks, recovery: useRecovery,
+  tasks: useTasks, recovery: useRecovery, prep: usePrep, after: useAfterSession, raise: useBridgeDraft, drafts: useUnsentDrafts,
 };
 
 /** Sheets shown over the whole app, by the name a screen passes to nav.present(). */
@@ -45,7 +46,7 @@ function ActiveTab({ tab, scheme, full, onTab }: Common & { tab: string }) {
 
 function DetailView({ id, tab, onBack, scheme, full, onTab }: Common & { id: string; tab: string; onBack: () => void }) {
   const d = DETAILS[id]();
-  return <AnchorScreen title={d.title} tab={tab} onTab={onTab} onBack={onBack} toolbar={d.toolbar} inset={d.inset} bottomBar={d.bottomBar} scheme={scheme} full={full}>{d.body}</AnchorScreen>;
+  return <AnchorScreen title={d.title} tab={tab} onTab={onTab} onBack={onBack} toolbar={d.toolbar} inset={d.inset} pinned={d.pinned} bottomBar={d.bottomBar} scheme={scheme} full={full}>{d.body}</AnchorScreen>;
 }
 
 /** The app. By default you tap around. Pass `controlledTab` (and `scrollTo`, `locked`) to drive it from outside, as the intro on the home page does. */

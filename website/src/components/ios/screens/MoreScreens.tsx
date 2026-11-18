@@ -1,7 +1,7 @@
 import { Card, Glyph, ListCard, NavRow, SecondaryButton, SectionHeader } from '../AnchorUI';
 import type { DetailParts } from './ListScreens';
 import {
-  boundaryCards, calendarEntries, diagramRows, futureNoteRows, goalGroups, messageLog, peopleRows, safetyPlan, writeToNames,
+  boundaryCards, calendarEntries, diagramRows, futureNoteRows, goalGroups, messageLog, peopleRows, safetyPlan, unsentDraftRows, writeToNames,
 } from '../../../content/seed';
 
 /** Pushed screens for People, To future me, Personal goals, Feedback loops, Boundaries, Support calendar, Message log and the Safety plan. */
@@ -157,5 +157,23 @@ export function useMessageLog(): DetailParts {
         ))}
       </>
     ),
+  };
+}
+
+/** UnsentDraftsView: private notes to people, some sent and some never sent. */
+export function useUnsentDrafts(): DetailParts {
+  return {
+    title: "Things I haven't said", toolbar: { trailing: HELP_ADD }, inset: 18,
+    body: <>{unsentDraftRows().map((d) => (
+      <Card key={d.to + d.text} tint="sage">
+        <div className="au-card-rel">
+          <div className="au-corner"><Chev /></div>
+          <div className="au-listcard-main" style={{ gap: 4 }}>
+            <div className="au-draft-top"><span className="au-headline">{d.to}</span>{d.sent && <span className="au-caption au-secondary au-label-plain"><Glyph name="checkmark" size={16} weight={2.2} />Sent</span>}</div>
+            <span className="au-subheadline au-secondary au-clamp2">{d.text}</span>
+          </div>
+        </div>
+      </Card>
+    ))}</>,
   };
 }

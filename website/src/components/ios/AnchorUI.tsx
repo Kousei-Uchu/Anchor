@@ -80,6 +80,15 @@ const GLYPHS: Record<string, (w: number) => ReactNode> = {
   'cloud.fill': () => <path fill={F} d="M7.5 19a4.5 4.5 0 0 1-.6-8.9 5.5 5.5 0 0 1 10.6-.8A4.8 4.8 0 0 1 17 19z" />,
   'figure.walk': () => <g fill={F}><circle cx="13" cy="4.5" r="2.2" /><path d="M11 8.5l-3.5 1.8-1 3.7a1 1 0 0 0 1.9.5l.8-2.8 1.3-.6-1.3 5.6-2.5 4.2a1 1 0 0 0 1.7 1l2.7-4.2 1.5 1.5v3.2a1 1 0 0 0 2 0v-3.8a1 1 0 0 0-.3-.7l-1.8-1.8 1-4.2 1.5 2.3a1 1 0 0 0 .8.4h2.2a1 1 0 0 0 0-2h-1.7l-2-3.1a2.5 2.5 0 0 0-3.9-.5z" /></g>,
   'list.bullet.rectangle': (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="3" /><path d="M7.5 9h.1M7.5 12.5h.1M7.5 16h.1M11 9h6M11 12.5h6M11 16h6" /></g>,
+  'person.text.rectangle': (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2.5" /><circle cx="8.5" cy="10.5" r="2" /><path d="M5.5 16c.5-1.5 1.7-2.2 3-2.2s2.5.7 3 2.2M14 9.5h4.5M14 13h3.5" /></g>,
+  hourglass: (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"><path d="M6.5 3h11M6.5 21h11M7.5 3v3.5c0 2 2 3.5 4.5 5.5-2.5 2-4.5 3.5-4.5 5.5V21M16.5 3v3.5c0 2-2 3.5-4.5 5.5 2.5 2 4.5 3.5 4.5 5.5V21" /></g>,
+  archivebox: (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="5" rx="1.5" /><path d="M4.5 9v9a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V9M10 13h4" /></g>,
+  xmark: (w) => <path fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" d="M6 6l12 12M18 6L6 18" />,
+  'doc.plaintext': (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"><path d="M6 3h8l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" /><path d="M14 3v5h5M8 13h8M8 17h6" /></g>,
+  'list.bullet.clipboard.fill': () => <path fill={F} fillRule="evenodd" d="M9 2.5h6a1 1 0 0 1 1 1V4.5h1.5A2.5 2.5 0 0 1 20 7v12.5a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 19.5V7a2.5 2.5 0 0 1 2.5-2.5H8V3.5a1 1 0 0 1 1-1zM8 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm3.5.2v1.6h5v-1.6zM8 15a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm3.5.2v1.6h5v-1.6z" />,
+  'text.bubble.fill': () => <path fill={F} fillRule="evenodd" d="M5 3.5h14A2.5 2.5 0 0 1 21.5 6v9a2.5 2.5 0 0 1-2.5 2.5h-6.5L7 21.5v-4H5A2.5 2.5 0 0 1 2.5 15V6A2.5 2.5 0 0 1 5 3.5zM7.5 8v1.5h9V8zm0 3.5V13h6v-1.5z" />,
+  'circle.fill': () => <circle cx="12" cy="12" r="6" fill={F} />,
+  checkmark: (w) => <path fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" d="M5 12.5l4.5 4.5L19 7.5" />,
   sparkles: () => <g fill={F}><path d="M10 5l1.8 5.2L17 12l-5.2 1.8L10 19l-1.8-5.2L3 12l5.2-1.8z" /><path d="M18 2.5l.9 2.6 2.6.9-2.6.9L18 9.5l-.9-2.6-2.6-.9 2.6-.9zM18.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z" /></g>,
   'checkmark.circle.fill': () => <path fill={F} fillRule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.7 6.8a1 1 0 0 1 0 1.4l-5.3 5.3a1 1 0 0 1-1.4 0l-2.3-2.3a1 1 0 1 1 1.4-1.4l1.6 1.6 4.6-4.6a1 1 0 0 1 1.4 0z" />,
   checklist: (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"><path d="M3 6.5l1.6 1.6L7.5 5M3 12.5l1.6 1.6 2.9-3.1M3 18.5l1.6 1.6 2.9-3.1M11 7h10M11 13h10M11 19h10" /></g>,
@@ -146,7 +155,7 @@ export function AnchorScreen({ title, tab, onTab, onBack, toolbar = { trailing: 
   const detail = !!onBack;
   const [collapsed, setCollapsed] = useState(false);
   const header = (
-    detail ? <div className="au-nav-spacer au-nav-spacer-detail" /> : (
+    detail ? <><div className="au-nav-spacer au-nav-spacer-detail" />{pinned}</> : (
       <>
         <div className="au-nav-spacer" />
         <h1 className="au-nav-title">{title}</h1>
@@ -522,17 +531,19 @@ export function NavRow({ children, onClick }: { children: ReactNode; onClick?: (
 }
 
 /** A task card from TasksView: a ring, the title, a row of small facts, and the first step or what it is waiting on. */
-export function TaskCardView({ title, done, facts, firstStep, waitingOn, steps, expanded, onToggleDone, onToggleSteps }: {
-  title: string; done: boolean; facts: { icon: string; text: string }[]; firstStep?: string; waitingOn?: string; steps: { title: string; done: boolean }[];
+export function TaskCardView({ title, done, waiting = false, muted = false, facts, firstStep, waitingOn, steps, expanded, onToggleDone, onToggleSteps }: {
+  title: string; done: boolean; waiting?: boolean; muted?: boolean; facts: { icon: string; text: string }[]; firstStep?: string; waitingOn?: string; steps: { title: string; done: boolean }[];
   expanded: boolean; onToggleDone: () => void; onToggleSteps: () => void;
 }) {
   return (
     <Card>
-      <div className="au-stack-8">
+      <div className={`au-stack-8${muted && !done ? ' au-muted' : ''}`}>
         <div className="au-taskcard-top">
-          <button type="button" className="au-ring" aria-label={`Mark ${title} as ${done ? 'not done' : 'done'}`} onClick={onToggleDone}><Glyph name={done ? 'checkmark.circle.fill' : 'circle'} size={26} weight={1.5} /></button>
+          {waiting && !done
+            ? <span className="au-ring au-ring-waiting" aria-hidden="true"><Glyph name="hourglass" size={26} weight={1.5} /></span>
+            : <button type="button" className={`au-ring${done ? ' au-ring-done' : ''}`} aria-label={`Mark ${title} as ${done ? 'not done' : 'done'}`} onClick={onToggleDone}><Glyph name={done ? 'checkmark.circle.fill' : 'circle'} size={26} weight={1.5} /></button>}
           <div className="au-taskcard-text">
-            <span className={`au-body${done ? ' au-secondary au-strike' : ''}`}>{title}</span>
+            <span className={`au-body${done ? ' au-secondary au-strike' : ''}${muted && !done ? ' au-secondary' : ''}`}>{title}</span>
             {waitingOn && <span className="au-caption au-secondary">{waitingOn}</span>}
             {facts.length > 0 && <span className="au-facts">{facts.map((f) => <span key={f.icon + f.text} className="au-fact"><Glyph name={f.icon} size={16} weight={1.8} />{f.text}</span>)}</span>}
             {firstStep && <span className="au-fact au-fact-step"><Glyph name="arrow.turn.down.right" size={16} weight={1.8} />{firstStep}</span>}
@@ -550,4 +561,28 @@ export function TaskCardView({ title, done, facts, firstStep, waitingOn, steps, 
 /** Slider(value:in:0...1) with the app's accent colour */
 export function RangeSlider({ value, onChange, label }: { value: number; onChange: (v: number) => void; label: string }) {
   return <input type="range" className="au-range" min={0} max={1} step={0.01} value={value} aria-label={label} style={{ ['--v' as string]: `${value * 100}%` }} onChange={(e) => onChange(Number(e.target.value))} />;
+}
+
+/** The clinician pills under the title of Session prep and Post-session notes. */
+export function ClinicianPills({ names, value, onChange }: { names: { id: string; name: string }[]; value: string; onChange: (id: string) => void }) {
+  return (
+    <div className="au-pills">
+      {names.map((n) => <button key={n.id} type="button" className={`au-pill${n.id === value ? ' au-pill-on' : ''}`} onClick={() => onChange(n.id)}>{n.name}</button>)}
+    </div>
+  );
+}
+
+/** The cards on Session prep: a header, what the app worked out, a small note, and a button that adds it to the prep notes. */
+export function PrepCard({ icon, title, tint = 'accent', children, note, summary, onAdd }: { icon: string; title: string; tint?: Tint; children: ReactNode; note: string; summary: () => string; onAdd: (text: string) => void }) {
+  const [added, setAdded] = useState(false);
+  return (
+    <Card tint={tint}>
+      <div className="au-stack-10">
+        <SectionHeader icon={icon} title={title} tint={tint} />
+        {children}
+        <div className="au-caption2 au-secondary" style={{ textAlign: 'left' }}>{note}</div>
+        <div><SecondaryButton tint={tint} onClick={() => { if (!added) { onAdd(summary()); setAdded(true); } }}><Glyph name={added ? 'checkmark' : 'plus'} size={18} weight={2.2} />{added ? 'Added to prep notes' : 'Add to prep notes'}</SecondaryButton></div>
+      </div>
+    </Card>
+  );
 }

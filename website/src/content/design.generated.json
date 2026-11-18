@@ -98,6 +98,16 @@
     "QuickListCard": "52494113e2",
     "RecoveryHomeView": "a35e7daa81",
     "RecoveryCounterCard": "268327ef02",
-    "CheckInSliderView": "6aaba2fdfa"
+    "CheckInSliderView": "6aaba2fdfa",
+    "AppointmentPrepView": "f2d4cf9248",
+    "RecoverySessionSummaryCard": "115bbe5ed2",
+    "JournalSessionSummaryCard": "72bad26644",
+    "SleepSessionSummaryCard": "34044ae0a2",
+    "RaiseSessionCard": "e2fd0f484e",
+    "PrepChecklistCard": "8eb07bbab9",
+    "BridgeDraftListView": "ae18f7b9d1",
+    "UnsentDraftsView": "9733f8ee70",
+    "JournalMonthView": "8ff4a71cfe",
+    "JournalYearView": "976eb88299"
   }
 }

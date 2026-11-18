@@ -313,7 +313,7 @@
   font-family: var(--au-text); --au-rounded: ui-rounded, "SF Pro Rounded", "Nunito Variable", system-ui, -apple-system, "Segoe UI", sans-serif; --au-text: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, "Segoe UI", sans-serif;
   --au-primary: #000; --au-secondary: rgb(60 60 67 / 0.6); --au-tertiary: rgb(60 60 67 / 0.3); text-align: left; }
 .au-sheet[data-anchor-scheme="dark"] { --au-primary: #fff; --au-secondary: rgb(235 235 245 / 0.6); --au-tertiary: rgb(235 235 245 / 0.3); }
-.au-sheet-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 39px 16px 16px; scrollbar-width: none; }
+.au-sheet-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 83px 16px 16px; scrollbar-width: none; }
 .au-sheet-scroll::-webkit-scrollbar { display: none; }
 .au-skip { display: inline-flex; align-items: center; height: 44px; padding: 0 20px; border-radius: 22px; border: 0; background: color-mix(in srgb, var(--anchor-card-background) 70%, transparent); box-shadow: 0 0 0 1px rgb(0 0 0 / 0.06); color: var(--anchor-accent); font: 400 17px/22px var(--au-text); cursor: pointer; }
 .au-sheet-title { margin: 20px 0 8px; font: 700 34px/41px var(--au-text); letter-spacing: 0.37px; }
@@ -341,3 +341,62 @@
 .au-lock b { font-size: 22px; font-weight: 600; }
 .au-lock span:last-child { font-size: 15px; opacity: 0.6; }
 .au-lock-ic { width: 76px; height: 76px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--anchor-accent) 15%, transparent); color: var(--anchor-accent); margin-bottom: 10px; }
+
+.au-muted { opacity: 0.82; }
+.au-ring-waiting { cursor: default !important; color: var(--au-secondary) !important; }
+.au-pills { display: flex; gap: 8px; margin: 0 -16px; padding: 10px 16px; background: rgb(120 120 128 / 0.08); }
+.au-pill { padding: 6px 14px; border-radius: 999px; border: 1px solid rgb(60 60 67 / 0.2); background: color-mix(in srgb, var(--anchor-card-background) 60%, transparent); font: 400 15px/18px var(--au-rounded); color: var(--au-primary); cursor: pointer; }
+.au-pill-on { background: var(--anchor-accent-soft); border-color: color-mix(in srgb, var(--anchor-accent) 55%, transparent); color: var(--anchor-accent); font-weight: 500; }
+.au-prep-line { font: 400 15px/19px var(--au-text); color: var(--au-secondary); text-align: left; }
+.au-prep-sub { font: 600 15px/18px var(--au-rounded); text-align: left; }
+.au-prep-date { font: 400 20px/24px var(--au-rounded); text-align: left; }
+.au-choose { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 4px 0; border: 0; background: none; font: 400 17px/20px var(--au-rounded); color: var(--au-primary); cursor: pointer; }
+.au-choose-list { display: flex; flex-direction: column; gap: 10px; }
+.au-pick { display: flex; align-items: flex-start; gap: 10px; border: 0; background: none; padding: 0; text-align: left; cursor: pointer; color: var(--au-primary); }
+.au-pick .au-ringicon { color: var(--anchor-accent); display: inline-flex; flex: none; }
+.au-bullets { display: flex; flex-direction: column; gap: 6px; font: 400 17px/20px var(--au-text); text-align: left; }
+.au-bullet { display: flex; align-items: baseline; gap: 8px; }
+.au-bullet .au-glyph { color: var(--au-secondary); transform: translateY(2px); }
+.au-bring-row { display: flex; align-items: flex-start; gap: 4px; }
+.au-bring-row .au-pick { flex: 1; font: 400 17px/22px var(--au-text); gap: 12px; }
+.au-xbtn { border: 0; background: none; color: var(--au-secondary); cursor: pointer; padding: 3px; display: inline-flex; }
+.au-bring-add { display: flex; align-items: center; gap: 8px; }
+.au-bring-add input { flex: 1; min-width: 0; border: 0; background: none; outline: none; font: 400 17px/22px var(--au-text); color: var(--au-primary); padding: 0; }
+.au-bring-add input::placeholder { color: var(--au-tertiary); }
+.au-bring-add button { border: 0; background: none; font: 400 17px/22px var(--au-text); color: var(--au-tertiary) !important; cursor: pointer; padding: 0; }
+.au-bring-add button.on { color: var(--anchor-accent) !important; }
+.au-notes-text { font: 400 17px/22px var(--au-text); text-align: left; }
+.au-draft-top { display: flex; align-items: baseline; gap: 8px; }
+.au-draft-top .au-grow { flex: 1; }
+.au-draftcard { position: relative; }
+
+/* Journal month and year */
+.au-period { display: flex; align-items: center; justify-content: space-between; color: var(--anchor-accent); }
+.au-period .au-headline { color: var(--anchor-accent); }
+.au-period button { border: 0; background: none; padding: 0; color: var(--anchor-accent) !important; cursor: pointer; display: inline-flex; }
+.au-period button:disabled { opacity: 0.3; cursor: default; }
+.au-monthgrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.au-daycell { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 48px; border-radius: 10px; }
+.au-daycell-today { background: var(--anchor-accent-soft); }
+.au-daynum { font: 400 15px/18px var(--au-rounded); }
+.au-daydots { display: flex; gap: 3px; height: 6px; align-items: center; }
+.au-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--anchor-accent); }
+.au-sq { display: inline-block; width: 6px; height: 6px; border-radius: 1px; background: var(--anchor-sage); }
+.au-legend { display: flex; justify-content: center; gap: 16px; font: 400 12px/14px var(--au-text); color: var(--au-secondary); }
+.au-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.au-legend i { width: 7px; height: 7px; }
+.au-yeargrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; align-items: start; }
+.au-minimonth { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 8px; border: 0; border-radius: 10px; background: var(--anchor-sage-soft); text-align: left; cursor: pointer; color: var(--au-primary); }
+.au-minimonth.au-future { opacity: 0.5; cursor: default; }
+.au-minigrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; width: 100%; }
+.au-minigrid i { display: block; aspect-ratio: 1; border-radius: 2px; }
+.au-shade-0 { background: rgb(120 120 128 / 0.14); }
+.au-shade-1 { background: color-mix(in srgb, var(--anchor-accent) 45%, transparent); }
+.au-shade-2 { background: var(--anchor-accent); }
+.au-minilead { background: transparent; }
+.au-sheet-top { position: absolute; top: 0; left: 0; right: 0; height: 83px; z-index: 3; padding: 39px 16px 0; box-sizing: border-box; display: flex; align-items: flex-start; pointer-events: none; }
+.au-sheet-top[data-on] { background: color-mix(in srgb, var(--anchor-background) 92%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.au-sheet-top .au-skip { pointer-events: auto; }
+.au-sheet-inline { position: absolute; left: 0; right: 0; top: 52px; text-align: center; font: 600 17px/22px var(--au-text); opacity: 0; transition: opacity 0.15s; }
+.au-sheet-top[data-on] .au-sheet-inline { opacity: 1; }
+.au-ring-done { color: var(--anchor-sage) !important; }

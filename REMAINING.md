@@ -75,7 +75,7 @@ Everything here builds and launches on your phone (confirmed 11 Nov 2026, after 
 **Parked on purpose**
 
 - **49, 50**: demo routes A and C, replaced by 55.
-- **55**: the web demo, done as 56a to 56j instead of recorded pictures: the screens are rebuilt in `website/src/components/ios` and read their content, colours and layout from the Swift. 55b's recording scripts are removed. Still to build there: Session prep, Things I haven't said, the Journal Month and Year views and the editors behind each row.
+- **55**: the web demo, done as 56a to 56j instead of recorded pictures: the screens are rebuilt in `website/src/components/ios` and read their content, colours and layout from the Swift. 55b's recording scripts are removed. Still to build there: the editors behind each row, the Feedback-loop diagram itself, the live Recovery counter and the guided Grounding tool screens.
 
 ## 4. Offered but not built
 

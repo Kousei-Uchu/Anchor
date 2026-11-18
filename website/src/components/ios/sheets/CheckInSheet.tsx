@@ -15,12 +15,16 @@ const SLIDERS = [
 
 export default function CheckInSheet({ scheme, onClose }: { scheme: 'light' | 'dark'; onClose: () => void }) {
   const [values, setValues] = useState<number[]>(SLIDERS.map(() => 0.5));
+  const [collapsed, setCollapsed] = useState(false);
   return (
     <div className="au-sheet-wrap" data-anchor-scheme={scheme}>
       <div className="au-sheet-dim" />
       <div className="au-sheet" data-anchor-scheme={scheme} role="dialog" aria-label="Check in">
-        <div className="au-sheet-scroll">
+        <div className="au-sheet-top" data-on={collapsed ? '' : undefined}>
           <button type="button" className="au-skip" onClick={onClose}>Skip</button>
+          <span className="au-sheet-inline">Check in</span>
+        </div>
+        <div className="au-sheet-scroll" onScroll={(e) => setCollapsed(e.currentTarget.scrollTop > 50)}>
           <h1 className="au-sheet-title">Check in</h1>
           <div className="au-sheet-stack">
             <MascotPresence line="Want to check in? Totally fine to skip." tone="sage" />

@@ -26,7 +26,7 @@ function render(id: string, m: { title: string; icon: string; tint: 'accent' | '
     case 'unsentDrafts': {
       const n = unsentDraftCount();
       const caption = 'Private. For big things you might never send.';
-      return <Widget icon={m.icon} title={m.title} tint={m.tint}>{n > 0 ? <div className="au-stack-2"><WidgetBig text={`${n} ${n === 1 ? 'draft' : 'drafts'}`} /><WidgetCaption text={caption} /></div> : <WidgetCaption text={caption} />}</Widget>;
+      return <Widget icon={m.icon} title={m.title} tint={m.tint} onOpen={() => nav.push('drafts')}>{n > 0 ? <div className="au-stack-2"><WidgetBig text={`${n} ${n === 1 ? 'draft' : 'drafts'}`} /><WidgetCaption text={caption} /></div> : <WidgetCaption text={caption} />}</Widget>;
     }
     case 'boundaries': {
       const b = boundariesGlance();

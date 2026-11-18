@@ -12,6 +12,10 @@ export const enumOf = (v: unknown): string => (v && typeof v === 'object' && '$e
 export const idOf = (v: unknown): string | null => (v && typeof v === 'object' && '$id' in (v as object) ? String((v as Row).$id) : null);
 
 const DAY = 86_400_000;
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+/** "3 Nov 2026", with the month abbreviations the app uses. */
+export const shortDate = (d: Date) => `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+export const monthShort = (d: Date) => MONTHS[d.getMonth()];
 /** The demo's "now": today at 10:25 am, the time of day the app's demo data is built around, so every visitor sees the same day grouping. */
 export const demoNow = () => { const d = new Date(); d.setHours(10, 25, 0, 0); return d; };
 export const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -42,7 +46,7 @@ export function resolveDate(v: unknown, now: Date = demoNow()): Date | null {
 
 /** "10 Nov 2026 at 10:30 am", like Swift's formatted(date: .abbreviated, time: .shortened) in an Australian locale. */
 export function formatAppointment(d: Date): string {
-  const date = new Intl.DateTimeFormat('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }).format(d);
+  const date = shortDate(d);
   const time = new Intl.DateTimeFormat('en-AU', { hour: 'numeric', minute: '2-digit', hour12: true }).format(d).toLowerCase().replace(/\s/g, ' ');
   return `${date} at ${time}`;
 }
@@ -343,7 +347,7 @@ export function groundingToolRows(): { title: string; kindLabel: string; when: s
   });
 }
 
-const dateOnly = (d: Date) => new Intl.DateTimeFormat('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }).format(d);
+const dateOnly = shortDate;
 const contactName = (ref: unknown) => { const id = idOf(ref); return String(rows('TrustedContact').find((c) => c._id === id)?.name ?? ''); };
 const firstLine = (text: unknown) => String(text ?? '').split('\n').map((l) => l.trim()).find(Boolean) ?? '';
 
@@ -432,7 +436,7 @@ const ENERGY_LABEL: Record<string, string> = { little: 'A little', some: 'Some',
 const ENERGY_ICON: Record<string, string> = { little: 'battery.25percent', some: 'battery.50percent', lots: 'battery.100percent' };
 const durationText = (m: number) => { const h = Math.floor(m / 60), r = m % 60; return h === 0 ? `${r} min` : r === 0 ? `${h} hr` : `${h} hr ${r} min`; };
 
-export type TaskCardData = { id: string; title: string; done: boolean; facts: { icon: string; text: string }[]; firstStep?: string; waitingOn?: string; steps: { title: string; done: boolean }[] };
+export type TaskCardData = { id: string; title: string; done: boolean; waiting?: boolean; muted?: boolean; facts: { icon: string; text: string }[]; firstStep?: string; waitingOn?: string; steps: { title: string; done: boolean }[] };
 
 /** TasksView: quick lists, then open tasks grouped by when they are due, then done tasks. */
 export function taskScreen(now: Date = demoNow()) {
@@ -464,7 +468,7 @@ export function taskScreen(now: Date = demoNow()) {
     if (Number(t.focusSessions) > 0) facts.push({ icon: 'timer', text: Number(t.focusSessions) === 1 ? '1 session' : `${t.focusSessions} sessions` });
     const showsFirstStep = !t.isDone && !blockers.length && enumOf(t.status) !== 'setAside' && !started && String(t.firstStep ?? '').trim() !== '';
     return {
-      id: String(t._id ?? t.title), title: String(t.title), done: !!t.isDone, facts,
+      id: String(t._id ?? t.title), title: String(t.title), done: !!t.isDone, waiting: blockers.length > 0, muted: blockers.length > 0 || enumOf(t.status) === 'setAside', facts,
       firstStep: showsFirstStep ? String(t.firstStep) : undefined,
       waitingOn: blockers.length ? (blockers.length === 1 ? `Waiting on ${blockers[0].title}` : `Waiting on ${blockers[0].title} and ${blockers.length - 1} more`) : undefined,
       steps: steps.map((s) => ({ title: String(s.title), done: !!s.isDone })),
@@ -474,5 +478,132 @@ export function taskScreen(now: Date = demoNow()) {
   const buckets = TASK_BUCKETS.map((title) => ({ title, tasks: open.filter((t) => bucketOf(t) === title).map(card) })).filter((b) => b.tasks.length > 0);
   const done = top.filter((t) => t.isDone).map(card);
   const quickLists = rows('QuickList').filter((l) => !l.archivedAt).map((l) => ({ title: String(l.title), ticked: (l.items ?? []).filter((i: Row) => i.isDone).length, total: (l.items ?? []).length }));
-  return { quickLists, buckets, done };
+  const archivedLists = rows('QuickList').filter((l) => l.archivedAt).length;
+  return { quickLists, buckets, done, archivedLists };
+}
+
+// ---- Session prep, After session, Bridge draft, Things I haven't said, Journal month and year ----
+
+const sortOrder = (a: Row, b: Row) => Number(a.sortOrder ?? 0) - Number(b.sortOrder ?? 0);
+export const clinicians = (): { id: string; name: string }[] => [...rows('AppointmentSeries')].sort(sortOrder).map((s) => ({ id: String(s._id), name: String(s.clinicianLabel) }));
+const asDay = shortDate;
+const clockText = (h: number, m: number) => new Intl.DateTimeFormat('en-AU', { hour: 'numeric', minute: '2-digit', hour12: true }).format(new Date(2000, 0, 1, h, m)).toLowerCase();
+const describeMinutes = (n: number) => { const h = Math.floor(n / 60), m = n % 60; return h === 0 ? `${m} min` : m === 0 ? `${h} h` : `${h} h ${m} min`; };
+
+/** The demo's sleep nights, worked out the way DemoMode's loop does (the numbers and the loop's text are in demo.seed.generated.json). */
+function sleepNights(now: Date) {
+  return (raw.sleep.asleep as number[]).map((asleep, i) => {
+    const night = startOfDay(new Date(now.getTime() - i * DAY));
+    const wake = new Date(night.getTime() + 7 * 3_600_000 + (i % 3) * 900_000);
+    const bed = new Date(wake.getTime() - (asleep + 20) * 60_000);
+    return { night, bed, minutes: i === 3 ? asleep : Math.round((wake.getTime() - bed.getTime()) / 60_000) };
+  });
+}
+
+/** SleepSessionSummaryCard.describingLines */
+function sleepLines(since: Date, now: Date): string[] {
+  const start = startOfDay(since);
+  const nights = sleepNights(now).filter((n) => n.night >= start && n.night <= now);
+  const lines = [`${nights.length === 1 ? '1 night' : `${nights.length} nights`} written down since ${asDay(since)}.`];
+  const mins = nights.map((n) => n.minutes);
+  if (mins.length) {
+    const low = Math.min(...mins), high = Math.max(...mins);
+    lines.push(mins.length === 1 ? `Asleep about ${describeMinutes(low)} on the night with a time.` : low === high ? `Asleep about ${describeMinutes(low)} each of those nights.` : `Time asleep from ${describeMinutes(low)} to ${describeMinutes(high)}.`);
+  }
+  const offsets = nights.map((n) => (n.bed.getHours() * 60 + n.bed.getMinutes() - 18 * 60 + 24 * 60) % (24 * 60)).sort((a, b) => a - b);
+  if (offsets.length >= 3) {
+    const round15 = (v: number) => Math.floor((v + 7) / 15) * 15;
+    const low = round15(offsets[Math.round((offsets.length - 1) * 0.2)]), high = round15(offsets[Math.round((offsets.length - 1) * 0.8)]);
+    const at = (o: number) => { const c = (o + 18 * 60) % (24 * 60); return clockText(Math.floor(c / 60), c % 60); };
+    lines.push(low === high ? `Usually in bed around ${at(low)}.` : `Usually in bed between ${at(low)} and ${at(high)}.`);
+  }
+  return lines;
+}
+
+/** RecoverySummary.lines */
+function recoveryLines(counter: Row, since: Date, now: Date): string[] {
+  const rec = recoveryHome(now).find((r) => r.name === counter.name);
+  const days = rec?.days ?? 0, total = rec?.total ?? 0;
+  let headline = `${days} ${days === 1 ? 'day' : 'days'} in the current run`;
+  if (total !== days) headline += `, ${total} ${total === 1 ? 'day' : 'days'} in total`;
+  const out = [headline];
+  const order = ['mild', 'strong', 'intense'];
+  const urges = rows('RecoveryUrge').filter((u) => idOf(u.counterID) === counter._id && (() => { const d = resolveDate(u.date, now); return !!d && d >= since && d <= now; })());
+  if (urges.length === 0) out.push('No urges logged');
+  else {
+    const strongest = urges.map((u) => enumOf(u.strength)).sort((a, b) => order.indexOf(b) - order.indexOf(a))[0];
+    out.push(`${urges.length} ${urges.length === 1 ? 'urge' : 'urges'} logged, strongest felt ${strongest}`);
+  }
+  const fresh = (counter.runs ?? []).slice(1).filter((r: Row) => { const d = resolveDate(r.start, now); return !!d && d >= since && d <= now; }).length;
+  if (fresh > 0) out.push(`${fresh} fresh ${fresh === 1 ? 'start' : 'starts'}`);
+  return out;
+}
+
+/** AppointmentPrepView: everything the Session prep screen shows for one clinician. */
+export function sessionPrep(id: string, now: Date = demoNow()) {
+  const series = rows('AppointmentSeries').find((s) => s._id === id);
+  if (!series) return null;
+  const occ = (series.occurrences ?? []).map((o: Row) => ({ o, date: resolveDate(o.scheduledDate, now) })).filter((x: { date: Date | null }) => x.date) as { o: Row; date: Date }[];
+  const next = occ.filter((x) => x.date > now).sort((a, b) => a.date.getTime() - b.date.getTime())[0];
+  const last = occ.filter((x) => x.date <= now).sort((a, b) => b.date.getTime() - a.date.getTime())[0]?.date ?? null;
+  const since = last ?? new Date(now.getTime() - Math.max(Number(series.typicalCadenceDays ?? 14), 7) * DAY);
+  const own = new Set((series.occurrences ?? []).flatMap((o: Row) => [idOf(o.prepNoteEntryID), idOf(o.postSessionNoteEntryID)]).filter(Boolean));
+  const entries = rows('JournalEntry').filter((e) => { const d = resolveDate(e.createdAt, now); return !!d && d >= since && !own.has(e._id) && entryText(e).trim() !== ''; });
+  const checkIns = rows('CheckIn').filter((c) => { const d = resolveDate(c.timestamp, now); return !!d && d >= since; }).length;
+  const bookmarked = entries.filter((e) => e.isFavorited).length;
+  const plural = (n: number, one: string, many: string) => (n === 1 ? `1 ${one}` : `${n} ${many}`);
+  const parts: string[] = [];
+  if (entries.length) parts.push(plural(entries.length, 'journal entry', 'journal entries') + (bookmarked ? ` (${bookmarked} bookmarked)` : ''));
+  if (checkIns) parts.push(plural(checkIns, 'check-in', 'check-ins'));
+  const prepEntry = next ? rows('JournalEntry').find((e) => e._id === idOf(next.o.prepNoteEntryID)) : undefined;
+  const eligible = entries.map((e) => ({ e, t: resolveDate(e.createdAt, now)!.getTime() })).sort((a, b) => b.t - a.t);
+  const ordered = [...eligible.filter((x) => x.e.isFavorited), ...eligible.filter((x) => !x.e.isFavorited)].slice(0, 12);
+  return {
+    name: String(series.clinicianLabel),
+    since: asDay(since),
+    journalParts: parts.join(' and '),
+    journalEntries: ordered.map((x) => { const line = previewLine(entryText(x.e)) ?? ''; return { id: String(x.e._id ?? x.t), day: asDay(new Date(x.t)), line: line.length > 140 ? line.slice(0, 140) + '...' : line, bookmarked: !!x.e.isFavorited }; }),
+    about: String(series.notes ?? '').trim() || null,
+    next: next ? formatAppointment(next.date) : null,
+    sinceIsLast: !!last,
+    recovery: rows('RecoveryCounter').filter((c) => !c.isArchived).sort(sortOrder).map((c) => ({ name: String(c.name), lines: recoveryLines(c, since, now) })),
+    journalLine: `${parts.join(' and ')} since ${asDay(since)}.`,
+    sleep: sleepLines(since, now),
+    raise: rows('BridgeDraftItem').filter((i) => !i.isResolved && String(i.text ?? '').trim() && (!i.providerID || idOf(i.providerID) === id)).map((i) => ({ text: String(i.text), isQuestion: !!i.isQuestion })),
+    bring: (next?.o.prepChecklist ?? []).map((i: Row) => ({ text: String(i.text), done: !!i.isDone })),
+    prepNotes: prepEntry ? entryText(prepEntry) : '',
+  };
+}
+
+/** The "Post-session notes" list: past sessions, newest first. */
+export function postSessions(id: string, now: Date = demoNow()): { when: string; note: string }[] {
+  const series = rows('AppointmentSeries').find((s) => s._id === id);
+  return (series?.occurrences ?? []).map((o: Row) => ({ o, date: resolveDate(o.scheduledDate, now) })).filter((x: { date: Date | null }) => x.date && x.date <= now)
+    .sort((a: { date: Date }, b: { date: Date }) => b.date.getTime() - a.date.getTime())
+    .map((x: { o: Row; date: Date }) => ({ when: formatAppointment(x.date), note: idOf(x.o.postSessionNoteEntryID) ? 'Has notes' : 'No notes yet' }));
+}
+
+/** UnsentDraftsView */
+export function unsentDraftRows(now: Date = demoNow()) {
+  return rows('UnsentDraft').map((d) => ({ t: resolveDate(d.createdAt, now)?.getTime() ?? 0, to: String(d.recipientLabel ?? ''), text: String(d.text ?? ''), sent: !!d.wasSent })).sort((a, b) => b.t - a.t);
+}
+
+/** The Bridge draft list behind Things to raise: open items newest first, then resolved ones. */
+export function bridgeDraftRows(now: Date = demoNow()) {
+  const all = rows('BridgeDraftItem');
+  const clinician = (i: Row) => (i.providerID ? String(rows('AppointmentSeries').find((s) => s._id === idOf(i.providerID))?.clinicianLabel ?? '') : '');
+  const view = (i: Row) => ({ text: String(i.text), isQuestion: !!i.isQuestion, resolved: !!i.isResolved, answer: String(i.answer ?? ''), meta: [clinician(i) ? `For ${clinician(i)}` : '', asDay(resolveDate(i.createdAt, now) ?? now)].filter(Boolean).join(' \u00b7 ') });
+  return [...all.filter((i) => !i.isResolved).reverse().map(view), ...all.filter((i) => i.isResolved).map(view)];
+}
+
+/** Counts per day for the Journal month and year views. */
+export function journalCounts(now: Date = demoNow()) {
+  const map = new Map<number, { entries: number; checkIns: number }>();
+  for (const d of journalDays(now)) {
+    const c = { entries: 0, checkIns: 0 };
+    for (const it of d.items) it.kind === 'entry' ? c.entries++ : c.checkIns++;
+    map.set(d.day.getTime(), c);
+  }
+  const earliest = [...map.keys()].sort((a, b) => a - b)[0] ?? now.getTime();
+  return { map, earliest: new Date(earliest) };
 }
