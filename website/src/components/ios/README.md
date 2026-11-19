@@ -46,7 +46,9 @@ Run `cd website && npm run dev` and open `/demo-now`. Add `?dark` for dark mode.
   Tasks (quick lists, tasks grouped by when they are due, the facts on each card, ticking and adding) and Recovery are built too, opened from the Now and Plan cards.
   Session prep (for each clinician: next session, recovery, journal and sleep summaries worked out with the app's own rules, what is waiting to be raised, the bring list and prep notes, each card's "Add to prep notes"), Post-session notes,
   the Bridge draft list behind Things to raise, and Things I haven't said are built as well. The sleep numbers come from the demo's own loop, which `sync-seed.mjs` keeps a copy of so a change to it fails the check.
-  Still to build: the editors behind each row, the Feedback-loop diagram itself, the live Recovery counter, and the guided Grounding tool screens.
+  The Feedback-loop diagram (the steps on a ring with arrows and plus or minus badges, then how each step leads to the next), a counter's Summary page (the time on this run counting up, with its rings),
+  and the Grounding tool editor (an iOS Form in a sheet, opened by tapping a tool) are built too. Screens that need to know which item was tapped take an argument: `?screen=loop::Waking in the night`, `?screen=counter::Energy drinks`, `?sheet=edittool::5-4-3-2-1`.
+  Still to build: the editors behind each other row, the Map kind of Feedback-loop diagram, the other pages of a counter (Savings, Calendar, Urges, Reasons), and the guided Grounding tool screens.
 - **Sheets**: `nav.present('checkin')` shows the Now check-in over the whole app, with five working sliders (the Check in button on the Now tab opens it).
   Open it directly with `?sheet=checkin`.
 - Inline titles are centred on the screen when they fit clear of the toolbar buttons, and sit next to the back button when they do not, as in iOS. Tapping the tab you are on goes back to its first screen.

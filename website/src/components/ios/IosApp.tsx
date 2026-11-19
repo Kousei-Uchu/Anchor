@@ -7,9 +7,10 @@ import BridgeTab from './tabs/BridgeTab';
 import ThreadTab from './tabs/ThreadTab';
 import { useJournalTab } from './tabs/JournalTab';
 import { useAffirmations, useContacts, useDeEscalation, useGrounding, type DetailParts } from './screens/ListScreens';
-import { useRecovery, useTasks } from './screens/TasksRecoveryScreens';
-import { useAfterSession, useBridgeDraft, usePrep } from './screens/BridgeScreens';
+import { useCounter, useRecovery, useTasks } from './screens/TasksRecoveryScreens';
+import { useAfterSession, useBridgeDraft, useLoopDiagram, usePrep } from './screens/BridgeScreens';
 import CheckInSheet from './sheets/CheckInSheet';
+import GroundingToolSheet from './sheets/GroundingToolSheet';
 import { useBoundaries, useFeedbackLoops, useFutureNotes, useMessageLog, usePeople, usePersonalGoals, useSafetyPlan, useSupportCalendar, useUnsentDrafts } from './screens/MoreScreens';
 
 /**
@@ -26,15 +27,17 @@ const useThread = (): Parts => ({ inset: 8, body: <ThreadTab /> });
 const TABS: Record<string, () => Parts> = { Now: useNow, Plan: usePlan, Journal: useJournal, Bridge: useBridge, Thread: useThread };
 
 /** Pushed screens, by the name a screen passes to nav.push(). */
-const DETAILS: Record<string, () => DetailParts> = {
+const DETAILS: Record<string, (arg?: string) => DetailParts> = {
   contacts: useContacts, grounding: useGrounding, deescalation: useDeEscalation, affirmations: useAffirmations,
   people: usePeople, future: useFutureNotes, goals: usePersonalGoals, diagrams: useFeedbackLoops,
   boundaries: useBoundaries, calendar: useSupportCalendar, messages: useMessageLog, safety: useSafetyPlan,
-  tasks: useTasks, recovery: useRecovery, prep: usePrep, after: useAfterSession, raise: useBridgeDraft, drafts: useUnsentDrafts,
+  tasks: useTasks, recovery: useRecovery, prep: usePrep, after: useAfterSession, raise: useBridgeDraft, drafts: useUnsentDrafts, loop: useLoopDiagram, counter: useCounter,
 };
 
 /** Sheets shown over the whole app, by the name a screen passes to nav.present(). */
-const SHEETS: Record<string, (p: { scheme: 'light' | 'dark'; onClose: () => void }) => ReactNode> = { checkin: CheckInSheet };
+const SHEETS: Record<string, (p: { scheme: 'light' | 'dark'; onClose: () => void; arg?: string }) => ReactNode> = { checkin: CheckInSheet, edittool: GroundingToolSheet };
+const nameOf = (id: string) => id.split('::')[0];
+const argOf = (id: string) => id.split('::').slice(1).join('::') || undefined;
 
 type Common = { scheme: 'light' | 'dark'; full: boolean; onTab: (t: string) => void };
 
@@ -45,7 +48,7 @@ function ActiveTab({ tab, scheme, full, onTab }: Common & { tab: string }) {
 }
 
 function DetailView({ id, tab, onBack, scheme, full, onTab }: Common & { id: string; tab: string; onBack: () => void }) {
-  const d = DETAILS[id]();
+  const d = DETAILS[nameOf(id)](argOf(id));
   return <AnchorScreen title={d.title} tab={tab} onTab={onTab} onBack={onBack} toolbar={d.toolbar} inset={d.inset} pinned={d.pinned} bottomBar={d.bottomBar} scheme={scheme} full={full}>{d.body}</AnchorScreen>;
 }
 
@@ -56,14 +59,14 @@ export default function IosApp({ initialTab = 'Now', initialScreen, initialSheet
   const first = initialTab in TABS ? initialTab : 'Now';
   const [own, setOwn] = useState(first);
   const tab = controlledTab && controlledTab in TABS ? controlledTab : own;
-  const [stacks, setStacks] = useState<Record<string, string[]>>(initialScreen && initialScreen in DETAILS ? { [first]: [initialScreen] } : {});
-  const [sheet, setSheet] = useState<string | null>(initialSheet && initialSheet in SHEETS ? initialSheet : null);
+  const [stacks, setStacks] = useState<Record<string, string[]>>(initialScreen && nameOf(initialScreen) in DETAILS ? { [first]: [initialScreen] } : {});
+  const [sheet, setSheet] = useState<string | null>(initialSheet && nameOf(initialSheet) in SHEETS ? initialSheet : null);
   const frame = useRef<HTMLDivElement>(null);
   const stack = stacks[tab] ?? [];
   const nav: Nav = {
-    push: (id) => { if (id in DETAILS) setStacks((s) => ({ ...s, [tab]: [...(s[tab] ?? []), id] })); },
+    push: (id) => { if (nameOf(id) in DETAILS) setStacks((s) => ({ ...s, [tab]: [...(s[tab] ?? []), id] })); },
     pop: () => setStacks((s) => ({ ...s, [tab]: (s[tab] ?? []).slice(0, -1) })),
-    present: (id) => { if (id in SHEETS) setSheet(id); },
+    present: (id) => { if (nameOf(id) in SHEETS) setSheet(id); },
     dismiss: () => setSheet(null),
   };
   // Tapping the tab you are on goes back to its first screen, as in iOS.
@@ -81,13 +84,13 @@ export default function IosApp({ initialTab = 'Now', initialScreen, initialSheet
     return () => window.clearTimeout(id);
   }, [tab, scrollTo]);
   const top = stack[stack.length - 1];
-  const Sheet = sheet ? SHEETS[sheet] : null;
+  const Sheet = sheet ? SHEETS[nameOf(sheet)] : null;
   return (
     <NavContext.Provider value={nav}>
       <div className="au-frame" ref={frame}>
         <div style={{ display: top ? 'none' : undefined }}><ActiveTab key={tab} tab={tab} scheme={scheme} full={full} onTab={onTab} /></div>
         {top && <DetailView key={`${tab}/${stack.join('/')}`} id={top} tab={tab} onBack={nav.pop} scheme={scheme} full={full} onTab={onTab} />}
-        {Sheet && <Sheet scheme={scheme} onClose={nav.dismiss} />}
+        {Sheet && sheet && <Sheet scheme={scheme} onClose={nav.dismiss} arg={argOf(sheet)} />}
         <div className={`au-lock${locked ? ' on' : ''}`} data-anchor-scheme={scheme} aria-hidden={!locked}>
           <span className="au-lock-ic"><Glyph name="lock" size={34} weight={1.6} /></span>
           <b>Anchor is locked</b>

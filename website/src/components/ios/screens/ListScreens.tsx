@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Card, Glyph, ListCard, SecondaryButton } from '../AnchorUI';
+import { useNav } from '../nav';
 import { affirmations, contactRows, deEscalationScripts, groundingToolRows } from '../../../content/seed';
 
 /** Pushed list screens. Each hook returns what the shell needs: the title, the toolbar, and the body. */
@@ -41,12 +42,13 @@ export function useContacts(): DetailParts {
 
 /** GroundingToolsEditorView */
 export function useGrounding(): DetailParts {
+  const nav = useNav();
   return {
     title: 'Grounding tools', toolbar: { trailing: REORDER_ADD }, inset: 18,
     body: (
       <>
         {groundingToolRows().map((t) => (
-          <ListCard key={t.title} tint="sage" accessory={t.hasSteps ? <span className="au-play"><Glyph name="play.circle.fill" size={32} /></span> : undefined}>
+          <ListCard key={t.title} tint="sage" onClick={() => nav.present(`edittool::${t.title}`)} accessory={t.hasSteps ? <span className="au-play"><Glyph name="play.circle.fill" size={32} /></span> : undefined}>
             <div className="au-row-top">
               <span className="au-headline au-grow">{t.title}</span>
               <span className="au-caption au-secondary au-label-plain"><Glyph name={t.kindLabel === 'Steps' ? 'list.number' : 'play.fill'} size={18} />{t.kindLabel}</span>

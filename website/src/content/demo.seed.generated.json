@@ -1289,7 +1289,21 @@
     "graphJSON": {
      "$expr": "DiagramGraph.loop([ (\"I wake up and check the time\", .same), (\"I start thinking about tomorrow\", .same), (\"I feel tense and wide awake\", .same) ]).encoded()"
     },
-    "_summary": "Loop, reinforcing"
+    "_summary": "Loop, reinforcing",
+    "_steps": [
+     {
+      "text": "I wake up and check the time",
+      "link": "same"
+     },
+     {
+      "text": "I start thinking about tomorrow",
+      "link": "same"
+     },
+     {
+      "text": "I feel tense and wide awake",
+      "link": "same"
+     }
+    ]
    },
    {
     "_type": "FeedbackLoopDiagram",
@@ -1297,7 +1311,21 @@
     "graphJSON": {
      "$expr": "DiagramGraph.loop([ (\"I take on more\", .same), (\"I feel stretched thin\", .same), (\"I say no to something\", .opposite) ]).encoded()"
     },
-    "_summary": "Loop, balancing"
+    "_summary": "Loop, balancing",
+    "_steps": [
+     {
+      "text": "I take on more",
+      "link": "same"
+     },
+     {
+      "text": "I feel stretched thin",
+      "link": "same"
+     },
+     {
+      "text": "I say no to something",
+      "link": "opposite"
+     }
+    ]
    },
    {
     "_type": "FeedbackLoopDiagram",

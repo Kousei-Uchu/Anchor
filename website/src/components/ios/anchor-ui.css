@@ -245,7 +245,7 @@
 .au-toolbar-detail { top: 62px; right: 20px; height: 44px; border-radius: 22px; }
 .au-toolbar-detail .au-toolbar-btn { width: 52px; height: 44px; border-radius: 22px; }
 .au-toolbar-detail .au-toolbar-btn:not(:only-child) { width: 52px; }
-.au-toolbar-btn.au-toolbar-text { width: 90px !important; padding: 0; font: 400 17px/22px var(--au-text); }
+.au-toolbar-btn.au-toolbar-text { width: auto !important; padding: 0 16px; font: 400 17px/22px var(--au-text); }
 .au-dtitle { position: absolute; top: 62px; height: 44px; left: 72px; right: 72px; display: flex; align-items: center; justify-content: center; pointer-events: none; font: 600 17px/22px var(--au-text); }
 .au-dtitle span { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .au-dtitle-left { justify-content: flex-start; left: 76px; }
@@ -400,3 +400,47 @@
 .au-sheet-inline { position: absolute; left: 0; right: 0; top: 52px; text-align: center; font: 600 17px/22px var(--au-text); opacity: 0; transition: opacity 0.15s; }
 .au-sheet-top[data-on] .au-sheet-inline { opacity: 1; }
 .au-ring-done { color: var(--anchor-sage) !important; }
+
+/* Loop diagram */
+.au-ring-wrap { position: relative; margin: 0 auto; }
+.au-ring-wrap svg { position: absolute; inset: 0; }
+.au-loop-node { position: absolute; transform: translate(-50%, -50%); box-sizing: content-box; max-width: 120px; padding: 9px 12px; border-radius: 12px; background: var(--anchor-sage-soft); font: 500 13px/17px var(--au-rounded); text-align: center; }
+.au-loop-badge { position: absolute; transform: translate(-50%, -50%); width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--anchor-accent-soft); color: var(--anchor-accent); font: 700 13px/1 var(--au-rounded); }
+
+/* Counter detail */
+.au-tabsrow { display: flex; gap: 6px; margin: 0 -16px; padding: 10px 16px; overflow: hidden; white-space: nowrap; }
+.au-tabchip { padding: 6px 14px; border-radius: 999px; font: 400 15px/18px var(--au-rounded); color: var(--au-secondary); }
+.au-tabchip-on { background: var(--anchor-sage-soft); color: var(--au-primary); font-weight: 500; }
+.au-counter { display: flex; align-items: center; justify-content: space-between; padding: 20px 8px 20px 16px; }
+.au-counter-nums { display: flex; flex-direction: column; gap: 2px; }
+.au-counter-row { display: flex; align-items: baseline; gap: 8px; }
+.au-counter-num { min-width: 44px; font: 600 36px/44px var(--au-rounded); text-align: left; font-variant-numeric: tabular-nums; }
+.au-dots { display: flex; justify-content: center; gap: 8px; padding: 66px 0 14px; }
+.au-dots i { width: 7px; height: 7px; border-radius: 50%; background: rgb(120 120 128 / 0.3); }
+.au-dots i.on { background: var(--au-primary); }
+.au-actions { display: flex; justify-content: space-around; font: 400 15px/18px var(--au-rounded); color: var(--au-secondary); }
+.au-actions span { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 90px; }
+
+/* Grounding tool editor: an iOS Form in a sheet */
+.au-sheet-form { --form-bg: #f2f1ee; --form-card: #fff; background: var(--form-bg); }
+.au-sheet-form[data-anchor-scheme="dark"] { --form-bg: #1c1c1e; --form-card: #2c2c2e; }
+.au-formbar { position: relative; flex: none; height: 108px; box-sizing: border-box; display: flex; align-items: flex-start; justify-content: center; font: 600 17px/22px var(--au-text); padding-top: 48px; }
+.au-formbar button { position: absolute; right: 18px; top: 37px; height: 44px; padding: 0 22px; border: 0; border-radius: 22px; background: color-mix(in srgb, var(--form-card) 80%, transparent); box-shadow: 0 0 0 1px rgb(0 0 0 / 0.06); color: var(--anchor-accent); font: 600 17px/22px var(--au-text); cursor: pointer; }
+.au-form { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 16px; scrollbar-width: none; }
+.au-formcard { background: var(--form-card); border-radius: 20px; padding: 14px 16px; }
+.au-formfield { width: 100%; box-sizing: border-box; border: 0; background: none; outline: none; font: 400 17px/22px var(--au-text); color: var(--au-primary); padding: 4px 0 10px; }
+.au-formrule { height: 1px; background: rgb(60 60 67 / 0.18); margin-bottom: 12px; }
+.au-formcard .au-segmented { margin: 0; background: rgb(120 120 128 / 0.12); }
+.au-formcard .au-segmented .au-seg-on { background: var(--form-card); }
+.au-formhead { padding: 22px 6px 8px; font: 600 15px/18px var(--au-text); color: var(--au-secondary); }
+.au-formnote { padding: 8px 6px 0; font: 400 13px/17px var(--au-text); color: var(--au-secondary); }
+.au-formtext { width: 100%; box-sizing: border-box; border: 0; background: none; outline: none; resize: none; font: 400 17px/26px var(--au-text); color: var(--au-primary); padding: 8px 4px; }
+.au-formrows { padding: 0 16px; }
+.au-formrow { display: flex; align-items: center; justify-content: space-between; min-height: 47px; font: 400 17px/22px var(--au-text); }
+.au-formrow + .au-formrow { border-top: 1px solid rgb(60 60 67 / 0.14); }
+.au-switch { position: relative; width: 51px; height: 31px; border: 0; border-radius: 16px; background: rgb(120 120 128 / 0.32); cursor: pointer; transition: background 0.2s; padding: 0; }
+.au-switch i { position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 2px 4px rgb(0 0 0 / 0.25); transition: transform 0.2s; }
+.au-switch.on { background: var(--anchor-accent); }
+.au-switch.on i { transform: translateX(20px); }
+.au-formdelete { flex: none; padding: 14px 16px 34px; text-align: center; background: color-mix(in srgb, var(--form-bg) 94%, #888); }
+.au-formdelete button { border: 0; background: none; color: #ff3b30; font: 400 17px/22px var(--au-text); cursor: pointer; }

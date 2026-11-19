@@ -385,8 +385,8 @@ export function goalGroups() {
 }
 
 /** FeedbackLoopDiagramView's list. Ties in edit time are arbitrary in the demo, so this follows what the app shows: the map first, then the loops as added. */
-export function diagramRows(): { title: string; summary: string }[] {
-  const list = rows('FeedbackLoopDiagram').map((d) => ({ title: String(d.title || 'Untitled'), summary: String(d._summary ?? '') }));
+export function diagramRows(): { title: string; summary: string; loop: boolean }[] {
+  const list = rows('FeedbackLoopDiagram').map((d) => ({ title: String(d.title || 'Untitled'), summary: String(d._summary ?? ''), loop: Array.isArray(d._steps) }));
   return [...list.filter((d) => d.summary.startsWith('Map')), ...list.filter((d) => !d.summary.startsWith('Map'))];
 }
 
@@ -606,4 +606,34 @@ export function journalCounts(now: Date = demoNow()) {
   }
   const earliest = [...map.keys()].sort((a, b) => a - b)[0] ?? now.getTime();
   return { map, earliest: new Date(earliest) };
+}
+
+
+/** A loop diagram: its steps in order, and whether each arrow means "more leads to more" (+) or "more leads to less" (-). */
+export function loopDiagram(title: string) {
+  const d = rows('FeedbackLoopDiagram').find((x) => x.title === title);
+  const steps: { text: string; opposite: boolean }[] = (d?._steps ?? []).map((st: Row) => ({ text: String(st.text), opposite: st.link === 'opposite' }));
+  if (steps.length === 0) return null;
+  const opposites = steps.filter((x) => x.opposite).length;
+  return {
+    steps,
+    closed: steps.length >= 2,
+    name: opposites % 2 === 0 ? 'Reinforcing' : 'Balancing',
+    sentence: opposites % 2 === 0 ? 'This one tends to keep itself going. Each time around, it adds to what it started with.' : 'This one tends to settle back. Each time around, it pushes against where it started.',
+  };
+}
+
+/** The counter detail screen's start: whole days on the current run and the next milestone, worked out like the cards on Now. */
+export function counterDetail(name: string, now: Date = demoNow()) {
+  const c = recoveryHome(now).find((x) => x.name === name);
+  const next = [1, 3, 7, 14, 21, 30, 60, 90, 120, 180, 270, 365].find((m) => m > (c?.days ?? 0)) ?? 365;
+  return c ? { name: c.name, days: c.days, next } : null;
+}
+
+/** One grounding tool for its editor sheet. */
+export function groundingToolDetail(title: string) {
+  const t = rows('GroundingTool').find((x) => x.title === title);
+  if (!t) return null;
+  const windows = (t.relevantTimeWindows ?? []).map((w: unknown) => enumOf(w));
+  return { title: String(t.title), steps: String(t.steps ?? ''), deepLink: enumOf(t.kind) === 'deepLink', windows };
 }

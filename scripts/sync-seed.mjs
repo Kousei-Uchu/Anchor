@@ -229,6 +229,7 @@ function build() {
     if (/DiagramGraph\.loop\(/.test(expr)) {
       const steps = (expr.match(/\(\s*"/g) ?? []).length, opposite = (expr.match(/\.opposite/g) ?? []).length;
       d._summary = steps < 2 ? "Loop, not closed yet" : `Loop, ${opposite % 2 === 0 ? "reinforcing" : "balancing"}`;
+      d._steps = [...expr.matchAll(/\(\s*"([^"]+)"\s*,\s*\.(same|opposite)\s*\)/g)].map((m) => ({ text: m[1], link: m[2] }));
     } else if (/DiagramGraph\.demoMap\(\)/.test(expr)) {
       const at = diagramSwift.indexOf("static func demoMap()");
       const names = /let names = \[([^\]]*)\]/.exec(diagramSwift.slice(at))?.[1] ?? "";

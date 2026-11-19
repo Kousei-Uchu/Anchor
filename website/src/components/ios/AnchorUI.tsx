@@ -89,6 +89,8 @@ const GLYPHS: Record<string, (w: number) => ReactNode> = {
   'text.bubble.fill': () => <path fill={F} fillRule="evenodd" d="M5 3.5h14A2.5 2.5 0 0 1 21.5 6v9a2.5 2.5 0 0 1-2.5 2.5h-6.5L7 21.5v-4H5A2.5 2.5 0 0 1 2.5 15V6A2.5 2.5 0 0 1 5 3.5zM7.5 8v1.5h9V8zm0 3.5V13h6v-1.5z" />,
   'circle.fill': () => <circle cx="12" cy="12" r="6" fill={F} />,
   checkmark: (w) => <path fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" d="M5 12.5l4.5 4.5L19 7.5" />,
+  waveform: (w) => <path fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" d="M3 12h2l1.5-5 2.5 11 2.5-14 2.5 15 2-9 1.5 2H21" />,
+  'arrow.counterclockwise': (w) => <path fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5M4.5 9a8 8 0 1 1-.700 6" />,
   sparkles: () => <g fill={F}><path d="M10 5l1.8 5.2L17 12l-5.2 1.8L10 19l-1.8-5.2L3 12l5.2-1.8z" /><path d="M18 2.5l.9 2.6 2.6.9-2.6.9L18 9.5l-.9-2.6-2.6-.9 2.6-.9zM18.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z" /></g>,
   'checkmark.circle.fill': () => <path fill={F} fillRule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.7 6.8a1 1 0 0 1 0 1.4l-5.3 5.3a1 1 0 0 1-1.4 0l-2.3-2.3a1 1 0 1 1 1.4-1.4l1.6 1.6 4.6-4.6a1 1 0 0 1 1.4 0z" />,
   checklist: (w) => <g fill="none" stroke={F} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"><path d="M3 6.5l1.6 1.6L7.5 5M3 12.5l1.6 1.6 2.9-3.1M3 18.5l1.6 1.6 2.9-3.1M11 7h10M11 13h10M11 19h10" /></g>,
@@ -116,7 +118,7 @@ export type Toolbar = { leading?: string[]; trailing?: string[] };
 function DetailTitle({ title, trailing }: { title: string; trailing: string[] }) {
   const ref = useRef<HTMLSpanElement>(null);
   const [centred, setCentred] = useState(true);
-  const pill = trailing.reduce((w, n) => w + (n.startsWith('text:') ? 90 : 52), 0);
+  const pill = trailing.reduce((w, n) => w + (n.startsWith('text:') ? 32 + (n.length - 5) * 8.7 : 52), 0);
   useLayoutEffect(() => {
     const measure = () => {
       const w = ref.current?.scrollWidth ?? 0;

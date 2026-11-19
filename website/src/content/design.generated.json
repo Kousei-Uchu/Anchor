@@ -108,6 +108,10 @@
     "BridgeDraftListView": "ae18f7b9d1",
     "UnsentDraftsView": "9733f8ee70",
     "JournalMonthView": "8ff4a71cfe",
-    "JournalYearView": "976eb88299"
+    "JournalYearView": "976eb88299",
+    "LoopReadView": "0b74fe1f07",
+    "LoopRingView": "748715e0a4",
+    "RecoverySummaryTab": "33ecbf0e10",
+    "GroundingToolEditorSheet": "fdd5afb711"
   }
 }

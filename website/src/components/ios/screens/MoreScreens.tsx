@@ -1,4 +1,5 @@
 import { Card, Glyph, ListCard, NavRow, SecondaryButton, SectionHeader } from '../AnchorUI';
+import { useNav } from '../nav';
 import type { DetailParts } from './ListScreens';
 import {
   boundaryCards, calendarEntries, diagramRows, futureNoteRows, goalGroups, messageLog, peopleRows, safetyPlan, unsentDraftRows, writeToNames,
@@ -63,10 +64,11 @@ export function usePersonalGoals(): DetailParts {
 
 /** FeedbackLoopDiagramView's list */
 export function useFeedbackLoops(): DetailParts {
+  const nav = useNav();
   return {
     title: 'Feedback-loop diagrams', toolbar: { trailing: HELP_ADD }, inset: 18,
     body: <>{diagramRows().map((d) => (
-      <Card key={d.title}><div className="au-listcard"><div className="au-listcard-main" style={{ gap: 2 }}><span className="au-headline">{d.title}</span><span className="au-caption au-secondary">{d.summary}</span></div><Chev /></div></Card>
+      <Card key={d.title} onClick={d.loop ? () => nav.push(`loop::${d.title}`) : undefined}><div className="au-listcard"><div className="au-listcard-main" style={{ gap: 2 }}><span className="au-headline">{d.title}</span><span className="au-caption au-secondary">{d.summary}</span></div><Chev /></div></Card>
     ))}</>,
   };
 }

@@ -89,6 +89,10 @@ const MIRRORED_VIEWS = [
   ["Views/Thread/UnsentDraftsView.swift", "UnsentDraftsView"],
   ["Views/Journal/JournalView.swift", "JournalMonthView"],
   ["Views/Journal/JournalView.swift", "JournalYearView"],
+  ["Views/Bridge/FeedbackLoopDiagramView.swift", "LoopReadView"],
+  ["Views/Bridge/FeedbackLoopDiagramView.swift", "LoopRingView"],
+  ["Views/Recovery/RecoverySummaryTab.swift", "RecoverySummaryTab"],
+  ["Views/Plan/GroundingToolsEditorView.swift", "GroundingToolEditorSheet"],
 ];
 
 const src = readFileSync(SWIFT, "utf8");

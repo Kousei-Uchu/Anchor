@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Card, ClinicianPills, Glyph, PrepCard, SecondaryButton, SectionHeader } from '../AnchorUI';
+import { Card, ClinicianPills, Divider, Glyph, PrepCard, SecondaryButton, SectionHeader } from '../AnchorUI';
 import type { DetailParts } from './ListScreens';
-import { bridgeDraftRows, clinicians, postSessions, sessionPrep } from '../../../content/seed';
+import { bridgeDraftRows, clinicians, loopDiagram, postSessions, sessionPrep } from '../../../content/seed';
 
 /** Session prep, Post-session notes and the Bridge draft list. */
 const PREP_TOOLBAR = ['questionmark.circle', 'person.crop.circle.fill'];
@@ -156,5 +156,63 @@ export function useBridgeDraft(): DetailParts {
         </Card>
       );
     })}</>,
+  };
+}
+
+
+/** LoopRingView: the steps sit on a circle, joined by arrows, with a plus or minus on each arrow. Sizes and spacing follow the Swift. */
+function LoopRing({ steps }: { steps: { text: string; opposite: boolean }[] }) {
+  const W = 408, H = 380, cx = W / 2, cy = H / 2;
+  const R = Math.max(60, Math.min(W, H) / 2 - 78);
+  const n = steps.length;
+  const angle = (i: number) => -Math.PI / 2 + (2 * Math.PI * i) / n;
+  const pt = (a: number, r = R) => ({ x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) });
+  const step = (2 * Math.PI) / n;
+  const inset = Math.min(40 / R, step * 0.32);
+  const arrows = n >= 2 ? steps.map((_, i) => {
+    const a0 = angle(i) + inset, a1 = angle(i) + step - inset;
+    const p0 = pt(a0), p1 = pt(a1);
+    const dir = { x: -Math.sin(a1), y: Math.cos(a1) };
+    const rot = (v: { x: number; y: number }, by: number) => ({ x: v.x * Math.cos(by) - v.y * Math.sin(by), y: v.x * Math.sin(by) + v.y * Math.cos(by) });
+    const l = rot(dir, Math.PI - 0.5), r = rot(dir, Math.PI + 0.5);
+    const head = `${p1.x},${p1.y} ${p1.x + l.x * 11},${p1.y + l.y * 11} ${p1.x + r.x * 11},${p1.y + r.y * 11}`;
+    return { d: `M ${p0.x} ${p0.y} A ${R} ${R} 0 ${step > Math.PI ? 1 : 0} 1 ${p1.x} ${p1.y}`, head, mid: pt(angle(i) + step / 2), opposite: steps[i].opposite };
+  }) : [];
+  return (
+    <div className="au-ring-wrap" style={{ width: W, height: H }}>
+      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
+        {arrows.map((a, i) => <g key={i}><path d={a.d} fill="none" stroke="var(--anchor-accent)" strokeOpacity="0.6" strokeWidth="2" /><polygon points={a.head} fill="var(--anchor-accent)" fillOpacity="0.8" /></g>)}
+      </svg>
+      {steps.map((st, i) => <div key={st.text} className="au-loop-node" style={{ left: pt(angle(i)).x, top: pt(angle(i)).y }}>{st.text}</div>)}
+      {arrows.map((a, i) => <div key={`b${i}`} className="au-loop-badge" style={{ left: a.mid.x, top: a.mid.y }}>{a.opposite ? '\u2212' : '+'}</div>)}
+    </div>
+  );
+}
+
+/** LoopReadView: the diagram, then what kind of loop it is and how each step leads to the next. */
+export function useLoopDiagram(title?: string): DetailParts {
+  const loop = loopDiagram(title ?? '');
+  return {
+    title: title ?? 'Diagram', toolbar: { trailing: ['ellipsis.circle', 'questionmark.circle', 'text:Edit'] }, inset: 18,
+    body: !loop ? <div className="au-subheadline au-secondary" style={{ textAlign: 'left' }}>This diagram is a map, which is not rebuilt for the website.</div> : (
+      <>
+        <LoopRing steps={loop.steps} />
+        <Card tint="sage">
+          <div className="au-stack-12">
+            <div className="au-stack-6"><span className="au-headline">{loop.closed ? loop.name : 'Not a loop yet'}</span><span className="au-subheadline au-secondary" style={{ textAlign: 'left' }}>{loop.closed ? loop.sentence : 'Add another step. The last step leads back to the first.'}</span></div>
+            {loop.closed && (
+              <>
+                <Divider />
+                {loop.steps.map((st, i) => (
+                  <div key={st.text} className="au-body" style={{ textAlign: 'left' }}>{st.text} leads to {loop.steps[(i + 1) % loop.steps.length].text}. {st.opposite ? 'More leads to less.' : 'More leads to more.'}</div>
+                ))}
+                <div className="au-caption au-secondary" style={{ textAlign: 'left' }}>A plus on an arrow means more leads to more. A minus means more leads to less.</div>
+              </>
+            )}
+          </div>
+        </Card>
+        <div style={{ height: 70 }} />
+      </>
+    ),
   };
 }

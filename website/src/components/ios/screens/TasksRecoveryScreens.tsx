@@ -1,10 +1,12 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Card, Glyph, MenuRow, SecondaryButton, TaskCardView } from '../AnchorUI';
 import type { DetailParts } from './ListScreens';
-import { recoveryHome, taskScreen, type TaskCardData } from '../../../content/seed';
+import { useNav } from '../nav';
+import { counterDetail, recoveryHome, taskScreen, type TaskCardData } from '../../../content/seed';
 
 /** RecoveryHomeView */
 export function useRecovery(): DetailParts {
+  const nav = useNav();
   const counters = recoveryHome();
   return {
     title: 'Recovery', toolbar: { trailing: ['gearshape', 'questionmark.circle'] }, inset: 10,
@@ -13,7 +15,7 @@ export function useRecovery(): DetailParts {
         <div className="au-recovery-hero">Your own counters, kept on this phone. Nothing here is scored, shared or compared.</div>
         <Card tint="sage"><MenuRow icon="wind" title="Riding out an urge" subtitle="A timer, your reasons, and your grounding tools" tint="sage" /></Card>
         {counters.map((c) => (
-          <Card key={c.name}>
+          <Card key={c.name} onClick={() => nav.push(`counter::${c.name}`)}>
             <div className="au-listcard">
               <div className="au-listcard-main" style={{ gap: 4 }}>
                 <span className="au-headline">{c.name}</span>
@@ -87,6 +89,61 @@ export function useTasks(): DetailParts {
           <Card><div className="au-listcard"><span className="au-secondary"><Glyph name="archivebox" size={28} weight={1.5} /></span><span className="au-body au-grow" style={{ textAlign: 'left' }}>Archive</span><span className="au-secondary">{base.archivedLists}</span><span className="au-tertiary"><Glyph name="chevron.right" size={20} weight={2.8} /></span></div></Card>
         )}
         <div style={{ height: 70 }} />
+      </>
+    ),
+  };
+}
+
+
+const DAY_MS = 86_400_000;
+
+/** The counter's rings: seconds on the outside, then progress toward the next milestone, with the counter's name in the middle. */
+function CounterRings({ seconds, dayProgress, name }: { seconds: number; dayProgress: number; name: string }) {
+  const arc = (r: number, frac: number) => { const a = Math.max(0.0001, Math.min(frac, 0.9999)) * 2 * Math.PI - Math.PI / 2; const x = 67 + r * Math.cos(a), y = 67 + r * Math.sin(a); return `M 67 ${67 - r} A ${r} ${r} 0 ${frac > 0.5 ? 1 : 0} 1 ${x} ${y}`; };
+  return (
+    <svg className="au-rings" width="150" height="150" viewBox="0 0 134 134" aria-hidden="true">
+      {[62, 54, 46, 38].map((r) => <circle key={r} cx="67" cy="67" r={r} fill="none" stroke="rgb(120 120 128 / 0.12)" strokeWidth="5" />)}
+      <path d={arc(62, seconds / 60)} fill="none" stroke="var(--anchor-accent)" strokeWidth="5" strokeLinecap="round" />
+      <path d={arc(46, dayProgress)} fill="none" stroke="var(--anchor-sage)" strokeWidth="5" strokeLinecap="round" />
+      <circle cx="67" cy="67" r="27" fill="url(#au-disc)" />
+      <defs><linearGradient id="au-disc" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="var(--anchor-accent)" stopOpacity="0.9" /><stop offset="1" stopColor="var(--anchor-accent)" stopOpacity="0.6" /></linearGradient></defs>
+      <text x="67" y="65" textAnchor="middle" fontSize="8.5" fontWeight="600" fill="#fff">{name.split(' ')[0]}</text>
+      <text x="67" y="75" textAnchor="middle" fontSize="8.5" fontWeight="600" fill="#fff">{name.split(' ').slice(1).join(' ')}</text>
+    </svg>
+  );
+}
+
+/** A counter's detail screen: the Summary page with the time on this run counting up as you watch. The other pages are not rebuilt. */
+export function useCounter(name?: string): DetailParts {
+  const c = counterDetail(name ?? '');
+  const [mounted] = useState(() => Date.now());
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => { const id = window.setInterval(() => setNow(Date.now()), 1000); return () => window.clearInterval(id); }, []);
+  const elapsed = (c?.days ?? 0) * DAY_MS + (now - mounted);
+  const days = Math.floor(elapsed / DAY_MS), hours = Math.floor(elapsed / 3_600_000) % 24, minutes = Math.floor(elapsed / 60_000) % 60, seconds = Math.floor(elapsed / 1000) % 60;
+  const tabs = ['Summary', 'Savings', 'Calendar', 'Urges', 'Reasons'];
+  return {
+    title: c?.name ?? 'Counter', toolbar: { trailing: ['questionmark.circle', 'gearshape'] }, inset: 20,
+    pinned: <div className="au-tabsrow">{tabs.map((t, i) => <span key={t} className={`au-tabchip${i === 0 ? ' au-tabchip-on' : ''}`}>{t}</span>)}</div>,
+    body: !c ? null : (
+      <>
+        <div className="au-subheadline au-secondary au-center" style={{ paddingTop: 48 }}>Time on this run</div>
+        <Card>
+          <div className="au-counter">
+            <div className="au-counter-nums">
+              {[[days, 'days', 'var(--anchor-sage)'], [hours, 'hours', 'color-mix(in srgb, var(--anchor-accent) 40%, var(--anchor-sage))'], [minutes, 'minutes', 'color-mix(in srgb, var(--anchor-accent) 70%, var(--anchor-sage))'], [seconds, 'seconds', 'var(--anchor-accent)']].map(([v, label, color]) => (
+                <div key={String(label)} className="au-counter-row"><span className="au-counter-num" style={{ color: String(color) }}>{v}</span><span className="au-subheadline au-secondary">{label}</span></div>
+              ))}
+            </div>
+            <CounterRings seconds={seconds} dayProgress={c.days / c.next} name={c.name} />
+          </div>
+        </Card>
+        <div className="au-dots">{[0, 1, 2, 3, 4, 5].map((i) => <i key={i} className={i === 0 ? 'on' : ''} />)}</div>
+        <div className="au-actions">
+          <span><Glyph name="square.and.arrow.up" size={26} weight={1.6} />Share</span>
+          <span><Glyph name="waveform" size={26} weight={1.6} />Log urge</span>
+          <span><Glyph name="arrow.counterclockwise" size={26} weight={1.6} />Start again</span>
+        </div>
       </>
     ),
   };
