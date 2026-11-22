@@ -13,6 +13,7 @@ import XCTest
 /// A step is one of:
 ///   a tab name (Now, Plan, Journal, Bridge, Thread)  taps that tab
 ///   "@scroll"                                        swipes up once (the screen after the swipe is its own screen)
+///   "@swipeLeft"                                     swipes left once, for pages that swipe sideways (the counter's summary pages)
 ///   anything else                                    taps the button or row with that label, scrolling to find it
 /// Plan's default layout is widgets, so its buttons are the widgets' own: "All contacts", "All scripts", "All tools",
 /// "All affirmations", and the Recovery widget. A tile that is below the fold needs no "@scroll" in its path. The test scrolls to find it, and the
@@ -65,6 +66,24 @@ final class DemoCaptureTests: XCTestCase {
         ("bridge-loop", ["Bridge", "Feedback loops", "Waking in the night"]),
         ("thread-drafts", ["Thread", "Things I haven't said"]),
         ("thread-person", ["Thread", "People", "Sam"]),
+        // The check-in's questions, the guided grounding tools, and the counter's other pages.
+        ("checkin-q1", ["Check in", "A few optional questions"]),
+        ("checkin-q2", ["Check in", "A few optional questions", "Next"]),
+        ("checkin-q5", ["Check in", "A few optional questions", "Next", "Next", "Next", "Next"]),
+        ("grounding-step1", ["Now", "5-4-3-2-1"]),
+        ("grounding-step2", ["Now", "5-4-3-2-1", "Next"]),
+        ("grounding-last", ["Now", "5-4-3-2-1", "Next", "Next", "Next", "Next"]),
+        ("grounding-breathing", ["Now", "Slow breathing"]),
+        ("counter-page2", ["Plan", "Recovery", "Energy drinks", "@swipeLeft"]),
+        ("counter-page3", ["Plan", "Recovery", "Energy drinks", "@swipeLeft", "@swipeLeft"]),
+        ("counter-page4", ["Plan", "Recovery", "Energy drinks", "@swipeLeft", "@swipeLeft", "@swipeLeft"]),
+        ("counter-page5", ["Plan", "Recovery", "Energy drinks", "@swipeLeft", "@swipeLeft", "@swipeLeft", "@swipeLeft"]),
+        ("counter-page6", ["Plan", "Recovery", "Energy drinks", "@swipeLeft", "@swipeLeft", "@swipeLeft", "@swipeLeft", "@swipeLeft"]),
+        ("counter-savings", ["Plan", "Recovery", "Energy drinks", "Savings"]),
+        ("counter-calendar", ["Plan", "Recovery", "Energy drinks", "Calendar"]),
+        ("counter-urges", ["Plan", "Recovery", "Energy drinks", "Urges"]),
+        ("counter-reasons", ["Plan", "Recovery", "Energy drinks", "Reasons"]),
+        ("counter-logurge", ["Plan", "Recovery", "Energy drinks", "Log urge"]),
     ]
     // END SCREENS
 
@@ -155,6 +174,12 @@ final class DemoCaptureTests: XCTestCase {
             app.swipeUp()
             sleep(1)
             return true
+        }
+        if step == "@swipeLeft" {
+            let before = XCUIScreen.main.screenshot().pngRepresentation
+            app.swipeLeft()
+            sleep(1)
+            return before != XCUIScreen.main.screenshot().pngRepresentation
         }
         if Self.tabs.contains(step) {
             let bar = app.tabBars.buttons[step]

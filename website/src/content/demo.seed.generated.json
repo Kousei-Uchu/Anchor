@@ -26,6 +26,77 @@
   ],
   "loop": "for index in 0..<demoAsleep.count { let cal = Calendar.current let night = cal.startOfDay(for: ago(Double(index))) let wake = night.addingTimeInterval(7 * 3_600 + Double(index % 3) * 900) let bed = wake.addingTimeInterval(-Double(demoAsleep[index] + 20) * 60) context.insert(SleepEntry(nightDate: night, bedTime: bed, wakeTime: wake, minutesAsleep: index == 3 ? demoAsleep[index] : nil, feel: demoFeel[index], note: index == 3 ? \"Woke a few times. Mind was busy.\" : \"\")) }"
  },
+ "checkIn": {
+  "prompts": [
+   {
+    "text": "What's currently on your mind?",
+    "detail": "Anything at all is fine, big or small. It doesn't need to make sense yet.",
+    "starters": [
+     "Right now I'm thinking about…",
+     "I keep coming back to…",
+     "What's taking up space is…"
+    ],
+    "mood": "neutral",
+    "isSleep": false
+   },
+   {
+    "text": "What's your biggest emotion right now?",
+    "detail": "Naming a feeling, even roughly, can make it a little less heavy.",
+    "starters": [
+     "Right now I feel…",
+     "Mostly I'm feeling…",
+     "It's hard to name, but it's something like…"
+    ],
+    "mood": "gentle",
+    "isSleep": false
+   },
+   {
+    "text": "Is there anything coming up that's on your mind?",
+    "detail": "A date, a conversation, a task, or anything else that's waiting for you.",
+    "starters": [
+     "Coming up, I'm thinking about…",
+     "I'm a bit unsure about…",
+     "Nothing big, but…"
+    ],
+    "mood": "quietDay",
+    "isSleep": false
+   },
+   {
+    "text": "Would you say today's closer to a good day, a bad day, or somewhere in between?",
+    "detail": "There's no right answer. \"In between\" is a very normal one.",
+    "starters": [
+     "Today feels like…",
+     "It's been a good day because…",
+     "It's been a harder day because…",
+     "Somewhere in between, since…"
+    ],
+    "mood": "encouragingNotPerformative",
+    "isSleep": false
+   },
+   {
+    "text": "What's something you're looking forward to?",
+    "detail": "It can be tiny, like a meal or a quiet evening.",
+    "starters": [
+     "I'm looking forward to…",
+     "One small thing I'm hoping for is…"
+    ],
+    "mood": "gentle",
+    "isSleep": false
+   }
+  ],
+  "sleepPrompt": {
+   "text": "How did you sleep?",
+   "detail": "However it went is fine. A few words are enough, or skip it.",
+   "starters": [
+    "I got to sleep around…",
+    "I woke up…",
+    "I slept through, and…",
+    "It was hard to switch off, so…"
+   ],
+   "mood": "gentle",
+   "isSleep": true
+  }
+ },
  "models": {
   "TrustedContact": [
    {

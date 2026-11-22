@@ -245,7 +245,26 @@ function build() {
   const loop = /for index in 0\.\.<demoAsleep\.count \{[\s\S]*?\n        \}/.exec(full)?.[0];
   if (!asleep || !loop) throw new Error("Could not find the demo sleep loop in AnchorApp.swift");
   const sleep = { asleep: asleep.split(",").map((n) => Number(n.trim())), loop: loop.replace(/\s+/g, " ") };
-  return { source: "DemoMode.makeContainer and addRecoveryContent in iOS/Anchor/Anchor/AnchorApp.swift", bindings, sleep, models };
+  // The check-in's optional questions are plain data in CheckInSliderView.swift (five questions, and a sleep one the app adds when that setting is on).
+  const checkInSwift = readFileSync(join(root, "iOS/Anchor/Anchor/Views/Now/CheckInSliderView.swift"), "utf8");
+  const bracket = (text, from, open, close) => {
+    let depth = 0, inStr = false;
+    for (let i = from; i < text.length; i++) {
+      const c = text[i];
+      if (inStr) { if (c === "\\") i++; else if (c === '"') inStr = false; continue; }
+      if (c === '"') inStr = true; else if (c === open) depth++; else if (c === close && --depth === 0) return i;
+    }
+    throw new Error("Unbalanced brackets in CheckInSliderView.swift");
+  };
+  const promptsAt = checkInSwift.indexOf("static let prompts: [CheckInPrompt] = [");
+  const sleepAt = checkInSwift.indexOf("static let sleepPrompt = CheckInPrompt(");
+  if (promptsAt < 0 || sleepAt < 0) throw new Error("Could not find the check-in prompts in CheckInSliderView.swift");
+  const listStart = checkInSwift.indexOf("[", checkInSwift.indexOf("=", promptsAt));
+  const toPrompt = (n) => ({ text: n.text, detail: n.detail, starters: n.starters, mood: n.mood?.$enum, isSleep: !!n.isSleep });
+  const prompts = parseBody(checkInSwift.slice(listStart, bracket(checkInSwift, listStart, "[", "]") + 1), "expr").map(toPrompt);
+  const callStart = checkInSwift.indexOf("CheckInPrompt(", sleepAt);
+  const sleepPrompt = toPrompt(parseBody(checkInSwift.slice(callStart, bracket(checkInSwift, checkInSwift.indexOf("(", callStart), "(", ")") + 1), "expr"));
+  return { source: "DemoMode.makeContainer and addRecoveryContent in iOS/Anchor/Anchor/AnchorApp.swift", bindings, sleep, checkIn: { prompts, sleepPrompt }, models };
 }
 
 const json = JSON.stringify(build(), null, 1) + "\n";
