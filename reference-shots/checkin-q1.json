@@ -1,0 +1,54 @@
+{
+  "elements" : [
+    {
+      "h" : 36,
+      "label" : "Skip",
+      "w" : 58,
+      "x" : 24,
+      "y" : 86
+    },
+    {
+      "h" : 29.666666666666742,
+      "label" : "Right now I'm thinking about…",
+      "w" : 207,
+      "x" : 24,
+      "y" : 533
+    },
+    {
+      "h" : 29.666666666666742,
+      "label" : "I keep coming back to…",
+      "w" : 167.33333333333331,
+      "x" : 239,
+      "y" : 533
+    },
+    {
+      "h" : 29.666666666666742,
+      "label" : "What's taking up space is…",
+      "w" : 25.666666666666686,
+      "x" : 414.33333333333331,
+      "y" : 533
+    },
+    {
+      "h" : 38,
+      "label" : "Next",
+      "w" : 408,
+      "x" : 16,
+      "y" : 851.66666666666663
+    },
+    {
+      "h" : 14.333333333333371,
+      "label" : "Finish now, skip the rest",
+      "w" : 136,
+      "x" : 152,
+      "y" : 899.66666666666663
+    }
+  ],
+  "height" : 956,
+  "name" : "checkin-q1",
+  "path" : [
+    "Check in",
+    "A few optional questions"
+  ],
+  "scale" : 3,
+  "width" : 440
+}

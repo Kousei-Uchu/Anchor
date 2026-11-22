@@ -1,0 +1,58 @@
+{
+  "elements" : [
+    {
+      "h" : 36,
+      "label" : "Skip",
+      "w" : 58,
+      "x" : 24,
+      "y" : 86
+    },
+    {
+      "h" : 29.666666666666742,
+      "label" : "I'm looking forward to…",
+      "w" : 166,
+      "x" : 24,
+      "y" : 513
+    },
+    {
+      "h" : 29.666666666666742,
+      "label" : "One small thing I'm hoping for is…",
+      "w" : 229.66666666666663,
+      "x" : 198,
+      "y" : 513
+    },
+    {
+      "h" : 34,
+      "label" : "Back",
+      "w" : 62.333333333333329,
+      "x" : 16,
+      "y" : 853.66666666666663
+    },
+    {
+      "h" : 38,
+      "label" : "Finish",
+      "w" : 333.66666666666663,
+      "x" : 90.333333333333329,
+      "y" : 851.66666666666663
+    },
+    {
+      "h" : 14.333333333333371,
+      "label" : "Finish now, skip the rest",
+      "w" : 136,
+      "x" : 152,
+      "y" : 899.66666666666663
+    }
+  ],
+  "height" : 956,
+  "name" : "checkin-q5",
+  "path" : [
+    "Check in",
+    "A few optional questions",
+    "Next",
+    "Next",
+    "Next",
+    "Next"
+  ],
+  "scale" : 3,
+  "width" : 440
+}

@@ -1,0 +1,26 @@
+{
+  "elements" : [
+    {
+      "h" : 36,
+      "label" : "Close",
+      "w" : 68.333333333333329,
+      "x" : 24,
+      "y" : 66
+    },
+    {
+      "h" : 38,
+      "label" : "Next",
+      "w" : 408,
+      "x" : 16,
+      "y" : 864
+    }
+  ],
+  "height" : 956,
+  "name" : "grounding-breathing",
+  "path" : [
+    "Now",
+    "Slow breathing"
+  ],
+  "scale" : 3,
+  "width" : 440
+}
