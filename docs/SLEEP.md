@@ -48,3 +48,11 @@ An optional, quiet record of nights. It has no score, no target hours, no streak
 - Log sleep (the + on the Sleep screen) offers Last night, A nap or other sleep, and Sleep on an earlier day. The "Woke up on" date in the sheet picks any earlier day.
 - Naps are listed with "Nap" on the date, but are left out of the dots, the usual range, the Last night card, the check-in question, and the appointment average. They are not left out of exports or the journal.
 - A nap's times start at 2 pm and 3 pm rather than 11 pm and 7 am.
+
+## The sleep calendar (Patch SL2)
+
+- The Sleep screen keeps the 30 dots and the usual range, as one card that opens **Sleep calendar and entries**. The list of entries now lives there, not on the Sleep screen.
+- The calendar is a month grid, newest first, that scrolls back through the months. Each day shows the night's sleep that ended on it ("7h30") and, under that, any daytime sleep ("+45m"). Today has a ring; days with sleep are tinted; days that have not happened cannot be opened.
+- Tapping a day opens it in full: the night first, then the other sleeps in order, with the night, daytime and total time asleep, and buttons to add a night's sleep or a nap for that day. Each sleep opens in the usual sheet, and a Health night opens as a copy the same way it does on the Sleep screen.
+- Months further back than 90 days are read from Apple Health as they scroll into view (nothing is stored). Your own entries show for any month.
+- No score, no target, no streak, and no colour for a short night.

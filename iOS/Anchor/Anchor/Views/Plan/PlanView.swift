@@ -323,8 +323,20 @@ struct SleepView: View {
                 ) { logNight() }
                 .anchorCardRow()
             } else {
-                Anchor.Card(accentColor: Anchor.Theme.accent) {
+                NavigationLink {
+                    SleepHistoryView()
+                } label: {
+                    Anchor.Card(accentColor: Anchor.Theme.accent) {
                     VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Label("Sleep calendar and entries", systemImage: "calendar")
+                                .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
                         let logged = entries.loggedNights
                         LazyVGrid(columns: columns, spacing: 6) {
                             ForEach(monthDays, id: \.self) { day in
@@ -341,17 +353,10 @@ struct SleepView: View {
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
+                    }
                 }
+                .buttonStyle(.plain)
                 .anchorCardRow()
-
-                ForEach(entries) { entry in
-                    SleepRow(entry: entry, words: words) { open(entry) }
-                        .anchorDeletable {
-                            // A night read from Apple Health is not in Anchor's store, so there is nothing here to delete.
-                            if entry.modelContext == nil { healthNightNotice = true } else { confirmingDelete = entry }
-                        }
-                        .anchorCardRow()
-                }
             }
 
             if SleepHealthReader.shared.isAvailable {
@@ -464,6 +469,290 @@ struct SleepView: View {
         } else if let opened {
             if opened.isBlank || opened.sourceRaw == SleepHealthSettings.sourceHealth {
                 // Blank, or a copy of a Health night that was not changed (a changed one has become typed).
+                modelContext.delete(opened)
+            } else {
+                opened.lastEditedAt = .now
+            }
+        }
+    }
+}
+
+// MARK: - The sleep calendar
+
+private struct SleepDay: Identifiable {
+    let date: Date
+    var id: Date { date }
+}
+
+/// A short length for a calendar cell: "7h30" or "45m".
+private func shortSleep(_ minutes: Int) -> String {
+    let hours = minutes / 60, mins = minutes % 60
+    if hours == 0 { return "\(mins)m" }
+    return mins == 0 ? "\(hours)h" : "\(hours)h" + String(format: "%02d", mins)
+}
+
+private extension Collection where Element == SleepEntry {
+    /// Time asleep across the night's sleeps in this group.
+    var nightMinutes: Int { filter { !$0.isNap }.compactMap(\.shownMinutes).reduce(0, +) }
+    /// Time asleep across the naps and other daytime sleeps in this group.
+    var napMinutes: Int { filter { $0.isNap }.compactMap(\.shownMinutes).reduce(0, +) }
+}
+
+/// Every month, newest first, as a calendar. Each day shows the night's sleep that ended on it and, under that, any
+/// daytime sleep. Tap a day for all of it, and to add sleep for it. Scrolling down goes further back; older months
+/// are read from Apple Health as they come into view. No score, no target, no streak.
+struct SleepHistoryView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Query private var entriesStored: [SleepEntry]
+    @State private var monthsShown = 6
+    @State private var openDay: SleepDay?
+
+    private var cal: Calendar { .current }
+    private var today: Date { cal.startOfDay(for: .now) }
+
+    private func monthStart(_ offset: Int) -> Date {
+        let thisMonth = cal.date(from: cal.dateComponents([.year, .month], from: today)) ?? today
+        return cal.date(byAdding: .month, value: -offset, to: thisMonth) ?? thisMonth
+    }
+
+    var body: some View {
+        let byDay = Dictionary(grouping: entriesStored.withHealthNights.filter { !$0.isBlank }) {
+            Calendar.current.startOfDay(for: $0.nightDate)
+        }
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 24) {
+                ForEach(0..<monthsShown, id: \.self) { offset in
+                    SleepMonthView(monthStart: monthStart(offset), today: today, byDay: byDay) { openDay = SleepDay(date: $0) }
+                        .onAppear {
+                            if offset == monthsShown - 1 && monthsShown < 240 {
+                                monthsShown += 6
+                                let earliest = monthStart(monthsShown - 1)
+                                Task { await SleepHealthReader.shared.extend(to: earliest, context: modelContext) }
+                            }
+                        }
+                }
+            }
+            .padding()
+        }
+        .anchorBackground()
+        .navigationTitle("Sleep calendar")
+        .navigationBarTitleDisplayMode(.inline)
+        .task { await SleepHealthReader.shared.extend(to: monthStart(monthsShown - 1), context: modelContext) }
+        .sheet(item: $openDay) { day in
+            SleepDaySheet(day: day.date)
+        }
+    }
+}
+
+private struct SleepMonthView: View {
+    let monthStart: Date
+    let today: Date
+    let byDay: [Date: [SleepEntry]]
+    let onOpen: (Date) -> Void
+
+    private var cal: Calendar { .current }
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 7)
+
+    private var cells: [Date?] {
+        let days = cal.range(of: .day, in: .month, for: monthStart) ?? 1..<31
+        let leading = (cal.component(.weekday, from: monthStart) - cal.firstWeekday + 7) % 7
+        var result: [Date?] = Array(repeating: nil, count: leading)
+        for day in days {
+            result.append(cal.date(byAdding: .day, value: day - 1, to: monthStart))
+        }
+        return result
+    }
+
+    private var weekdaySymbols: [String] {
+        let symbols = cal.veryShortStandaloneWeekdaySymbols
+        let first = cal.firstWeekday - 1
+        return Array(symbols[first...]) + Array(symbols[..<first])
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(monthStart.formatted(.dateTime.month(.wide).year()))
+                .font(.system(.headline, design: .rounded))
+            HStack(spacing: 4) {
+                ForEach(weekdaySymbols.indices, id: \.self) { index in
+                    Text(weekdaySymbols[index])
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            LazyVGrid(columns: columns, spacing: 4) {
+                ForEach(cells.indices, id: \.self) { index in
+                    if let day = cells[index] {
+                        cell(day)
+                    } else {
+                        Color.clear.frame(height: 54)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func cell(_ day: Date) -> some View {
+        let entries = byDay[day] ?? []
+        let night = entries.nightMinutes
+        let nap = entries.napMinutes
+        Button { onOpen(day) } label: {
+            VStack(spacing: 1) {
+                Text("\(cal.component(.day, from: day))")
+                    .font(.system(.caption, design: .rounded).weight(.semibold))
+                if night > 0 {
+                    Text(shortSleep(night))
+                        .font(.system(size: 9, design: .rounded))
+                }
+                if nap > 0 {
+                    Text("+" + shortSleep(nap))
+                        .font(.system(size: 9, design: .rounded))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 54)
+            .background(RoundedRectangle(cornerRadius: 8).fill(entries.isEmpty ? Color.clear : Anchor.Theme.sage.opacity(0.3)))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(day == today ? Anchor.Theme.accent : Color.secondary.opacity(0.25), lineWidth: day == today ? 2 : 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(day > today)
+        .accessibilityLabel(accessibilityText(day, night: night, nap: nap, count: entries.count))
+    }
+
+    private func accessibilityText(_ day: Date, night: Int, nap: Int, count: Int) -> String {
+        var text = day.formatted(.dateTime.weekday(.wide).day().month(.wide))
+        if count == 0 { return text + ", nothing logged" }
+        if night > 0 { text += ", night " + SleepEntry.describe(minutes: night) }
+        if nap > 0 { text += ", daytime " + SleepEntry.describe(minutes: nap) }
+        return text
+    }
+}
+
+/// One day, in full: the night's sleep that ended on it and every other sleep that day, with the totals, and a way
+/// to add sleep for it.
+private struct SleepDaySheet: View {
+    let day: Date
+
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+    @Query private var entriesStored: [SleepEntry]
+    @AppStorage(SleepFeelWords.storageKey) private var wordsRaw = ""
+    @State private var editing: SleepEntry?
+    @State private var lastOpened: SleepEntry?
+    @State private var toDelete: SleepEntry?
+    @State private var confirmingDelete: SleepEntry?
+    @State private var healthNightNotice = false
+
+    private var words: [String] { SleepFeelWords.words(from: wordsRaw) }
+
+    /// The night first, then the rest in the order they happened.
+    private var entries: [SleepEntry] {
+        let cal = Calendar.current
+        let sameDay = entriesStored.withHealthNights.filter { !$0.isBlank && cal.startOfDay(for: $0.nightDate) == day }
+        return sameDay.sorted { a, b in
+            if a.isNap != b.isNap { return !a.isNap }
+            return (a.wakeTime ?? a.bedTime ?? a.nightDate) < (b.wakeTime ?? b.bedTime ?? b.nightDate)
+        }
+    }
+
+    private var totalsLine: String {
+        let night = entries.nightMinutes, nap = entries.napMinutes
+        var parts: [String] = []
+        if night > 0 { parts.append("Night " + SleepEntry.describe(minutes: night)) }
+        if nap > 0 { parts.append("Daytime " + SleepEntry.describe(minutes: nap)) }
+        if night > 0 && nap > 0 { parts.append("Total " + SleepEntry.describe(minutes: night + nap)) }
+        return parts.isEmpty ? "Nothing logged for this day." : parts.joined(separator: " · ")
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    ForEach(entries) { entry in
+                        SleepRow(entry: entry, words: words) { open(entry) }
+                            .anchorDeletable {
+                                // A night read from Apple Health is not in Anchor's store, so there is nothing here to delete.
+                                if entry.modelContext == nil { healthNightNotice = true } else { confirmingDelete = entry }
+                            }
+                            .anchorCardRow()
+                    }
+                } header: {
+                    Text(totalsLine)
+                }
+
+                Section {
+                    Button { add(.night) } label: {
+                        Label("Add a night's sleep", systemImage: "moon.zzz.fill")
+                    }
+                    Button { add(.nap) } label: {
+                        Label("Add a nap or other sleep", systemImage: "sun.max.fill")
+                    }
+                }
+            }
+            .listStyle(.plain)
+            .anchorBackground()
+            .navigationTitle(day.formatted(.dateTime.weekday(.wide).day().month(.wide)))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+            .sheet(item: $editing, onDismiss: finishEditing) { entry in
+                SleepEntrySheet(entry: entry, words: words) { toDelete = entry }
+            }
+            .alert("This night is read from Apple Health", isPresented: $healthNightNotice) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Anchor does not keep it, so there is nothing to delete here. Change or remove it in the Health app, or open it and write your own version, which then takes its place.")
+            }
+            .confirmationDialog(
+                "Delete this sleep?",
+                isPresented: Binding(get: { confirmingDelete != nil }, set: { if !$0 { confirmingDelete = nil } }),
+                titleVisibility: .visible,
+                presenting: confirmingDelete
+            ) { entry in
+                Button("Delete", role: .destructive) { modelContext.delete(entry) }
+                Button("Keep it", role: .cancel) {}
+            } message: { _ in
+                Text("What is written in it goes too.")
+            }
+        }
+    }
+
+    private func add(_ kind: SleepKind) {
+        let new = SleepEntry(nightDate: day, kind: kind)
+        modelContext.insert(new)
+        open(new)
+    }
+
+    private func open(_ entry: SleepEntry) {
+        // A night read from Apple Health opens as a copy, dropped again if nothing is changed (see SleepView).
+        var target = entry
+        if entry.modelContext == nil {
+            target = SleepEntry(nightDate: entry.nightDate, bedTime: entry.bedTime, wakeTime: entry.wakeTime,
+                                minutesAsleep: entry.minutesAsleep, feel: entry.feel, note: entry.note,
+                                sourceRaw: SleepHealthSettings.sourceHealth, externalID: entry.externalID, kind: entry.kind)
+            modelContext.insert(target)
+        }
+        lastOpened = target
+        editing = target
+    }
+
+    private func finishEditing() {
+        let deleting = toDelete
+        toDelete = nil
+        let opened = lastOpened
+        lastOpened = nil
+        if let deleting {
+            modelContext.delete(deleting)
+        } else if let opened {
+            if opened.isBlank || opened.sourceRaw == SleepHealthSettings.sourceHealth {
                 modelContext.delete(opened)
             } else {
                 opened.lastEditedAt = .now
@@ -869,6 +1158,8 @@ final class SleepHealthReader {
     var foundNights: Int?
     /// Why the last Connect did not work, in plain words, or nil. Shown under the switch, so a refusal is never silent.
     var problem: String?
+    /// How far back the sleep calendar has asked to see, when that is further than the usual 90 days.
+    private var earliestWanted: Date?
 
     @ObservationIgnored private let store = HKHealthStore()
 
@@ -901,6 +1192,14 @@ final class SleepHealthReader {
     func disconnect() {
         UserDefaults.standard.set(false, forKey: SleepHealthSettings.connectedKey)
         SleepHealthNights.shared.nights = []
+    }
+
+    /// Reads further back, for the sleep calendar's older months. Nothing is stored.
+    func extend(to date: Date, context: ModelContext) async {
+        guard UserDefaults.standard.bool(forKey: SleepHealthSettings.connectedKey) else { return }
+        if let current = earliestWanted, current <= date { return }
+        earliestWanted = date
+        await sync(context: context)
     }
 
     /// Stops reading from Apple Health and clears the nights held from it. Nothing in Health changes. Any copy of
@@ -979,8 +1278,9 @@ final class SleepHealthReader {
 
         let cal = Calendar.current
         let today = cal.startOfDay(for: .now)
-        // The last 90 days are read each time, since nothing is stored.
-        guard let from = cal.date(byAdding: .day, value: -90, to: today) else { return }
+        // The last 90 days are read each time, since nothing is stored, and further back when the calendar has asked.
+        guard let usualFrom = cal.date(byAdding: .day, value: -90, to: today) else { return }
+        let from = min(usualFrom, earliestWanted.map { cal.startOfDay(for: $0) } ?? usualFrom)
         // Start earlier than the first day, so a night that began the evening before is whole.
         let predicate = HKQuery.predicateForSamples(withStart: from.addingTimeInterval(-18 * 3600), end: .now, options: [])
         let descriptor = HKSampleQueryDescriptor(
