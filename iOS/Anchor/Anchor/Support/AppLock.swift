@@ -15,12 +15,14 @@
 //  in that one case it unlocks automatically rather than showing a dead end.
 //
 
+import Combine
 import CryptoKit
 import Foundation
 import LocalAuthentication
 import Security
 import SwiftData
 import SwiftUI
+import UIKit
 
 @MainActor
 final class AppLock: ObservableObject {
@@ -155,6 +157,7 @@ struct AppLockGateView<Content: View>: View {
         }
         .animation(.easeInOut(duration: 0.2), value: lock.isUnlocked)
         .onAppear {
+            PrivacyCover.shared.start()
             lock.bypassIfNotApplicable()
             if !lock.isUnlocked {
                 Task { await lock.attemptUnlock() }
@@ -171,6 +174,103 @@ struct AppLockGateView<Content: View>: View {
             default:
                 break
             }
+        }
+    }
+}
+
+// MARK: - The cover above everything
+//
+// The lock screen inside the app's own view cannot cover a sheet, because iOS shows a sheet above
+// the view that opened it, and the app switcher takes its picture the moment the app stops being the
+// active one, which is before it has gone to the background. So the cover is a window of its own, above
+// everything including sheets, and it goes up when the app is about to stop being active (the system tells
+// the app this a moment before SwiftUI's scene phase does), and stays up until the person has unlocked.
+//
+// It only comes up while the app lock is switched on, the phone has something to ask with, and showcase
+// mode is off: the same conditions as the lock itself.
+
+@MainActor
+final class PrivacyCover {
+    static let shared = PrivacyCover()
+
+    private var window: UIWindow?
+    private var isCoveringForInactive = false
+    private var started = false
+    private var cancellable: AnyCancellable?
+
+    private init() {}
+
+    private var shouldCover: Bool {
+        AppLock.shared.isEnabled && !ShowcaseMode.isOn && AppLock.shared.canAuthenticate()
+    }
+
+    func start() {
+        guard !started else { return }
+        started = true
+        let center = NotificationCenter.default
+        center.addObserver(forName: UIApplication.willResignActiveNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.isCoveringForInactive = self.shouldCover
+                self.refresh()
+            }
+        }
+        center.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.isCoveringForInactive = false
+                self?.refresh()
+            }
+        }
+        cancellable = AppLock.shared.$isUnlocked.sink { [weak self] _ in
+            // $isUnlocked sends before the value changes, so look again on the next turn of the run loop.
+            DispatchQueue.main.async { self?.refresh() }
+        }
+        refresh()
+    }
+
+    private func refresh() {
+        let locked = !AppLock.shared.isUnlocked && shouldCover
+        if locked || isCoveringForInactive {
+            show()
+        } else {
+            window?.isHidden = true
+        }
+    }
+
+    private func show() {
+        if window == nil {
+            let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+            guard let scene = scenes.first(where: { $0.activationState == .foregroundActive })
+                ?? scenes.first(where: { $0.activationState == .foregroundInactive })
+                ?? scenes.first else { return }
+            let cover = UIWindow(windowScene: scene)
+            cover.windowLevel = UIWindow.Level.alert + 1
+            let host = UIHostingController(rootView: PrivacyCoverRoot())
+            host.view.backgroundColor = .clear
+            cover.rootViewController = host
+            window = cover
+        }
+        window?.isHidden = false
+    }
+}
+
+/// What the cover shows: the lock screen while locked, and a plain screen with no content while the
+/// app is only inactive (the app switcher, Control Center, a Face ID prompt).
+private struct PrivacyCoverRoot: View {
+    @ObservedObject private var lock = AppLock.shared
+
+    var body: some View {
+        if lock.isUnlocked {
+            VStack(spacing: 14) {
+                MascotCharacterView(mood: .neutral)
+                    .frame(width: 84, height: 84)
+                Text("Anchor")
+                    .font(.system(.title3, design: .rounded).weight(.semibold))
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .anchorBackground()
+        } else {
+            AppLockScreenView(lock: lock)
         }
     }
 }
