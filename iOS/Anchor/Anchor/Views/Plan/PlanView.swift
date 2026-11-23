@@ -787,6 +787,8 @@ final class SleepHealthReader {
     var isWorking = false
     /// How many nights the last check found in Apple Health. Nil until one has run.
     var foundNights: Int?
+    /// Why the last Connect did not work, in plain words, or nil. Shown under the switch, so a refusal is never silent.
+    var problem: String?
 
     @ObservationIgnored private let store = HKHealthStore()
 
@@ -797,10 +799,23 @@ final class SleepHealthReader {
     /// Asks for read access to sleep, which is when iOS shows its own
     /// question, then brings in the last 30 days.
     func connect(context: ModelContext) async {
-        guard isAvailable, !DemoMode.isOn, !CloudSync.isOn, let type = sleepType else { return }
+        problem = nil
+        if DemoMode.isOn || ShowcaseMode.isOn {
+            problem = "Apple Health is not used in demo or showcase mode."
+            return
+        }
+        guard !CloudSync.isOn else {
+            problem = "Nights from Apple Health can't be brought in while iCloud sync is on, because Apple doesn't allow health information to be kept in iCloud. Turn iCloud sync off to bring them in."
+            return
+        }
+        guard HKHealthStore.isHealthDataAvailable(), let type = sleepType else {
+            problem = "Apple Health isn't available on this device."
+            return
+        }
         do {
             try await store.requestAuthorization(toShare: [], read: [type])
         } catch {
+            problem = "Apple Health did not open its question: \(error.localizedDescription)"
             return
         }
         UserDefaults.standard.set(true, forKey: SleepHealthSettings.connectedKey)
@@ -978,6 +993,8 @@ final class SleepHealthWriter {
     var isWorking = false
     /// One quiet line after saving the recent nights.
     var message: String?
+    /// Why turning saving on, or a save, did not work, in plain words, or nil. Shown under the switch.
+    var problem: String?
 
     @ObservationIgnored private let store = HKHealthStore()
 
@@ -1014,6 +1031,9 @@ final class SleepHealthWriter {
     /// How many nights Anchor has samples saved for.
     var savedCount: Int { tracked.values.filter { $0 > 0 }.count }
 
+    /// How many nights were left alone because Apple Health already holds sleep for them from another source.
+    var leftAloneCount: Int { tracked.values.filter { $0 < 0 }.count }
+
     private func sampleIDs(_ id: String) -> [String] {
         ["anchor.sleep.\(id).bed", "anchor.sleep.\(id).asleep"]
     }
@@ -1021,10 +1041,15 @@ final class SleepHealthWriter {
     /// Asks for permission to save sleep (and to look at what Health already
     /// holds for the night), which is when iOS shows its own question.
     func enable(context: ModelContext) async {
-        guard available, let type = sleepType else { return }
+        problem = nil
+        guard available, let type = sleepType else {
+            problem = "Apple Health isn't available here."
+            return
+        }
         do {
             try await store.requestAuthorization(toShare: [type], read: [type])
         } catch {
+            problem = "Apple Health did not open its question: \(error.localizedDescription)"
             return
         }
         let defaults = UserDefaults.standard
@@ -1049,7 +1074,9 @@ final class SleepHealthWriter {
         let before = savedCount
         await reconcile(context: context)
         let added = max(0, savedCount - before)
-        message = added == 0 ? "Nothing new to save." : (added == 1 ? "Saved 1 night." : "Saved \(added) nights.")
+        if problem == nil {
+            message = added == 0 ? "Nothing new to save." : (added == 1 ? "Saved 1 night." : "Saved \(added) nights.")
+        }
     }
 
     /// Removes everything Anchor has saved to Health and switches saving off.
@@ -1076,6 +1103,7 @@ final class SleepHealthWriter {
         if !writing && written.isEmpty { return }
         isWorking = true
         defer { isWorking = false }
+        problem = nil
 
         let since = Date(timeIntervalSince1970: defaults.double(forKey: SleepHealthSettings.writeSinceKey))
         let entries = (try? context.fetch(FetchDescriptor<SleepEntry>())) ?? []
@@ -1109,7 +1137,13 @@ final class SleepHealthWriter {
                 let predicate = HKQuery.predicateForSamples(withStart: night.bed, end: night.wake, options: [])
                 let descriptor = HKSampleQueryDescriptor(predicates: [.categorySample(type: type, predicate: predicate)], sortDescriptors: [])
                 let found = (try? await descriptor.result(for: store)) ?? []
-                if found.contains(where: { $0.sourceRevision.source.bundleIdentifier != Bundle.main.bundleIdentifier }) {
+                // Only another source's time ASLEEP counts as Health already holding the night. Time in bed, which an iPhone
+                // records on its own, or time awake, does not: it would otherwise stop most nights from being saved.
+                let inBed = HKCategoryValueSleepAnalysis.inBed.rawValue
+                let awake = HKCategoryValueSleepAnalysis.awake.rawValue
+                if found.contains(where: {
+                    $0.sourceRevision.source.bundleIdentifier != Bundle.main.bundleIdentifier && $0.value != inBed && $0.value != awake
+                }) {
                     written[id] = -night.version
                     continue
                 }
@@ -1136,6 +1170,7 @@ final class SleepHealthWriter {
                 try await store.save(samples)
                 written[id] = night.version
             } catch {
+                problem = "Apple Health would not save a night: \(error.localizedDescription) Check that Anchor is allowed to write sleep in the Health app, under Sharing, Apps, Anchor."
                 continue
             }
         }
@@ -1234,6 +1269,15 @@ private extension SleepHealthCard {
             Text("Reads sleep only, and keeps a copy on this phone.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
+            if CloudSync.isOn && !connected {
+                Text("Not available while iCloud sync is on: Apple doesn't allow health information to be kept in iCloud.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } else if let problem = reader.problem {
+                Text(problem)
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
+            }
 
             if connected {
                 if let statusLine {
@@ -1280,6 +1324,11 @@ private extension SleepHealthCard {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
 
+            if let problem = writer.problem {
+                Text(problem)
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
+            }
             if writing {
                 Button("Save the last 30 nights I typed") {
                     Task { await writer.saveRecent(context: modelContext) }
@@ -1288,6 +1337,13 @@ private extension SleepHealthCard {
                 if let message = writer.message {
                     Text(message)
                         .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                if writer.leftAloneCount > 0 {
+                    Text(writer.leftAloneCount == 1
+                         ? "1 night was left alone because Apple Health already holds sleep for it from another source, such as a watch."
+                         : "\(writer.leftAloneCount) nights were left alone because Apple Health already holds sleep for them from another source, such as a watch.")
+                        .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
             }

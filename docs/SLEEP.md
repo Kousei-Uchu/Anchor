@@ -26,7 +26,7 @@ An optional, quiet record of nights. It has no score, no target hours, no streak
 - Off by default, its own switch. Turning it on asks Health for permission to save sleep, and to look at sleep (so it can see what is already there for a night). Reading into the journal stays off unless Connect is used.
 - Only typed nights with both a bed time and a wake time are saved. Nights from Apple Health are never written back. Nights typed before the switch was turned on are not saved unless Save the last 30 nights I typed is tapped.
 - Each night is one in-bed sample (bed to wake) and one asleep sample whose length is the time asleep, placed so it ends when you got up. Both carry Anchor's sync identifier and a version, so editing a night replaces the samples instead of adding more.
-- **Health is the source of truth.** If another source already holds sleep over that night, Anchor leaves it alone and does not save one.
+- **Health is the source of truth.** If another source already holds time asleep over that night, Anchor leaves it alone and does not save one. Time in bed (an iPhone records it on its own) and time awake do not count as holding the night. The Sleep screen says how many nights were left alone, and why a save or a connect did not work.
 - Deleting a night, or clearing its times, removes the samples Anchor saved for it, the next time the Sleep screen opens or the app comes forward. Remove what Anchor saved removes every sample Anchor wrote, and Clear everything does the same. Only samples Anchor itself saved can be removed.
 - What was saved is tracked in the app's settings (night id and version), not in the database or an export.
 
