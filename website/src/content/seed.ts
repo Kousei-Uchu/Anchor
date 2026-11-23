@@ -70,9 +70,6 @@ export function nextAppointment(now: Date = demoNow()) {
   return best;
 }
 
-const EARLY = [1, 3, 7, 14, 21, 30, 60, 90, 120, 180, 270, 365];
-const daysText = (n: number) => `${n} ${n === 1 ? 'day' : 'days'}`;
-const milestoneLabel = (n: number) => (n >= 365 && n % 365 === 0 ? `${n / 365} ${n / 365 === 1 ? 'year' : 'years'}` : daysText(n));
 
 /** RecoveryNowCard: the counters, with the big number and the line under the name. */
 export function recoveryCounters(now: Date = demoNow()) {
@@ -80,10 +77,7 @@ export function recoveryCounters(now: Date = demoNow()) {
     const run = (c.runs ?? []).find((r: Row) => r.end === null || r.end === undefined);
     const start = run ? resolveDate(run.start, now) : null;
     const days = start ? Math.max(0, Math.floor((now.getTime() - start.getTime()) / DAY)) : 0;
-    const acknowledged: number[] = c.acknowledgedMilestones ?? [];
-    const reached = EARLY.filter((m) => m <= days).find((m) => !acknowledged.includes(m));
-    const next = EARLY.find((m) => m > days) ?? (Math.floor(days / 365) + 1) * 365;
-    return { name: String(c.name), number: String(days), label: days === 1 ? 'day' : 'days', line: reached ? `You've reached ${milestoneLabel(reached)}.` : `Next: ${milestoneLabel(next)}` };
+    return { name: String(c.name), number: String(days), label: days === 1 ? 'day' : 'days', line: '' };  // milestones are off until switched on in Settings, so the row shows no milestone line
   });
 }
 

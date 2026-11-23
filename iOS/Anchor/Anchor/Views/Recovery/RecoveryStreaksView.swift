@@ -129,7 +129,7 @@ struct RecoveryStreaksView: View {
                     HStack(spacing: 4) {
                         HStack(spacing: 3) {
                             ForEach(0..<min(entry.slipTimes, 6), id: \.self) { _ in
-                                Image(systemName: "xmark.circle.fill").foregroundStyle(Anchor.Theme.accent.opacity(0.8))
+                                Image(systemName: "circle.fill").foregroundStyle(Anchor.Theme.accent.opacity(0.8))
                             }
                         }
                         Text(entry.slipTimes > 6 ? "+\(entry.slipTimes - 6)" : "").font(.caption)

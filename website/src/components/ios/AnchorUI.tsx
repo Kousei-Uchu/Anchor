@@ -351,7 +351,7 @@ export function HScroll({ children }: { children: ReactNode }) {
 export function RecoveryRow({ name, line, number, label, onClick }: { name: string; line: string; number: string; label: string; onClick?: () => void }) {
   return (
     <div className="au-recovery-row" onClick={onClick}>
-      <div className="au-recovery-text"><span className="au-headline">{name}</span><span className="au-caption au-secondary">{line}</span></div>
+      <div className="au-recovery-text"><span className="au-headline">{name}</span>{line ? <span className="au-caption au-secondary">{line}</span> : null}</div>
       <div className="au-recovery-num"><span className="au-recovery-big">{number}</span><span className="au-caption au-secondary">{label}</span></div>
       <span className="au-tertiary"><Glyph name="chevron.right" size={20} weight={2.8} /></span>
     </div>

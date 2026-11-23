@@ -16,7 +16,8 @@ struct RecoverySummaryTab: View {
     let onStartAgain: () -> Void
 
     @State private var page = 0
-    private let pageCount = 6
+    @AppStorage(RecoverySettings.hideStreaks) private var hideStreaks = false
+    private var pageCount: Int { hideStreaks ? 4 : 6 }
 
     var body: some View {
         VStack(spacing: 18) {
@@ -24,9 +25,11 @@ struct RecoverySummaryTab: View {
                 RecoveryTimePage(counter: counter).tag(0)
                 RecoveryMonthPage(counter: counter, onShowCalendar: onShowCalendar).tag(1)
                 RecoveryTotalPage(counter: counter).tag(2)
-                RecoveryRecordPage(counter: counter).tag(3)
-                RecoveryStreakPage(counter: counter).tag(4)
-                RecoveryStartPage(counter: counter).tag(5)
+                if !hideStreaks {
+                    RecoveryRecordPage(counter: counter).tag(3)
+                    RecoveryStreakPage(counter: counter).tag(4)
+                }
+                RecoveryStartPage(counter: counter).tag(hideStreaks ? 3 : 5)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .frame(height: 410)

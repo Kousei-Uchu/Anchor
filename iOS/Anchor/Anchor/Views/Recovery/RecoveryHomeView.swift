@@ -92,6 +92,7 @@ struct RecoveryHomeView: View {
 }
 
 private struct RecoveryCounterCard: View {
+    @AppStorage(RecoverySettings.milestonesEnabled) private var milestonesEnabled = false
     let counter: RecoveryCounter
 
     var body: some View {
@@ -107,9 +108,11 @@ private struct RecoveryCounterCard: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-                    Text("Next: \(RecoveryMilestones.label(RecoveryMilestones.next(after: days)))")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    if milestonesEnabled {
+                        Text("Next: \(RecoveryMilestones.label(RecoveryMilestones.next(after: days)))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 Spacer()
                 VStack(spacing: 0) {
@@ -132,6 +135,7 @@ private struct RecoveryCounterCard: View {
 /// scores or nags: it shows where each counter is, offers today's pledge only if
 /// the user turned that reminder on, and keeps "Ride out an urge" one tap away.
 struct RecoveryNowCard: View {
+    @AppStorage(RecoverySettings.milestonesEnabled) private var milestonesEnabled = false
     @Query(sort: \RecoveryCounter.sortOrder) private var allCounters: [RecoveryCounter]
     @Query private var entries: [RecoveryDayEntry]
     @AppStorage(RecoverySettings.pledgeEnabled) private var pledgeEnabled = false
@@ -184,14 +188,16 @@ struct RecoveryNowCard: View {
                 Text(counter.name)
                     .font(.system(.headline, design: .rounded))
                     .foregroundStyle(.primary)
-                if let milestone = counter.unacknowledgedMilestone() {
-                    Text("You've reached \(RecoveryMilestones.label(milestone)).")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } else {
-                    Text("Next: \(RecoveryMilestones.label(RecoveryMilestones.next(after: days)))")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                if milestonesEnabled {
+                    if let milestone = counter.unacknowledgedMilestone() {
+                        Text("You've reached \(RecoveryMilestones.label(milestone)).")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("Next: \(RecoveryMilestones.label(RecoveryMilestones.next(after: days)))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
             Spacer()

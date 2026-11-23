@@ -33,6 +33,7 @@ struct RecoveryCounterDetailView: View {
 
     let counter: RecoveryCounter
 
+    @AppStorage(RecoverySettings.milestonesEnabled) private var milestonesEnabled = false
     @State private var tab: RecoveryTab = .summary
     @State private var showingEditor = false
     @State private var editorFocus: RecoveryCounterEditorView.Focus?
@@ -51,7 +52,7 @@ struct RecoveryCounterDetailView: View {
             tabStrip
             ScrollView {
                 VStack(spacing: Anchor.Theme.spacing) {
-                    if tab == .summary, let milestone = counter.unacknowledgedMilestone() {
+                    if milestonesEnabled, tab == .summary, let milestone = counter.unacknowledgedMilestone() {
                         milestoneCard(milestone)
                     }
                     if showCheckInNudge {

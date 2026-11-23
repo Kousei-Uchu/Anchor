@@ -24,6 +24,8 @@ enum RecoverySettings {
     static let milestonesEnabled = "recovery.milestoneReminders.enabled"
     /// Off until switched on: the longest run, and anything that sets the current run beside it.
     static let showLongest = "recovery.showLongest"
+    /// Off until switched on: when on, no streaks, streak records or streak history appear anywhere in Recovery.
+    static let hideStreaks = "recovery.hideStreaks"
 }
 
 // MARK: - Reminders

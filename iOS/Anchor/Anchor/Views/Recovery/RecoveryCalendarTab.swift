@@ -9,6 +9,7 @@
 import SwiftUI
 
 struct RecoveryCalendarTab: View {
+    @AppStorage(RecoverySettings.hideStreaks) private var hideStreaks = false
     let counter: RecoveryCounter
 
     @State private var month: Date = {
@@ -40,13 +41,15 @@ struct RecoveryCalendarTab: View {
             summaryPill(timeline: timeline)
             legend
 
-            NavigationLink { RecoveryStreaksView(counter: counter) } label: {
-                Anchor.Card {
-                    HStack {
-                        Label("Streaks", systemImage: "chart.bar.doc.horizontal")
-                            .foregroundStyle(.primary)
-                        Spacer()
-                        Image(systemName: "chevron.right").foregroundStyle(.secondary)
+            if !hideStreaks {
+                NavigationLink { RecoveryStreaksView(counter: counter) } label: {
+                    Anchor.Card {
+                        HStack {
+                            Label("Streaks", systemImage: "chart.bar.doc.horizontal")
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                        }
                     }
                 }
             }
@@ -124,9 +127,6 @@ struct RecoveryCalendarTab: View {
                 VStack(spacing: -1) {
                     Text("\(calendar.component(.day, from: day))")
                         .font(.system(.subheadline, design: .rounded))
-                    if status == .slip {
-                        Image(systemName: "xmark").font(.system(size: 7, weight: .bold))
-                    }
                 }
                 .foregroundStyle(status == .sober ? Color.white : (status == .slip ? Anchor.Theme.accent : Color.primary))
             }

@@ -58,6 +58,7 @@ struct SettingsView: View {
     @AppStorage(RecoverySettings.reviewHour) private var reviewHour = 20
     @AppStorage(RecoverySettings.reviewMinute) private var reviewMinute = 30
     @AppStorage(RecoverySettings.milestonesEnabled) private var milestonesEnabled = false
+    @AppStorage(RecoverySettings.hideStreaks) private var hideStreaks = false
     @AppStorage(RecoverySettings.showLongest) private var showLongest = false
     @AppStorage(AppointmentReminders.dayBeforeKey) private var remindDayBefore = false
     @AppStorage(AppointmentReminders.sameDayKey) private var remindSameDay = false
@@ -305,7 +306,10 @@ struct SettingsView: View {
                     Anchor.SettingsTimeRow(time: timeBinding($reviewHour, $reviewMinute))
                 }
                 Anchor.SettingsToggle(title: "Milestones", isOn: $milestonesEnabled)
-                Anchor.SettingsToggle(title: "Show my longest run", isOn: $showLongest)
+                if !hideStreaks {
+                    Anchor.SettingsToggle(title: "Show my longest run", isOn: $showLongest)
+                }
+                Anchor.SettingsToggle(title: "Hide streaks everywhere", isOn: $hideStreaks)
             }
         }
         .anchorSettingsStyle()

@@ -46,7 +46,7 @@
     "GroundingToolRow": "38877e991e",
     "GroundingToolsView": "1b2054361d",
     "QuickContactsView": "4bbc53074d",
-    "RecoveryNowCard": "a2251f25e9",
+    "RecoveryNowCard": "799dc25f6b",
     "NextAppointmentCardView": "2fca40f725",
     "DecisionPresetsQuickView": "dfaab343d7",
     "TasksNowCard": "ec2eb278b6",
@@ -97,7 +97,7 @@
     "TaskCard": "5a5be40074",
     "QuickListCard": "52494113e2",
     "RecoveryHomeView": "a35e7daa81",
-    "RecoveryCounterCard": "268327ef02",
+    "RecoveryCounterCard": "9941c95b25",
     "CheckInSliderView": "6aaba2fdfa",
     "AppointmentPrepView": "f2d4cf9248",
     "RecoverySessionSummaryCard": "115bbe5ed2",
@@ -111,7 +111,7 @@
     "JournalYearView": "976eb88299",
     "LoopReadView": "0b74fe1f07",
     "LoopRingView": "748715e0a4",
-    "RecoverySummaryTab": "33ecbf0e10",
+    "RecoverySummaryTab": "42c2a2a64e",
     "GroundingToolEditorSheet": "fdd5afb711"
   }
 }
