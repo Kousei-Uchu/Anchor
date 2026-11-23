@@ -267,7 +267,7 @@ struct SessionOnePageSheet: View {
     @Query private var allCheckIns: [CheckIn]
     @Query private var allNightsStored: [SleepEntry]
     /// Sorted after the items are opened, because a locked nightDate cannot be sorted by the database (Patch 35g1b).
-    private var allNights: [SleepEntry] { allNightsStored.sortedByKey(descending: true) { $0.nightDate } }
+    private var allNights: [SleepEntry] { allNightsStored.withHealthNights.sortedByKey(descending: true) { $0.nightDate } }
     @Query private var allItemsStored: [BridgeDraftItem]
     /// Sorted after the items are opened, because a locked createdAt cannot be sorted by the database (Patch 35g2).
     private var allItems: [BridgeDraftItem] { allItemsStored.sortedByKey { $0.createdAt } }

@@ -45,8 +45,13 @@ for (const needle of ["DataKeyStore.lookup()", "LockMyData.isOn", "LockMyData.ne
 }
 
 const plan = readFileSync(join(app, "Views/Plan/PlanView.swift"), "utf8");
-const guards = (plan.match(/!CloudSync\.isOn/g) || []).length;
-if (guards < 2) problems.push("The Health reader must stop bringing nights in while sync is on, in both connect and sync.");
+// D39 (Patch HK2): a night from Apple Health must never be put in the store, because the store can sync to iCloud. The
+// reader holds them in memory (SleepHealthNights) as SleepEntry values that belong to no store.
+const planCode = plan.replace(/\/\/[^\n]*/g, "");
+if (/insert\(\s*SleepEntry\([^)]*sourceHealth/s.test(planCode.slice(planCode.indexOf("final class SleepHealthReader"), planCode.indexOf("final class SleepHealthWriter")))) {
+  problems.push("The Health reader must not insert a night from Apple Health into the store; hold it in SleepHealthNights.");
+}
+if (!/SleepHealthNights\.shared\.nights\s*=/.test(planCode)) problems.push("The Health reader no longer fills SleepHealthNights.");
 
 // SY2: files reach iCloud only as sealed files, and nothing in FileSync deletes a local file by itself.
 const files = readFileSync(join(app, "Support/FileSync.swift"), "utf8").replace(/\/\/[^\n]*/g, "");

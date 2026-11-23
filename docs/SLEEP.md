@@ -12,14 +12,15 @@ An optional, quiet record of nights. It has no score, no target hours, no streak
 - **Export.** Sleep is a kind in Export for someone, one entry per night with the bed and up times, time asleep and the note. In the web page, Sleep also gets a line chart of time asleep from 0 h to the next whole hour above the longest night, with no target line. Nights with no time asleep are left out of the chart, and it needs two nights with a time. The PDF draws the same chart above the nights, under the same rule, and the Word file carries the lines as text. The web page's Download CSV has in_bed, up and minutes_asleep columns after its first five. In Your data, the CSV and PDF exports include sleep too: the CSV has bed_time, wake_time, minutes_asleep and feel columns after its first three (filled only on sleep rows), and the PDF has a Sleep heading, the chart and a line for each night. The feel word is in Your data's CSV only, never in Export for someone.
 
 ## How the Health import works
-- Reads sleep analysis samples only. The first time, the last 30 days; after that, the last few days again, when the Sleep screen opens and when the app comes to the foreground. There is no background delivery.
+- Reads sleep analysis samples only. The last 90 days are read each time the Sleep screen opens. There is no background delivery.
+- **Never stored (Patch HK2).** Nights from Health are held in memory only, as nights that belong to no store. They are never in the database, so they are never synced to iCloud (D39, and Apple does not allow health information in iCloud), never in a backup of the store, and they work the same with iCloud sync on or off. Copies an older version stored are deleted the next time sleep is read.
 - One summary per night, for the day the sleep ended on. Samples less than three hours apart count as one sleep, and the longest one that day is kept, so naps are left out.
 - Time asleep is the combined length of the asleep stages (overlaps from two devices counted once). Awake time is left out. If a source only records time in bed, the night has times and no time asleep.
-- A night is kept under the id `health:YYYY-MM-DD`, so it is never added twice.
-- **Typed wins.** If a night has an entry that was typed, Health never adds or changes it. If an imported night is changed in the sheet, it becomes a typed night.
+- A night carries the id `health:YYYY-MM-DD`.
+- **Typed wins.** If a day has a night that was typed, the Health night for that day is not shown. Opening a Health night makes a copy to look at; if it is changed in the sheet the copy becomes a typed night (which is then stored and can sync), and if not the copy is dropped. A Health night cannot be deleted in Anchor, because Anchor does not keep it.
 - Anything Anchor itself writes to Health is ignored on import.
 - **Denied looks like empty.** HealthKit does not say whether read access was refused, so the screen says "No sleep found in Apple Health yet." and nothing more.
-- **Controls.** Bring in nights from Apple Health (switching it off stops further imports, and switching it on asks Health and brings in the last 30 days). Remove imported sleep deletes only the nights that came from Health and were not changed, and switches importing off. Access itself is changed in the Health app, under Sharing. Clear everything switches importing off.
+- **Controls.** Bring in nights from Apple Health (switching it off stops reading and clears the nights held from it, and switching it on asks Health and reads the last 90 days). Stop reading sleep from Apple Health does the same and also deletes any copy an older version stored. Access itself is changed in the Health app, under Sharing. Clear everything switches importing off.
 - The Health section is hidden where Health data is not available. Demo mode and showcase mode never touch Health.
 
 ## How writing back works

@@ -46,7 +46,7 @@ struct JournalView: View {
     @Query(sort: \RecoveryCounter.sortOrder) private var recoveryCounters: [RecoveryCounter]
     @Query private var sleepEntriesStored: [SleepEntry]
     /// Sorted after the items are opened, because a locked nightDate cannot be sorted by the database (Patch 35g1b).
-    private var sleepEntries: [SleepEntry] { sleepEntriesStored.sortedByKey { $0.nightDate } }
+    private var sleepEntries: [SleepEntry] { sleepEntriesStored.withHealthNights.sortedByKey { $0.nightDate } }
     @AppStorage(SleepSettings.journalKey) private var showsSleep = false
     @State private var sleepToEdit: SleepEntry?
     @State private var searchText = ""

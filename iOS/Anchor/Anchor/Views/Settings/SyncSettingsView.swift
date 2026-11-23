@@ -181,17 +181,16 @@ struct SyncSettingsView: View {
         var text = "A safety copy is made first, when Anchor next starts. Sync starts then too."
         let nights = healthNights
         if nights > 0 {
-            text += " The \(nights) nights Anchor brought in from Apple Health are removed from Anchor now, because Apple Health information is not kept in iCloud. They stay in Health. Anchor stops bringing nights in from Health while sync is on."
-        } else {
-            text += " Anchor will not bring nights in from Apple Health while sync is on, because Apple Health information is not kept in iCloud."
+            text += " The \(nights) copies of Apple Health nights an older version of Anchor stored are removed now, because Apple Health information is not kept in iCloud. They stay in Health."
         }
+        text += " Nights from Apple Health are read from Health each time and are never saved in Anchor, so they never go to iCloud."
         return text
     }
 
     // MARK: Actions
 
     private func turnOn() {
-        _ = SleepHealthReader.shared.removeImported(context: modelContext)
+        _ = SleepHealthReader.shared.purgeStoredCopies(context: modelContext)
         UserDefaults.standard.set(true, forKey: CloudSync.enabledKey)
         CloudSync.publishForOtherDevices()
         SafetyCopy.request(.make)

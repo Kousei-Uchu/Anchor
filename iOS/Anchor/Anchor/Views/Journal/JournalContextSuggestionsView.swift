@@ -190,7 +190,7 @@ struct JournalContextSuggestionsView: View {
 
     private var dayStart: Date { Calendar.current.startOfDay(for: day) }
 
-    private var nights: [SleepEntry] { nightsStored.sortedByKey(descending: true) { $0.nightDate } }
+    private var nights: [SleepEntry] { nightsStored.withHealthNights.sortedByKey(descending: true) { $0.nightDate } }
 
     /// The night written down for this page's day, if it has anything in it.
     private var nightForDay: SleepEntry? {

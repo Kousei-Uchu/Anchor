@@ -435,7 +435,7 @@ struct SleepSessionSummaryCard: View {
 
     /// Sorted after the items are opened, because a locked nightDate cannot be sorted by the database (Patch 35g1b).
 
-    private var allNights: [SleepEntry] { allNightsStored.sortedByKey(descending: true) { $0.nightDate } }
+    private var allNights: [SleepEntry] { allNightsStored.withHealthNights.sortedByKey(descending: true) { $0.nightDate } }
     @State private var added = false
 
     /// Nights with something written down, from the day of the last session on.

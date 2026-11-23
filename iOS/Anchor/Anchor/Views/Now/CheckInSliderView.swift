@@ -109,7 +109,7 @@ struct CheckInSliderView: View {
 
     private var lastNightLogged: Bool {
         let today = Calendar.current.startOfDay(for: .now)
-        return sleepEntries.contains { Calendar.current.startOfDay(for: $0.nightDate) == today && !$0.isBlank }
+        return sleepEntries.withHealthNights.contains { Calendar.current.startOfDay(for: $0.nightDate) == today && !$0.isBlank }
     }
 
     /// The fixed questions, plus the sleep one at the end when it applies.

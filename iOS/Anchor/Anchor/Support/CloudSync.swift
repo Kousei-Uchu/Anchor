@@ -8,8 +8,9 @@ import SwiftData
 /// second device gets the small recovery file through iCloud's key-value store (the file is sealed under the recovery
 /// key, so it is no use without it) and the person types the recovery key there (D40, answer a).
 ///
-/// Nights that Apple Health already holds are not synced (D39). While sync is on, Anchor does not bring nights in from
-/// Health, and the nights it had brought in are removed when sync is switched on. Nothing in Health changes.
+/// Nights that Apple Health already holds are not synced (D39). They are read from Health each time and held in memory
+/// only (Patch HK2), never put in the store, so they cannot reach iCloud. Copies an older version stored are removed when
+/// sync is switched on. Nothing in Health changes.
 ///
 /// The setting is read once, when the store is opened, so a change takes effect the next time Anchor starts.
 enum CloudSync {

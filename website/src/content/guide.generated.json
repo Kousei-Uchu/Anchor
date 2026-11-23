@@ -247,7 +247,7 @@
       "tips": [
         "Sleep starts hidden on Plan. Turn it on under Customise.",
         "Apple Health is optional and sits at the bottom of this screen, with one switch for bringing nights in and one for saving the nights you type. Nothing is asked of Health until you switch one on, and a night you typed is never replaced.",
-        "Bringing nights in only reads sleep. To stop Anchor asking at all, change Sleep under Sharing in the Health app. Remove imported sleep takes out the nights that came from Health and leaves Health itself alone.",
+        "Bringing nights in only reads sleep, each time you open the screen, and the nights are never saved in Anchor, so they never go to iCloud. To stop Anchor asking at all, change Sleep under Sharing in the Health app. Stop reading sleep from Apple Health clears those nights from Anchor and leaves Health itself alone.",
         "Saving writes only nights with both a bed time and a wake time, marked as coming from Anchor. A night Health already has from somewhere else is left alone, and deleting a night here removes the one Anchor saved. Remove what Anchor saved takes out only that."
       ],
       "inTour": true

@@ -662,7 +662,7 @@ struct DataControlView: View {
     }
 
     private func filteredSleep(_ range: ClosedRange<Date>?) -> [SleepEntry] {
-        sleepEntries.filter { !$0.isBlank && (range?.contains($0.nightDate) ?? true) }.sorted { $0.nightDate < $1.nightDate }
+        sleepEntries.withHealthNights.filter { !$0.isBlank && (range?.contains($0.nightDate) ?? true) }.sorted { $0.nightDate < $1.nightDate }
     }
 
     private var activeRecoveryCounters: [RecoveryCounter] {

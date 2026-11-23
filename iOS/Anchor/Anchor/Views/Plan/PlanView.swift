@@ -239,7 +239,7 @@ private extension Collection where Element == SleepEntry {
 struct SleepWidget: View {
     @Query private var entriesStored: [SleepEntry]
     /// Sorted after the items are opened, because a locked nightDate cannot be sorted by the database (Patch 35g1b).
-    private var entries: [SleepEntry] { entriesStored.sortedByKey(descending: true) { $0.nightDate } }
+    private var entries: [SleepEntry] { entriesStored.withHealthNights.sortedByKey(descending: true) { $0.nightDate } }
     private var caption: String {
         if let latest = entries.first(where: { $0.shownMinutes != nil }), let minutes = latest.shownMinutes {
             return "Last logged: " + SleepEntry.describe(minutes: minutes)
@@ -266,13 +266,14 @@ struct SleepView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var entriesStored: [SleepEntry]
     /// Sorted after the items are opened, because a locked nightDate cannot be sorted by the database (Patch 35g1b).
-    private var entries: [SleepEntry] { entriesStored.sortedByKey(descending: true) { $0.nightDate } }
+    private var entries: [SleepEntry] { entriesStored.withHealthNights.sortedByKey(descending: true) { $0.nightDate } }
     @AppStorage(SleepFeelWords.storageKey) private var wordsRaw = ""
 
     @State private var editing: SleepEntry?
     @State private var lastOpened: SleepEntry?
     @State private var toDelete: SleepEntry?
     @State private var confirmingDelete: SleepEntry?
+    @State private var healthNightNotice = false
     @State private var renamingWords = false
 
     private var words: [String] { SleepFeelWords.words(from: wordsRaw) }
@@ -345,7 +346,10 @@ struct SleepView: View {
 
                 ForEach(entries) { entry in
                     SleepRow(entry: entry, words: words) { open(entry) }
-                        .anchorDeletable { confirmingDelete = entry }
+                        .anchorDeletable {
+                            // A night read from Apple Health is not in Anchor's store, so there is nothing here to delete.
+                            if entry.modelContext == nil { healthNightNotice = true } else { confirmingDelete = entry }
+                        }
                         .anchorCardRow()
                 }
             }
@@ -381,6 +385,11 @@ struct SleepView: View {
         .sheet(isPresented: $renamingWords) {
             SleepWordsSheet()
         }
+        .alert("This night is read from Apple Health", isPresented: $healthNightNotice) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Anchor does not keep it, so there is nothing to delete here. Change or remove it in the Health app, or open it and write your own version, which then takes its place.")
+        }
         .confirmationDialog(
             "Delete this night?",
             isPresented: Binding(get: { confirmingDelete != nil }, set: { if !$0 { confirmingDelete = nil } }),
@@ -395,8 +404,18 @@ struct SleepView: View {
     }
 
     private func open(_ entry: SleepEntry) {
-        lastOpened = entry
-        editing = entry
+        // A night read from Apple Health is not in the store. It opens as a copy that is put in the store only to be
+        // looked at or changed: if nothing is changed, the copy is dropped again when the sheet closes, and if
+        // something is, the sheet turns it into the person's own night.
+        var target = entry
+        if entry.modelContext == nil {
+            target = SleepEntry(nightDate: entry.nightDate, bedTime: entry.bedTime, wakeTime: entry.wakeTime,
+                                minutesAsleep: entry.minutesAsleep, feel: entry.feel, note: entry.note,
+                                sourceRaw: SleepHealthSettings.sourceHealth, externalID: entry.externalID)
+            modelContext.insert(target)
+        }
+        lastOpened = target
+        editing = target
     }
 
     /// Opens last night, which is the one you woke up from today. If today
@@ -421,7 +440,8 @@ struct SleepView: View {
         if let deleting {
             modelContext.delete(deleting)
         } else if let opened {
-            if opened.isBlank {
+            if opened.isBlank || opened.sourceRaw == SleepHealthSettings.sourceHealth {
+                // Blank, or a copy of a Health night that was not changed (a changed one has become typed).
                 modelContext.delete(opened)
             } else {
                 opened.lastEditedAt = .now
@@ -774,8 +794,34 @@ enum SleepHealthSettings {
     static let writtenKey = "anchor.sleep.health.written"
 }
 
-/// Reads sleep from Apple Health and keeps one summary per night in Anchor's
-/// own store. Nothing is read until the person taps Connect, and a night they
+/// Nights read from Apple Health, held in memory only. They are never put in Anchor's store, so they are never synced
+/// to iCloud, never in a backup or an export of the store, and they come back from Health each time. Each is a
+/// `SleepEntry` that belongs to no store, so the screens that show nights can show it like any other.
+@MainActor
+@Observable
+final class SleepHealthNights {
+    static let shared = SleepHealthNights()
+    var nights: [SleepEntry] = []
+
+    /// The nights you wrote or changed, and the nights Apple Health holds for days you have no night of your own.
+    /// A night you wrote down is yours, so Apple Health never takes its place.
+    func merged(with stored: [SleepEntry]) -> [SleepEntry] {
+        guard !nights.isEmpty else { return stored }
+        let cal = Calendar.current
+        // A copy of a Health night that an older version stored is left out while the live nights are there.
+        let own = stored.filter { $0.sourceRaw != SleepHealthSettings.sourceHealth }
+        let ownDays = Set(own.map { cal.startOfDay(for: $0.nightDate) })
+        return own + nights.filter { !ownDays.contains(cal.startOfDay(for: $0.nightDate)) }
+    }
+}
+
+extension Collection where Element == SleepEntry {
+    /// These nights with the ones Apple Health holds added (see `SleepHealthNights`).
+    @MainActor var withHealthNights: [SleepEntry] { SleepHealthNights.shared.merged(with: Array(self)) }
+}
+
+/// Reads sleep from Apple Health and keeps one summary per night in memory, never in
+/// Anchor's own store. Nothing is read until the person taps Connect, and a night they
 /// typed is never replaced. HealthKit does not say whether read access was
 /// refused, so a refusal looks the same as no sleep being there.
 @MainActor
@@ -804,10 +850,6 @@ final class SleepHealthReader {
             problem = "Apple Health is not used in demo or showcase mode."
             return
         }
-        guard !CloudSync.isOn else {
-            problem = "Nights from Apple Health can't be brought in while iCloud sync is on, because Apple doesn't allow health information to be kept in iCloud. Turn iCloud sync off to bring them in."
-            return
-        }
         guard HKHealthStore.isHealthDataAvailable(), let type = sleepType else {
             problem = "Apple Health isn't available on this device."
             return
@@ -824,22 +866,33 @@ final class SleepHealthReader {
 
     func disconnect() {
         UserDefaults.standard.set(false, forKey: SleepHealthSettings.connectedKey)
+        SleepHealthNights.shared.nights = []
     }
 
-    /// Removes only the nights that came from Apple Health and were not
-    /// changed since, and stops bringing in more. Nothing in Health changes.
+    /// Stops reading from Apple Health and clears the nights held from it. Nothing in Health changes. Any copy of
+    /// a Health night that an older version stored is removed too. Nights you wrote or changed stay.
     @discardableResult
     func removeImported(context: ModelContext) -> Int {
         disconnect()
+        SleepHealthNights.shared.nights = []
+        let removed = purgeStoredCopies(context: context)
+        foundNights = nil
+        UserDefaults.standard.removeObject(forKey: SleepHealthSettings.lastSyncKey)
+        return removed
+    }
+
+    /// Older versions kept a copy of each Health night in the store, which would reach iCloud. Nights are now held
+    /// in memory only, so any copy still in the store is deleted. A night that was changed became the person's own
+    /// (its source is typed) and is not touched.
+    @discardableResult
+    func purgeStoredCopies(context: ModelContext) -> Int {
         let all = (try? context.fetch(FetchDescriptor<SleepEntry>())) ?? []
         var removed = 0
         for entry in all where entry.sourceRaw == SleepHealthSettings.sourceHealth {
             context.delete(entry)
             removed += 1
         }
-        try? context.save()
-        foundNights = nil
-        UserDefaults.standard.removeObject(forKey: SleepHealthSettings.lastSyncKey)
+        if removed > 0 { try? context.save() }
         return removed
     }
 
@@ -883,22 +936,17 @@ final class SleepHealthReader {
     /// then what is new. It does nothing unless the person has connected.
     func sync(context: ModelContext, full: Bool = false) async {
         let defaults = UserDefaults.standard
-        // With iCloud sync on, nights from Apple Health are not brought in, because Apple Health information is not kept
-        // in iCloud (D39, Patch SY1b).
-        guard defaults.bool(forKey: SleepHealthSettings.connectedKey), !CloudSync.isOn,
+        // Nights from Apple Health are held in memory and never stored, so they are never in iCloud (D39, Patch HK2),
+        // and reading them is fine whether sync is on or off.
+        guard defaults.bool(forKey: SleepHealthSettings.connectedKey),
               isAvailable, !DemoMode.isOn, !isWorking, let type = sleepType else { return }
         isWorking = true
         defer { isWorking = false }
 
         let cal = Calendar.current
         let today = cal.startOfDay(for: .now)
-        guard let floor = cal.date(byAdding: .day, value: -30, to: today) else { return }
-        var from = floor
-        let last = defaults.double(forKey: SleepHealthSettings.lastSyncKey)
-        if !full, last > 0,
-           let back = cal.date(byAdding: .day, value: -2, to: cal.startOfDay(for: Date(timeIntervalSince1970: last))) {
-            from = max(floor, back)
-        }
+        // The last 90 days are read each time, since nothing is stored.
+        guard let from = cal.date(byAdding: .day, value: -90, to: today) else { return }
         // Start earlier than the first day, so a night that began the evening before is whole.
         let predicate = HKQuery.predicateForSamples(withStart: from.addingTimeInterval(-18 * 3600), end: .now, options: [])
         let descriptor = HKSampleQueryDescriptor(
@@ -949,33 +997,15 @@ final class SleepHealthReader {
             longestByDay[day] = night
         }
 
-        let existing = (try? context.fetch(FetchDescriptor<SleepEntry>())) ?? []
-        var typedDays = Set<Date>()
-        var healthByKey: [String: SleepEntry] = [:]
-        for entry in existing {
-            if entry.sourceRaw == SleepHealthSettings.sourceHealth, let key = entry.externalID {
-                healthByKey[key] = entry
-            } else {
-                typedDays.insert(cal.startOfDay(for: entry.nightDate))
-            }
-        }
-        for night in longestByDay.values {
-            // A night you wrote down is yours, so Apple Health never replaces it.
-            if typedDays.contains(night.day) { continue }
+        // A copy that an older version stored would reach iCloud, so it goes.
+        purgeStoredCopies(context: context)
+        SleepHealthNights.shared.nights = longestByDay.values.sorted { $0.day > $1.day }.map { night in
             let parts = cal.dateComponents([.year, .month, .day], from: night.day)
             let key = String(format: "health:%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
-            if let entry = healthByKey[key] {
-                if entry.bedTime != night.bed { entry.bedTime = night.bed }
-                if entry.wakeTime != night.wake { entry.wakeTime = night.wake }
-                if entry.minutesAsleep != night.minutesAsleep { entry.minutesAsleep = night.minutesAsleep }
-            } else {
-                context.insert(SleepEntry(
-                    nightDate: night.day, bedTime: night.bed, wakeTime: night.wake,
-                    minutesAsleep: night.minutesAsleep, sourceRaw: SleepHealthSettings.sourceHealth, externalID: key
-                ))
-            }
+            // Not inserted into any store.
+            return SleepEntry(nightDate: night.day, bedTime: night.bed, wakeTime: night.wake,
+                              minutesAsleep: night.minutesAsleep, sourceRaw: SleepHealthSettings.sourceHealth, externalID: key)
         }
-        try? context.save()
         foundNights = longestByDay.count
         defaults.set(Date.now.timeIntervalSince1970, forKey: SleepHealthSettings.lastSyncKey)
     }
@@ -1185,7 +1215,6 @@ private struct SleepHealthCard: View {
     @AppStorage(SleepHealthSettings.connectedKey) private var connected = false
     @AppStorage(SleepHealthSettings.lastSyncKey) private var lastSync = 0.0
     @AppStorage(SleepHealthSettings.writeKey) private var writing = false
-    @Query private var entries: [SleepEntry]
     @State private var connecting = false
     @State private var enablingWrite = false
     @State private var confirmingRemove = false
@@ -1195,7 +1224,7 @@ private struct SleepHealthCard: View {
     private let writer = SleepHealthWriter.shared
 
     private var importedCount: Int {
-        entries.filter { $0.sourceRaw == SleepHealthSettings.sourceHealth }.count
+        SleepHealthNights.shared.nights.count
     }
 
     private var statusLine: String? {
@@ -1232,16 +1261,16 @@ private struct SleepHealthCard: View {
             Text("This takes out only the sleep Anchor saved. Your nights here stay, and nothing from any other source in Apple Health is touched.")
         }
         .confirmationDialog(
-            "Remove imported sleep?",
+            "Stop reading sleep from Apple Health?",
             isPresented: $confirmingRemove,
             titleVisibility: .visible
         ) {
-            Button("Remove and stop bringing in nights", role: .destructive) {
+            Button("Stop and clear these nights", role: .destructive) {
                 reader.removeImported(context: modelContext)
             }
             Button("Keep them", role: .cancel) {}
         } message: {
-            Text("This takes out the nights that came from Apple Health. Nights you typed or changed yourself stay, and nothing in Apple Health is touched.")
+            Text("The nights read from Apple Health disappear from here. Nights you typed or changed yourself stay, and nothing in Apple Health is touched.")
         }
     }
 }
@@ -1266,14 +1295,10 @@ private extension SleepHealthCard {
             ))
             .tint(Anchor.Theme.accent)
             .disabled(connecting)
-            Text("Reads sleep only, and keeps a copy on this phone.")
+            Text("Reads sleep only. The nights are read from Apple Health each time and are never saved in Anchor, so they never go to iCloud.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
-            if CloudSync.isOn && !connected {
-                Text("Not available while iCloud sync is on: Apple doesn't allow health information to be kept in iCloud.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            } else if let problem = reader.problem {
+            if let problem = reader.problem {
                 Text(problem)
                     .font(.footnote)
                     .foregroundStyle(.orange)
@@ -1292,9 +1317,9 @@ private extension SleepHealthCard {
             }
 
             if importedCount > 0 {
-                Button("Remove imported sleep", role: .destructive) { confirmingRemove = true }
+                Button("Stop reading sleep from Apple Health", role: .destructive) { confirmingRemove = true }
                     .padding(.top, 2)
-                Text(importedCount == 1 ? "1 night here came from Apple Health." : "\(importedCount) nights here came from Apple Health.")
+                Text(importedCount == 1 ? "1 night shown here is read from Apple Health." : "\(importedCount) nights shown here are read from Apple Health.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -1429,7 +1454,7 @@ struct SleepMorningCard: View {
     @AppStorage(SleepSettings.nowDismissedKey) private var dismissedDay = ""
     @Query private var entriesStored: [SleepEntry]
     /// Sorted after the items are opened, because a locked nightDate cannot be sorted by the database (Patch 35g1b).
-    private var entries: [SleepEntry] { entriesStored.sortedByKey(descending: true) { $0.nightDate } }
+    private var entries: [SleepEntry] { entriesStored.withHealthNights.sortedByKey(descending: true) { $0.nightDate } }
     @State private var logging = false
 
     init() {}

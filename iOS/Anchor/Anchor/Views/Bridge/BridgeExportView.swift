@@ -312,7 +312,7 @@ struct BridgeExportView: View {
         }
         return BridgeExportBuilder(
             selection: chosen, drafts: drafts, journal: journal, checkIns: checkIns,
-            sleep: sleep, counters: counters, urges: urges, providers: providers
+            sleep: sleep.withHealthNights, counters: counters, urges: urges, providers: providers
         )
     }
 
