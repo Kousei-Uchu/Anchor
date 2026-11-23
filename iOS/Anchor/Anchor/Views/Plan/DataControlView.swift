@@ -1811,7 +1811,10 @@ struct SleepEntryDTO: Codable {
     var bedTime: Date?; var wakeTime: Date?; var minutesAsleep: Int?; var feel: Int?
     var note: String; var sourceRaw: String; var externalID: String?
     var createdAt: Date; var lastEditedAt: Date
+    /// Optional so exports made before naps existed still import.
+    var kindRaw: String?
     init(_ m: SleepEntry) {
+        kindRaw = m.kindRaw
         id = m.id; nightDate = m.nightDate
         bedTime = m.bedTime; wakeTime = m.wakeTime; minutesAsleep = m.minutesAsleep; feel = m.feel
         note = m.note; sourceRaw = m.sourceRaw; externalID = m.externalID
@@ -1820,7 +1823,8 @@ struct SleepEntryDTO: Codable {
     func toModel() -> SleepEntry {
         SleepEntry(id: id, nightDate: nightDate, bedTime: bedTime, wakeTime: wakeTime,
                    minutesAsleep: minutesAsleep, feel: feel, note: note, sourceRaw: sourceRaw,
-                   externalID: externalID, createdAt: createdAt, lastEditedAt: lastEditedAt)
+                   externalID: externalID, createdAt: createdAt, lastEditedAt: lastEditedAt,
+                   kind: SleepKind(rawValue: kindRaw ?? "") ?? .night)
     }
 }
 

@@ -155,6 +155,7 @@ Lock in: none
 | minutesAsleep | Int? | locked | sealed | how long you slept |
 | feel | Int? | locked | sealed | how you said the night felt |
 | note | String | locked | sealed | your own words |
+| kindRaw | String | locked | sealed | whether you call it a night's sleep or a nap |
 | sourceRaw | String | plain | plain | typed or from Apple Health, which only decides how the night is treated |
 | externalID | String? | plain | plain | an id that Apple Health gave the night, a link and not content |
 | createdAt | Date | locked | sealed | when you made it |

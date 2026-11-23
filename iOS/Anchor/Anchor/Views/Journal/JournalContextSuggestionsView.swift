@@ -238,7 +238,7 @@ struct JournalContextSuggestionsView: View {
     }
 
     private func sleepCard(for night: SleepEntry, showDate: Bool) -> JournalCard {
-        let title = night.shownMinutes.map { "Slept \(SleepEntry.describe(minutes: $0))" } ?? "Sleep"
+        let title = night.shownMinutes.map { (night.isNap ? "Napped " : "Slept ") + SleepEntry.describe(minutes: $0) } ?? "Sleep"
         var detail: [String] = []
         if showDate {
             detail.append(night.nightDate.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)))

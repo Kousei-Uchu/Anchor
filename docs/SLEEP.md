@@ -41,3 +41,10 @@ An optional, quiet record of nights. It has no score, no target hours, no streak
 - [ ] Check the current App Store guideline text on Health data (no advertising, no iCloud storage). Anchor does neither.
 - [ ] **Open, not blocking (D29a):** the Apple Health sleep cleanup has not been reviewed on a device. Try Remove imported sleep, Remove what Anchor saved, deleting a night and clearing a night's times, and check the rules for nights under three hours apart, naps, and the written asleep sample ending when you got up. Nothing else waits on this.
 - [ ] Try on a real device with real sleep data: connect, deny, allow later in the Health app, disconnect, remove imported sleep, save a typed night, edit it, delete it, and check Health shows one set of samples from Anchor each time.
+
+## Naps, other sleeps and earlier days (Patch SL1)
+
+- A sleep has a kind: a night's sleep, or a nap or other sleep in the day (`kindRaw`, locked). There can be any number of sleeps on a day.
+- Log sleep (the + on the Sleep screen) offers Last night, A nap or other sleep, and Sleep on an earlier day. The "Woke up on" date in the sheet picks any earlier day.
+- Naps are listed with "Nap" on the date, but are left out of the dots, the usual range, the Last night card, the check-in question, and the appointment average. They are not left out of exports or the journal.
+- A nap's times start at 2 pm and 3 pm rather than 11 pm and 7 am.

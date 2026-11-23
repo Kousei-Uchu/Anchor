@@ -466,7 +466,7 @@ struct JournalView: View {
                     Image(systemName: "moon.zzz.fill")
                         .font(.caption)
                         .foregroundStyle(Anchor.Theme.sage)
-                    Text(night.shownMinutes.map { "Slept \(SleepEntry.describe(minutes: $0))" } ?? "A night noted")
+                    Text(night.shownMinutes.map { (night.isNap ? "Napped " : "Slept ") + SleepEntry.describe(minutes: $0) } ?? (night.isNap ? "A nap noted" : "A night noted"))
                         .font(.system(.caption, design: .rounded).weight(.medium))
                         .foregroundStyle(.secondary)
                     Image(systemName: "chevron.right")

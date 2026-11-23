@@ -232,7 +232,7 @@ private struct SleepDots: View {
 private extension Collection where Element == SleepEntry {
     /// The nights that have something in them, as start-of-day dates.
     var loggedNights: Set<Date> {
-        Set(filter { !$0.isBlank }.map { Calendar.current.startOfDay(for: $0.nightDate) })
+        Set(filter { !$0.isBlank && !$0.isNap }.map { Calendar.current.startOfDay(for: $0.nightDate) })
     }
 }
 
@@ -241,7 +241,7 @@ struct SleepWidget: View {
     /// Sorted after the items are opened, because a locked nightDate cannot be sorted by the database (Patch 35g1b).
     private var entries: [SleepEntry] { entriesStored.withHealthNights.sortedByKey(descending: true) { $0.nightDate } }
     private var caption: String {
-        if let latest = entries.first(where: { $0.shownMinutes != nil }), let minutes = latest.shownMinutes {
+        if let latest = entries.first(where: { $0.shownMinutes != nil && !$0.isNap }), let minutes = latest.shownMinutes {
             return "Last logged: " + SleepEntry.describe(minutes: minutes)
         }
         return "A quiet place to note how you slept."
@@ -285,7 +285,7 @@ struct SleepView: View {
         let cal = Calendar.current
         guard let from = cal.date(byAdding: .day, value: -29, to: today) else { return [] }
         return entries
-            .filter { cal.startOfDay(for: $0.nightDate) >= from }
+            .filter { cal.startOfDay(for: $0.nightDate) >= from && !$0.isNap }
             .compactMap(\.shownMinutes)
             .sorted()
     }
@@ -376,7 +376,14 @@ struct SleepView: View {
                     Image(systemName: "ellipsis.circle")
                 }
                 .accessibilityLabel("More")
-                Anchor.AddToolbarButton(label: "Log sleep") { logNight() }
+                Menu {
+                    Button("Last night") { logNight() }
+                    Button("A nap or other sleep") { logNap() }
+                    Button("Sleep on an earlier day") { logEarlier() }
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .accessibilityLabel("Log sleep")
             }
         }
         .sheet(item: $editing, onDismiss: finishEditing) { entry in
@@ -421,11 +428,26 @@ struct SleepView: View {
     /// Opens last night, which is the one you woke up from today. If today
     /// already has one, that one opens instead of a second being made.
     private func logNight() {
-        if let existing = entries.first(where: { Calendar.current.startOfDay(for: $0.nightDate) == today }) {
+        if let existing = entries.first(where: { Calendar.current.startOfDay(for: $0.nightDate) == today && !$0.isNap }) {
             open(existing)
             return
         }
         let new = SleepEntry(nightDate: today)
+        modelContext.insert(new)
+        open(new)
+    }
+
+    /// A nap or other sleep in the day. There can be as many as you like on a day, so one is always made new.
+    private func logNap() {
+        let new = SleepEntry(nightDate: today, kind: .nap)
+        modelContext.insert(new)
+        open(new)
+    }
+
+    /// Sleep for a day that has passed: starts on yesterday, and the sheet's "Woke up on" date picks any earlier day.
+    private func logEarlier() {
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: today) ?? today
+        let new = SleepEntry(nightDate: yesterday)
         modelContext.insert(new)
         open(new)
     }
@@ -470,7 +492,7 @@ private struct SleepRow: View {
             Button(action: onEdit) {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(alignment: .firstTextBaseline) {
-                        Text(entry.nightDate.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)))
+                        Text(entry.nightDate.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)) + (entry.isNap ? " · Nap" : ""))
                             .font(.system(.headline, design: .rounded))
                         Spacer()
                         if let minutes = entry.shownMinutes {
@@ -530,7 +552,8 @@ private struct SleepEntrySheet: View {
             entry.wakeTime.map { String($0.timeIntervalSince1970) } ?? "-",
             entry.minutesAsleep.map(String.init) ?? "-",
             entry.feel.map(String.init) ?? "-",
-            entry.note
+            entry.note,
+            entry.kindRaw
         ].joined(separator: "|")
     }
 
@@ -560,7 +583,7 @@ private struct SleepEntrySheet: View {
         Binding(
             get: { entry.bedTime != nil },
             set: { on in
-                entry.bedTime = on ? SleepEntry.bedMoment(clock: clock(23, 0), night: entry.nightDate, wake: entry.wakeTime) : nil
+                entry.bedTime = on ? SleepEntry.bedMoment(clock: entry.isNap ? clock(14, 0) : clock(23, 0), night: entry.nightDate, wake: entry.wakeTime) : nil
             }
         )
     }
@@ -569,7 +592,7 @@ private struct SleepEntrySheet: View {
         Binding(
             get: { entry.wakeTime != nil },
             set: { on in
-                entry.wakeTime = on ? SleepEntry.wakeMoment(clock: clock(7, 0), night: entry.nightDate) : nil
+                entry.wakeTime = on ? SleepEntry.wakeMoment(clock: entry.isNap ? clock(15, 0) : clock(7, 0), night: entry.nightDate) : nil
                 if let bed = entry.bedTime {
                     entry.bedTime = SleepEntry.bedMoment(clock: bed, night: entry.nightDate, wake: entry.wakeTime)
                 }
@@ -579,14 +602,14 @@ private struct SleepEntrySheet: View {
 
     private var bedPicker: Binding<Date> {
         Binding(
-            get: { entry.bedTime ?? clock(23, 0) },
+            get: { entry.bedTime ?? (entry.isNap ? clock(14, 0) : clock(23, 0)) },
             set: { entry.bedTime = SleepEntry.bedMoment(clock: $0, night: entry.nightDate, wake: entry.wakeTime) }
         )
     }
 
     private var wakePicker: Binding<Date> {
         Binding(
-            get: { entry.wakeTime ?? clock(7, 0) },
+            get: { entry.wakeTime ?? (entry.isNap ? clock(15, 0) : clock(7, 0)) },
             set: { newValue in
                 entry.wakeTime = SleepEntry.wakeMoment(clock: newValue, night: entry.nightDate)
                 if let bed = entry.bedTime {
@@ -645,10 +668,21 @@ private struct SleepEntrySheet: View {
                 }
 
                 Section {
-                    DatePicker("Woke up on", selection: nightBinding, in: ...Date.now, displayedComponents: .date)
+                    Picker("Kind of sleep", selection: Binding(get: { entry.kind }, set: { entry.kind = $0 })) {
+                        ForEach(SleepKind.allCases) { kind in
+                            Text(kind.label).tag(kind)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                }
+
+                Section {
+                    DatePicker(entry.isNap ? "Slept on" : "Woke up on", selection: nightBinding, in: ...Date.now, displayedComponents: .date)
                 } footer: {
                     if nightTaken {
-                        Text("There is already an entry for this night. You can open it from the list.")
+                        Text("There is another sleep on this day as well. You can have more than one.")
+                    } else {
+                        Text("Pick any earlier day to add sleep you missed.")
                     }
                 }
 
@@ -1461,7 +1495,7 @@ struct SleepMorningCard: View {
 
     private var loggedToday: Bool {
         let today = Calendar.current.startOfDay(for: .now)
-        return entries.contains { Calendar.current.startOfDay(for: $0.nightDate) == today && !$0.isBlank }
+        return entries.contains { Calendar.current.startOfDay(for: $0.nightDate) == today && !$0.isBlank && !$0.isNap }
     }
 
     /// A review run shows it at any hour, so it can be looked at in the afternoon.

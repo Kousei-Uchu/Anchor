@@ -463,7 +463,7 @@ struct SleepSessionSummaryCard: View {
         let countLine = (count == 1 ? "1 night" : "\(count) nights") + " written down since \(day)."
 
         var asleepLine: String?
-        let minutes = nights.compactMap { $0.shownMinutes }
+        let minutes = nights.filter { !$0.isNap }.compactMap { $0.shownMinutes }
         if let low = minutes.min(), let high = minutes.max() {
             if minutes.count == 1 {
                 asleepLine = "Asleep about \(SleepEntry.describe(minutes: low)) on the night with a time."

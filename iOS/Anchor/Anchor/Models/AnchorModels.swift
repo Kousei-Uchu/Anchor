@@ -1151,6 +1151,21 @@ extension BoundarySection {
 /// One night in the sleep journal. A quiet record and nothing more: there is
 /// no score, no target, no streak and no word for a "bad" night. Every field
 /// is optional or defaulted, so a night can hold just a note, or just a time.
+/// What kind of sleep an entry is: the main sleep of a night, or a nap or other sleep in the day. It only decides how
+/// the sleep is listed and counted (the usual range and the dots are about nights).
+enum SleepKind: String, CaseIterable, Identifiable {
+    case night = "", nap
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .night: return "A night's sleep"
+        case .nap: return "A nap or other sleep"
+        }
+    }
+}
+
 @Model
 final class SleepEntry {
     var id: UUID = UUID()
@@ -1178,6 +1193,11 @@ final class SleepEntry {
     var noteSealed: String? = nil
     /// "typed" for now. Later versions may add other sources.
     var sourceRaw: String = "typed"
+    /// Empty for a night's sleep, "nap" for a nap or other sleep in the day. A new field, so an older entry reads as a
+    /// night. Read and written through `kindRaw` only.
+    var kindRawPlain: String = ""   // a new locked field
+    /// The locked form of `kindRaw`, empty until locking is turned on. Read and written through `kindRaw` only.
+    var kindRawSealed: String? = nil
     /// For a night that came from somewhere else, that source's own id, so
     /// the same night is never added twice. Nil for typed nights.
     var externalID: String? = nil
@@ -1191,8 +1211,9 @@ final class SleepEntry {
     init(id: UUID = UUID(), nightDate: Date = Calendar.current.startOfDay(for: .now),
          bedTime: Date? = nil, wakeTime: Date? = nil, minutesAsleep: Int? = nil,
          feel: Int? = nil, note: String = "", sourceRaw: String = "typed",
-         externalID: String? = nil, createdAt: Date = .now, lastEditedAt: Date = .now) {
+         externalID: String? = nil, createdAt: Date = .now, lastEditedAt: Date = .now, kind: SleepKind = .night) {
         self.id = id
+        self.kindRawPlain = kind.rawValue
         self.nightDatePlain = nightDate
         self.bedTimePlain = bedTime
         self.wakeTimePlain = wakeTime
@@ -1250,6 +1271,23 @@ final class SleepEntry {
 
 // Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
 extension SleepEntry {
+    var kindRaw: String {
+        get { FieldLock.read(plain: kindRawPlain, sealed: kindRawSealed, context: "SleepEntry.kindRaw") }
+        set {
+            let kept = FieldLock.store(newValue, context: "SleepEntry.kindRaw")
+            kindRawPlain = kept.plain
+            kindRawSealed = kept.sealed
+        }
+    }
+
+    var kind: SleepKind {
+        get { SleepKind(rawValue: kindRaw) ?? .night }
+        set { kindRaw = newValue.rawValue }
+    }
+
+    /// True for a nap or other sleep in the day, which is left out of the usual range and the dots.
+    var isNap: Bool { kind == .nap }
+
     var note: String {
         get { FieldLock.read(plain: notePlain, sealed: noteSealed, context: "SleepEntry.note") }
         set {
@@ -1328,12 +1366,14 @@ extension SleepEntry {
         createdAt = createdAtPlain
         lastEditedAt = lastEditedAtPlain
         note = notePlain
+        kindRaw = kindRawPlain
     }
 
     /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
     /// again. It does nothing while locking is off.
     func lockExistingValues() {
         guard FieldLock.isOn else { return }
+        if kindRawSealed == nil { kindRaw = kindRawPlain }
         if nightDateSealed == nil { nightDate = nightDatePlain }
         if bedTimeSealed == nil { bedTime = bedTimePlain }
         if wakeTimeSealed == nil { wakeTime = wakeTimePlain }
@@ -1355,13 +1395,15 @@ extension SleepEntry {
             FieldLock.describe(feel),
             FieldLock.describe(createdAt),
             FieldLock.describe(lastEditedAt),
-            FieldLock.describe(note)
+            FieldLock.describe(note),
+            FieldLock.describe(kindRaw)
         ])
     }
 
     /// True when every locked field is held sealed, with nothing left in the plain property.
     func lockedFieldsAreSealed() -> Bool {
-        nightDateSealed != nil && nightDatePlain == Date.lockedPlaceholder
+        kindRawSealed != nil && kindRawPlain.isEmpty
+            && nightDateSealed != nil && nightDatePlain == Date.lockedPlaceholder
             && bedTimeSealed != nil && bedTimePlain == nil
             && wakeTimeSealed != nil && wakeTimePlain == nil
             && minutesAsleepSealed != nil && minutesAsleepPlain == nil
