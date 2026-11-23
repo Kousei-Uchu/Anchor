@@ -279,14 +279,14 @@ export function EmptyState({ icon, title, message, actionTitle, tint = 'sage' }:
 }
 
 /** CrisisNumbersView */
-export function CrisisCard({ numbers, region }: { numbers: { label: string; display: string; kind: 'call' | 'text' }[]; region: string }) {
+export function CrisisCard({ numbers, region }: { numbers: { label: string; display: string; kind: 'call' | 'text' | 'link' }[]; region: string }) {
   return (
     <div className="au-crisis">
       <div className="au-headline au-crisis-title"><Glyph name="cross.case.fill" size={21} />Crisis numbers</div>
       {numbers.map((n) => (
         <div key={n.label} className="au-crisis-row">
           <span className="au-subheadline au-medium">{n.label}</span>
-          <span className="au-crisis-num">{n.display}<Glyph name={n.kind === 'call' ? 'phone.fill' : 'message.fill'} size={21} /></span>
+          <span className="au-crisis-num">{n.display}<Glyph name={n.kind === 'call' ? 'phone.fill' : n.kind === 'link' ? 'globe' : 'message.fill'} size={21} /></span>
         </div>
       ))}
       <div className="au-caption au-crisis-foot"><Glyph name="globe" size={13} weight={1.8} />Numbers for {region}. Change</div>

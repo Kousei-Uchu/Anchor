@@ -358,6 +358,14 @@ struct SettingsView: View {
 
     private var dataAndHelpPage: some View {
         Form {
+            Anchor.SettingsSection(title: "Crisis numbers") {
+                NavigationLink {
+                    CrisisNumbersSettingsView()
+                } label: {
+                    Text("Crisis numbers").font(.system(.subheadline, design: .rounded))
+                }
+            }
+
             Anchor.SettingsSection(title: "Your data") {
                 NavigationLink {
                     DataControlView()

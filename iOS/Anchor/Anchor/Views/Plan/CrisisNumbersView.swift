@@ -92,8 +92,135 @@ enum CrisisRegion: String, CaseIterable, Identifiable {
     }
 }
 
+// MARK: - Extra lines, custom numbers and settings
+
+extension CrisisRegion {
+    /// Numbers for LGBTQIA+ people. Only shown when the person switches them on. A region with none listed
+    /// here has none checked yet; the Find a helpline row is always there for it.
+    var lgbtqNumbers: [CrisisNumber] {
+        switch self {
+        case .au:
+            return [CrisisNumber(label: "QLife (3pm to midnight)", url: "tel:1800184527", display: "1800 184 527")]
+        default:
+            return []
+        }
+    }
+
+    /// Numbers for Aboriginal and Torres Strait Islander people (or the region's Indigenous peoples). Only shown when switched on.
+    var indigenousNumbers: [CrisisNumber] {
+        switch self {
+        case .au:
+            return [CrisisNumber(label: "13YARN (24/7)", url: "tel:139276", display: "13 92 76")]
+        default:
+            return []
+        }
+    }
+
+    static let findAHelpline = CrisisNumber(label: "Find a helpline", url: "https://findahelpline.com", display: "findahelpline.com")
+}
+
+/// A number the person added themselves, for someone they trust or a service near them.
+struct CustomCrisisNumber: Codable, Identifiable, Hashable {
+    var id = UUID()
+    var label = ""
+    var number = ""
+
+    var crisisNumber: CrisisNumber? {
+        let dialable = number.filter { $0.isNumber || $0 == "+" || $0 == "*" || $0 == "#" }
+        guard !dialable.isEmpty else { return nil }
+        return CrisisNumber(label: label.isEmpty ? "My number" : label, url: "tel:" + dialable, display: number)
+    }
+}
+
+enum CrisisSettings {
+    static let showLGBTQ = "anchor.crisis.showLGBTQ"
+    static let showIndigenous = "anchor.crisis.showIndigenous"
+    static let customNumbers = "anchor.crisis.customNumbers"
+
+    static func decode(_ raw: String) -> [CustomCrisisNumber] {
+        guard let data = raw.data(using: .utf8),
+              let list = try? JSONDecoder().decode([CustomCrisisNumber].self, from: data) else { return [] }
+        return list
+    }
+
+    static func encode(_ list: [CustomCrisisNumber]) -> String {
+        guard let data = try? JSONEncoder().encode(list), let text = String(data: data, encoding: .utf8) else { return "" }
+        return text
+    }
+}
+
+/// Settings page: which extra lines to show, and the person's own numbers.
+struct CrisisNumbersSettingsView: View {
+    @AppStorage(CrisisSettings.showLGBTQ) private var showLGBTQ = false
+    @AppStorage(CrisisSettings.showIndigenous) private var showIndigenous = false
+    @AppStorage(CrisisSettings.customNumbers) private var customRaw = ""
+    @AppStorage("anchor.crisisRegion") private var regionSetting = "auto"
+
+    private var region: CrisisRegion {
+        if regionSetting == "auto" { return CrisisRegion.detect() }
+        return CrisisRegion(rawValue: regionSetting) ?? CrisisRegion.detect()
+    }
+
+    private var custom: Binding<[CustomCrisisNumber]> {
+        Binding(get: { CrisisSettings.decode(customRaw) }, set: { customRaw = CrisisSettings.encode($0) })
+    }
+
+    var body: some View {
+        Form {
+            Anchor.SettingsSection(
+                title: "Numbers for \(region.name)",
+                footer: "These are added to the Crisis numbers card on Now. Find a helpline is always there. \(region.lgbtqNumbers.isEmpty && region.indigenousNumbers.isEmpty ? "No extra lines are listed for this region yet." : "")"
+            ) {
+                Anchor.SettingsToggle(title: "LGBTQIA+ support lines", isOn: $showLGBTQ)
+                Anchor.SettingsToggle(title: "Aboriginal and Torres Strait Islander lines", isOn: $showIndigenous)
+            }
+
+            Anchor.SettingsSection(
+                title: "My own numbers",
+                footer: "A number you add shows on the Crisis numbers card, after the standard ones. It stays on this phone."
+            ) {
+                ForEach(custom) { $entry in
+                    VStack(alignment: .leading, spacing: 6) {
+                        TextField("Name, such as My sister", text: $entry.label)
+                        TextField("Number", text: $entry.number)
+                            .keyboardType(.phonePad)
+                    }
+                    .font(.system(.subheadline, design: .rounded))
+                }
+                .onDelete { offsets in
+                    var list = custom.wrappedValue
+                    list.remove(atOffsets: offsets)
+                    custom.wrappedValue = list
+                }
+                Button {
+                    custom.wrappedValue = custom.wrappedValue + [CustomCrisisNumber()]
+                } label: {
+                    Label("Add a number", systemImage: "plus.circle.fill")
+                        .font(.system(.subheadline, design: .rounded))
+                }
+            }
+        }
+        .anchorSettingsStyle()
+        .navigationTitle("Crisis numbers")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
 struct CrisisNumbersView: View {
     @AppStorage("anchor.crisisRegion") private var regionSetting = "auto"
+    @AppStorage(CrisisSettings.showLGBTQ) private var showLGBTQ = false
+    @AppStorage(CrisisSettings.showIndigenous) private var showIndigenous = false
+    @AppStorage(CrisisSettings.customNumbers) private var customRaw = ""
+
+    /// The region's standard numbers, then the person's own, then any extra lines they switched on, then Find a helpline.
+    private var numbers: [CrisisNumber] {
+        var list = region.numbers
+        list += CrisisSettings.decode(customRaw).compactMap { $0.crisisNumber }
+        if showLGBTQ { list += region.lgbtqNumbers }
+        if showIndigenous { list += region.indigenousNumbers }
+        if !list.contains(where: { $0.url == CrisisRegion.findAHelpline.url }) { list.append(CrisisRegion.findAHelpline) }
+        return list
+    }
 
     private var region: CrisisRegion {
         if regionSetting == "auto" { return CrisisRegion.detect() }
@@ -105,7 +232,7 @@ struct CrisisNumbersView: View {
             Label("Crisis numbers", systemImage: "cross.case.fill")
                 .font(.system(.headline, design: .rounded))
                 .foregroundStyle(.white)
-            ForEach(region.numbers) { entry in
+            ForEach(numbers) { entry in
                 if let url = URL(string: entry.url) {
                     Link(destination: url) {
                         HStack {

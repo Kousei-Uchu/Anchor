@@ -11,6 +11,7 @@ const NUMBERS = [
   { label: 'Emergency', display: '000', kind: 'call' as const },
   { label: 'Lifeline (call)', display: '13 11 14', kind: 'call' as const },
   { label: 'Lifeline (text)', display: '0477 13 11 14', kind: 'text' as const },
+  { label: 'Find a helpline', display: 'findahelpline.com', kind: 'link' as const },
 ];
 
 export default function NowTab() {
