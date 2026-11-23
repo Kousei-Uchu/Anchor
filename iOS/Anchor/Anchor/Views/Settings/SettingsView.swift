@@ -748,6 +748,42 @@ struct AboutVersion: Identifiable {
     var id: String { version }
 }
 
+/// Anchor's version, written v<major>.<minor>.<patch><tag>. The numbers are written into the app by
+/// scripts/version.sh when it is built (see docs/VERSIONING.md). The tag is worked out here, when the app runs,
+/// because the same file can go to TestFlight and then be released on the App Store.
+enum AppVersion {
+    enum Channel {
+        case appStore, testFlight, dev
+
+        /// "" for the App Store, "-pre" for TestFlight, "-dev" for a run from Xcode.
+        var tag: String {
+            switch self {
+            case .appStore: return ""
+            case .testFlight: return "-pre"
+            case .dev: return "-dev"
+            }
+        }
+    }
+
+    static var channel: Channel {
+        #if DEBUG
+        return .dev
+        #else
+        // TestFlight builds carry a "sandboxReceipt"; the App Store's is "receipt". Neither exists on a run from Xcode.
+        guard let url = Bundle.main.appStoreReceiptURL, FileManager.default.fileExists(atPath: url.path) else { return .dev }
+        return url.lastPathComponent == "sandboxReceipt" ? .testFlight : .appStore
+        #endif
+    }
+
+    /// For example "1.4.0".
+    static var number: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+    }
+
+    /// For example "v1.4.0-pre".
+    static var display: String { "v" + number + channel.tag }
+}
+
 /// The words on the About screen. The same copy is in
 /// website/src/content/about.ts, and scripts/check-about-content.mjs fails if
 /// the two stop matching, so the app and the website say the same thing.
@@ -808,13 +844,16 @@ enum AboutContent {
         ]),
     ]
 
-    /// For example "Version 1.0 (1)". Falls back to the version alone.
+    /// For example "v1.4.0-pre (build 140, a1b2c3d)". Falls back to the version alone.
     static var versionLine: String {
         let info = Bundle.main.infoDictionary
-        let version = info?["CFBundleShortVersionString"] as? String ?? ""
         let build = info?["CFBundleVersion"] as? String ?? ""
-        if version.isEmpty { return "Version not available" }
-        return build.isEmpty ? "Version \(version)" : "Version \(version) (\(build))"
+        let commit = info?["AnchorGitCommit"] as? String ?? ""
+        if AppVersion.number.isEmpty { return "Version not available" }
+        var details: [String] = []
+        if !build.isEmpty { details.append("build \(build)") }
+        if !commit.isEmpty, commit != "none" { details.append(commit) }
+        return details.isEmpty ? AppVersion.display : "\(AppVersion.display) (\(details.joined(separator: ", ")))"
     }
 
     /// The device model as the system names it, such as iPhone15,2.

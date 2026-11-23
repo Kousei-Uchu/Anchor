@@ -568,6 +568,7 @@
 				996FB510E2C948CC84C2F9D4 /* Resources */,
 				868E8B10D3F84AF8840D97CD /* Frameworks */,
 				408E5EAEB7D845D783F655AA /* Embed Foundation Extensions */,
+				A1B2C3D4E5F60718293A4B01 /* Set version from git */,
 			);
 			buildRules = (
 			);
@@ -589,6 +590,7 @@
 				40C3E4C4FD2F471D8AAF7A78 /* Sources */,
 				69D3BCD7C0354D5B9B671820 /* Resources */,
 				3A536E339EDB4F25B97E71C1 /* Frameworks */,
+				A1B2C3D4E5F60718293A4B02 /* Set version from git */,
 			);
 			buildRules = (
 			);
@@ -696,6 +698,47 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		A1B2C3D4E5F60718293A4B01 /* Set version from git */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Set version from git";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "bash \"${SRCROOT}/../../scripts/version.sh\" --apply\n";
+		};
+		A1B2C3D4E5F60718293A4B02 /* Set version from git */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Set version from git";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "bash \"${SRCROOT}/../../scripts/version.sh\" --apply\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		40C3E4C4FD2F471D8AAF7A78 /* Sources */ = {
@@ -851,6 +894,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				DEVELOPMENT_ASSET_PATHS = "\"Anchor/Preview Content\"";
 				DEVELOPMENT_TEAM = HD264P8365;
 				ENABLE_APP_SANDBOX = YES;
@@ -914,6 +958,7 @@
 				CODE_SIGN_ENTITLEMENTS = AnchorWidget/AnchorWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				DEVELOPMENT_TEAM = HD264P8365;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = AnchorWidget/Info.plist;
@@ -976,6 +1021,7 @@
 				CODE_SIGN_ENTITLEMENTS = AnchorWidget/AnchorWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				DEVELOPMENT_TEAM = HD264P8365;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = AnchorWidget/Info.plist;
@@ -1033,6 +1079,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				DEVELOPMENT_ASSET_PATHS = "\"Anchor/Preview Content\"";
 				DEVELOPMENT_TEAM = HD264P8365;
 				ENABLE_APP_SANDBOX = YES;

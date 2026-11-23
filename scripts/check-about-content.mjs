@@ -22,7 +22,7 @@ function literals(text) {
 
 const swift = readFileSync(swiftPath, "utf8");
 const start = swift.indexOf("enum AboutContent {");
-const end = swift.indexOf("/// For example \"Version", start);
+const end = swift.indexOf("/// For example \"v", start);
 if (start < 0 || end < 0) {
   console.error("Could not find the AboutContent block in SettingsView.swift.");
   process.exit(2);

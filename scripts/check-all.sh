@@ -19,6 +19,8 @@ echo "=== sync-design.mjs --check ==="
 node scripts/sync-design.mjs --check || status=1
 echo "=== check-promo-shots.mjs ==="
 node scripts/check-promo-shots.mjs || status=1
+echo "=== check-version.sh ==="
+bash scripts/check-version.sh || status=1
 echo "=== check-swift-syntax.py ==="
 python3 scripts/check-swift-syntax.py
 code=$?
