@@ -562,6 +562,7 @@ Every key the app keeps in the phone's settings (UserDefaults and `@AppStorage`)
 | anchor.sync.files.last | how the last pass of sending files went | plain | plain | two counts in a short line |
 | anchor.sync.locklevel | how much is locked, put in iCloud's key-value store for a second device | plain | plain | a single number with no content |
 | anchor.sleep.health.write | saving typed nights to Apple Health | plain | plain | an on or off switch |
+| anchor.sleep.health.stages | showing sleep stages read from Apple Health | plain | plain | an on or off switch |
 | reminders.appointment.dayBefore | the day-before session reminder | plain | plain | an on or off switch |
 | reminders.appointment.sameDay | the same-day session reminder | plain | plain | an on or off switch |
 | recovery.pledgeReminder.enabled | the pledge reminder | plain | plain | an on or off switch |

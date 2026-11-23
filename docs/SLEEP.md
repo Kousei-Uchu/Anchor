@@ -56,3 +56,10 @@ An optional, quiet record of nights. It has no score, no target hours, no streak
 - Tapping a day opens it in full: the night first, then the other sleeps in order, with the night, daytime and total time asleep, and buttons to add a night's sleep or a nap for that day. Each sleep opens in the usual sheet, and a Health night opens as a copy the same way it does on the Sleep screen.
 - Months further back than 90 days are read from Apple Health as they scroll into view (nothing is stored). Your own entries show for any month.
 - No score, no target, no streak, and no colour for a short night.
+
+## Sessions and stages from Apple Health (Patch SL3)
+
+- Health is now read as sessions, not one night a day. Samples less than three hours apart are one sleep. For each day, the longest sleep that was not in the daytime is the night (a sleep that began after 8 am and ended before 8 pm counts as daytime); every other sleep that day with at least 15 minutes asleep is a nap or other sleep. A night keeps the id `health:YYYY-MM-DD`; a nap adds the time it began, `health:YYYY-MM-DD-HHMM`.
+- **Show sleep stages** (a switch under Bring in nights from Apple Health, off until switched on) reads core, deep, REM and awake time for each sleep from a watch or another device that records stages. A sleep with only "asleep" shows no stages.
+- Stages are held in memory with the nights and never saved in Anchor. They show as a thin bar and one line of words on the sleep's card, on the Sleep calendar's day view. There is no "good" amount of any stage, no score and no target. If a Health night is opened and changed, it becomes your own night and its stages no longer show.
+- Your own night hides the Health night for that day; your own nap hides the Health naps for that day.

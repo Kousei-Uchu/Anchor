@@ -761,6 +761,39 @@ private struct SleepDaySheet: View {
     }
 }
 
+/// A thin bar and one line of words for the time in each sleep stage. The words carry the meaning, not the colours,
+/// and there is nothing to aim for: no "good" amount of any stage.
+private struct SleepStagesView: View {
+    let stages: SleepStages
+
+    private var parts: [(label: String, minutes: Int, opacity: Double)] {
+        [("Deep", stages.deep, 1.0), ("Core", stages.core, 0.6), ("REM", stages.rem, 0.35), ("Awake", stages.awake, 0.15)]
+            .filter { $0.1 > 0 }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            GeometryReader { geo in
+                let total = max(1, parts.map { $0.minutes }.reduce(0, +))
+                HStack(spacing: 1) {
+                    ForEach(parts.indices, id: \.self) { index in
+                        Rectangle()
+                            .fill(Anchor.Theme.accent.opacity(parts[index].opacity))
+                            .frame(width: max(2, geo.size.width * CGFloat(parts[index].minutes) / CGFloat(total)))
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 3))
+            }
+            .frame(height: 6)
+            Text(parts.map { "\($0.label) \(shortSleep($0.minutes))" }.joined(separator: " · "))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Sleep stages. " + parts.map { "\($0.label) \(SleepEntry.describe(minutes: $0.minutes))" }.joined(separator: ", "))
+    }
+}
+
 private struct SleepRow: View {
     let entry: SleepEntry
     let words: [String]
@@ -805,6 +838,10 @@ private struct SleepRow: View {
                             .lineLimit(2)
                     }
                     if entry.sourceRaw == SleepHealthSettings.sourceHealth {
+                        if let stages = SleepHealthNights.shared.stages[entry.externalID ?? ""], stages.hasDetail {
+                            SleepStagesView(stages: stages)
+                                .padding(.top, 2)
+                        }
                         Text("From Apple Health")
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -1108,6 +1145,8 @@ enum SleepHealthSettings {
     static let lastSyncKey = "anchor.sleep.health.lastSync"
     /// The `sourceRaw` of a night that came from Apple Health.
     static let sourceHealth = "health"
+    /// On while sleep stages (core, deep, REM, awake) are read along with the nights, from a watch that records them.
+    static let stagesKey = "anchor.sleep.health.stages"
     /// On while typed nights are saved to Apple Health.
     static let writeKey = "anchor.sleep.health.write"
     /// Nights typed since this moment are eligible to be saved, as seconds since 1970.
@@ -1120,11 +1159,25 @@ enum SleepHealthSettings {
 /// Nights read from Apple Health, held in memory only. They are never put in Anchor's store, so they are never synced
 /// to iCloud, never in a backup or an export of the store, and they come back from Health each time. Each is a
 /// `SleepEntry` that belongs to no store, so the screens that show nights can show it like any other.
+/// Minutes in each sleep stage for one sleep, as an Apple Watch (or another device that records stages) reports them.
+struct SleepStages: Equatable {
+    var core = 0
+    var deep = 0
+    var rem = 0
+    var awake = 0
+
+    /// True when the device recorded actual stages, not only "asleep".
+    var hasDetail: Bool { core + deep + rem > 0 }
+}
+
 @MainActor
 @Observable
 final class SleepHealthNights {
     static let shared = SleepHealthNights()
     var nights: [SleepEntry] = []
+    /// The stages for a night in `nights`, by its external id. Only filled while stages are switched on, and held in memory
+    /// like the nights.
+    var stages: [String: SleepStages] = [:]
 
     /// The nights you wrote or changed, and the nights Apple Health holds for days you have no night of your own.
     /// A night you wrote down is yours, so Apple Health never takes its place.
@@ -1132,9 +1185,11 @@ final class SleepHealthNights {
         guard !nights.isEmpty else { return stored }
         let cal = Calendar.current
         // A copy of a Health night that an older version stored is left out while the live nights are there.
+        // Your own night hides the Health night for that day, and your own nap hides the Health naps for that day.
         let own = stored.filter { $0.sourceRaw != SleepHealthSettings.sourceHealth }
-        let ownDays = Set(own.map { cal.startOfDay(for: $0.nightDate) })
-        return own + nights.filter { !ownDays.contains(cal.startOfDay(for: $0.nightDate)) }
+        func key(_ entry: SleepEntry) -> String { "\(cal.startOfDay(for: entry.nightDate).timeIntervalSince1970)-\(entry.isNap)" }
+        let ownKeys = Set(own.map(key))
+        return own + nights.filter { !ownKeys.contains(key($0)) }
     }
 }
 
@@ -1192,6 +1247,7 @@ final class SleepHealthReader {
     func disconnect() {
         UserDefaults.standard.set(false, forKey: SleepHealthSettings.connectedKey)
         SleepHealthNights.shared.nights = []
+        SleepHealthNights.shared.stages = [:]
     }
 
     /// Reads further back, for the sleep calendar's older months. Nothing is stored.
@@ -1233,6 +1289,8 @@ final class SleepHealthReader {
         var start: Date
         var end: Date
         var asleep: Bool
+        /// The Health sleep value (core, deep, REM, asleep, awake), as its raw number.
+        var value: Int = 0
     }
 
     private struct Night {
@@ -1240,6 +1298,9 @@ final class SleepHealthReader {
         var bed: Date
         var wake: Date
         var minutesAsleep: Int?
+        var stages: SleepStages?
+        /// True for a sleep that began after 8 am and ended before 8 pm.
+        var isDaytime: Bool
     }
 
     private static func unionMinutes(_ pieces: [Piece]) -> Int {
@@ -1295,13 +1356,18 @@ final class SleepHealthReader {
         }
 
         var pieces: [Piece] = []
+        var awakePieces: [Piece] = []
         for sample in samples {
             // Never read back anything Anchor wrote itself.
             if sample.sourceRevision.source.bundleIdentifier == Bundle.main.bundleIdentifier { continue }
             guard let value = HKCategoryValueSleepAnalysis(rawValue: sample.value) else { continue }
-            if value == .awake { continue }
+            if value == .awake {
+                // Not part of when a sleep began or ended, but kept for the awake time within a sleep.
+                awakePieces.append(Piece(start: sample.startDate, end: sample.endDate, asleep: false, value: sample.value))
+                continue
+            }
             let asleep = HKCategoryValueSleepAnalysis.allAsleepValues.contains(value)
-            pieces.append(Piece(start: sample.startDate, end: sample.endDate, asleep: asleep))
+            pieces.append(Piece(start: sample.startDate, end: sample.endDate, asleep: asleep, value: sample.value))
         }
         pieces.sort { $0.start < $1.start }
 
@@ -1317,7 +1383,11 @@ final class SleepHealthReader {
             }
             runEnd = max(runEnd, piece.end)
         }
-        var longestByDay: [Date: Night] = [:]
+        let wantStages = defaults.bool(forKey: SleepHealthSettings.stagesKey)
+        let coreValue = HKCategoryValueSleepAnalysis.asleepCore.rawValue
+        let deepValue = HKCategoryValueSleepAnalysis.asleepDeep.rawValue
+        let remValue = HKCategoryValueSleepAnalysis.asleepREM.rawValue
+        var found: [Night] = []
         for session in sessions {
             guard let bed = session.map(\.start).min(), let wake = session.map(\.end).max() else { continue }
             let span = wake.timeIntervalSince(bed)
@@ -1326,21 +1396,49 @@ final class SleepHealthReader {
             guard day >= from, day <= today else { continue }
             let asleepPieces = session.filter(\.asleep)
             let minutes = asleepPieces.isEmpty ? nil : Self.unionMinutes(asleepPieces)
-            let night = Night(day: day, bed: bed, wake: wake, minutesAsleep: minutes.flatMap { $0 > 0 ? $0 : nil })
-            if let existing = longestByDay[day], existing.wake.timeIntervalSince(existing.bed) >= span { continue }
-            longestByDay[day] = night
+            var stages: SleepStages?
+            if wantStages {
+                var detail = SleepStages()
+                detail.core = Self.unionMinutes(session.filter { $0.value == coreValue })
+                detail.deep = Self.unionMinutes(session.filter { $0.value == deepValue })
+                detail.rem = Self.unionMinutes(session.filter { $0.value == remValue })
+                detail.awake = Self.unionMinutes(awakePieces.filter { $0.start >= bed && $0.end <= wake })
+                if detail.hasDetail { stages = detail }
+            }
+            let startHour = cal.component(.hour, from: bed)
+            let endHour = cal.component(.hour, from: wake)
+            let sameDay = cal.startOfDay(for: bed) == day
+            found.append(Night(day: day, bed: bed, wake: wake, minutesAsleep: minutes.flatMap { $0 > 0 ? $0 : nil },
+                               stages: stages, isDaytime: sameDay && startHour >= 8 && endHour < 20))
         }
+
+        // For each day, the longest sleep that was not in the daytime is the night. Every other sleep that day with at
+        // least 15 minutes asleep is a nap or other sleep.
+        var entries: [SleepEntry] = []
+        var stagesByID: [String: SleepStages] = [:]
+        for (day, group) in Dictionary(grouping: found, by: \.day) {
+            let night = group.filter { !$0.isDaytime }.max { $0.wake.timeIntervalSince($0.bed) < $1.wake.timeIntervalSince($1.bed) }
+            let parts = cal.dateComponents([.year, .month, .day], from: day)
+            let dayKey = String(format: "health:%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
+            for sleep in group {
+                let isNight = night.map { $0.bed == sleep.bed && $0.wake == sleep.wake } ?? false
+                if !isNight && (sleep.minutesAsleep ?? 0) < 15 { continue }
+                let clock = cal.dateComponents([.hour, .minute], from: sleep.bed)
+                let key = isNight ? dayKey : dayKey + String(format: "-%02d%02d", clock.hour ?? 0, clock.minute ?? 0)
+                // Not inserted into any store.
+                entries.append(SleepEntry(nightDate: day, bedTime: sleep.bed, wakeTime: sleep.wake,
+                                          minutesAsleep: sleep.minutesAsleep, sourceRaw: SleepHealthSettings.sourceHealth,
+                                          externalID: key, kind: isNight ? .night : .nap))
+                if let stages = sleep.stages { stagesByID[key] = stages }
+            }
+        }
+        entries.sort { ($0.wakeTime ?? $0.nightDate) > ($1.wakeTime ?? $1.nightDate) }
 
         // A copy that an older version stored would reach iCloud, so it goes.
         purgeStoredCopies(context: context)
-        SleepHealthNights.shared.nights = longestByDay.values.sorted { $0.day > $1.day }.map { night in
-            let parts = cal.dateComponents([.year, .month, .day], from: night.day)
-            let key = String(format: "health:%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
-            // Not inserted into any store.
-            return SleepEntry(nightDate: night.day, bedTime: night.bed, wakeTime: night.wake,
-                              minutesAsleep: night.minutesAsleep, sourceRaw: SleepHealthSettings.sourceHealth, externalID: key)
-        }
-        foundNights = longestByDay.count
+        SleepHealthNights.shared.nights = entries
+        SleepHealthNights.shared.stages = stagesByID
+        foundNights = entries.count
         defaults.set(Date.now.timeIntervalSince1970, forKey: SleepHealthSettings.lastSyncKey)
     }
 }
@@ -1549,6 +1647,7 @@ private struct SleepHealthCard: View {
     @AppStorage(SleepHealthSettings.connectedKey) private var connected = false
     @AppStorage(SleepHealthSettings.lastSyncKey) private var lastSync = 0.0
     @AppStorage(SleepHealthSettings.writeKey) private var writing = false
+    @AppStorage(SleepHealthSettings.stagesKey) private var showStages = false
     @State private var connecting = false
     @State private var enablingWrite = false
     @State private var confirmingRemove = false
@@ -1639,6 +1738,17 @@ private extension SleepHealthCard {
             }
 
             if connected {
+                Toggle("Show sleep stages", isOn: Binding(
+                    get: { showStages },
+                    set: { on in
+                        showStages = on
+                        Task { await reader.sync(context: modelContext, full: true) }
+                    }
+                ))
+                .tint(Anchor.Theme.accent)
+                Text("Core, deep, REM and awake time, when a watch or another device records them. Read from Health when needed and never saved in Anchor.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
                 if let statusLine {
                     Text(statusLine)
                         .font(.subheadline)
