@@ -372,7 +372,7 @@ export function futureNoteRows(now: Date = demoNow()) {
 export function goalGroups() {
   const sorted = [...rows('PersonalGoal')].sort((a, b) => Number(a.sortOrder) - Number(b.sortOrder));
   const card = (g: Row) => {
-    const bits = [g.usesSMART ? 'SMART' : '', (g.notes ?? []).length ? `${g.notes.length} ${g.notes.length === 1 ? 'note' : 'notes'}` : ''].filter(Boolean);
+    const bits = [g.termRaw === 'short' ? 'Short term' : g.termRaw === 'long' ? 'Long term' : '', g.usesSMART ? 'SMART' : '', (g.notes ?? []).length ? `${g.notes.length} ${g.notes.length === 1 ? 'note' : 'notes'}` : ''].filter(Boolean);
     return { title: String(g.title), why: String(g.why ?? ''), meta: bits.join(' \u00b7 ') };
   };
   return { working: sorted.filter((g) => enumOf(g.status) === 'active' || g.status === undefined).map(card), reached: sorted.filter((g) => enumOf(g.status) === 'reached').map(card) };

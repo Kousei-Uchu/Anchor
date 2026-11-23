@@ -1534,6 +1534,22 @@ enum GoalStatus: String, CaseIterable, Identifiable {
     }
 }
 
+/// How far ahead a goal looks, as the person sees it: nothing chosen, a short-term goal, or a long-term one.
+/// Nothing is measured or dated, and there is no deadline: it is only a way to sort the list.
+enum GoalTerm: String, CaseIterable, Identifiable {
+    case unset = "", short, long
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .unset: return "Not set"
+        case .short: return "Short term"
+        case .long: return "Long term"
+        }
+    }
+}
+
 /// One of the person's own goals, written in their words, with short dated
 /// notes along the way. Nothing is scored, counted as a percentage or framed
 /// as treatment: a note is just something they wanted to remember. Where a
@@ -1576,15 +1592,21 @@ final class PersonalGoal {
     @Attribute(originalName: "smartTimeBound") var smartTimeBoundPlain: String = ""
     /// The locked form of `smartTimeBound`, empty until locking is turned on. Read and written through `smartTimeBound` only.
     var smartTimeBoundSealed: String? = nil
+    /// Short term or long term, or empty when the person has not said. A new field, so a goal made before it existed
+    /// reads as not set. Read and written through `termRaw` only.
+    var termRawPlain: String = ""   // a new locked field
+    /// The locked form of `termRaw`, empty until locking is turned on. Read and written through `termRaw` only.
+    var termRawSealed: String? = nil
 
     init(id: UUID = UUID(), title: String = "", why: String = "", status: GoalStatus = .active,
          notes: [GoalNote] = [], sortOrder: Int = 0, createdAt: Date = .now, lastEditedAt: Date = .now,
          usesSMART: Bool = false, smartSpecific: String = "", smartMeasurable: String = "",
-         smartAchievable: String = "", smartTimeBound: String = "") {
+         smartAchievable: String = "", smartTimeBound: String = "", term: GoalTerm = .unset) {
         self.id = id
         self.titlePlain = title
         self.whyPlain = why
         self.statusRawPlain = status.rawValue
+        self.termRawPlain = term.rawValue
         self.notesPlain = notes
         self.sortOrder = sortOrder
         self.createdAtPlain = createdAt
@@ -1600,6 +1622,11 @@ final class PersonalGoal {
     var status: GoalStatus {
         get { GoalStatus(rawValue: statusRaw) ?? .active }
         set { statusRaw = newValue.rawValue }
+    }
+
+    var term: GoalTerm {
+        get { GoalTerm(rawValue: termRaw) ?? .unset }
+        set { termRaw = newValue.rawValue }
     }
 }
 
@@ -1662,6 +1689,15 @@ extension PersonalGoal {
         }
     }
 
+    var termRaw: String {
+        get { FieldLock.read(plain: termRawPlain, sealed: termRawSealed, context: "PersonalGoal.termRaw") }
+        set {
+            let kept = FieldLock.store(newValue, context: "PersonalGoal.termRaw")
+            termRawPlain = kept.plain
+            termRawSealed = kept.sealed
+        }
+    }
+
     var statusRaw: String {
         get { FieldLock.read(plain: statusRawPlain, sealed: statusRawSealed, context: "PersonalGoal.statusRaw") }
         set {
@@ -1692,6 +1728,7 @@ extension PersonalGoal {
     func lockNewValues() {
         guard FieldLock.isOn else { return }
         statusRaw = statusRawPlain
+        termRaw = termRawPlain
         createdAt = createdAtPlain
         lastEditedAt = lastEditedAtPlain
         title = titlePlain
@@ -1708,6 +1745,7 @@ extension PersonalGoal {
     func lockExistingValues() {
         guard FieldLock.isOn else { return }
         if statusRawSealed == nil { statusRaw = statusRawPlain }
+        if termRawSealed == nil { termRaw = termRawPlain }
         if createdAtSealed == nil { createdAt = createdAtPlain }
         if lastEditedAtSealed == nil { lastEditedAt = lastEditedAtPlain }
         if titleSealed == nil { title = titlePlain }
@@ -1724,6 +1762,7 @@ extension PersonalGoal {
     func lockedSnapshot() -> String {
         FieldLock.join([
             FieldLock.describe(statusRaw),
+            FieldLock.describe(termRaw),
             FieldLock.describe(createdAt),
             FieldLock.describe(lastEditedAt),
             FieldLock.describe(title),
@@ -1739,6 +1778,7 @@ extension PersonalGoal {
     /// True when every locked field is held sealed, with nothing left in the plain property.
     func lockedFieldsAreSealed() -> Bool {
         statusRawSealed != nil && statusRawPlain.isEmpty
+            && termRawSealed != nil && termRawPlain.isEmpty
             && createdAtSealed != nil && createdAtPlain == Date.lockedPlaceholder
             && lastEditedAtSealed != nil && lastEditedAtPlain == Date.lockedPlaceholder
             && titleSealed != nil && titlePlain.isEmpty

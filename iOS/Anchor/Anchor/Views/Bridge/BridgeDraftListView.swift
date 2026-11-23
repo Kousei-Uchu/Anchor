@@ -395,6 +395,7 @@ struct PersonalGoalsView: View {
 
     private func caption(_ goal: PersonalGoal) -> String? {
         var parts: [String] = []
+        if goal.term != .unset { parts.append(goal.term.label) }
         if goal.usesSMART { parts.append("SMART") }
         if !goal.notes.isEmpty { parts.append(goal.notes.count == 1 ? "1 note" : "\(goal.notes.count) notes") }
         return parts.isEmpty ? nil : parts.joined(separator: " \u{00B7} ")
@@ -485,6 +486,19 @@ private struct PersonalGoalEditorSheet: View {
                     } footer: {
                         Text("Relevant is the box above. Time-bound can stay open: no date is needed, and nothing is ever marked late.")
                     }
+                }
+                Section {
+                    Picker("How far ahead", selection: Binding(
+                        get: { goal.term },
+                        set: { goal.term = $0; goal.lastEditedAt = .now }
+                    )) {
+                        ForEach(GoalTerm.allCases) { term in
+                            Text(term.label).tag(term)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                } footer: {
+                    Text("Short term or long term, only to help you sort. No dates, nothing is ever late.")
                 }
                 Section {
                     Picker("Where it is", selection: Binding(

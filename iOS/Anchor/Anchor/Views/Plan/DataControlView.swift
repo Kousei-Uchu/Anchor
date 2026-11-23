@@ -1840,18 +1840,21 @@ struct PersonalGoalDTO: Codable {
     /// Optional so exports made before the SMART frame existed still import.
     var usesSMART: Bool?; var smartSpecific: String?; var smartMeasurable: String?
     var smartAchievable: String?; var smartTimeBound: String?
+    /// Optional so exports made before goals had a term still import.
+    var termRaw: String?
     init(_ m: PersonalGoal) {
         id = m.id; title = m.title; why = m.why; statusRaw = m.statusRaw; notes = m.notes
         sortOrder = m.sortOrder; createdAt = m.createdAt; lastEditedAt = m.lastEditedAt
         usesSMART = m.usesSMART; smartSpecific = m.smartSpecific; smartMeasurable = m.smartMeasurable
         smartAchievable = m.smartAchievable; smartTimeBound = m.smartTimeBound
+        termRaw = m.termRaw
     }
     func toModel() -> PersonalGoal {
         PersonalGoal(id: id, title: title, why: why, status: GoalStatus(rawValue: statusRaw) ?? .active,
                      notes: notes, sortOrder: sortOrder, createdAt: createdAt, lastEditedAt: lastEditedAt,
                      usesSMART: usesSMART ?? false, smartSpecific: smartSpecific ?? "",
                      smartMeasurable: smartMeasurable ?? "", smartAchievable: smartAchievable ?? "",
-                     smartTimeBound: smartTimeBound ?? "")
+                     smartTimeBound: smartTimeBound ?? "", term: GoalTerm(rawValue: termRaw ?? "") ?? .unset)
     }
 }
 

@@ -186,6 +186,7 @@ Lock in: none
 | title | String | locked | sealed | a title you typed |
 | why | String | locked | sealed | your own words |
 | statusRaw | String | locked | sealed | where you say a goal stands |
+| termRaw | String | locked | sealed | whether you call a goal short term or long term |
 | notes | [GoalNote] | locked | sealed | your own words |
 | sortOrder | Int | plain | plain | the order on screen |
 | createdAt | Date | locked | sealed | when you made it |
