@@ -181,10 +181,18 @@ struct SafetyPlanView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \SafetyPlanSection.sortOrder) private var sections: [SafetyPlanSection]
 
+    @Query private var contacts: [TrustedContact]
+    @Query private var groundingTools: [GroundingTool]
+    @Query private var goals: [PersonalGoal]
+    @Environment(\.openURL) private var openURL
+
     @State private var editing: SafetyPlanSection?
     @State private var lastOpened: SafetyPlanSection?
     @State private var removing: SafetyPlanSection?
     @State private var confirmingRemove: SafetyPlanSection?
+    @State private var runningTool: GroundingTool?
+    @State private var showingGoals = false
+    @State private var linkFailureMessage: String?
 
     /// Sections that are not under another one that still exists. A section whose parent is gone shows as its own card.
     private var topLevel: [SafetyPlanSection] {
@@ -247,6 +255,27 @@ struct SafetyPlanView: View {
                 }
                 Anchor.AddToolbarButton(label: "Add a section") { addSection() }
             }
+        }
+        .fullScreenCover(item: $runningTool) { tool in
+            GroundingToolStepRunnerView(tool: tool)
+        }
+        .sheet(isPresented: $showingGoals) {
+            NavigationStack {
+                PersonalGoalsView()
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { showingGoals = false }
+                        }
+                    }
+            }
+        }
+        .alert("Couldn't open that", isPresented: Binding(
+            get: { linkFailureMessage != nil },
+            set: { if !$0 { linkFailureMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { linkFailureMessage = nil }
+        } message: {
+            Text(linkFailureMessage ?? "")
         }
         .sheet(item: $editing, onDismiss: finishEditing) { section in
             CustomSectionEditor(
@@ -324,8 +353,10 @@ struct SafetyPlanView: View {
             ForEach(shown) { section in
                 SafetyPlanCardView(
                     section: section,
+                    resolver: SafetyPlanLinkResolver(people: contacts, tools: groundingTools, goals: goals),
                     childrenOf: { shownChildren(of: $0) },
-                    onOpen: { open($0) }
+                    onOpen: { open($0) },
+                    onLink: { follow($0) }
                 )
                 .contextMenu {
                     Button {
@@ -405,6 +436,26 @@ struct SafetyPlanView: View {
         let new = SafetyPlanSection(sortOrder: nextOrder())
         modelContext.insert(new)
         open(new)
+    }
+
+    /// What happens when a linked item is tapped: a call or a web page goes to the phone, a grounding tool runs, and a goal
+    /// opens the goals screen.
+    private func follow(_ target: SafetyPlanLinkResolver.Target) {
+        switch target {
+        case .call(let number):
+            if let url = URL(string: "tel:" + number) { openURL(url) }
+        case .url(let url):
+            openURL(url)
+        case .tool(let tool):
+            switch tool.kind {
+            case .physicalAction:
+                runningTool = tool
+            case .deepLink:
+                DeepLinkOpener.open(tool.deepLink) { message in linkFailureMessage = message }
+            }
+        case .goals:
+            showingGoals = true
+        }
     }
 
     /// A new section that sits under another, shown as a subheading inside its card.
@@ -489,13 +540,16 @@ struct SafetyPlanView: View {
 /// own subtitle and words, to any depth. Tap the heading area of any of them to change that one.
 struct SafetyPlanCardView: View {
     let section: SafetyPlanSection
+    let resolver: SafetyPlanLinkResolver
     let childrenOf: (SafetyPlanSection) -> [SafetyPlanSection]
     let onOpen: (SafetyPlanSection) -> Void
+    let onLink: (SafetyPlanLinkResolver.Target) -> Void
 
     var body: some View {
         let tint = SectionTint.named(section.tintName).color
         Anchor.Card(accentColor: tint) {
-            SafetyPlanBlockView(section: section, depth: 0, tint: tint, childrenOf: childrenOf, onOpen: onOpen)
+            SafetyPlanBlockView(section: section, depth: 0, tint: tint, resolver: resolver,
+                                childrenOf: childrenOf, onOpen: onOpen, onLink: onLink)
         }
     }
 }
@@ -504,8 +558,10 @@ private struct SafetyPlanBlockView: View {
     let section: SafetyPlanSection
     let depth: Int
     let tint: Color
+    let resolver: SafetyPlanLinkResolver
     let childrenOf: (SafetyPlanSection) -> [SafetyPlanSection]
     let onOpen: (SafetyPlanSection) -> Void
+    let onLink: (SafetyPlanLinkResolver.Target) -> Void
 
     var body: some View {
         let children = childrenOf(section)
@@ -544,14 +600,6 @@ private struct SafetyPlanBlockView: View {
                             .font(.subheadline)
                             .foregroundStyle(.tertiary)
                     }
-                    if !items.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            ForEach(items) { item in
-                                SafetyPlanItemRow(item: item, fields: fields)
-                            }
-                        }
-                        .padding(.top, 2)
-                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
@@ -559,9 +607,20 @@ private struct SafetyPlanBlockView: View {
             .buttonStyle(.plain)
             .accessibilityHint("Opens the editor")
 
+            if !items.isEmpty {
+                // Outside the button above, so a linked item can be tapped on its own.
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(items) { item in
+                        SafetyPlanItemRow(item: item, fields: fields, resolver: resolver, tint: tint,
+                                          onLink: onLink, onEdit: { onOpen(section) })
+                    }
+                }
+            }
+
             ForEach(children) { child in
                 AnyView(
-                    SafetyPlanBlockView(section: child, depth: depth + 1, tint: tint, childrenOf: childrenOf, onOpen: onOpen)
+                    SafetyPlanBlockView(section: child, depth: depth + 1, tint: tint, resolver: resolver,
+                                        childrenOf: childrenOf, onOpen: onOpen, onLink: onLink)
                         .padding(.leading, 12)
                         .overlay(alignment: .leading) {
                             Rectangle().fill(tint.opacity(0.35)).frame(width: 2)
@@ -573,10 +632,76 @@ private struct SafetyPlanBlockView: View {
 }
 
 
-/// One listed item as it reads on a card: its title, the answers to the section's entry format, and its note.
+/// Finds what an item's link points at, using the people, grounding tools and goals that are in Anchor right now, so a
+/// linked item always shows the current name and never a stale copy.
+struct SafetyPlanLinkResolver {
+    let people: [TrustedContact]
+    let tools: [GroundingTool]
+    let goals: [PersonalGoal]
+
+    enum Target {
+        case call(String)
+        case url(URL)
+        case tool(GroundingTool)
+        case goals
+    }
+
+    struct Resolved {
+        var title: String
+        var detail: String?
+        var symbol: String
+        var target: Target?
+        /// True when the person, tool or goal it pointed at has been deleted.
+        var missing = false
+    }
+
+    func resolve(_ link: String?) -> Resolved? {
+        guard let parts = SafetyPlanLink.parts(link) else { return nil }
+        switch parts.kind {
+        case "person":
+            guard let id = UUID(uuidString: parts.payload) else { return nil }
+            guard let person = people.first(where: { $0.id == id }) else {
+                return Resolved(title: "A person who is no longer in Anchor", detail: nil, symbol: "person.fill.questionmark", target: nil, missing: true)
+            }
+            let number = person.dialableNumber
+            return Resolved(title: person.name.isEmpty ? "Unnamed person" : person.name,
+                            detail: person.phoneNumber.isEmpty ? nil : person.phoneNumber,
+                            symbol: "person.fill", target: number.isEmpty ? nil : .call(number))
+        case "tool":
+            guard let id = UUID(uuidString: parts.payload) else { return nil }
+            guard let tool = tools.first(where: { $0.id == id }) else {
+                return Resolved(title: "A grounding tool that is no longer in Anchor", detail: nil, symbol: "leaf", target: nil, missing: true)
+            }
+            return Resolved(title: tool.title.isEmpty ? "Untitled tool" : tool.title, detail: nil,
+                            symbol: tool.kind == .deepLink ? "arrow.up.forward.app.fill" : "leaf.fill", target: .tool(tool))
+        case "goal":
+            guard let id = UUID(uuidString: parts.payload) else { return nil }
+            guard let goal = goals.first(where: { $0.id == id }) else {
+                return Resolved(title: "A goal that is no longer in Anchor", detail: nil, symbol: "target", target: nil, missing: true)
+            }
+            return Resolved(title: goal.title.isEmpty ? "Untitled goal" : goal.title,
+                            detail: goal.why.isEmpty ? nil : goal.why, symbol: "target", target: .goals)
+        case "url":
+            guard let url = URL(string: parts.payload), let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else { return nil }
+            return Resolved(title: url.host ?? parts.payload, detail: nil, symbol: "safari", target: .url(url))
+        case "tel":
+            let number = parts.payload.filter { $0.isNumber || $0 == "+" || $0 == "*" || $0 == "#" }
+            return Resolved(title: parts.payload, detail: nil, symbol: "phone.fill", target: number.isEmpty ? nil : .call(number))
+        default:
+            return nil
+        }
+    }
+}
+
+/// One listed item as it reads on a card: its title, the answers to the section's entry format, and its note. An item
+/// with a link is also a button that follows the link.
 private struct SafetyPlanItemRow: View {
     let item: SafetyPlanItem
     let fields: [SafetyPlanField]
+    let resolver: SafetyPlanLinkResolver
+    let tint: Color
+    let onLink: (SafetyPlanLinkResolver.Target) -> Void
+    let onEdit: () -> Void
 
     private var answered: [(name: String, value: String)] {
         fields.compactMap { field in
@@ -586,13 +711,12 @@ private struct SafetyPlanItemRow: View {
     }
 
     var body: some View {
+        let resolved = resolver.resolve(item.link)
         VStack(alignment: .leading, spacing: 2) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text("\u{2022}")
-                    .foregroundStyle(.secondary)
-                Text(item.title.isEmpty ? "Untitled item" : item.title)
-                    .font(.system(.body, design: .rounded).weight(.semibold))
-                    .fixedSize(horizontal: false, vertical: true)
+            if let resolved {
+                linkedLine(resolved)
+            } else {
+                plainLine
             }
             ForEach(answered.indices, id: \.self) { index in
                 Text("\(answered[index].name): \(answered[index].value)")
@@ -609,14 +733,60 @@ private struct SafetyPlanItemRow: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if let target = resolved?.target { onLink(target) } else { onEdit() }
+        }
         .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(resolved?.target != nil ? .isButton : [])
+    }
+
+    private var plainLine: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Text("\u{2022}")
+                .foregroundStyle(.secondary)
+            Text(item.title.isEmpty ? "Untitled item" : item.title)
+                .font(.system(.body, design: .rounded).weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func linkedLine(_ resolved: SafetyPlanLinkResolver.Resolved) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Image(systemName: resolved.symbol)
+                .foregroundStyle(resolved.missing ? Color.secondary : tint)
+                .frame(width: 18)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(!item.title.isEmpty && !resolved.missing ? item.title : resolved.title)
+                    .font(.system(.body, design: .rounded).weight(.semibold))
+                    .foregroundStyle(resolved.missing ? Color.secondary : Color.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let detail = resolved.detail {
+                    Text(detail)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            if resolved.target != nil {
+                Spacer(minLength: 4)
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+        }
     }
 }
 
-/// The Form sections for a section's entry format and its items: the fields you choose for every entry, then the items,
-/// each with its own title, one answer per field, and an optional note.
+/// The Form sections for what a section is for, its entry format, and its items. Items can point at a person, a grounding
+/// tool or a goal in Anchor, or at a web address or phone number outside it.
 private struct SafetyPlanItemsEditor: View {
     let section: SafetyPlanSection
+
+    @Query private var contacts: [TrustedContact]
+    @Query private var groundingTools: [GroundingTool]
+    @Query private var goals: [PersonalGoal]
 
     private var items: Binding<[SafetyPlanItem]> {
         Binding(get: { section.items }, set: { section.items = $0; section.lastEditedAt = .now })
@@ -626,6 +796,10 @@ private struct SafetyPlanItemsEditor: View {
         Binding(get: { section.fields }, set: { section.fields = $0; section.lastEditedAt = .now })
     }
 
+    private var resolver: SafetyPlanLinkResolver {
+        SafetyPlanLinkResolver(people: contacts, tools: groundingTools, goals: goals)
+    }
+
     /// Ready-made formats to start from. Each can be changed afterwards.
     private static let presets: [(name: String, fields: [String])] = [
         ("A person: phone, when to contact", ["Phone", "When to contact them"]),
@@ -633,6 +807,10 @@ private struct SafetyPlanItemsEditor: View {
         ("Something to do: how long, what I need", ["How long", "What I need"]),
         ("A medicine: dose, when", ["Dose", "When"])
     ]
+
+    private var kind: SafetyPlanKind { section.kind }
+    private var showsItems: Bool { kind != .text || !section.items.isEmpty }
+    private var showsFormat: Bool { kind == .list || !section.fields.isEmpty }
 
     private func answer(_ itemID: UUID, _ fieldID: UUID) -> Binding<String> {
         Binding(
@@ -647,72 +825,217 @@ private struct SafetyPlanItemsEditor: View {
         )
     }
 
+    private func setLink(_ itemID: UUID, _ link: String?) {
+        var list = section.items
+        guard let index = list.firstIndex(where: { $0.id == itemID }) else { return }
+        list[index].link = link
+        section.items = list
+        section.lastEditedAt = .now
+    }
+
+    /// The part of a typed (outside) link that the person sees and edits, without the "url:" or "tel:" in front.
+    private func outsideText(_ itemID: UUID) -> Binding<String> {
+        Binding(
+            get: {
+                guard let item = section.items.first(where: { $0.id == itemID }),
+                      let parts = SafetyPlanLink.parts(item.link), parts.kind == "url" || parts.kind == "tel" else { return "" }
+                return parts.payload
+            },
+            set: { new in
+                let trimmed = new.trimmingCharacters(in: .whitespacesAndNewlines)
+                let digits = trimmed.filter { $0.isNumber || " +()-*#".contains($0) }
+                // Digits and phone punctuation only: a phone number. Anything else: a web address.
+                let link = trimmed.isEmpty ? nil : (digits.count == trimmed.count ? SafetyPlanLink.phone(trimmed) : SafetyPlanLink.website(trimmed))
+                setLink(itemID, link)
+            }
+        )
+    }
+
+    private func addLinked(_ link: String) {
+        items.wrappedValue.append(SafetyPlanItem(link: link))
+    }
+
     var body: some View {
         Group {
             Section {
-                ForEach(fields) { $field in
-                    TextField("Field name, such as Phone", text: $field.name)
-                }
-                .onDelete { offsets in
-                    fields.wrappedValue.remove(atOffsets: offsets)
-                }
-                Button {
-                    fields.wrappedValue.append(SafetyPlanField())
-                } label: {
-                    Label("Add a field", systemImage: "plus.circle.fill")
-                }
-                Menu {
-                    ForEach(Self.presets.indices, id: \.self) { index in
-                        Button(Self.presets[index].name) {
-                            fields.wrappedValue = Self.presets[index].fields.map { SafetyPlanField(name: $0) }
-                        }
+                Picker("This section is", selection: Binding(
+                    get: { section.kind },
+                    set: { section.kind = $0; section.lastEditedAt = .now }
+                )) {
+                    ForEach(SafetyPlanKind.allCases) { kind in
+                        Label(kind.label, systemImage: kind.symbol).tag(kind)
                     }
-                } label: {
-                    Label("Start from a ready-made format", systemImage: "rectangle.3.group")
                 }
-            } header: {
-                Text("Entry format")
+                .pickerStyle(.menu)
             } footer: {
-                Text("The fields every item in this section has, such as a name, a phone number or when to use it. Leave it empty for plain items. Changing the format keeps what you already wrote under each field name.")
+                Text("Words is just your own writing. A list holds items, each with a note. People, Grounding tools and Goals point at the ones you already have in Anchor, so the name and number are always the current ones. Changing this never deletes anything.")
             }
 
-            Section {
-                ForEach(items) { $item in
-                    VStack(alignment: .leading, spacing: 8) {
-                        TextField("Item", text: $item.title)
-                            .font(.system(.body, design: .rounded).weight(.semibold))
-                        ForEach(fields.wrappedValue) { field in
-                            TextField(field.name.isEmpty ? "Field" : field.name, text: answer(item.id, field.id))
-                                .font(.subheadline)
+            if showsFormat {
+                Section {
+                    ForEach(fields) { $field in
+                        TextField("Field name, such as Phone", text: $field.name)
+                    }
+                    .onDelete { offsets in
+                        fields.wrappedValue.remove(atOffsets: offsets)
+                    }
+                    Button {
+                        fields.wrappedValue.append(SafetyPlanField())
+                    } label: {
+                        Label("Add a field", systemImage: "plus.circle.fill")
+                    }
+                    Menu {
+                        ForEach(Self.presets.indices, id: \.self) { index in
+                            Button(Self.presets[index].name) {
+                                fields.wrappedValue = Self.presets[index].fields.map { SafetyPlanField(name: $0) }
+                            }
                         }
-                        TextField("A note (optional)", text: $item.note, axis: .vertical)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
+                    } label: {
+                        Label("Start from a ready-made format", systemImage: "rectangle.3.group")
                     }
-                    .padding(.vertical, 2)
+                } header: {
+                    Text("Entry format")
+                } footer: {
+                    Text("The fields every item in this section has, such as a name, a phone number or when to use it. Leave it empty for plain items. Changing the format keeps what you already wrote under each field name.")
                 }
-                .onDelete { offsets in
-                    items.wrappedValue.remove(atOffsets: offsets)
+            }
+
+            if showsItems {
+                Section {
+                    ForEach(items) { $item in
+                        itemEditor($item)
+                    }
+                    .onDelete { offsets in
+                        items.wrappedValue.remove(atOffsets: offsets)
+                    }
+                    .onMove { source, destination in
+                        items.wrappedValue.move(fromOffsets: source, toOffset: destination)
+                    }
+                    addButtons
+                } header: {
+                    HStack {
+                        Text("Items")
+                        Spacer()
+                        if !section.items.isEmpty {
+                            EditButton()
+                                .font(.footnote)
+                        }
+                    }
+                } footer: {
+                    Text("Swipe an item to delete it, or use Edit to put them in order.")
                 }
-                .onMove { source, destination in
-                    items.wrappedValue.move(fromOffsets: source, toOffset: destination)
-                }
-                Button {
-                    items.wrappedValue.append(SafetyPlanItem())
-                } label: {
-                    Label("Add an item", systemImage: "plus.circle.fill")
-                }
-            } header: {
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func itemEditor(_ item: Binding<SafetyPlanItem>) -> some View {
+        let resolved = resolver.resolve(item.wrappedValue.link)
+        VStack(alignment: .leading, spacing: 8) {
+            if let resolved, SafetyPlanLink.isInside(item.wrappedValue.link) {
                 HStack {
-                    Text("Items")
+                    Label(resolved.title, systemImage: resolved.symbol)
+                        .font(.system(.body, design: .rounded).weight(.semibold))
+                        .foregroundStyle(resolved.missing ? Color.secondary : Color.primary)
                     Spacer()
-                    if !section.items.isEmpty {
-                        EditButton()
-                            .font(.footnote)
+                    Button("Unlink") { setLink(item.wrappedValue.id, nil) }
+                        .font(.footnote)
+                        .buttonStyle(.borderless)
+                }
+            } else {
+                TextField("Item", text: item.title)
+                    .font(.system(.body, design: .rounded).weight(.semibold))
+                ForEach(fields.wrappedValue) { field in
+                    TextField(field.name.isEmpty ? "Field" : field.name, text: answer(item.wrappedValue.id, field.id))
+                        .font(.subheadline)
+                }
+                TextField("A website or phone number to open (optional)", text: outsideText(item.wrappedValue.id))
+                    .font(.subheadline)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .keyboardType(.URL)
+                linkMenu(item.wrappedValue.id)
+            }
+            TextField("A note (optional)", text: item.note, axis: .vertical)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 2)
+    }
+
+    /// Points an item at a person, a grounding tool or a goal that is already in Anchor.
+    private func linkMenu(_ itemID: UUID) -> some View {
+        Menu {
+            if !contacts.isEmpty {
+                Menu("A person") {
+                    ForEach(contacts) { person in
+                        Button(person.name.isEmpty ? "Unnamed person" : person.name) { setLink(itemID, SafetyPlanLink.person(person.id)) }
                     }
                 }
-            } footer: {
-                Text("A list inside this section, each with an optional note. Swipe an item to delete it, or use Edit to put them in order.")
+            }
+            if !groundingTools.isEmpty {
+                Menu("A grounding tool") {
+                    ForEach(groundingTools) { tool in
+                        Button(tool.title.isEmpty ? "Untitled tool" : tool.title) { setLink(itemID, SafetyPlanLink.tool(tool.id)) }
+                    }
+                }
+            }
+            if !goals.isEmpty {
+                Menu("A goal") {
+                    ForEach(goals) { goal in
+                        Button(goal.title.isEmpty ? "Untitled goal" : goal.title) { setLink(itemID, SafetyPlanLink.goal(goal.id)) }
+                    }
+                }
+            }
+        } label: {
+            Label("Link to something in Anchor", systemImage: "link")
+                .font(.footnote)
+        }
+        .disabled(contacts.isEmpty && groundingTools.isEmpty && goals.isEmpty)
+    }
+
+    /// What the Add button offers depends on what the section is for.
+    @ViewBuilder
+    private var addButtons: some View {
+        switch kind {
+        case .people:
+            addMenu(label: "Add a person", symbol: "person.badge.plus",
+                    entries: contacts.map { ($0.name.isEmpty ? "Unnamed person" : $0.name, SafetyPlanLink.person($0.id)) },
+                    empty: "Add people in Plan first, under Contacts.")
+        case .tools:
+            addMenu(label: "Add a grounding tool", symbol: "leaf.fill",
+                    entries: groundingTools.map { ($0.title.isEmpty ? "Untitled tool" : $0.title, SafetyPlanLink.tool($0.id)) },
+                    empty: "Add grounding tools in Plan first.")
+        case .goals:
+            addMenu(label: "Add a goal", symbol: "target",
+                    entries: goals.map { ($0.title.isEmpty ? "Untitled goal" : $0.title, SafetyPlanLink.goal($0.id)) },
+                    empty: "Add goals first, under Goals.")
+        case .text, .list:
+            Button {
+                items.wrappedValue.append(SafetyPlanItem())
+            } label: {
+                Label("Add an item", systemImage: "plus.circle.fill")
+            }
+        }
+    }
+
+    /// Lists what is in Anchor and not yet in this section, and adds the one picked.
+    private func addMenu(label: String, symbol: String, entries: [(String, String)], empty: String) -> some View {
+        let already = Set(section.items.compactMap(\.link))
+        let choices = entries.filter { !already.contains($0.1) }
+        return Group {
+            if choices.isEmpty {
+                Text(entries.isEmpty ? empty : "Everything you have is already here.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } else {
+                Menu {
+                    ForEach(choices.indices, id: \.self) { index in
+                        Button(choices[index].0) { addLinked(choices[index].1) }
+                    }
+                } label: {
+                    Label(label, systemImage: symbol)
+                }
             }
         }
     }

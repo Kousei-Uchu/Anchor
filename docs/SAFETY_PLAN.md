@@ -24,8 +24,13 @@ the source of reminder quotes.
 - Items and fields are kept inside the section as coded lists (the way a goal keeps its notes), locked like the section's words, and carried in exports (older exports still import).
 - Nothing is counted or scored: no number of items shown as progress.
 
+## Kinds and links (Patch SP3)
+
+- A section is one of five **kinds** (`kindRaw`, locked): **Words** (just your own writing, the default), **A list**, **People**, **Grounding tools** or **Goals**. The kind decides what the editor offers: a list gets the entry format and an Add an item button; People, Grounding tools and Goals get an add menu of the ones you already have in Anchor (leaving out any already in the section). Changing the kind never deletes anything, and a Words section that already has items keeps showing them.
+- An item can carry a **link** (`SafetyPlanItem.link`, a short piece of text). Inside Anchor: a **person** (shows the name and number, tap to call), a **grounding tool** (tap to run it, or to open its link), or a **goal** (shows the title and why, tap to open the goals screen). Outside Anchor: a **website** (https or http only) or a **phone number**, typed on the item. A person, tool or goal is looked up each time the card is shown, so it is always the current name and number. If it has been deleted the item says so and nothing else breaks.
+- Tapping a linked item follows the link. Tapping an unlinked item, or the heading and words, opens the editor.
+- Nothing about a link leaves the phone except the call or web page the person chooses to open.
+
 ## Still to come
 
-- Section kinds: list, text, people, grounding tools, goals.
-- Links from items to a person, a grounding tool, a goal, another section, or something outside Anchor.
 - An export button for the safety plan alone.

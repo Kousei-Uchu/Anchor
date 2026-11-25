@@ -913,6 +913,65 @@ extension SafetyPlan {
     }
 }
 
+/// What a safety plan section is for. Plain words, a list of your own items, or a list that points at people, grounding
+/// tools or goals you already have in Anchor. It only decides what the editor offers and how the card reads.
+enum SafetyPlanKind: String, CaseIterable, Identifiable {
+    case text = "", list, people, tools, goals
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .text: return "Words"
+        case .list: return "A list"
+        case .people: return "People"
+        case .tools: return "Grounding tools"
+        case .goals: return "Goals"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .text: return "text.alignleft"
+        case .list: return "list.bullet"
+        case .people: return "person.2.fill"
+        case .tools: return "leaf.fill"
+        case .goals: return "target"
+        }
+    }
+}
+
+/// How an item's `link` is written and read. A link is text: a kind, a colon, then the id of the person, tool or goal in
+/// Anchor, or a web address, or a phone number.
+enum SafetyPlanLink {
+    static func person(_ id: UUID) -> String { "person:" + id.uuidString }
+    static func tool(_ id: UUID) -> String { "tool:" + id.uuidString }
+    static func goal(_ id: UUID) -> String { "goal:" + id.uuidString }
+
+    /// A web address typed by the person. Nothing is added to it except https:// when no scheme is given.
+    static func website(_ typed: String) -> String? {
+        let text = typed.trimmingCharacters(in: .whitespacesAndNewlines)
+        if text.isEmpty { return nil }
+        return "url:" + (text.lowercased().hasPrefix("http") ? text : "https://" + text)
+    }
+
+    static func phone(_ typed: String) -> String? {
+        let text = typed.trimmingCharacters(in: .whitespacesAndNewlines)
+        return text.isEmpty ? nil : "tel:" + text
+    }
+
+    static func parts(_ link: String?) -> (kind: String, payload: String)? {
+        guard let link, let colon = link.firstIndex(of: ":") else { return nil }
+        return (String(link[..<colon]), String(link[link.index(after: colon)...]))
+    }
+
+    /// True for a link to something inside Anchor (a person, a grounding tool or a goal).
+    static func isInside(_ link: String?) -> Bool {
+        guard let kind = parts(link)?.kind else { return false }
+        return kind == "person" || kind == "tool" || kind == "goal"
+    }
+}
+
 /// One thing listed in a safety plan section, with a note and the answers to the section's entry format.
 struct SafetyPlanItem: Codable, Identifiable, Hashable {
     var id: UUID = UUID()
@@ -920,6 +979,9 @@ struct SafetyPlanItem: Codable, Identifiable, Hashable {
     var note: String = ""
     /// Answers to the section's entry format, one for each field that has been filled in.
     var answers: [SafetyPlanAnswer] = []
+    /// Where the item points, or nil for plain words: "person:", "tool:" or "goal:" and the id of that person, grounding
+    /// tool or goal, or "url:" and a web address, or "tel:" and a phone number. See `SafetyPlanLink`.
+    var link: String?
 
     func answer(for fieldID: UUID) -> String {
         answers.first(where: { $0.fieldID == fieldID })?.value ?? ""
@@ -979,6 +1041,11 @@ final class SafetyPlanSection {
     var itemsPlain: [SafetyPlanItem] = []   // a new locked field
     /// The locked form of `items`, empty until locking is turned on. Read and written through `items` only.
     var itemsSealed: String? = nil
+    /// What the section is for: empty for plain words, or list, people, tools or goals. A new field, so a section made
+    /// before it existed reads as plain words. Read and written through `kindRaw` only.
+    var kindRawPlain: String = ""   // a new locked field
+    /// The locked form of `kindRaw`, empty until locking is turned on. Read and written through `kindRaw` only.
+    var kindRawSealed: String? = nil
     /// The fields every item in this section has, such as Name or Phone: the entry format. A new field. Read and written
     /// through `fields` only.
     var fieldsPlain: [SafetyPlanField] = []   // a new locked field
@@ -994,8 +1061,9 @@ final class SafetyPlanSection {
          iconName: String = "doc.text.fill", tintName: String = "sage",
          sortOrder: Int = 0, isHidden: Bool = false, role: String = "",
          lastEditedAt: Date = .now, subtitle: String = "", parentID: UUID? = nil,
-         items: [SafetyPlanItem] = [], fields: [SafetyPlanField] = []) {
+         items: [SafetyPlanItem] = [], fields: [SafetyPlanField] = [], kind: SafetyPlanKind = .text) {
         self.id = id
+        self.kindRawPlain = kind.rawValue
         self.itemsPlain = items
         self.fieldsPlain = fields
         self.subtitlePlain = subtitle
@@ -1014,6 +1082,20 @@ final class SafetyPlanSection {
 
 // Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
 extension SafetyPlanSection {
+    var kindRaw: String {
+        get { FieldLock.read(plain: kindRawPlain, sealed: kindRawSealed, context: "SafetyPlanSection.kindRaw") }
+        set {
+            let kept = FieldLock.store(newValue, context: "SafetyPlanSection.kindRaw")
+            kindRawPlain = kept.plain
+            kindRawSealed = kept.sealed
+        }
+    }
+
+    var kind: SafetyPlanKind {
+        get { SafetyPlanKind(rawValue: kindRaw) ?? .text }
+        set { kindRaw = newValue.rawValue }
+    }
+
     var items: [SafetyPlanItem] {
         get { FieldLock.readCoded(itemsPlain, sealed: itemsSealed, context: "SafetyPlanSection.items") }
         set {
@@ -1077,6 +1159,7 @@ extension SafetyPlanSection {
         subtitle = subtitlePlain
         items = itemsPlain
         fields = fieldsPlain
+        kindRaw = kindRawPlain
     }
 
     /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
@@ -1089,6 +1172,7 @@ extension SafetyPlanSection {
         if subtitleSealed == nil { subtitle = subtitlePlain }
         if itemsSealed == nil { items = itemsPlain }
         if fieldsSealed == nil { fields = fieldsPlain }
+        if kindRawSealed == nil { kindRaw = kindRawPlain }
     }
 
     /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
@@ -1100,7 +1184,8 @@ extension SafetyPlanSection {
             FieldLock.describe(text),
             FieldLock.describe(subtitle),
             FieldLock.describe(items),
-            FieldLock.describe(fields)
+            FieldLock.describe(fields),
+            FieldLock.describe(kindRaw)
         ])
     }
 
@@ -1112,6 +1197,7 @@ extension SafetyPlanSection {
             && subtitleSealed != nil && subtitlePlain.isEmpty
             && itemsSealed != nil && itemsPlain.isEmpty
             && fieldsSealed != nil && fieldsPlain.isEmpty
+            && kindRawSealed != nil && kindRawPlain.isEmpty
     }
 }
 

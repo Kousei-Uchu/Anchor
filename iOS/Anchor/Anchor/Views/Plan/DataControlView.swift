@@ -1581,17 +1581,18 @@ struct SafetyPlanSectionDTO: Codable {
     var sortOrder: Int; var isHidden: Bool; var role: String; var lastEditedAt: Date
     /// Optional so exports made before subheadings existed still import.
     var subtitle: String?; var parentID: UUID?
-    var items: [SafetyPlanItem]?; var fields: [SafetyPlanField]?
+    var items: [SafetyPlanItem]?; var fields: [SafetyPlanField]?; var kindRaw: String?
     init(_ m: SafetyPlanSection) {
         id = m.id; title = m.title; text = m.text; iconName = m.iconName; tintName = m.tintName
         sortOrder = m.sortOrder; isHidden = m.isHidden; role = m.role; lastEditedAt = m.lastEditedAt
         subtitle = m.subtitle; parentID = m.parentID
-        items = m.items; fields = m.fields
+        items = m.items; fields = m.fields; kindRaw = m.kindRaw
     }
     func toModel() -> SafetyPlanSection {
         SafetyPlanSection(id: id, title: title, text: text, iconName: iconName, tintName: tintName,
                           sortOrder: sortOrder, isHidden: isHidden, role: role, lastEditedAt: lastEditedAt,
-                          subtitle: subtitle ?? "", parentID: parentID, items: items ?? [], fields: fields ?? [])
+                          subtitle: subtitle ?? "", parentID: parentID, items: items ?? [], fields: fields ?? [],
+                          kind: SafetyPlanKind(rawValue: kindRaw ?? "") ?? .text)
     }
 }
 
@@ -2438,6 +2439,7 @@ extension SafetyPlanSection: DataBrowsable {
             .yesNo("Hidden", isHidden),
             .text("Role", role),
             .text("Sits under", parentID?.uuidString ?? ""),
+            .text("Kind", kindRaw),
             .number("Items", items.count),
             .number("Fields in the entry format", fields.count),
             .date("Last edited", lastEditedAt)
