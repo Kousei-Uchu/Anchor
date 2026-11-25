@@ -31,6 +31,12 @@ the source of reminder quotes.
 - Tapping a linked item follows the link. Tapping an unlinked item, or the heading and words, opens the editor.
 - Nothing about a link leaves the phone except the call or web page the person chooses to open.
 
-## Still to come
+## Sharing the safety plan on its own (Patch SP4)
 
-- An export button for the safety plan alone.
+- The share button at the top of the safety plan opens **Share your safety plan**. It holds only the safety plan: nothing else from Anchor, and nothing from the rest of your data.
+- You choose what goes in: **phone numbers and web addresses** (on by default) and **notes on items** (on by default). Sections you have hidden are never included, and neither is anything under a hidden section.
+- It shows the plan as it will read, then offers **Share as text** (through the share sheet) and **Share as a PDF** (A4, as many pages as it needs, written to a temporary file and handed to the share sheet).
+- A linked person, grounding tool or goal is written with its current name. A person's number is a contact detail; the reason you wrote for a goal is too.
+- Nothing is made until a share button is pressed, and nothing is sent anywhere by Anchor: the share sheet is the phone's own.
+
+This finishes the safety plan upgrades from the notes list (#3).

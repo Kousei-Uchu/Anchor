@@ -193,6 +193,7 @@ struct SafetyPlanView: View {
     @State private var runningTool: GroundingTool?
     @State private var showingGoals = false
     @State private var linkFailureMessage: String?
+    @State private var sharing = false
 
     /// Sections that are not under another one that still exists. A section whose parent is gone shows as its own card.
     private var topLevel: [SafetyPlanSection] {
@@ -250,11 +251,23 @@ struct SafetyPlanView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
+                if !shown.isEmpty {
+                    Button { sharing = true } label: {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    .accessibilityLabel("Share your safety plan")
+                }
                 if shown.count > 1 {
                     Anchor.ReorderToolbarButton()
                 }
                 Anchor.AddToolbarButton(label: "Add a section") { addSection() }
             }
+        }
+        .sheet(isPresented: $sharing) {
+            SafetyPlanShareSheet(
+                sections: sections,
+                resolver: SafetyPlanLinkResolver(people: contacts, tools: groundingTools, goals: goals)
+            )
         }
         .fullScreenCover(item: $runningTool) { tool in
             GroundingToolStepRunnerView(tool: tool)
@@ -1036,6 +1049,240 @@ private struct SafetyPlanItemsEditor: View {
                 } label: {
                     Label(label, systemImage: symbol)
                 }
+            }
+        }
+    }
+}
+
+
+// MARK: - Sharing the safety plan on its own
+
+/// The safety plan, and nothing else from Anchor, as lines that can become plain text or a PDF. What is hidden in the plan
+/// is left out. A linked person, tool or goal is written with its current name, and a goal with the reason you gave for it.
+enum SafetyPlanExport {
+    enum Style { case title, heading, subheading, subsubheading, subtitle, body, item, detail, note }
+
+    struct Line {
+        var style: Style
+        var depth: Int
+        var text: String
+    }
+
+    struct Options {
+        /// Phone numbers, web addresses and the reason written for a goal.
+        var includeContactDetails = true
+        /// The note on each item.
+        var includeNotes = true
+    }
+
+    static func lines(sections: [SafetyPlanSection], resolver: SafetyPlanLinkResolver, options: Options, shared: Date = .now) -> [Line] {
+        var lines: [Line] = [
+            Line(style: .title, depth: 0, text: "My safety plan"),
+            Line(style: .detail, depth: 0, text: "Shared on " + shared.formatted(.dateTime.day().month(.wide).year()) + ", from Anchor.")
+        ]
+        let ids = Set(sections.map(\.id))
+        let top = sections.filter { !$0.isHidden && ($0.parentID == nil || !ids.contains($0.parentID!)) }
+        for section in top {
+            add(section, depth: 0, all: sections, resolver: resolver, options: options, into: &lines)
+        }
+        return lines
+    }
+
+    private static func add(_ section: SafetyPlanSection, depth: Int, all: [SafetyPlanSection], resolver: SafetyPlanLinkResolver,
+                            options: Options, into lines: inout [Line]) {
+        let heading: Style = depth == 0 ? .heading : (depth == 1 ? .subheading : .subsubheading)
+        lines.append(Line(style: heading, depth: depth, text: section.title.isEmpty ? "Untitled" : section.title))
+        if !section.subtitle.isEmpty { lines.append(Line(style: .subtitle, depth: depth, text: section.subtitle)) }
+        let words = section.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !words.isEmpty { lines.append(Line(style: .body, depth: depth, text: words)) }
+
+        let fields = section.fields
+        for item in section.items {
+            let resolved = resolver.resolve(item.link)
+            var title = item.title.isEmpty ? "Untitled item" : item.title
+            var detail: String?
+            if let resolved {
+                title = (!item.title.isEmpty && !resolved.missing) ? item.title : resolved.title
+                if options.includeContactDetails { detail = resolved.detail }
+            }
+            lines.append(Line(style: .item, depth: depth, text: title))
+            if let detail { lines.append(Line(style: .detail, depth: depth, text: detail)) }
+            for field in fields {
+                let value = item.answer(for: field.id).trimmingCharacters(in: .whitespacesAndNewlines)
+                if value.isEmpty { continue }
+                if !options.includeContactDetails && isContactDetail(field.name) { continue }
+                lines.append(Line(style: .detail, depth: depth, text: (field.name.isEmpty ? "Field" : field.name) + ": " + value))
+            }
+            let note = item.note.trimmingCharacters(in: .whitespacesAndNewlines)
+            if options.includeNotes && !note.isEmpty { lines.append(Line(style: .note, depth: depth, text: note)) }
+        }
+
+        for child in all where child.parentID == section.id && !child.isHidden {
+            add(child, depth: depth + 1, all: all, resolver: resolver, options: options, into: &lines)
+        }
+    }
+
+    /// Fields that are named like a phone number or address are left out when contact details are left out.
+    private static func isContactDetail(_ name: String) -> Bool {
+        let lower = name.lowercased()
+        return ["phone", "number", "mobile", "address", "email", "website", "link"].contains { lower.contains($0) }
+    }
+
+    // MARK: Plain text
+
+    static func plainText(_ lines: [Line]) -> String {
+        var out: [String] = []
+        for line in lines {
+            let indent = String(repeating: "  ", count: line.depth)
+            switch line.style {
+            case .title:
+                out.append(line.text.uppercased())
+            case .heading, .subheading, .subsubheading:
+                out.append("")
+                out.append(indent + line.text)
+            case .subtitle:
+                out.append(indent + line.text)
+            case .body:
+                out.append(contentsOf: line.text.split(separator: "\n", omittingEmptySubsequences: false).map { indent + $0 })
+            case .item:
+                out.append(indent + "\u{2022} " + line.text)
+            case .detail:
+                out.append(indent + "   " + line.text)
+            case .note:
+                out.append(indent + "   " + line.text)
+            }
+        }
+        return out.joined(separator: "\n")
+    }
+
+    // MARK: PDF
+
+    private static func attributed(_ lines: [Line]) -> NSAttributedString {
+        let result = NSMutableAttributedString()
+        for line in lines {
+            let font: UIFont
+            var color = UIColor.black
+            let before: CGFloat
+            switch line.style {
+            case .title: font = .systemFont(ofSize: 22, weight: .bold); before = 0
+            case .heading: font = .systemFont(ofSize: 16, weight: .bold); before = 16
+            case .subheading: font = .systemFont(ofSize: 14, weight: .bold); before = 10
+            case .subsubheading: font = .systemFont(ofSize: 13, weight: .semibold); before = 8
+            case .subtitle: font = .italicSystemFont(ofSize: 12); color = .darkGray; before = 0
+            case .body: font = .systemFont(ofSize: 12); before = 4
+            case .item: font = .systemFont(ofSize: 12, weight: .semibold); before = 5
+            case .detail: font = .systemFont(ofSize: 11); color = .darkGray; before = 0
+            case .note: font = .italicSystemFont(ofSize: 10.5); color = .darkGray; before = 0
+            }
+            let paragraph = NSMutableParagraphStyle()
+            let indent = CGFloat(line.depth) * 16 + ((line.style == .detail || line.style == .note) ? 12 : 0)
+            paragraph.firstLineHeadIndent = indent
+            paragraph.headIndent = indent
+            paragraph.paragraphSpacingBefore = before
+            let text = (line.style == .item ? "\u{2022} " : "") + line.text
+            result.append(NSAttributedString(string: text + "\n", attributes: [.font: font, .foregroundColor: color, .paragraphStyle: paragraph]))
+        }
+        return result
+    }
+
+    /// Makes the PDF in a temporary folder, A4, as many pages as it needs, or nil if it could not be written.
+    static func makePDF(_ lines: [Line]) -> URL? {
+        let page = SafetyPlanPageRenderer.paper
+        let renderer = SafetyPlanPageRenderer()
+        renderer.addPrintFormatter(UISimpleTextPrintFormatter(attributedText: attributed(lines)), startingAtPageAt: 0)
+        let data = NSMutableData()
+        UIGraphicsBeginPDFContextToData(data, page, nil)
+        renderer.prepare(forDrawingPages: NSRange(location: 0, length: renderer.numberOfPages))
+        for index in 0..<renderer.numberOfPages {
+            UIGraphicsBeginPDFPage()
+            renderer.drawPage(at: index, in: UIGraphicsGetPDFContextBounds())
+        }
+        UIGraphicsEndPDFContext()
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("anchor-export-\(UUID().uuidString)", isDirectory: true)
+        let url = folder.appendingPathComponent("Safety plan.pdf")
+        do {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            try data.write(to: url, options: .atomic)
+            return url
+        } catch {
+            return nil
+        }
+    }
+}
+
+/// An A4 page with a margin, for the PDF.
+private final class SafetyPlanPageRenderer: UIPrintPageRenderer {
+    static let paper = CGRect(x: 0, y: 0, width: 595.2, height: 841.8)
+    override var paperRect: CGRect { Self.paper }
+    override var printableRect: CGRect { Self.paper.insetBy(dx: 48, dy: 54) }
+}
+
+/// Choose what goes out, read it as it will be sent, then share it as text or a PDF. Nothing is made or sent until a share
+/// button is pressed, and nothing from Anchor but the safety plan is in it.
+private struct SafetyPlanShareSheet: View {
+    let sections: [SafetyPlanSection]
+    let resolver: SafetyPlanLinkResolver
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var includeContactDetails = true
+    @State private var includeNotes = true
+    @State private var shareURL: IdentifiableURL?
+    @State private var failed = false
+
+    private var lines: [SafetyPlanExport.Line] {
+        SafetyPlanExport.lines(
+            sections: sections,
+            resolver: resolver,
+            options: SafetyPlanExport.Options(includeContactDetails: includeContactDetails, includeNotes: includeNotes)
+        )
+    }
+
+    var body: some View {
+        let text = SafetyPlanExport.plainText(lines)
+        NavigationStack {
+            Form {
+                Section {
+                    Toggle("Phone numbers and web addresses", isOn: $includeContactDetails)
+                    Toggle("Notes on items", isOn: $includeNotes)
+                } header: {
+                    Text("What goes in")
+                } footer: {
+                    Text("Sections you have hidden are never included. Only the safety plan is shared: nothing else from Anchor.")
+                }
+
+                Section("How it will read") {
+                    Text(text)
+                        .font(.system(.footnote, design: .monospaced))
+                        .textSelection(.enabled)
+                }
+
+                Section {
+                    ShareLink(item: text) {
+                        Label("Share as text", systemImage: "text.alignleft")
+                    }
+                    Button {
+                        if let url = SafetyPlanExport.makePDF(lines) {
+                            shareURL = IdentifiableURL(url: url)
+                        } else {
+                            failed = true
+                        }
+                    } label: {
+                        Label("Share as a PDF", systemImage: "doc.richtext")
+                    }
+                }
+            }
+            .navigationTitle("Share your safety plan")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") { dismiss() }
+                }
+            }
+            .sheet(item: $shareURL) { wrapped in
+                ShareSheet(activityItems: [wrapped.url])
+            }
+            .alert("Could not make the PDF", isPresented: $failed) {
+                Button("OK", role: .cancel) {}
             }
         }
     }
