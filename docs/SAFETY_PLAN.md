@@ -16,9 +16,16 @@ the source of reminder quotes.
 - A section whose parent has been deleted shows as a card of its own.
 - There are more icons to choose from (the set is fixed, so the icon name is still not content).
 
+## Items, notes and entry formats (Patch SP2)
+
+- A section can hold a list of **items**. Each has a title, an optional **note**, and an answer for each field of the section's entry format. Items show on the card as a bulleted list under the section's words, with each answer on its own line ("Phone: 0400 000 000") and the note under that.
+- The **entry format** is the set of fields every item in that section has, which you name yourself (a name, a phone number, when to use it, and so on). **Start from a ready-made format** fills it in for a person, a place, something to do, or a medicine; all of it can be changed. Each field has its own id, so renaming a field keeps the answers already written under it, and deleting a field leaves the old answers stored but unseen.
+- Open a section to edit its items. Swipe to delete, **Edit** to put them in order. An empty entry format means plain items.
+- Items and fields are kept inside the section as coded lists (the way a goal keeps its notes), locked like the section's words, and carried in exports (older exports still import).
+- Nothing is counted or scored: no number of items shown as progress.
+
 ## Still to come
 
-- Items inside a section: a list kind with a note on each item, and entry formats you set the fields of.
 - Section kinds: list, text, people, grounding tools, goals.
 - Links from items to a person, a grounding tool, a goal, another section, or something outside Anchor.
 - An export button for the safety plan alone.

@@ -126,6 +126,8 @@ Lock in: none
 | role | String | plain | plain | a fixed label that says which built-in section this is, never typed |
 | subtitle | String | locked | sealed | a line you typed under the title |
 | parentID | UUID? | plain | plain | which section this one sits under, a link and not content |
+| items | [SafetyPlanItem] | locked | sealed | the things you listed, with your own notes |
+| fields | [SafetyPlanField] | locked | sealed | the field names you chose for your entries |
 | lastEditedAt | Date | locked | sealed | when you last changed it |
 
 ## BoundarySection

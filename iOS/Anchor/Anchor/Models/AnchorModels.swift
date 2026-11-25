@@ -913,6 +913,39 @@ extension SafetyPlan {
     }
 }
 
+/// One thing listed in a safety plan section, with a note and the answers to the section's entry format.
+struct SafetyPlanItem: Codable, Identifiable, Hashable {
+    var id: UUID = UUID()
+    var title: String = ""
+    var note: String = ""
+    /// Answers to the section's entry format, one for each field that has been filled in.
+    var answers: [SafetyPlanAnswer] = []
+
+    func answer(for fieldID: UUID) -> String {
+        answers.first(where: { $0.fieldID == fieldID })?.value ?? ""
+    }
+
+    mutating func setAnswer(_ value: String, for fieldID: UUID) {
+        if let index = answers.firstIndex(where: { $0.fieldID == fieldID }) {
+            answers[index].value = value
+        } else {
+            answers.append(SafetyPlanAnswer(fieldID: fieldID, value: value))
+        }
+    }
+}
+
+/// What was written for one field of a section's entry format, on one item.
+struct SafetyPlanAnswer: Codable, Hashable {
+    var fieldID: UUID
+    var value: String = ""
+}
+
+/// One field of a section's entry format, such as Name or Phone. Every item in the section has it.
+struct SafetyPlanField: Codable, Identifiable, Hashable {
+    var id: UUID = UUID()
+    var name: String = ""
+}
+
 /// One section of the safety plan: a title, the person's own words, and how
 /// it looks. Sections can be renamed, reordered, added, hidden and removed.
 /// The four text fields on `SafetyPlan` are the older form: they are copied
@@ -941,6 +974,16 @@ final class SafetyPlanSection {
     /// The section this one sits under, shown as a subheading inside that section's card. Nil for a card of its own.
     /// Only a link to another section, not content.
     var parentID: UUID? = nil
+    /// The items listed in this section, each with a note and the answers to this section's entry format. A new field,
+    /// so a section made before it existed has none. Read and written through `items` only.
+    var itemsPlain: [SafetyPlanItem] = []   // a new locked field
+    /// The locked form of `items`, empty until locking is turned on. Read and written through `items` only.
+    var itemsSealed: String? = nil
+    /// The fields every item in this section has, such as Name or Phone: the entry format. A new field. Read and written
+    /// through `fields` only.
+    var fieldsPlain: [SafetyPlanField] = []   // a new locked field
+    /// The locked form of `fields`, empty until locking is turned on. Read and written through `fields` only.
+    var fieldsSealed: String? = nil
     @Attribute(originalName: "lastEditedAt") var lastEditedAtPlain: Date = Date(timeIntervalSinceReferenceDate: 0)
     /// The locked form of `lastEditedAt`, empty until locking is turned on. Read and written through `lastEditedAt` only.
     var lastEditedAtSealed: String? = nil
@@ -950,8 +993,11 @@ final class SafetyPlanSection {
     init(id: UUID = UUID(), title: String = "", text: String = "",
          iconName: String = "doc.text.fill", tintName: String = "sage",
          sortOrder: Int = 0, isHidden: Bool = false, role: String = "",
-         lastEditedAt: Date = .now, subtitle: String = "", parentID: UUID? = nil) {
+         lastEditedAt: Date = .now, subtitle: String = "", parentID: UUID? = nil,
+         items: [SafetyPlanItem] = [], fields: [SafetyPlanField] = []) {
         self.id = id
+        self.itemsPlain = items
+        self.fieldsPlain = fields
         self.subtitlePlain = subtitle
         self.parentID = parentID
         self.titlePlain = title
@@ -968,6 +1014,24 @@ final class SafetyPlanSection {
 
 // Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
 extension SafetyPlanSection {
+    var items: [SafetyPlanItem] {
+        get { FieldLock.readCoded(itemsPlain, sealed: itemsSealed, context: "SafetyPlanSection.items") }
+        set {
+            let kept = FieldLock.storeCoded(newValue, empty: [], context: "SafetyPlanSection.items")
+            itemsPlain = kept.plain
+            itemsSealed = kept.sealed
+        }
+    }
+
+    var fields: [SafetyPlanField] {
+        get { FieldLock.readCoded(fieldsPlain, sealed: fieldsSealed, context: "SafetyPlanSection.fields") }
+        set {
+            let kept = FieldLock.storeCoded(newValue, empty: [], context: "SafetyPlanSection.fields")
+            fieldsPlain = kept.plain
+            fieldsSealed = kept.sealed
+        }
+    }
+
     var subtitle: String {
         get { FieldLock.read(plain: subtitlePlain, sealed: subtitleSealed, context: "SafetyPlanSection.subtitle") }
         set {
@@ -1011,6 +1075,8 @@ extension SafetyPlanSection {
         title = titlePlain
         text = textPlain
         subtitle = subtitlePlain
+        items = itemsPlain
+        fields = fieldsPlain
     }
 
     /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
@@ -1021,6 +1087,8 @@ extension SafetyPlanSection {
         if titleSealed == nil { title = titlePlain }
         if textSealed == nil { text = textPlain }
         if subtitleSealed == nil { subtitle = subtitlePlain }
+        if itemsSealed == nil { items = itemsPlain }
+        if fieldsSealed == nil { fields = fieldsPlain }
     }
 
     /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
@@ -1030,7 +1098,9 @@ extension SafetyPlanSection {
             FieldLock.describe(lastEditedAt),
             FieldLock.describe(title),
             FieldLock.describe(text),
-            FieldLock.describe(subtitle)
+            FieldLock.describe(subtitle),
+            FieldLock.describe(items),
+            FieldLock.describe(fields)
         ])
     }
 
@@ -1040,6 +1110,8 @@ extension SafetyPlanSection {
             && titleSealed != nil && titlePlain.isEmpty
             && textSealed != nil && textPlain.isEmpty
             && subtitleSealed != nil && subtitlePlain.isEmpty
+            && itemsSealed != nil && itemsPlain.isEmpty
+            && fieldsSealed != nil && fieldsPlain.isEmpty
     }
 }
 

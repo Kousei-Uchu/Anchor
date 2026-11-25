@@ -273,6 +273,7 @@ struct SafetyPlanView: View {
                 } footer: {
                     Text("Put this under another section to show it as a subheading inside that card.")
                 }
+                SafetyPlanItemsEditor(section: section)
                 Section {
                     Toggle("Use this for reminder quotes", isOn: Binding(
                         get: { section.role == SafetyPlanSection.reasonsRole },
@@ -508,6 +509,8 @@ private struct SafetyPlanBlockView: View {
 
     var body: some View {
         let children = childrenOf(section)
+        let items = section.items
+        let fields = section.fields
         let words = section.text.trimmingCharacters(in: .whitespacesAndNewlines)
         VStack(alignment: .leading, spacing: 10) {
             Button { onOpen(section) } label: {
@@ -536,10 +539,18 @@ private struct SafetyPlanBlockView: View {
                             .font(.system(depth == 0 ? .body : .subheadline, design: .rounded))
                             .foregroundStyle(.primary)
                             .fixedSize(horizontal: false, vertical: true)
-                    } else if depth == 0 && children.isEmpty {
+                    } else if depth == 0 && children.isEmpty && items.isEmpty {
                         Text("Nothing added yet.")
                             .font(.subheadline)
                             .foregroundStyle(.tertiary)
+                    }
+                    if !items.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach(items) { item in
+                                SafetyPlanItemRow(item: item, fields: fields)
+                            }
+                        }
+                        .padding(.top, 2)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -556,6 +567,152 @@ private struct SafetyPlanBlockView: View {
                             Rectangle().fill(tint.opacity(0.35)).frame(width: 2)
                         }
                 )
+            }
+        }
+    }
+}
+
+
+/// One listed item as it reads on a card: its title, the answers to the section's entry format, and its note.
+private struct SafetyPlanItemRow: View {
+    let item: SafetyPlanItem
+    let fields: [SafetyPlanField]
+
+    private var answered: [(name: String, value: String)] {
+        fields.compactMap { field in
+            let value = item.answer(for: field.id).trimmingCharacters(in: .whitespacesAndNewlines)
+            return value.isEmpty ? nil : (field.name.isEmpty ? "Field" : field.name, value)
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text("\u{2022}")
+                    .foregroundStyle(.secondary)
+                Text(item.title.isEmpty ? "Untitled item" : item.title)
+                    .font(.system(.body, design: .rounded).weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            ForEach(answered.indices, id: \.self) { index in
+                Text("\(answered[index].name): \(answered[index].value)")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .padding(.leading, 16)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if !item.note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Text(item.note)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .padding(.leading, 16)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// The Form sections for a section's entry format and its items: the fields you choose for every entry, then the items,
+/// each with its own title, one answer per field, and an optional note.
+private struct SafetyPlanItemsEditor: View {
+    let section: SafetyPlanSection
+
+    private var items: Binding<[SafetyPlanItem]> {
+        Binding(get: { section.items }, set: { section.items = $0; section.lastEditedAt = .now })
+    }
+
+    private var fields: Binding<[SafetyPlanField]> {
+        Binding(get: { section.fields }, set: { section.fields = $0; section.lastEditedAt = .now })
+    }
+
+    /// Ready-made formats to start from. Each can be changed afterwards.
+    private static let presets: [(name: String, fields: [String])] = [
+        ("A person: phone, when to contact", ["Phone", "When to contact them"]),
+        ("A place: address, why it helps", ["Address", "Why it helps"]),
+        ("Something to do: how long, what I need", ["How long", "What I need"]),
+        ("A medicine: dose, when", ["Dose", "When"])
+    ]
+
+    private func answer(_ itemID: UUID, _ fieldID: UUID) -> Binding<String> {
+        Binding(
+            get: { section.items.first(where: { $0.id == itemID })?.answer(for: fieldID) ?? "" },
+            set: { new in
+                var list = section.items
+                guard let index = list.firstIndex(where: { $0.id == itemID }) else { return }
+                list[index].setAnswer(new, for: fieldID)
+                section.items = list
+                section.lastEditedAt = .now
+            }
+        )
+    }
+
+    var body: some View {
+        Group {
+            Section {
+                ForEach(fields) { $field in
+                    TextField("Field name, such as Phone", text: $field.name)
+                }
+                .onDelete { offsets in
+                    fields.wrappedValue.remove(atOffsets: offsets)
+                }
+                Button {
+                    fields.wrappedValue.append(SafetyPlanField())
+                } label: {
+                    Label("Add a field", systemImage: "plus.circle.fill")
+                }
+                Menu {
+                    ForEach(Self.presets.indices, id: \.self) { index in
+                        Button(Self.presets[index].name) {
+                            fields.wrappedValue = Self.presets[index].fields.map { SafetyPlanField(name: $0) }
+                        }
+                    }
+                } label: {
+                    Label("Start from a ready-made format", systemImage: "rectangle.3.group")
+                }
+            } header: {
+                Text("Entry format")
+            } footer: {
+                Text("The fields every item in this section has, such as a name, a phone number or when to use it. Leave it empty for plain items. Changing the format keeps what you already wrote under each field name.")
+            }
+
+            Section {
+                ForEach(items) { $item in
+                    VStack(alignment: .leading, spacing: 8) {
+                        TextField("Item", text: $item.title)
+                            .font(.system(.body, design: .rounded).weight(.semibold))
+                        ForEach(fields.wrappedValue) { field in
+                            TextField(field.name.isEmpty ? "Field" : field.name, text: answer(item.id, field.id))
+                                .font(.subheadline)
+                        }
+                        TextField("A note (optional)", text: $item.note, axis: .vertical)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 2)
+                }
+                .onDelete { offsets in
+                    items.wrappedValue.remove(atOffsets: offsets)
+                }
+                .onMove { source, destination in
+                    items.wrappedValue.move(fromOffsets: source, toOffset: destination)
+                }
+                Button {
+                    items.wrappedValue.append(SafetyPlanItem())
+                } label: {
+                    Label("Add an item", systemImage: "plus.circle.fill")
+                }
+            } header: {
+                HStack {
+                    Text("Items")
+                    Spacer()
+                    if !section.items.isEmpty {
+                        EditButton()
+                            .font(.footnote)
+                    }
+                }
+            } footer: {
+                Text("A list inside this section, each with an optional note. Swipe an item to delete it, or use Edit to put them in order.")
             }
         }
     }
