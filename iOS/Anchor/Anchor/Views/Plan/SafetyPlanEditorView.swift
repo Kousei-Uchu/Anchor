@@ -79,7 +79,45 @@ enum CustomSectionStyle {
         Icon(symbol: "book.fill", name: "Book"),
         Icon(symbol: "music.note", name: "Music"),
         Icon(symbol: "figure.walk", name: "Walk"),
-        Icon(symbol: "cup.and.saucer.fill", name: "Cup")
+        Icon(symbol: "cup.and.saucer.fill", name: "Cup"),
+        Icon(symbol: "shield.fill", name: "Shield"),
+        Icon(symbol: "cross.case.fill", name: "First aid"),
+        Icon(symbol: "bandage.fill", name: "Care"),
+        Icon(symbol: "bubble.left.fill", name: "Talk"),
+        Icon(symbol: "message.fill", name: "Message"),
+        Icon(symbol: "envelope.fill", name: "Letter"),
+        Icon(symbol: "bell.fill", name: "Bell"),
+        Icon(symbol: "clock.fill", name: "Time"),
+        Icon(symbol: "calendar", name: "Calendar"),
+        Icon(symbol: "map.fill", name: "Map"),
+        Icon(symbol: "location.fill", name: "Place"),
+        Icon(symbol: "car.fill", name: "Car"),
+        Icon(symbol: "bed.double.fill", name: "Bed"),
+        Icon(symbol: "bolt.fill", name: "Energy"),
+        Icon(symbol: "flame.fill", name: "Flame"),
+        Icon(symbol: "drop.fill", name: "Water"),
+        Icon(symbol: "wind", name: "Breath"),
+        Icon(symbol: "cloud.fill", name: "Cloud"),
+        Icon(symbol: "tree.fill", name: "Tree"),
+        Icon(symbol: "pawprint.fill", name: "Pet"),
+        Icon(symbol: "fork.knife", name: "Food"),
+        Icon(symbol: "pills.fill", name: "Medicine"),
+        Icon(symbol: "stethoscope", name: "Doctor"),
+        Icon(symbol: "brain.head.profile", name: "Mind"),
+        Icon(symbol: "figure.mind.and.body", name: "Calm"),
+        Icon(symbol: "hands.sparkles.fill", name: "Care hands"),
+        Icon(symbol: "lock.fill", name: "Lock"),
+        Icon(symbol: "key.fill", name: "Key"),
+        Icon(symbol: "flag.fill", name: "Flag"),
+        Icon(symbol: "target", name: "Goal"),
+        Icon(symbol: "list.bullet", name: "List"),
+        Icon(symbol: "checkmark.circle.fill", name: "Done"),
+        Icon(symbol: "pencil", name: "Write"),
+        Icon(symbol: "camera.fill", name: "Photo"),
+        Icon(symbol: "headphones", name: "Listen"),
+        Icon(symbol: "paintbrush.fill", name: "Create"),
+        Icon(symbol: "gamecontroller.fill", name: "Play"),
+        Icon(symbol: "globe", name: "World")
     ]
 }
 
@@ -148,8 +186,41 @@ struct SafetyPlanView: View {
     @State private var removing: SafetyPlanSection?
     @State private var confirmingRemove: SafetyPlanSection?
 
-    private var shown: [SafetyPlanSection] { sections.filter { !$0.isHidden } }
+    /// Sections that are not under another one that still exists. A section whose parent is gone shows as its own card.
+    private var topLevel: [SafetyPlanSection] {
+        let ids = Set(sections.map(\.id))
+        return sections.filter { $0.parentID == nil || !ids.contains($0.parentID!) }
+    }
+    private var shown: [SafetyPlanSection] { topLevel.filter { !$0.isHidden } }
     private var hidden: [SafetyPlanSection] { sections.filter { $0.isHidden } }
+
+    /// What sits directly under a section, in order, leaving out hidden ones.
+    private func shownChildren(of parent: SafetyPlanSection) -> [SafetyPlanSection] {
+        sections.filter { $0.parentID == parent.id && !$0.isHidden }
+    }
+
+    /// Everything under a section, at any depth.
+    private func descendants(of parent: SafetyPlanSection) -> [SafetyPlanSection] {
+        let direct = sections.filter { $0.parentID == parent.id }
+        return direct + direct.flatMap { descendants(of: $0) }
+    }
+
+    /// How many levels a section is down: 0 for a card of its own.
+    private func depth(of section: SafetyPlanSection) -> Int {
+        var depth = 0
+        var current = section
+        while let parentID = current.parentID, let parent = sections.first(where: { $0.id == parentID }), depth < 10 {
+            depth += 1
+            current = parent
+        }
+        return depth
+    }
+
+    /// Where a section can go: not itself, not anything under it, and no deeper than a sub-subheading.
+    private func parentChoices(for section: SafetyPlanSection) -> [SafetyPlanSection] {
+        let blocked = Set(descendants(of: section).map(\.id) + [section.id])
+        return sections.filter { !blocked.contains($0.id) && depth(of: $0) < 2 }
+    }
 
     /// True when no shown section is marked for reminder quotes, which also
     /// covers the marked one being hidden or deleted.
@@ -183,6 +254,25 @@ struct SafetyPlanView: View {
                 deleteQuestion: deleteQuestion(for: section),
                 onDelete: { removing = section }
             ) {
+                Section("Subtitle") {
+                    TextField("A line under the title (optional)", text: Binding(
+                        get: { section.subtitle },
+                        set: { section.subtitle = $0; section.lastEditedAt = .now }
+                    ))
+                }
+                Section {
+                    Picker("Sits under", selection: Binding(
+                        get: { section.parentID },
+                        set: { section.parentID = $0; section.lastEditedAt = .now }
+                    )) {
+                        Text("Nothing: its own card").tag(UUID?.none)
+                        ForEach(parentChoices(for: section)) { choice in
+                            Text(choice.title.isEmpty ? "Untitled" : choice.title).tag(Optional(choice.id))
+                        }
+                    }
+                } footer: {
+                    Text("Put this under another section to show it as a subheading inside that card.")
+                }
                 Section {
                     Toggle("Use this for reminder quotes", isOn: Binding(
                         get: { section.role == SafetyPlanSection.reasonsRole },
@@ -200,7 +290,7 @@ struct SafetyPlanView: View {
             presenting: confirmingRemove
         ) { section in
             Button("Delete section", role: .destructive) {
-                modelContext.delete(section)
+                deleteWithChildren(section)
                 syncReminders()
             }
             Button("Keep it", role: .cancel) {}
@@ -231,24 +321,18 @@ struct SafetyPlanView: View {
     private var listBody: some View {
         List {
             ForEach(shown) { section in
-                Button {
-                    open(section)
-                } label: {
-                    Anchor.TextCard(
-                        icon: section.iconName,
-                        title: section.title.isEmpty ? "Untitled" : section.title,
-                        text: section.text,
-                        tint: SectionTint.named(section.tintName).color
-                    )
-                    .overlay(alignment: .topTrailing) {
-                        Image(systemName: "pencil")
-                            .font(.footnote)
-                            .foregroundStyle(.tertiary)
-                            .padding(14)
+                SafetyPlanCardView(
+                    section: section,
+                    childrenOf: { shownChildren(of: $0) },
+                    onOpen: { open($0) }
+                )
+                .contextMenu {
+                    Button {
+                        addSubheading(under: section)
+                    } label: {
+                        Label("Add a subheading", systemImage: "text.append")
                     }
                 }
-                .buttonStyle(.plain)
-                .accessibilityHint("Opens the editor")
                 .swipeActions(edge: .leading) {
                     Button {
                         section.isHidden = true
@@ -322,6 +406,20 @@ struct SafetyPlanView: View {
         open(new)
     }
 
+    /// A new section that sits under another, shown as a subheading inside its card.
+    private func addSubheading(under parent: SafetyPlanSection) {
+        let new = SafetyPlanSection(iconName: parent.iconName, tintName: parent.tintName,
+                                    sortOrder: nextOrder(), parentID: parent.id)
+        modelContext.insert(new)
+        open(new)
+    }
+
+    /// A section goes with everything that sits under it.
+    private func deleteWithChildren(_ section: SafetyPlanSection) {
+        for child in descendants(of: section) { modelContext.delete(child) }
+        modelContext.delete(section)
+    }
+
     private func startWithFour() {
         for section in SafetyPlanSections.makeSections() { modelContext.insert(section) }
     }
@@ -353,10 +451,11 @@ struct SafetyPlanView: View {
     }
 
     private func deleteQuestion(for section: SafetyPlanSection) -> String {
+        let under = descendants(of: section).isEmpty ? "" : " Everything under it goes too."
         if section.role == SafetyPlanSection.reasonsRole {
-            return "Delete this section? What is written in it goes too, and reminder quotes will be off until you choose another section."
+            return "Delete this section? What is written in it goes too, and reminder quotes will be off until you choose another section." + under
         }
-        return "Delete this section? What is written in it goes too."
+        return "Delete this section? What is written in it goes too." + under
     }
 
     /// Runs once the editor has closed, so a sheet never reads a section that
@@ -368,9 +467,10 @@ struct SafetyPlanView: View {
         let opened = lastOpened
         lastOpened = nil
         if let deleting {
-            modelContext.delete(deleting)
+            deleteWithChildren(deleting)
         } else if let opened, opened.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                  opened.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                  opened.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                  opened.subtitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             modelContext.delete(opened)
         }
         syncReminders()
@@ -380,5 +480,83 @@ struct SafetyPlanView: View {
     /// (or to what it says) is passed on to the scheduled reminders.
     private func syncReminders() {
         NotificationScheduler.resyncTriggerWindows(using: modelContext)
+    }
+}
+
+
+/// One section as a card: its heading, subtitle and words, then anything that sits under it as subheadings, each with its
+/// own subtitle and words, to any depth. Tap the heading area of any of them to change that one.
+struct SafetyPlanCardView: View {
+    let section: SafetyPlanSection
+    let childrenOf: (SafetyPlanSection) -> [SafetyPlanSection]
+    let onOpen: (SafetyPlanSection) -> Void
+
+    var body: some View {
+        let tint = SectionTint.named(section.tintName).color
+        Anchor.Card(accentColor: tint) {
+            SafetyPlanBlockView(section: section, depth: 0, tint: tint, childrenOf: childrenOf, onOpen: onOpen)
+        }
+    }
+}
+
+private struct SafetyPlanBlockView: View {
+    let section: SafetyPlanSection
+    let depth: Int
+    let tint: Color
+    let childrenOf: (SafetyPlanSection) -> [SafetyPlanSection]
+    let onOpen: (SafetyPlanSection) -> Void
+
+    var body: some View {
+        let children = childrenOf(section)
+        let words = section.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        VStack(alignment: .leading, spacing: 10) {
+            Button { onOpen(section) } label: {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(alignment: .firstTextBaseline) {
+                        if depth == 0 {
+                            Anchor.SectionHeader(icon: section.iconName, title: section.title.isEmpty ? "Untitled" : section.title, tint: tint)
+                        } else {
+                            Label(section.title.isEmpty ? "Untitled" : section.title, systemImage: section.iconName)
+                                .font(.system(depth == 1 ? .subheadline : .footnote, design: .rounded).weight(.semibold))
+                                .foregroundStyle(tint)
+                        }
+                        Spacer(minLength: 8)
+                        Image(systemName: "pencil")
+                            .font(.footnote)
+                            .foregroundStyle(.tertiary)
+                    }
+                    if !section.subtitle.isEmpty {
+                        Text(section.subtitle)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    if !words.isEmpty {
+                        Text(words)
+                            .font(.system(depth == 0 ? .body : .subheadline, design: .rounded))
+                            .foregroundStyle(.primary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } else if depth == 0 && children.isEmpty {
+                        Text("Nothing added yet.")
+                            .font(.subheadline)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Opens the editor")
+
+            ForEach(children) { child in
+                AnyView(
+                    SafetyPlanBlockView(section: child, depth: depth + 1, tint: tint, childrenOf: childrenOf, onOpen: onOpen)
+                        .padding(.leading, 12)
+                        .overlay(alignment: .leading) {
+                            Rectangle().fill(tint.opacity(0.35)).frame(width: 2)
+                        }
+                )
+            }
+        }
     }
 }

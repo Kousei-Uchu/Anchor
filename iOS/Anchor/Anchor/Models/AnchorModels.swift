@@ -933,6 +933,14 @@ final class SafetyPlanSection {
     /// Empty for an ordinary section. `reasonsRole` marks the one section that
     /// reminder quotes are taken from.
     var role: String = ""
+    /// A line under the title. A new field, so a section made before it existed has none. Read and written through
+    /// `subtitle` only.
+    var subtitlePlain: String = ""   // a new locked field
+    /// The locked form of `subtitle`, empty until locking is turned on. Read and written through `subtitle` only.
+    var subtitleSealed: String? = nil
+    /// The section this one sits under, shown as a subheading inside that section's card. Nil for a card of its own.
+    /// Only a link to another section, not content.
+    var parentID: UUID? = nil
     @Attribute(originalName: "lastEditedAt") var lastEditedAtPlain: Date = Date(timeIntervalSinceReferenceDate: 0)
     /// The locked form of `lastEditedAt`, empty until locking is turned on. Read and written through `lastEditedAt` only.
     var lastEditedAtSealed: String? = nil
@@ -942,8 +950,10 @@ final class SafetyPlanSection {
     init(id: UUID = UUID(), title: String = "", text: String = "",
          iconName: String = "doc.text.fill", tintName: String = "sage",
          sortOrder: Int = 0, isHidden: Bool = false, role: String = "",
-         lastEditedAt: Date = .now) {
+         lastEditedAt: Date = .now, subtitle: String = "", parentID: UUID? = nil) {
         self.id = id
+        self.subtitlePlain = subtitle
+        self.parentID = parentID
         self.titlePlain = title
         self.textPlain = text
         self.iconName = iconName
@@ -958,6 +968,15 @@ final class SafetyPlanSection {
 
 // Patch 35b2: the old names, read and written through FieldLock so a locked value reads as its text.
 extension SafetyPlanSection {
+    var subtitle: String {
+        get { FieldLock.read(plain: subtitlePlain, sealed: subtitleSealed, context: "SafetyPlanSection.subtitle") }
+        set {
+            let kept = FieldLock.store(newValue, context: "SafetyPlanSection.subtitle")
+            subtitlePlain = kept.plain
+            subtitleSealed = kept.sealed
+        }
+    }
+
     var title: String {
         get { FieldLock.read(plain: titlePlain, sealed: titleSealed, context: "SafetyPlanSection.title") }
         set {
@@ -991,6 +1010,7 @@ extension SafetyPlanSection {
         lastEditedAt = lastEditedAtPlain
         title = titlePlain
         text = textPlain
+        subtitle = subtitlePlain
     }
 
     /// Patch 35b3: seals what is stored plain and leaves anything already sealed alone, so it is safe to run
@@ -1000,6 +1020,7 @@ extension SafetyPlanSection {
         if lastEditedAtSealed == nil { lastEditedAt = lastEditedAtPlain }
         if titleSealed == nil { title = titlePlain }
         if textSealed == nil { text = textPlain }
+        if subtitleSealed == nil { subtitle = subtitlePlain }
     }
 
     /// What every locked field reads as, joined into one piece of text, so the Lock my data check can compare it
@@ -1008,7 +1029,8 @@ extension SafetyPlanSection {
         FieldLock.join([
             FieldLock.describe(lastEditedAt),
             FieldLock.describe(title),
-            FieldLock.describe(text)
+            FieldLock.describe(text),
+            FieldLock.describe(subtitle)
         ])
     }
 
@@ -1017,6 +1039,7 @@ extension SafetyPlanSection {
         lastEditedAtSealed != nil && lastEditedAtPlain == Date.lockedPlaceholder
             && titleSealed != nil && titlePlain.isEmpty
             && textSealed != nil && textPlain.isEmpty
+            && subtitleSealed != nil && subtitlePlain.isEmpty
     }
 }
 

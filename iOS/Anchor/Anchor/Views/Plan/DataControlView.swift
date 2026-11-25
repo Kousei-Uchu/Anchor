@@ -1579,13 +1579,17 @@ struct SafetyPlanSectionDTO: Codable {
     var id: UUID; var title: String; var text: String
     var iconName: String; var tintName: String
     var sortOrder: Int; var isHidden: Bool; var role: String; var lastEditedAt: Date
+    /// Optional so exports made before subheadings existed still import.
+    var subtitle: String?; var parentID: UUID?
     init(_ m: SafetyPlanSection) {
         id = m.id; title = m.title; text = m.text; iconName = m.iconName; tintName = m.tintName
         sortOrder = m.sortOrder; isHidden = m.isHidden; role = m.role; lastEditedAt = m.lastEditedAt
+        subtitle = m.subtitle; parentID = m.parentID
     }
     func toModel() -> SafetyPlanSection {
         SafetyPlanSection(id: id, title: title, text: text, iconName: iconName, tintName: tintName,
-                          sortOrder: sortOrder, isHidden: isHidden, role: role, lastEditedAt: lastEditedAt)
+                          sortOrder: sortOrder, isHidden: isHidden, role: role, lastEditedAt: lastEditedAt,
+                          subtitle: subtitle ?? "", parentID: parentID)
     }
 }
 
@@ -2424,12 +2428,14 @@ extension SafetyPlanSection: DataBrowsable {
     var browseFields: [BrowseField] {
         [
             .text("Title", title),
+            .text("Subtitle", subtitle),
             .text("Text", text),
             .text("Icon", iconName),
             .text("Colour", tintName),
             .number("Position in the list", sortOrder),
             .yesNo("Hidden", isHidden),
             .text("Role", role),
+            .text("Sits under", parentID?.uuidString ?? ""),
             .date("Last edited", lastEditedAt)
         ]
     }

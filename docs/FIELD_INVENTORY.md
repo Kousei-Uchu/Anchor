@@ -124,6 +124,8 @@ Lock in: none
 | sortOrder | Int | plain | plain | the order on screen |
 | isHidden | Bool | plain | plain | an on or off switch |
 | role | String | plain | plain | a fixed label that says which built-in section this is, never typed |
+| subtitle | String | locked | sealed | a line you typed under the title |
+| parentID | UUID? | plain | plain | which section this one sits under, a link and not content |
 | lastEditedAt | Date | locked | sealed | when you last changed it |
 
 ## BoundarySection
