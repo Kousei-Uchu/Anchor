@@ -2028,13 +2028,16 @@ protocol DataBrowsable {
 /// nothing generic.
 struct DataRecord: Identifiable {
     let id = UUID()
+    /// The stored record this was copied from, so it can be found again to delete it.
+    let modelID: PersistentIdentifier?
     let headline: String
     let subtitle: String?
     let date: Date?
     let fields: [BrowseField]
     let searchText: String
 
-    init<M: DataBrowsable>(_ model: M) {
+    init<M: DataBrowsable>(_ model: M, modelID: PersistentIdentifier? = nil) {
+        self.modelID = modelID
         headline = model.browseHeadline
         subtitle = model.browseSubtitle
         date = model.browseDate
@@ -2051,7 +2054,7 @@ struct DataKind: Identifiable {
     let count: (ModelContext) -> Int
     let list: () -> AnyView
 
-    static func of<M: PersistentModel & DataBrowsable>(_ type: M.Type) -> DataKind {
+    static func of<M: PersistentModel & DataBrowsable & DataDeletable>(_ type: M.Type) -> DataKind {
         DataKind(
             id: String(describing: M.self),
             title: M.browseTitle,
@@ -2133,7 +2136,7 @@ struct DataViewerHome: View {
     var body: some View {
         List {
             Section {
-                Text("Everything here is read only. Nothing can be changed from this screen.")
+                Text("Look at what is stored, and delete single entries. To change something, use its own screen in Anchor.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -2167,10 +2170,11 @@ struct DataViewerHome: View {
                 .accessibilityLabel("More")
             }
         }
-        .task {
+        .onAppear {
             #if DEBUG
             assert(DataViewerKinds.missing.isEmpty, "Not in the data viewer: \(DataViewerKinds.missing)")
             #endif
+            // Each time this screen is shown, so the counts are right after deleting something.
             var found: [String: Int] = [:]
             for kind in DataViewerKinds.all { found[kind.id] = kind.count(modelContext) }
             counts = found
@@ -2179,16 +2183,30 @@ struct DataViewerHome: View {
 }
 
 /// Fetches one kind, copies it out as records and hands them to the list.
-struct DataKindListView<M: PersistentModel & DataBrowsable>: View {
+struct DataKindListView<M: PersistentModel & DataBrowsable & DataDeletable>: View {
     @Environment(\.modelContext) private var modelContext
     @State private var records: [DataRecord] = []
     @State private var loaded = false
 
+    /// Deletes the stored records behind these rows, with whatever goes with each one, then makes anything scheduled from
+    /// this kind (reminders, widgets) again from what is left.
+    private func delete(_ doomed: [DataRecord]) {
+        for record in doomed {
+            guard let id = record.modelID, let model = modelContext.model(for: id) as? M else { continue }
+            model.deleteFromViewer(in: modelContext)
+        }
+        try? modelContext.save()
+        M.refreshAfterViewerDelete(in: modelContext)
+        WidgetCenter.shared.reloadAllTimelines()
+        let gone = Set(doomed.map(\.id))
+        records.removeAll { gone.contains($0.id) }
+    }
+
     var body: some View {
-        DataRecordList(title: M.browseTitle, singular: M.browseSingular, records: records, loaded: loaded)
+        DataRecordList(title: M.browseTitle, singular: M.browseSingular, records: records, loaded: loaded, onDelete: { delete($0) })
             .task {
                 let items = (try? modelContext.fetch(FetchDescriptor<M>())) ?? []
-                records = items.map { DataRecord($0) }.sorted {
+                records = items.map { DataRecord($0, modelID: $0.persistentModelID) }.sorted {
                     switch ($0.date, $1.date) {
                     case let (a?, b?): return a > b
                     case (_?, nil): return true
@@ -2206,9 +2224,14 @@ struct DataRecordList: View {
     let singular: String
     let records: [DataRecord]
     let loaded: Bool
+    /// Deletes the stored records these rows came from. Nil means the list can only be looked at.
+    var onDelete: (([DataRecord]) -> Void)?
 
     @AppStorage("anchor.dataViewer.blur") private var blur = false
+    @Environment(\.editMode) private var editMode
     @State private var search = ""
+    @State private var selection = Set<UUID>()
+    @State private var confirming: [DataRecord] = []
 
     private var shown: [DataRecord] {
         let q = search.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -2216,8 +2239,14 @@ struct DataRecordList: View {
         return records.filter { $0.searchText.localizedCaseInsensitiveContains(q) }
     }
 
+    private var isEditing: Bool { editMode?.wrappedValue.isEditing ?? false }
+
+    private var confirmTitle: String {
+        confirming.count == 1 ? "Delete this \(singular.lowercased())?" : "Delete \(confirming.count) entries?"
+    }
+
     var body: some View {
-        List {
+        List(selection: $selection) {
             if loaded && records.isEmpty {
                 Text("Nothing stored here.")
                     .foregroundStyle(.secondary)
@@ -2227,7 +2256,7 @@ struct DataRecordList: View {
             }
             ForEach(shown) { record in
                 NavigationLink {
-                    DataRecordDetail(singular: singular, record: record)
+                    DataRecordDetail(singular: singular, record: record, onDelete: onDelete.map { delete in { delete([record]) } })
                 } label: {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(record.headline)
@@ -2247,21 +2276,70 @@ struct DataRecordList: View {
                     }
                     .blur(radius: blur ? 6 : 0)
                 }
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                    if onDelete != nil {
+                        Button(role: .destructive) {
+                            confirming = [record]
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
+                }
             }
         }
         .anchorSettingsStyle()
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $search, prompt: "Search")
+        .toolbar {
+            if onDelete != nil && !records.isEmpty {
+                ToolbarItem(placement: .primaryAction) {
+                    EditButton()
+                }
+            }
+            ToolbarItemGroup(placement: .bottomBar) {
+                if isEditing {
+                    Button(role: .destructive) {
+                        confirming = records.filter { selection.contains($0.id) }
+                    } label: {
+                        Text(selection.isEmpty ? "Select entries to delete" : "Delete \(selection.count)")
+                    }
+                    .disabled(selection.isEmpty)
+                    Spacer()
+                    Button(selection.count == shown.count ? "Select none" : "Select all") {
+                        selection = selection.count == shown.count ? [] : Set(shown.map(\.id))
+                    }
+                }
+            }
+        }
+        .confirmationDialog(
+            confirmTitle,
+            isPresented: Binding(get: { !confirming.isEmpty }, set: { if !$0 { confirming = [] } }),
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                let doomed = confirming
+                confirming = []
+                selection = []
+                onDelete?(doomed)
+            }
+            Button("Keep", role: .cancel) { confirming = [] }
+        } message: {
+            Text("What is written in it is deleted from this phone, and from iCloud if sync is on. This cannot be undone.")
+        }
     }
 }
 
 struct DataRecordDetail: View {
     let singular: String
     let record: DataRecord
+    /// Deletes this record. Nil means it can only be looked at.
+    var onDelete: (() -> Void)?
 
+    @Environment(\.dismiss) private var dismiss
     @AppStorage("anchor.dataViewer.blur") private var blur = false
     @State private var revealed = false
+    @State private var confirmingDelete = false
 
     private var hidden: Bool { blur && !revealed }
 
@@ -2291,14 +2369,113 @@ struct DataRecordDetail: View {
                     .accessibilityElement(children: .combine)
                 }
             } footer: {
-                Text("Read only.")
+                Text(onDelete == nil ? "Read only." : "To change this, use its own screen in Anchor.")
+            }
+
+            if onDelete != nil {
+                Section {
+                    Button(role: .destructive) {
+                        confirmingDelete = true
+                    } label: {
+                        Label("Delete this \(singular.lowercased())", systemImage: "trash")
+                    }
+                }
             }
         }
         .anchorSettingsStyle()
         .navigationTitle(singular)
         .navigationBarTitleDisplayMode(.inline)
+        .confirmationDialog("Delete this \(singular.lowercased())?", isPresented: $confirmingDelete, titleVisibility: .visible) {
+            Button("Delete", role: .destructive) {
+                onDelete?()
+                dismiss()
+            }
+            Button("Keep", role: .cancel) {}
+        } message: {
+            Text("What is written in it is deleted from this phone, and from iCloud if sync is on. This cannot be undone.")
+        }
     }
 }
+
+/// A kind of record the viewer can delete single entries of. Most are just deleted. Where a record has files or other records
+/// that belong to it, or reminders are scheduled from the kind, the same cleanup its own screen does is done here too.
+protocol DataDeletable {
+    /// Deletes this record and whatever has to go with it.
+    func deleteFromViewer(in context: ModelContext)
+    /// Makes anything scheduled from this kind (reminders, the widget) again from what is left.
+    static func refreshAfterViewerDelete(in context: ModelContext)
+}
+
+extension DataDeletable where Self: PersistentModel {
+    func deleteFromViewer(in context: ModelContext) { context.delete(self) }
+}
+
+extension DataDeletable {
+    static func refreshAfterViewerDelete(in context: ModelContext) {}
+}
+
+extension JournalEntry: DataDeletable {
+    func deleteFromViewer(in context: ModelContext) {
+        JournalBlocks.deleteVoiceFiles(in: text)
+        context.delete(self)
+    }
+}
+extension CheckIn: DataDeletable {}
+extension SleepEntry: DataDeletable {}
+extension RecoveryCounter: DataDeletable {
+    /// Takes its days and urges with it, and remakes the reminders, as deleting it in Recovery does.
+    func deleteFromViewer(in context: ModelContext) { RecoveryStore.delete(self, in: context) }
+    static func refreshAfterViewerDelete(in context: ModelContext) { RecoveryNotifications.refresh(using: context) }
+}
+extension RecoveryDayEntry: DataDeletable {}
+extension RecoveryUrge: DataDeletable {}
+extension RecoveryMotivation: DataDeletable {}
+extension SafetyPlanSection: DataDeletable {
+    /// Takes what sits under it with it, as deleting it in the safety plan does.
+    func deleteFromViewer(in context: ModelContext) {
+        let all = (try? context.fetch(FetchDescriptor<SafetyPlanSection>())) ?? []
+        func below(_ parent: UUID) -> [SafetyPlanSection] {
+            let direct = all.filter { $0.parentID == parent }
+            return direct + direct.flatMap { below($0.id) }
+        }
+        for child in below(id) { context.delete(child) }
+        context.delete(self)
+    }
+    static func refreshAfterViewerDelete(in context: ModelContext) { NotificationScheduler.resyncTriggerWindows(using: context) }
+}
+extension SafetyPlan: DataDeletable {}
+extension TrustedContact: DataDeletable {
+    static func refreshAfterViewerDelete(in context: ModelContext) { HelloReminders.refresh(using: context) }
+}
+extension GroundingTool: DataDeletable {}
+extension TriggerWindow: DataDeletable {
+    static func refreshAfterViewerDelete(in context: ModelContext) { NotificationScheduler.resyncTriggerWindows(using: context) }
+}
+extension AppointmentSeries: DataDeletable {
+    static func refreshAfterViewerDelete(in context: ModelContext) {
+        AppointmentReminders.refresh(using: context)
+        HelloReminders.refresh(using: context)
+    }
+}
+extension TaskItem: DataDeletable {}
+extension QuickList: DataDeletable {}
+extension Routine: DataDeletable {
+    static func refreshAfterViewerDelete(in context: ModelContext) { RoutineReminders.refresh(using: context) }
+}
+extension ItemList: DataDeletable {}
+extension DecisionPresetCategory: DataDeletable {}
+extension DeEscalationScript: DataDeletable {}
+extension Affirmation: DataDeletable {}
+extension BridgeDraftItem: DataDeletable {}
+extension FeedbackLoopDiagram: DataDeletable {}
+extension PersonalGoal: DataDeletable {}
+extension BoundarySection: DataDeletable {}
+extension PersonSection: DataDeletable {}
+extension ThreadMessage: DataDeletable {}
+extension MessageStarter: DataDeletable {}
+extension SupportCalendarEntry: DataDeletable {}
+extension FutureNote: DataDeletable {}
+extension UnsentDraft: DataDeletable {}
 
 // MARK: - What each kind shows
 
