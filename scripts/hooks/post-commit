@@ -1,0 +1,23 @@
+#!/bin/bash
+# After every commit: tag it with its version, v<major>.<minor>.<patch> (for example v0.2.5), worked out by scripts/version.sh.
+# The tag is annotated, so "git push" sends it along with the commit (scripts/install-hooks.sh turns that on).
+# It never blocks or fails a commit. To skip it once:  ANCHOR_NO_VERSION_TAG=1 git commit ...
+[ -n "$ANCHOR_NO_VERSION_TAG" ] && exit 0
+cd "$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+[ -f scripts/version.sh ] || exit 0
+read -r number _ <<<"$(bash scripts/version.sh 2>/dev/null)"
+[ -n "$number" ] || exit 0
+tag="v$number"
+sha=$(git rev-parse HEAD)
+existing=$(git rev-parse -q --verify "refs/tags/$tag^{commit}" 2>/dev/null)
+if [ -z "$existing" ]; then
+  git tag -a "$tag" -m "Anchor $tag" "$sha" 2>/dev/null && echo "Tagged $tag"
+elif [ "$existing" != "$sha" ]; then
+  if [ -z "$(git branch -a --contains "$existing" 2>/dev/null)" ]; then
+    # The commit that had this tag is on no branch any more (it was amended or rebased away), so the tag follows the new one.
+    git tag -f -a "$tag" -m "Anchor $tag" "$sha" >/dev/null 2>&1 && echo "Moved $tag to the new commit"
+  else
+    echo "note: $tag already marks a different commit that is still on a branch, so this commit was not tagged."
+  fi
+fi
+exit 0

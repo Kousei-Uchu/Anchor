@@ -1,0 +1,17 @@
+#!/bin/bash
+# Before every commit: run the repo checks (about three seconds). A commit that fails them is stopped, with the reason.
+# To commit anyway, once:  SKIP_CHECKS=1 git commit ...
+[ -n "$SKIP_CHECKS" ] && exit 0
+cd "$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+[ -f scripts/check-all.sh ] || exit 0
+if ! command -v node >/dev/null 2>&1; then
+  echo "pre-commit: Node is not installed, so the checks were skipped."; exit 0
+fi
+output=$(bash scripts/check-all.sh 2>&1)
+if [ $? -ne 0 ]; then
+  echo "$output" | grep -i -B1 -A6 "FAIL\|changed in\|problem\|could not\|differs" | head -40
+  echo
+  echo "pre-commit: the checks failed, so this commit was stopped. Fix the above, or commit anyway with:  SKIP_CHECKS=1 git commit ..."
+  exit 1
+fi
+exit 0

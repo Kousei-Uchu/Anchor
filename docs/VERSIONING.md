@@ -26,6 +26,22 @@ Last build sent was TestFlight build 0.3, then:
 - Xcode run, 5 commits after that: `v0.4.5-dev`
 - A GitHub release is made (`git tag release-1`): `v1.0.0`, and minor and patch start again
 
+## Automatic tagging and the helper scripts (Patch TG1)
+
+Run **`bash scripts/install-hooks.sh`** once in each clone. After that:
+
+- **Every commit is tagged** with its version by a post-commit hook (`scripts/hooks/post-commit`): `v<major>.<minor>.<patch>`, for example `v0.2.5`. The tag is annotated, so a plain `git push` sends it with the commit. These tags are only labels: the version numbers are still counted from the `release-N` and `build-N.M` tags, and `scripts/version.sh` ignores the `v` ones. A commit that is amended or rebased away has its tag follow the new commit, and a tag that already marks a commit still on a branch is never moved. To skip it once: `ANCHOR_NO_VERSION_TAG=1 git commit ...`.
+- **Every commit is checked** first (`scripts/hooks/pre-commit` runs `scripts/check-all.sh`, about three seconds), and a commit that fails the checks is stopped with the reason. To commit anyway, once: `SKIP_CHECKS=1 git commit ...`.
+
+Other scripts:
+
+| Script | What it does |
+|---|---|
+| `scripts/version-status.sh` | Where things stand: this checkout's version, the last build sent and how many commits ago, the last release, what the next archive will be, and how many tags are not pushed |
+| `PUSH=1 scripts/tag-build.sh` | After an upload: tags the build `build-N.M` and pushes the tag |
+| `scripts/new-release.sh [--push]` | Starts a new major (`release-N`) on the current commit, and with `--push` pushes it and makes the GitHub release if the `gh` tool is installed |
+| `scripts/tag-history.sh [--all]` | Gives earlier commits their `v...` tags, for the commits after the newest build or release tag, or with `--all` for every commit |
+
 ## What you do
 
 1. After you upload a build: `bash scripts/tag-build.sh` (or `bash scripts/tag-build.sh <commit>` if you have committed since
