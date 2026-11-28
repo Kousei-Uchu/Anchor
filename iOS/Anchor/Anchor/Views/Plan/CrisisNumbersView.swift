@@ -97,22 +97,61 @@ enum CrisisRegion: String, CaseIterable, Identifiable {
 extension CrisisRegion {
     /// Numbers for LGBTQIA+ people. Only shown when the person switches them on. A region with none listed
     /// here has none checked yet; the Find a helpline row is always there for it.
+    /// Every line here was checked against its own organisation's page or a government page (see docs/CRISIS_LINES.md),
+    /// and each label says when it is open if that is not all day, so nobody rings a line that is closed.
     var lgbtqNumbers: [CrisisNumber] {
         switch self {
         case .au:
             return [CrisisNumber(label: "QLife (3pm to midnight)", url: "tel:1800184527", display: "1800 184 527")]
-        default:
+        case .us:
+            return [
+                CrisisNumber(label: "Trevor Project, LGBTQ young people (call, 24/7)", url: "tel:18664887386", display: "1-866-488-7386"),
+                CrisisNumber(label: "Trevor Project (text START)", url: "sms:678678&body=START", display: "678-678"),
+                CrisisNumber(label: "Trans Lifeline (peer support)", url: "tel:18775658860", display: "1-877-565-8860")
+            ]
+        case .ca:
+            return [
+                CrisisNumber(label: "Trans Lifeline (peer support)", url: "tel:18773306366", display: "1-877-330-6366"),
+                CrisisNumber(label: "LGBT YouthLine (text, Ontario, under 30)", url: "sms:6476944275", display: "647-694-4275")
+            ]
+        case .gb:
+            return [
+                CrisisNumber(label: "Switchboard LGBT+ (10am to 10pm)", url: "tel:08000119100", display: "0800 0119 100"),
+                CrisisNumber(label: "Mindline Trans+ (Mon and Fri evenings)", url: "tel:03003305468", display: "0300 330 5468")
+            ]
+        case .ie:
+            return [CrisisNumber(label: "LGBT Ireland helpline (evenings)", url: "tel:1800929539", display: "1800 929 539")]
+        case .nz:
+            return [CrisisNumber(label: "OUTLine (6pm to 9pm)", url: "tel:08006885463", display: "0800 688 5463")]
+        case .other:
             return []
         }
     }
 
-    /// Numbers for Aboriginal and Torres Strait Islander people (or the region's Indigenous peoples). Only shown when switched on.
+    /// Numbers for the region's Indigenous peoples. Only shown when switched on. Where there is no line to list, it is
+    /// left empty rather than filled with something unchecked.
     var indigenousNumbers: [CrisisNumber] {
         switch self {
         case .au:
             return [CrisisNumber(label: "13YARN (24/7)", url: "tel:139276", display: "13 92 76")]
-        default:
+        case .us:
+            return [CrisisNumber(label: "StrongHearts Native Helpline (domestic, dating and sexual violence, 24/7)", url: "tel:18447628483", display: "1-844-762-8483")]
+        case .ca:
+            return [
+                CrisisNumber(label: "Hope for Wellness, Indigenous peoples (24/7)", url: "tel:18552423310", display: "1-855-242-3310"),
+                CrisisNumber(label: "Talk4Healing, Indigenous women (24/7)", url: "tel:18555544325", display: "1-855-554-4325")
+            ]
+        case .gb, .ie, .nz, .other:
             return []
+        }
+    }
+
+    /// What the switch for the Indigenous lines is called in this region.
+    var indigenousLabel: String {
+        switch self {
+        case .au: return "Aboriginal and Torres Strait Islander lines"
+        case .us: return "Native American and Alaska Native lines"
+        default: return "Indigenous support lines"
         }
     }
 
@@ -169,10 +208,14 @@ struct CrisisNumbersSettingsView: View {
         Form {
             Anchor.SettingsSection(
                 title: "Numbers for \(region.name)",
-                footer: "These are added to the Crisis numbers card on Now. Find a helpline is always there. \(region.lgbtqNumbers.isEmpty && region.indigenousNumbers.isEmpty ? "No extra lines are listed for this region yet." : "")"
+                footer: "These are added to the Crisis numbers card on Now. Find a helpline is always there." + (region.indigenousNumbers.isEmpty && region != .other ? " No Indigenous line has been checked for \(region.name) yet, so there is no switch for one." : "") + (region == .other ? " Pick a region in the Crisis numbers card to see its extra lines." : "")
             ) {
-                Anchor.SettingsToggle(title: "LGBTQIA+ support lines", isOn: $showLGBTQ)
-                Anchor.SettingsToggle(title: "Aboriginal and Torres Strait Islander lines", isOn: $showIndigenous)
+                if !region.lgbtqNumbers.isEmpty {
+                    Anchor.SettingsToggle(title: "LGBTQIA+ support lines", isOn: $showLGBTQ)
+                }
+                if !region.indigenousNumbers.isEmpty {
+                    Anchor.SettingsToggle(title: region.indigenousLabel, isOn: $showIndigenous)
+                }
             }
 
             Anchor.SettingsSection(
