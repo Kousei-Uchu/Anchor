@@ -41,6 +41,7 @@ struct SettingsView: View {
 
     @StateObject private var appLock = AppLock.shared
     @State private var faceIDEnabled = AppLock.shared.isEnabled
+    @AppStorage(PrivacyCoverSettings.hideInSwitcherKey) private var hideInSwitcher = true
     @State private var showTour = false
 
     @AppStorage(TabLayoutStyle.storageKey) private var layoutRaw = TabLayoutStyle.widgets.rawValue
@@ -96,11 +97,13 @@ struct SettingsView: View {
             Form {
                 Anchor.SettingsSection(
                     title: "Privacy",
-                    footer: appLock.canAuthenticate()
+                    footer: (appLock.canAuthenticate()
                         ? "Locks Anchor independently of your phone's own lock."
-                        : "This device doesn't have Face ID, Touch ID, or a passcode set up."
+                        : "This device doesn't have Face ID, Touch ID, or a passcode set up.")
+                        + " Hiding Anchor in the app switcher shows a plain screen instead of what was open, whether or not Face ID is on."
                 ) {
                     Anchor.SettingsToggle(title: "Require Face ID", isOn: $faceIDEnabled)
+                    Anchor.SettingsToggle(title: "Hide Anchor in the app switcher", isOn: $hideInSwitcher)
                 }
 
                 Anchor.SettingsSection(title: nil) {

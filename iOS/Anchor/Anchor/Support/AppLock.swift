@@ -186,8 +186,19 @@ struct AppLockGateView<Content: View>: View {
 // everything including sheets, and it goes up when the app is about to stop being active (the system tells
 // the app this a moment before SwiftUI's scene phase does), and stays up until the person has unlocked.
 //
-// It only comes up while the app lock is switched on, the phone has something to ask with, and showcase
-// mode is off: the same conditions as the lock itself.
+// The locked screen only comes up while the app lock is switched on, the phone has something to ask with, and showcase
+// mode is off. A plain cover (no content) also goes up whenever the app stops being active if "Hide Anchor in the app
+// switcher" is on, which it is unless the person switches it off, whether or not the lock is on.
+
+/// The switch for covering Anchor in the app switcher when the app lock is off.
+enum PrivacyCoverSettings {
+    /// On unless the person switches it off. With the app lock on, the cover is always used.
+    static let hideInSwitcherKey = "anchor.privacy.hideInSwitcher"
+
+    static var hidesInSwitcher: Bool {
+        (UserDefaults.standard.object(forKey: hideInSwitcherKey) as? Bool) ?? true
+    }
+}
 
 @MainActor
 final class PrivacyCover {
@@ -200,8 +211,14 @@ final class PrivacyCover {
 
     private init() {}
 
+    /// The app lock is on and can be used, so the locked screen covers sheets and the app switcher.
     private var shouldCover: Bool {
         AppLock.shared.isEnabled && !ShowcaseMode.isOn && AppLock.shared.canAuthenticate()
+    }
+
+    /// A plain cover while the app is not active: with the lock on, or with "Hide Anchor in the app switcher" on.
+    private var shouldCoverInactive: Bool {
+        !ShowcaseMode.isOn && (shouldCover || PrivacyCoverSettings.hidesInSwitcher)
     }
 
     func start() {
@@ -211,7 +228,7 @@ final class PrivacyCover {
         center.addObserver(forName: UIApplication.willResignActiveNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self else { return }
-                self.isCoveringForInactive = self.shouldCover
+                self.isCoveringForInactive = self.shouldCoverInactive
                 self.refresh()
             }
         }
